@@ -19,6 +19,9 @@
 		AA000001000000000000009A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000009B /* Assets.xcassets */; };
 		AA00000100000000000000AA /* AgentsUsageBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000100000000000000AB /* AgentsUsageBarTests.swift */; };
 		AA00000100000000000000BA /* AgentsUsageBar.app in Frameworks */ = {isa = PBXBuildFile; fileRef = AA00000100000000000000BB /* AgentsUsageBar.app */; };
+		/* Plan 06-02 — Sparkle SPM dependency (link + embed & sign) */
+		AA060200000000000000003A /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = AA060200000000000000002A /* Sparkle */; };
+		AA060200000000000000004A /* Sparkle in Embed Frameworks */ = {isa = PBXBuildFile; productRef = AA060200000000000000002A /* Sparkle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		/* Plan 01.02 — Domain sources */
 		AA020200000000000000001A /* UsageSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000001B /* UsageSnapshot.swift */; };
 		AA020200000000000000002A /* DailyTotals.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000002B /* DailyTotals.swift */; };
@@ -658,11 +661,26 @@
 		AA020700000000000000014B /* MenuBarTintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarTintTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		AA060200000000000000005A /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				AA060200000000000000004A /* Sparkle in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		AA00000100000000000000F1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA060200000000000000003A /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1479,12 +1497,16 @@
 				AA00000100000000000000F3 /* Sources */,
 				AA00000100000000000000F1 /* Frameworks */,
 				AA00000100000000000000F4 /* Resources */,
+				AA060200000000000000005A /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = AgentsUsageBar;
+			packageProductDependencies = (
+				AA060200000000000000002A /* Sparkle */,
+			);
 			productName = AgentsUsageBar;
 			productReference = AA00000100000000000000BB /* AgentsUsageBar.app */;
 			productType = "com.apple.product-type.application";
@@ -1535,6 +1557,9 @@
 				Base,
 			);
 			mainGroup = AA00000100000000000000D8 /* MainGroup */;
+			packageReferences = (
+				AA060200000000000000001A /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			productRefGroup = AA00000100000000000000D0 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -2128,6 +2153,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA060200000000000000001A /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.9.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA060200000000000000002A /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA060200000000000000001A /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 	};
 	rootObject = AA00000100000000000000E0 /* Project object */;
