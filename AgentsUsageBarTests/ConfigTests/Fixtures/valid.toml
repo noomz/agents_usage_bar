@@ -5,6 +5,6 @@ threshold = 0.80
 [openrouter]
 api_key = "fake-or-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 api_url = "https://openrouter.ai/api/v1"
-http_referer = "https://github.com/lazym0m3nt/agents_usage_bar"
+http_referer = "https://github.com/noomz/agents_usage_bar"
 x_title = "Agents Usage Bar"
 enabled = true

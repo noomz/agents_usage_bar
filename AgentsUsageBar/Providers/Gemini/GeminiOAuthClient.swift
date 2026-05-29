@@ -26,12 +26,40 @@ import os.log
 // inherent to OAuth2 form-urlencoded grants and does not pass through the
 // `Secret` reveal accessor.
 //
-// **Client credentials note (RFC 6749 §2.1):** the OAuth2 spec explicitly
-// treats client_secret as "publicly accessible" for installed-app flows.
-// The constants below are the values published in gemini-cli's
-// `oauth2.ts`; they identify the gemini-cli application, not the user.
-// Re-verify against the gemini-cli source if Gemini auth ever breaks
-// wholesale (Google has historically rotated these credentials rarely).
+// **Client credentials sourcing (RFC 6749 §2.1):** the OAuth2 spec treats
+// `client_secret` as publicly accessible for installed-app flows, but
+// GitHub push-protection scanners still flag the literal strings. The
+// gemini-cli `client_id` / `client_secret` are therefore NOT embedded in
+// source — the caller injects them via `GeminiCLIPublicCreds` resolved
+// from environment variables (`GEMINI_CLI_CLIENT_ID`,
+// `GEMINI_CLI_CLIENT_SECRET`). When the caller passes `nil`, refresh is
+// disabled and the cached / on-disk access token is used until it
+// expires; expired tokens surface as `.refreshDisabled` which the
+// provider renders as the same degraded UX as `.refreshFailed`.
+// See `docs/gemini-setup.md` for the values published by gemini-cli.
+
+/// Caller-supplied gemini-cli OAuth2 client credentials. Values come from
+/// gemini-cli's `oauth2.ts` (see `docs/gemini-setup.md`); resolution lives
+/// outside this file so the literal strings stay out of git history.
+public struct GeminiCLIPublicCreds: Sendable, Equatable {
+    public let clientID: String
+    public let clientSecret: String
+
+    public init(clientID: String, clientSecret: String) {
+        self.clientID = clientID
+        self.clientSecret = clientSecret
+    }
+
+    /// Resolve from a `ProcessInfo.environment`-shaped dictionary.
+    /// Returns nil when either variable is missing or empty so callers
+    /// can fall back to the degraded-UX branch without throwing.
+    public static func fromEnvironment(_ env: [String: String]) -> GeminiCLIPublicCreds? {
+        guard let cid = env["GEMINI_CLI_CLIENT_ID"], !cid.isEmpty,
+              let cs = env["GEMINI_CLI_CLIENT_SECRET"], !cs.isEmpty
+        else { return nil }
+        return GeminiCLIPublicCreds(clientID: cid, clientSecret: cs)
+    }
+}
 
 /// Actor managing the eager-pre-check + lazy-401 OAuth state machine for
 /// Gemini. Refreshed access_token is kept in actor-isolated state only.
@@ -42,13 +70,6 @@ public actor GeminiOAuthClient {
     /// Google's OAuth2 token endpoint (form-urlencoded grants).
     public static let tokenURL = URL(string: "https://oauth2.googleapis.com/token")!
 
-    /// gemini-cli OAuth2 client identifier (RFC 6749 §2.1 public).
-    public static let clientID = "REDACTED-CLIENT-ID-SEE-DOCS-GEMINI-SETUP-MD"
-
-    /// gemini-cli OAuth2 client credential (RFC 6749 §2.1 public for
-    /// installed-app flows). Re-verify if Gemini auth breaks wholesale.
-    public static let clientSecret = "REDACTED-CLIENT-SECRET-SEE-DOCS-GEMINI-SETUP-MD"
-
     /// Skew window for the eager pre-check (seconds). If the token expires
     /// within this window we refresh proactively.
     public static let refreshSkewSeconds: TimeInterval = 60
@@ -58,6 +79,7 @@ public actor GeminiOAuthClient {
     private let http: any HTTPClient
     private let credentialLoader: GeminiCredentialLoader
     private let clock: any Clock
+    private let publicCreds: GeminiCLIPublicCreds?
     private let logger = AppLogger.logger(category: "gemini-oauth")
 
     /// In-memory cache of the most recent successful access_token.
@@ -84,14 +106,21 @@ public actor GeminiOAuthClient {
     ///   - http: Shared URLSession-backed HTTP client (POLL-08 singleton).
     ///   - credentialLoader: `~/.gemini/oauth_creds.json` resolver.
     ///   - clock: Clock abstraction for deterministic eager-skew tests.
+    ///   - publicCreds: gemini-cli OAuth2 client credentials. `nil` disables
+    ///     the in-app refresh path; cached and on-disk access tokens are
+    ///     still used until they expire, after which `freshAccessToken`
+    ///     throws `.refreshDisabled` and the provider renders the same
+    ///     degraded UX as `.refreshFailed`.
     public init(
         http: any HTTPClient,
         credentialLoader: GeminiCredentialLoader = GeminiCredentialLoader(),
-        clock: any Clock = SystemClock()
+        clock: any Clock = SystemClock(),
+        publicCreds: GeminiCLIPublicCreds? = nil
     ) {
         self.http = http
         self.credentialLoader = credentialLoader
         self.clock = clock
+        self.publicCreds = publicCreds
     }
 
     // MARK: - Public API
@@ -177,12 +206,16 @@ public actor GeminiOAuthClient {
         refreshToken: String,
         now: Date
     ) async throws -> (accessToken: String, expiryDate: Date) {
+        guard let creds = publicCreds else {
+            logger.notice("oauth2/token refresh skipped — GEMINI_CLI_CLIENT_ID / GEMINI_CLI_CLIENT_SECRET not set")
+            throw GeminiOAuthError.refreshDisabled
+        }
         do {
             let response: GeminiTokenRefreshResponse = try await http.postFormURLEncoded(
                 Self.tokenURL,
                 formFields: [
-                    ("client_id", Self.clientID),
-                    ("client_secret", Self.clientSecret),
+                    ("client_id", creds.clientID),
+                    ("client_secret", creds.clientSecret),
                     ("refresh_token", refreshToken),
                     ("grant_type", "refresh_token"),
                 ],

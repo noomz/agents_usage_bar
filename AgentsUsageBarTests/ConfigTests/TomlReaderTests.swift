@@ -149,7 +149,7 @@ struct TomlReaderTests {
         #expect(or != nil)
         #expect(or?["api_key"] == .string("fake-or-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
         #expect(or?["api_url"] == .string("https://openrouter.ai/api/v1"))
-        #expect(or?["http_referer"] == .string("https://github.com/lazym0m3nt/agents_usage_bar"))
+        #expect(or?["http_referer"] == .string("https://github.com/noomz/agents_usage_bar"))
         #expect(or?["x_title"] == .string("Agents Usage Bar"))
         #expect(or?["enabled"] == .bool(true))
     }

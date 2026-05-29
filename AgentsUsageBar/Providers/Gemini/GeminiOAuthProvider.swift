@@ -411,6 +411,7 @@ public actor GeminiOAuthProvider: UsageProvider {
 
     private func isRefreshFailed(_ err: GeminiOAuthError) -> Bool {
         if case .refreshFailed = err { return true }
+        if case .refreshDisabled = err { return true }
         return false
     }
 

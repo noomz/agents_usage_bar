@@ -34,7 +34,7 @@
 	         Empty placeholder until plan 06-05 runs generate_keys and pastes the public-key string here.
 	         Sparkle refuses any update whose `sparkle:edSignature` does not verify against this key (T-06-03 mitigation). -->
 	<key>SUFeedURL</key>
-	<string>https://noomzopendream.github.io/agents_usage_bar/appcast.xml</string>
+	<string>https://noomz.github.io/agents_usage_bar/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string></string>
 </dict>

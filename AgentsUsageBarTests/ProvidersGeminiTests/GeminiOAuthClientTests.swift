@@ -156,7 +156,8 @@ struct GeminiOAuthClientTests {
         let client = GeminiOAuthClient(
             http: http,
             credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
-            clock: VirtualClock(fixed: now)
+            clock: VirtualClock(fixed: now),
+            publicCreds: GeminiCLIPublicCreds(clientID: "test-cid", clientSecret: "test-cs")
         )
 
         // First call seeds cache from file (well above skew → no refresh).
@@ -181,7 +182,8 @@ struct GeminiOAuthClientTests {
         let client = GeminiOAuthClient(
             http: http,
             credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
-            clock: VirtualClock(fixed: now)
+            clock: VirtualClock(fixed: now),
+            publicCreds: GeminiCLIPublicCreds(clientID: "test-cid", clientSecret: "test-cs")
         )
 
         let bearer = try await client.freshAccessToken(now: now)
@@ -204,7 +206,8 @@ struct GeminiOAuthClientTests {
         let client = GeminiOAuthClient(
             http: http,
             credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
-            clock: VirtualClock(fixed: now)
+            clock: VirtualClock(fixed: now),
+            publicCreds: GeminiCLIPublicCreds(clientID: "test-cid", clientSecret: "test-cs")
         )
 
         let bearer = try await client.freshAccessToken(now: now)
@@ -232,7 +235,8 @@ struct GeminiOAuthClientTests {
         let client = GeminiOAuthClient(
             http: http,
             credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
-            clock: VirtualClock(fixed: now)
+            clock: VirtualClock(fixed: now),
+            publicCreds: GeminiCLIPublicCreds(clientID: "test-cid", clientSecret: "test-cs")
         )
 
         _ = try await client.freshAccessToken(now: now)
@@ -240,8 +244,8 @@ struct GeminiOAuthClientTests {
         let call = try #require(http.calls.first)
         #expect(call.url == GeminiOAuthClient.tokenURL)
         let body = try #require(call.formBody)
-        #expect(body.contains("client_id=681255809395-"))
-        #expect(body.contains("client_secret=GOCSPX-"))
+        #expect(body.contains("client_id=test-cid"))
+        #expect(body.contains("client_secret=test-cs"))
         #expect(body.contains("grant_type=refresh_token"))
         // Percent-encoded refresh_token (space → %20, & → %26).
         let encoded = refreshToken.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
@@ -265,7 +269,8 @@ struct GeminiOAuthClientTests {
         let client = GeminiOAuthClient(
             http: http,
             credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
-            clock: VirtualClock(fixed: now)
+            clock: VirtualClock(fixed: now),
+            publicCreds: GeminiCLIPublicCreds(clientID: "test-cid", clientSecret: "test-cs")
         )
         await #expect(throws: GeminiOAuthError.refreshFailed(status: 400)) {
             _ = try await client.freshAccessToken(now: now)
@@ -286,7 +291,8 @@ struct GeminiOAuthClientTests {
         let client = GeminiOAuthClient(
             http: http,
             credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
-            clock: VirtualClock(fixed: now)
+            clock: VirtualClock(fixed: now),
+            publicCreds: GeminiCLIPublicCreds(clientID: "test-cid", clientSecret: "test-cs")
         )
         await #expect(throws: GeminiOAuthError.refreshFailed(status: 401)) {
             _ = try await client.freshAccessToken(now: now)
@@ -303,7 +309,8 @@ struct GeminiOAuthClientTests {
         let client = GeminiOAuthClient(
             http: http,
             credentialLoader: GeminiCredentialLoader(credentialsPath: missingURL),
-            clock: VirtualClock(fixed: now)
+            clock: VirtualClock(fixed: now),
+            publicCreds: GeminiCLIPublicCreds(clientID: "test-cid", clientSecret: "test-cs")
         )
         await #expect(throws: GeminiOAuthError.notSignedIn) {
             _ = try await client.freshAccessToken(now: now)
@@ -328,7 +335,8 @@ struct GeminiOAuthClientTests {
         let client = GeminiOAuthClient(
             http: http,
             credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
-            clock: VirtualClock(fixed: now)
+            clock: VirtualClock(fixed: now),
+            publicCreds: GeminiCLIPublicCreds(clientID: "test-cid", clientSecret: "test-cs")
         )
 
         _ = try await client.freshAccessToken(now: now)
@@ -354,7 +362,8 @@ struct GeminiOAuthClientTests {
         let client = GeminiOAuthClient(
             http: http,
             credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
-            clock: VirtualClock(fixed: now)
+            clock: VirtualClock(fixed: now),
+            publicCreds: GeminiCLIPublicCreds(clientID: "test-cid", clientSecret: "test-cs")
         )
         _ = try await client.freshAccessToken(now: now)
         let after = try Data(contentsOf: credsURL)
@@ -399,12 +408,12 @@ struct GeminiOAuthClientTests {
 
     // MARK: - Test 12: ci.yml SEC-04 exclusion includes GeminiOAuthClient.swift
 
-    @Test func ciYamlSEC04_excludesGeminiOAuthClient() throws {
+    @Test func ciYamlSEC04_doesNotExcludeGeminiOAuthClient() throws {
         let repoRoot = repoRootFromTestFile()
         let url = repoRoot.appendingPathComponent(".github/workflows/ci.yml")
         let src = try String(contentsOf: url, encoding: .utf8)
-        #expect(src.contains("GeminiOAuthClient.swift"),
-                "ci.yml must add --exclude='GeminiOAuthClient.swift' so the RFC 6749 §2.1 client_secret constant doesn't trip SEC-04")
+        #expect(!src.contains("--exclude='GeminiOAuthClient.swift'"),
+                "ci.yml must NOT exclude GeminiOAuthClient.swift — gemini-cli client_id / client_secret literals now live in env vars resolved at composition time")
     }
 
     // MARK: - Test 13: CR-02 — retryAfter401 forces a POST even when the
@@ -429,7 +438,8 @@ struct GeminiOAuthClientTests {
         let client = GeminiOAuthClient(
             http: http,
             credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
-            clock: VirtualClock(fixed: now)
+            clock: VirtualClock(fixed: now),
+            publicCreds: GeminiCLIPublicCreds(clientID: "test-cid", clientSecret: "test-cs")
         )
 
         // 1. First fetch hits the disk fast-path — zero POSTs.
@@ -448,6 +458,71 @@ struct GeminiOAuthClientTests {
         // of the freshly refreshed token) serves from cache — no extra POST.
         _ = try await client.freshAccessToken(now: now)
         #expect(http.calls.count == 1)
+    }
+
+    // MARK: - Test 14: publicCreds == nil disables refresh
+
+    @Test func refreshPath_withoutPublicCreds_throwsRefreshDisabled() async throws {
+        let now = Date(timeIntervalSince1970: 1_780_000_000)
+        let http = FakeGeminiHTTPClient()
+        // Script a response anyway — the guard should short-circuit BEFORE
+        // the HTTP layer is touched.
+        http.postFormResponses = [.success(try loadFixtureData("gemini-token-refresh-fixture.json"))]
+        let credsURL = try writeCredsFile(
+            accessToken: nil,
+            refreshToken: "FAKE-1//0gb-XXXX",
+            expiryDate: 0
+        )
+        let client = GeminiOAuthClient(
+            http: http,
+            credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
+            clock: VirtualClock(fixed: now),
+            publicCreds: nil
+        )
+
+        await #expect(throws: GeminiOAuthError.refreshDisabled) {
+            _ = try await client.freshAccessToken(now: now)
+        }
+        #expect(http.calls.isEmpty,
+                "guard must short-circuit before any HTTP call")
+    }
+
+    // MARK: - Test 15: GeminiCLIPublicCreds.fromEnvironment resolution
+
+    @Test func fromEnvironment_returnsCreds_whenBothVariablesSet() {
+        let env = [
+            "GEMINI_CLI_CLIENT_ID": "env-cid",
+            "GEMINI_CLI_CLIENT_SECRET": "env-cs",
+            "UNRELATED": "noise",
+        ]
+        let creds = GeminiCLIPublicCreds.fromEnvironment(env)
+        #expect(creds == GeminiCLIPublicCreds(clientID: "env-cid", clientSecret: "env-cs"))
+    }
+
+    @Test func fromEnvironment_returnsNil_whenEitherVariableMissingOrEmpty() {
+        #expect(GeminiCLIPublicCreds.fromEnvironment([:]) == nil)
+        #expect(GeminiCLIPublicCreds.fromEnvironment(["GEMINI_CLI_CLIENT_ID": "x"]) == nil)
+        #expect(GeminiCLIPublicCreds.fromEnvironment(["GEMINI_CLI_CLIENT_SECRET": "x"]) == nil)
+        #expect(GeminiCLIPublicCreds.fromEnvironment([
+            "GEMINI_CLI_CLIENT_ID": "",
+            "GEMINI_CLI_CLIENT_SECRET": "x",
+        ]) == nil)
+        #expect(GeminiCLIPublicCreds.fromEnvironment([
+            "GEMINI_CLI_CLIENT_ID": "x",
+            "GEMINI_CLI_CLIENT_SECRET": "",
+        ]) == nil)
+    }
+
+    // MARK: - Test 16: source contains no gemini-cli literal credentials
+
+    @Test func source_doesNotEmbedGeminiCLILiteralCredentials() throws {
+        let repoRoot = repoRootFromTestFile()
+        let url = repoRoot.appendingPathComponent("AgentsUsageBar/Providers/Gemini/GeminiOAuthClient.swift")
+        let src = try String(contentsOf: url, encoding: .utf8)
+        #expect(!src.contains(".apps.googleusercontent.com"),
+                "GeminiOAuthClient.swift must not contain a Google OAuth2 client_id literal")
+        #expect(!src.contains("GOCSPX-"),
+                "GeminiOAuthClient.swift must not contain a Google OAuth2 client_secret literal")
     }
 
     // MARK: - Helpers

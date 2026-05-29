@@ -31,6 +31,13 @@ public enum GeminiOAuthError: Error, Sendable {
     /// Non-2xx from the OAuth token endpoint.
     case refreshFailed(status: Int)
 
+    /// gemini-cli OAuth2 client credentials (`GEMINI_CLI_CLIENT_ID` /
+    /// `GEMINI_CLI_CLIENT_SECRET`) are not configured, so the in-app
+    /// refresh path is disabled. Cached + on-disk access tokens still
+    /// flow; this only fires when those are also expired. Rendered as
+    /// the same degraded UX as `.refreshFailed` (D-11).
+    case refreshDisabled
+
     /// `oauth_creds.json` was absent while `settings.json` said `oauth-personal`
     /// (Pitfall 9 — keychain migration).
     case notSignedIn
@@ -44,6 +51,7 @@ extension GeminiOAuthError: Equatable {
         switch (lhs, rhs) {
         case (.noCredentials, .noCredentials),
              (.settingsGateClosed, .settingsGateClosed),
+             (.refreshDisabled, .refreshDisabled),
              (.notSignedIn, .notSignedIn):
             return true
         case (.refreshFailed(let a), .refreshFailed(let b)):

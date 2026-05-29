@@ -222,7 +222,12 @@ public enum AppDependencies {
            GeminiSettingsGate.isOAuthPersonal(),
            GeminiCredentialLoader().loadCredentials() != nil
         {
-            let geminiOAuth = GeminiOAuthClient(http: http, clock: clock)
+            let geminiPublicCreds = GeminiCLIPublicCreds.fromEnvironment(ProcessInfo.processInfo.environment)
+            let geminiOAuth = GeminiOAuthClient(
+                http: http,
+                clock: clock,
+                publicCreds: geminiPublicCreds
+            )
             let geminiProvider = GeminiOAuthProvider(
                 http: http,
                 oauth: geminiOAuth,
