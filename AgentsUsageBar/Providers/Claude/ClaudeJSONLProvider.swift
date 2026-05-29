@@ -218,9 +218,10 @@ public actor ClaudeJSONLProvider: UsageProvider {
             }
 
             // 5. Persist offsets (partial progress saved even if fan-out partially failed).
-            for (_, offset) in newOffsets {
-                cache.setTranscriptOffset(offset)
-            }
+            //    Single batch write — per-offset writes would re-encode the entire
+            //    envelope each iteration, which is O(N²) on a freshly-seeded cache
+            //    with hundreds of transcript files.
+            cache.setTranscriptOffsets(Array(newOffsets.values))
 
             // 6. Build quotaWindows + primary quota from OAuth result.
             let oauthResult = await oauthResultBox

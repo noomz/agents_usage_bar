@@ -183,6 +183,28 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
         }
     }
 
+    /// Atomic batch upsert — one envelope load, merge all offsets, one envelope
+    /// write. Avoids the O(N²) decode/encode storm `setTranscriptOffset` would
+    /// cause when called per-file after a multi-hundred-file fan-out
+    /// (`ClaudeJSONLProvider.fetch` on a freshly-seeded cache).
+    public func setTranscriptOffsets(_ offsets: [TranscriptOffset]) {
+        guard !offsets.isEmpty else { return }
+        queue.sync(flags: .barrier) {
+            let envelope = _loadEnvelope() ?? CacheEnvelope(providers: [:], baselines: [:], transcripts: [:])
+            var ts = envelope.transcripts
+            for offset in offsets {
+                ts[offset.url] = offset
+            }
+            let updated = CacheEnvelope(
+                schemaVersion: 2,
+                providers: envelope.providers,
+                baselines: envelope.baselines,
+                transcripts: ts
+            )
+            _writeEnvelope(updated)
+        }
+    }
+
     public func allTranscriptOffsets() -> [String: TranscriptOffset] {
         queue.sync { _loadEnvelope()?.transcripts ?? [:] }
     }

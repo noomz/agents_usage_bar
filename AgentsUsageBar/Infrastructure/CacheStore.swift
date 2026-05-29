@@ -69,7 +69,25 @@ public protocol CacheStore: Sendable {
     /// Overwrites any prior offset stored for the same URL (delta semantics — CLAUDE-02).
     func setTranscriptOffset(_ offset: TranscriptOffset)
 
+    /// Batch-upserts multiple transcript offsets in a single envelope read/write.
+    /// Per-poll fan-outs can produce hundreds of offsets — calling
+    /// `setTranscriptOffset` per file is O(N²) (each call re-decodes/encodes the full
+    /// envelope). Production `FileCacheStore` overrides this for an atomic single
+    /// write; the default extension implementation below falls back to per-offset
+    /// calls so in-memory test stores stay simple.
+    func setTranscriptOffsets(_ offsets: [TranscriptOffset])
+
     /// Returns a snapshot of all persisted transcript offsets.
     /// Mutating the returned dict has no side effect (Swift value-type copy).
     func allTranscriptOffsets() -> [String: TranscriptOffset]
+}
+
+extension CacheStore {
+    /// Default fan-out implementation. Conformers that can do a single atomic write
+    /// (e.g. `FileCacheStore`) should override this.
+    public func setTranscriptOffsets(_ offsets: [TranscriptOffset]) {
+        for offset in offsets {
+            setTranscriptOffset(offset)
+        }
+    }
 }
