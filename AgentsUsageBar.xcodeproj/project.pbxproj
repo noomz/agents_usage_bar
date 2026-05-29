@@ -100,6 +100,8 @@
 		/* Plan 01.07 — NotificationsTests build files (test target) */
 		AA070700000000000000010A /* ThresholdEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070700000000000000010B /* ThresholdEngineTests.swift */; };
 		AA070700000000000000011A /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070700000000000000011B /* NotificationManagerTests.swift */; };
+		/* Plan 03-01 Task 1 — Codex ProviderID constant test */
+		AA030100000000000000001A /* ProviderIDCodexTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000001B /* ProviderIDCodexTests.swift */; };
 		/* Plan 02.01 — Claude transcript primitives (app target) */
 		AA020100000000000000001A /* TranscriptOffset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000001B /* TranscriptOffset.swift */; };
 		AA020100000000000000002A /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000002B /* TranscriptRecord.swift */; };
@@ -278,6 +280,8 @@
 		/* Plan 01.07 — NotificationsTests file references */
 		AA070700000000000000010B /* ThresholdEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdEngineTests.swift; sourceTree = "<group>"; };
 		AA070700000000000000011B /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
+		/* Plan 03-01 Task 1 — Codex ProviderID constant test file reference */
+		AA030100000000000000001B /* ProviderIDCodexTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderIDCodexTests.swift; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -446,6 +450,8 @@
 				AA020200000000000000023B /* ThresholdStateTests.swift */,
 				/* Plan 02.07 — reset-clock caption */
 				AA020700000000000000010B /* TodayHelperResetClockTests.swift */,
+				/* Plan 03-01 — Codex ProviderID constant */
+				AA030100000000000000001B /* ProviderIDCodexTests.swift */,
 			);
 			path = DomainTests;
 			sourceTree = "<group>";
@@ -1001,6 +1007,8 @@
 				AA020700000000000000012A /* QuotaBarThresholdConventionTests.swift in Sources */,
 				AA020700000000000000013A /* FooterResetCaptionTests.swift in Sources */,
 				AA020700000000000000014A /* MenuBarTintTests.swift in Sources */,
+				/* Plan 03-01 Task 1 — Codex ProviderID constant test */
+				AA030100000000000000001A /* ProviderIDCodexTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

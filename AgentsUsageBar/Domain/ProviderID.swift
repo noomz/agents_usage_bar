@@ -19,6 +19,12 @@ extension ProviderID {
     /// `displayHint` already returns "Claude" for this rawValue (Phase 1 declaration).
     public static let claude = ProviderID(rawValue: "claude")
 
+    /// Codex — OpenAI Codex via local rollout JSONL files (`~/.codex/sessions/**`)
+    /// with OAuth fallback. Plan 03-01 introduces this constant for use by
+    /// `CodexRolloutScanner` / `CodexRolloutParser` / future `CodexJSONLProvider`.
+    /// `displayHint` already returns "Codex" for this rawValue.
+    public static let codex = ProviderID(rawValue: "codex")
+
     /// Human-readable display hint for this provider.
     ///
     /// Used by `ThresholdEngine` to populate `NotificationDecision.displayName` (B3),
