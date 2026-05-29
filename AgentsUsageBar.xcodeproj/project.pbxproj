@@ -65,6 +65,7 @@
 		/* Plan 05-03 — SettingsGeneralTabTests + AggregateStoreUpdateWarningFractionTests test sources */
 		AA050302000000000000010A /* SettingsGeneralTabTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050302000000000000010B /* SettingsGeneralTabTests.swift */; };
 		AA050302000000000000011A /* AggregateStoreUpdateWarningFractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050302000000000000011B /* AggregateStoreUpdateWarningFractionTests.swift */; };
+		AA050303000000000000010A /* AggregateStoreProviderEnabledTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050303000000000000010B /* AggregateStoreProviderEnabledTests.swift */; };
 		/* Plan 01.03 — Config sources */
 		AA030300000000000000001A /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000001B /* AppConfig.swift */; };
 		AA030300000000000000002A /* EnvReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000002B /* EnvReader.swift */; };
@@ -373,6 +374,7 @@
 		/* Plan 05-03 — SettingsGeneralTabTests + AggregateStoreUpdateWarningFractionTests file references */
 		AA050302000000000000010B /* SettingsGeneralTabTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsGeneralTabTests.swift; sourceTree = "<group>"; };
 		AA050302000000000000011B /* AggregateStoreUpdateWarningFractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreUpdateWarningFractionTests.swift; sourceTree = "<group>"; };
+		AA050303000000000000010B /* AggregateStoreProviderEnabledTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreProviderEnabledTests.swift; sourceTree = "<group>"; };
 		/* Plan 05-04 Task 1 — DetectionProbe + OnboardingCopy file references */
 		AA050400000000000000001B /* DetectionProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionProbe.swift; sourceTree = "<group>"; };
 		AA050400000000000000002B /* OnboardingCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCopy.swift; sourceTree = "<group>"; };
@@ -1058,6 +1060,8 @@
 				AA040800000000000000012B /* AggregateStoreLocalRollupTests.swift */,
 				/* Plan 05-03 — AggregateStore.updateWarningFraction tests */
 				AA050302000000000000011B /* AggregateStoreUpdateWarningFractionTests.swift */,
+				/* Plan 05-03 — AggregateStore.setProviderEnabled tests (D-04) */
+				AA050303000000000000010B /* AggregateStoreProviderEnabledTests.swift */,
 			);
 			path = AggregationTests;
 			sourceTree = "<group>";
@@ -1843,6 +1847,8 @@
 				/* Plan 05-03 — SettingsGeneralTab + AggregateStore.updateWarningFraction tests */
 				AA050302000000000000010A /* SettingsGeneralTabTests.swift in Sources */,
 				AA050302000000000000011A /* AggregateStoreUpdateWarningFractionTests.swift in Sources */,
+				/* Plan 05-03 — AggregateStore.setProviderEnabled tests (D-04) */
+				AA050303000000000000010A /* AggregateStoreProviderEnabledTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
