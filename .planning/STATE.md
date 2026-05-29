@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-05-18T04:40:25.373Z"
+status: ready_to_plan
+last_updated: 2026-05-18T08:21:31.188Z
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 25
   completed_plans: 25
-  percent: 100
+  percent: 33
+stopped_at: Phase 03 complete (9/9) — ready to discuss Phase 4
 ---
 
 # Project State: Agents Usage Bar
@@ -25,7 +26,7 @@ progress:
 
 **What This Is:** A macOS menu bar app that surfaces today's AI agent usage across Claude, OpenAI Codex, Gemini, OpenRouter, and local agents (Ollama, LM Studio, llama.cpp) — tokens used, USD spent, quota remaining per provider — with native notifications at threshold crossings.
 
-**Current Focus:** Phase 03 — remote-api-providers-codex-gemini
+**Current Focus:** Phase 4 — local llm presence (ollama + lm studio + llama.cpp)
 
 ## Current Position
 
@@ -34,9 +35,9 @@ Plan: 9 of 9 plans executed (Plan 01 ✅; Plan 02 ✅; Plan 03 ✅; Plan 04 ✅;
 Phase: 03 — Plans 01 + 02 + 03 + 04 + 05 + 06 + 07 + 08 + 09 ✅ EXECUTED (Codex rollout discovery + Codex USD pricing + Codex OAuth fallback + Codex provider actor + Gemini OAuth + credential layer + Gemini provider actor + composition root registration with D-07 + D-11 cross-cutting policy + Phase 3 UI surface + Phase 3 UAT walkthrough script ready for reviewer)
 
 - **Milestone:** v1 (initial release)
-- **Phase:** 3 of 6 — Remote API Providers (Codex + Gemini) — AWAITING UAT
-- **Plan:** 9 of 9 plans executed (Plan 01 ✅; Plan 02 ✅; Plan 03 ✅; Plan 04 ✅; Plan 05 ✅; Plan 06 ✅; Plan 07 ✅; Plan 08 ✅; Plan 09 ✅)
-- **Status:** Phase exit BLOCKED on reviewer UAT — see `.planning/phases/03-remote-api-providers-codex-gemini/03-UAT.md`
+- **Phase:** 4 of 6 (local llm presence (ollama + lm studio + llama.cpp))
+- **Plan:** Not started
+- **Status:** Ready to plan
 - **Progress:** [██████████] 100% (25/25 plans executed; Phase 3 awaiting UAT approval)
 
 ```
