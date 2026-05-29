@@ -9,13 +9,23 @@ import SwiftUI
 /// Phase 1 trade-off (W2 comment): Very long elapsed periods (>24h) render as "Xd ago" rather
 /// than switching to an absolute date string. This keeps the label compact and avoids locale/timezone
 /// complexity. Revisit in Phase 2 if user feedback demands absolute timestamps.
+///
+/// Plan 02.07 (UI-08): the `isStale` flag swaps the foreground style from
+/// `.secondary` to `.tertiary` when the row's data is older than 2× the current
+/// refresh interval. The text content is unchanged ("Updated 7m ago") — only
+/// the colour intensity differs so the user notices the data is stale.
 public struct RelativeTimestampLabel: View {
     public let date: Date?
     public let prefix: String
+    public let isStale: Bool
 
-    public init(date: Date?, prefix: String = "Updated") {
+    /// Plan 02.07 — additive overload accepting `isStale` from
+    /// `AggregateStore.isStale(_:now:)`. The default `false` preserves Phase 1
+    /// call-site compatibility.
+    public init(date: Date?, prefix: String = "Updated", isStale: Bool = false) {
         self.date = date
         self.prefix = prefix
+        self.isStale = isStale
     }
 
     // MARK: - View body
@@ -26,11 +36,13 @@ public struct RelativeTimestampLabel: View {
             if let date {
                 Text("\(prefix) \(Self.relativeString(from: date, to: now)) ago")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isStale ? AnyShapeStyle(HierarchicalShapeStyle.tertiary)
+                                             : AnyShapeStyle(HierarchicalShapeStyle.secondary))
             } else {
                 Text("Never updated")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isStale ? AnyShapeStyle(HierarchicalShapeStyle.tertiary)
+                                             : AnyShapeStyle(HierarchicalShapeStyle.secondary))
             }
         }
     }

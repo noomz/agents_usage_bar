@@ -21,7 +21,7 @@ struct AgentsUsageBarApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("Agents Usage Bar", systemImage: "chart.bar.doc.horizontal") {
+        MenuBarExtra {
             PopoverRootView()
                 .environment(dependencies.store)
                 .environment(\.clockService, dependencies.clock)   // B5: only INJECT; key declared in Plan 01.06
@@ -37,6 +37,16 @@ struct AgentsUsageBarApp: App {
                     // Cancelled automatically when the scene tears down (structured concurrency).
                     await dependencies.scheduler.start()
                 }
+        } label: {
+            // Plan 02.07 (UI-09 + Pitfall 9): the menu bar icon tints to reflect the
+            // highest quota fraction across all providers (green < 0.80, yellow 0.80–0.95,
+            // red >= 0.95). `@Observable` re-renders this label automatically when
+            // `dependencies.store.maxQuotaFraction` changes. Snap transition (no animation)
+            // is acceptable per RESEARCH §H.3.
+            Image(systemName: "chart.bar.doc.horizontal")
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(dependencies.store.menuBarTint)
+                .accessibilityLabel("Agents Usage Bar")
         }
         .menuBarExtraStyle(.window)   // SHELL-04 — rich SwiftUI popover (not .menu)
     }

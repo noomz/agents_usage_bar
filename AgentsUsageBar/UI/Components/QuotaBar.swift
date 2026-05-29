@@ -1,6 +1,11 @@
 import SwiftUI
 
-/// Color-coded quota progress bar per UI-02 (REQUIREMENTS.md authoritative, B4).
+/// UI-03 reconciliation (Plan 02.07): The thresholds below ARE the ClaudeBar
+/// convention as defined by REQUIREMENTS.md UI-03. Phase 1 D-30 / B4 already
+/// implemented them; Plan 02.07 verifies + locks the convention against drift.
+/// Any future alteration to these breakpoints requires a coordinated UI-03 RFC.
+///
+/// Color-coded quota progress bar per UI-02 / UI-03 (REQUIREMENTS.md authoritative, B4).
 ///
 /// Color mapping:
 ///   - `quota == nil`    → gray bar + "no limit" caption (D-14, ROUTER-03)

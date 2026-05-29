@@ -18,28 +18,42 @@ public struct FooterView: View {
     public init() {}
 
     public var body: some View {
-        HStack(spacing: 8) {
-            Button {
-                Task {
-                    await store.refresh(now: clock.now())
+        // Plan 02.07 (UI-05): the footer now stacks a small "Resets HH:mm <TZ>" caption
+        // above the action buttons so the user knows exactly when the today aggregation
+        // window resets (local midnight, DST-correct via Calendar.current).
+        VStack(spacing: 4) {
+            HStack {
+                Text(TodayHelper.resetClockText(clock.now()))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+
+            HStack(spacing: 8) {
+                Button {
+                    Task {
+                        await store.refresh(now: clock.now())
+                    }
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
                 }
-            } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
-            }
-            .keyboardShortcut("r", modifiers: .command)
-            .buttonStyle(HoverableBorderedButtonStyle())
-            .tint(.accentColor)
+                .keyboardShortcut("r", modifiers: .command)
+                .buttonStyle(HoverableBorderedButtonStyle())
+                .tint(.accentColor)
 
-            Spacer()
+                Spacer()
 
-            Button("Quit") {
-                NSApp.terminate(nil)
+                Button("Quit") {
+                    NSApp.terminate(nil)
+                }
+                .keyboardShortcut("q", modifiers: .command)
+                .buttonStyle(HoverableBorderedButtonStyle())
             }
-            .keyboardShortcut("q", modifiers: .command)
-            .buttonStyle(HoverableBorderedButtonStyle())
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.bottom, 4)
     }
 }
 

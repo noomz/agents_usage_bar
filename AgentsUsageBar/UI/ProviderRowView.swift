@@ -15,61 +15,71 @@ import SwiftUI
 /// No `@StateObject`, `ObservableObject`, `@Published`, or Combine — pure value render from `ProviderState`.
 public struct ProviderRowView: View {
     public let state: ProviderState
+    /// Plan 02.07 — environment-injected store + clock for `isStale(_:now:)`.
+    /// Available since Plan 01.08 wires both into the SwiftUI environment.
+    @Environment(AggregateStore.self) private var store
+    @Environment(\.clockService) private var clock
 
     public init(state: ProviderState) {
         self.state = state
     }
 
     public var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            // Status dot aligned to top of content
-            StatusDot(status: state.status)
-                .padding(.top, 3)
+        // Plan 02.07 (UI-08): wrap the row in a TimelineView so the staleness predicate
+        // re-evaluates as time crosses the 2 × interval threshold. Body recomputation is
+        // a single-row, integer-math cost — acceptable per RESEARCH §H.2.
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+            let isStale = store.isStale(state.id, now: ctx.date)
+            HStack(alignment: .top, spacing: 10) {
+                // Status dot aligned to top of content
+                StatusDot(status: state.status, isStale: isStale)
+                    .padding(.top, 3)
 
-            VStack(alignment: .leading, spacing: 4) {
-                // Provider name
-                Text(state.displayName)
-                    .font(.subheadline.weight(.semibold))
+                VStack(alignment: .leading, spacing: 4) {
+                    // Provider name
+                    Text(state.displayName)
+                        .font(.subheadline.weight(.semibold))
 
-                // Token count · USD cost · balance
-                HStack(spacing: 4) {
-                    Text(tokenText(state.snapshot))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Text("·")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Text(usdText(state.snapshot))
-                        .font(.caption2)
-                        .monospacedDigit()
-                    if let bal = balanceText(state.snapshot), !bal.isEmpty {
+                    // Token count · USD cost · balance
+                    HStack(spacing: 4) {
+                        Text(tokenText(state.snapshot))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                         Text("·")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text(bal)
+                        Text(usdText(state.snapshot))
+                            .font(.caption2)
+                            .monospacedDigit()
+                        if let bal = balanceText(state.snapshot), !bal.isEmpty {
+                            Text("·")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text(bal)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                    }
+
+                    // Quota bar
+                    QuotaBar(quota: state.snapshot?.quota)
+                        .frame(maxWidth: .infinity)
+
+                    // Reset countdown + relative timestamp
+                    HStack(spacing: 8) {
+                        RelativeTimestampLabel(date: state.lastSuccess, isStale: isStale)
+                        Spacer()
+                        // OpenRouter has no per-day reset countdown (RESEARCH Open Question #4)
+                        Text("Resets —")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                            .monospacedDigit()
                     }
                 }
-
-                // Quota bar
-                QuotaBar(quota: state.snapshot?.quota)
-                    .frame(maxWidth: .infinity)
-
-                // Reset countdown + relative timestamp
-                HStack(spacing: 8) {
-                    RelativeTimestampLabel(date: state.lastSuccess)
-                    Spacer()
-                    // OpenRouter has no per-day reset countdown (RESEARCH Open Question #4)
-                    Text("Resets —")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
     }
 
     // MARK: - Private helpers
@@ -97,6 +107,17 @@ public struct ProviderRowView: View {
 
 // MARK: - Previews
 
+@MainActor
+private func previewStore() -> AggregateStore {
+    AggregateStore(
+        registry: [],
+        clock: SystemClock(),
+        cache: NoopCacheStore(),
+        thresholds: ThresholdEngine(),
+        notifications: NoopNotificationManager()
+    )
+}
+
 #Preview("ProviderRowView — ok with quota") {
     let snapshot = UsageSnapshot(
         providerID: ProviderID(rawValue: "openrouter"),
@@ -115,6 +136,7 @@ public struct ProviderRowView: View {
         lastSuccess: .now.addingTimeInterval(-30)
     )
     return ProviderRowView(state: state)
+        .environment(previewStore())
         .frame(width: 360)
 }
 
@@ -127,6 +149,7 @@ public struct ProviderRowView: View {
         lastSuccess: nil
     )
     return ProviderRowView(state: state)
+        .environment(previewStore())
         .frame(width: 360)
 }
 
@@ -139,5 +162,6 @@ public struct ProviderRowView: View {
         lastSuccess: nil
     )
     return ProviderRowView(state: state)
+        .environment(previewStore())
         .frame(width: 360)
 }
