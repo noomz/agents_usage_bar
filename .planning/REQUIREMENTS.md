@@ -16,11 +16,11 @@
 
 ### Provider — Claude
 
-- [ ] **CLAUDE-01**: App parses `~/.claude/projects/**/*.jsonl` (streaming, line-by-line) and sums today's per-model input/output/cache-read/cache-create tokens
-- [ ] **CLAUDE-02**: App caches `lastReadOffset` per transcript file so subsequent polls read only the delta
-- [ ] **CLAUDE-03**: Transcript parsing uses a lenient `Codable` with `extraFields` so unknown future fields do not zero out the row
-- [ ] **CLAUDE-04**: If `~/.claude/.credentials.json` (or Keychain `Claude Code-credentials`) exists, app calls `GET https://api.anthropic.com/api/oauth/usage` with header `anthropic-beta: oauth-2025-04-20` and surfaces `five_hour` + `seven_day` quota windows with reset times
-- [ ] **CLAUDE-05**: Claude row computes today's USD cost via an embedded `models.json` price table (input / output / cache-read / cache-create per model)
+- [x] **CLAUDE-01**: App parses `~/.claude/projects/**/*.jsonl` (streaming, line-by-line) and sums today's per-model input/output/cache-read/cache-create tokens
+- [x] **CLAUDE-02**: App caches `lastReadOffset` per transcript file so subsequent polls read only the delta
+- [x] **CLAUDE-03**: Transcript parsing uses a lenient `Codable` with `extraFields` so unknown future fields do not zero out the row
+- [x] **CLAUDE-04**: If `~/.claude/.credentials.json` (or Keychain `Claude Code-credentials`) exists, app calls `GET https://api.anthropic.com/api/oauth/usage` with header `anthropic-beta: oauth-2025-04-20` and surfaces `five_hour` + `seven_day` quota windows with reset times
+- [x] **CLAUDE-05**: Claude row computes today's USD cost via an embedded `models.json` price table (input / output / cache-read / cache-create per model)
 
 ### Provider — Codex
 
@@ -173,11 +173,11 @@
 | SHELL-04 | Phase 1 | Complete |
 | SHELL-05 | Phase 5 | Pending |
 | SHELL-06 | Phase 1 | Complete |
-| CLAUDE-01 | Phase 2 | Pending |
-| CLAUDE-02 | Phase 2 | Pending |
-| CLAUDE-03 | Phase 2 | Pending |
-| CLAUDE-04 | Phase 2 | Pending |
-| CLAUDE-05 | Phase 2 | Pending |
+| CLAUDE-01 | Phase 2 | Complete |
+| CLAUDE-02 | Phase 2 | Complete |
+| CLAUDE-03 | Phase 2 | Complete |
+| CLAUDE-04 | Phase 2 | Complete |
+| CLAUDE-05 | Phase 2 | Complete |
 | CODEX-01 | Phase 3 | Pending |
 | CODEX-02 | Phase 3 | Pending |
 | CODEX-03 | Phase 3 | Pending |
