@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-last_updated: 2026-05-20T08:22:19.464Z
+status: planning
+last_updated: "2026-05-21T09:00:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 34
+  completed_phases: 4
+  total_plans: 40
   completed_plans: 34
-  percent: 50
-stopped_at: Phase 04 complete (9/9) — ready to discuss Phase 5
+  percent: 67
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-19 (Phase 4 Plan 04-09 complete — `04-UAT.md` authored (243 lines, 10-row test outcomes table, 5 manual + 5 unit-test attestation, pre-conditions checklist, per-test PASS criteria, D-04 verbatim subtitle, LOCAL-01..06 all referenced, 16 named test suites cited, reviewer-signal protocol, Hotfixes stub, Phase 4 Success Criteria Mapping); build SHA pinned `883702b`; force-add per Phase 2/3 precedent; Task 2 (checkpoint:human-verify) deferred to post-merge reviewer per `autonomous:false` + Phase 3 03-09 precedent (e192b0a). Commits: efe829b (UAT walkthrough) + 26896a4 (SUMMARY). Phase 4 STATUS = AWAITING UAT; phase exit BLOCKED on reviewer signal (`approved` / `failed: <test#>` / `deferred: <test#>`); STATE/ROADMAP do NOT mark Phase 4 complete until reviewer signals `approved`.)
+**Last Updated:** 2026-05-21 (Phase 5 planning complete — 6/6 PLAN.md files drafted at `.planning/phases/05-first-run-ux-settings-polish/05-{01..06}-PLAN.md`. Wave structure: Wave 1 (05-01 Settings scaffold + WindowActivationObserver); Wave 2 (05-02 UserPreferencesStore + ConfigStore precedence overlay); Wave 3 (05-03 SettingsGeneralTab + hot-reload, 05-04 DetectionProbe + OnboardingCopy + SettingsProvidersTab, parallel); Wave 4 (05-05 WelcomeWindowController + WelcomeRootView); Wave 5 (05-06 SettingsAboutTab + CFG-06 CI step + 05-UAT.md). All 5 Phase 5 requirements traced: SHELL-05→05-01/03, CFG-03→05-04/05, CFG-04→05-04/05/06, CFG-05→05-02/03, CFG-06→05-04/05/06. ROADMAP.md Plans field updated from TBD. STATE.md total_plans 34→40. Phase 5 STATUS = READY TO EXECUTE; entry-point `/gsd-execute-phase 05`. Commit: 7d39d63.)
+**Last Updated (previous):** 2026-05-19 (Phase 4 Plan 04-09 complete — `04-UAT.md` authored (243 lines, 10-row test outcomes table, 5 manual + 5 unit-test attestation, pre-conditions checklist, per-test PASS criteria, D-04 verbatim subtitle, LOCAL-01..06 all referenced, 16 named test suites cited, reviewer-signal protocol, Hotfixes stub, Phase 4 Success Criteria Mapping); build SHA pinned `883702b`; force-add per Phase 2/3 precedent; Task 2 (checkpoint:human-verify) deferred to post-merge reviewer per `autonomous:false` + Phase 3 03-09 precedent (e192b0a). Commits: efe829b (UAT walkthrough) + 26896a4 (SUMMARY). Phase 4 STATUS = AWAITING UAT; phase exit BLOCKED on reviewer signal (`approved` / `failed: <test#>` / `deferred: <test#>`); STATE/ROADMAP do NOT mark Phase 4 complete until reviewer signals `approved`.)
 **Last Updated (previous):** 2026-05-19 (Phase 4 Plan 04-08 complete — `AppDependencies.makeProduction()` wired with two-tier URLSessionHTTPClient (8s remote / 2s localhost); Ollama registered when `config.ollama.enabled`; LM Studio registered when `config.lmstudio.enabled` with `config.lmstudio.port`; llama.cpp registered when `config.llamacpp.enabled && port != nil` (LOCAL-03 no-scanning); cold-launch placeholder seeds for Ollama/LM Studio (`.notRunning`, OPTION A visibility); D-04 discoverability placeholder for llama.cpp with verbatim subtitle `"Set [llamacpp] port in config.toml to enable"` when unconfigured; B1/B6/B9 invariants preserved; 16 new Swift Testing cases (7 `AppDependenciesLocalRegistrationTests` + 5 `ThresholdEngineLocalNilQuotaTests` + 4 `AggregateStoreLocalRollupTests`); pre-existing Plan 04-06 build gaps fixed (FakeLlamaCppHTTPClient conformance, wrong test double names, missing PBXBuildFile entries); pbxproj wired via AA040800 UUID namespace (12 entries). Commit: b0223b9.)
 **Last Updated (previous):** 2026-05-19 (Phase 4 Plan 04-07 complete — `LocalRowSecondaryView` helper renders five D-02/D-03 row states (A notRunning / B idle-0-loaded / B' no-models-installed / C single-model+VRAM / D multi-model+N-more / E loading-model) for `isLocal=true` rows; `ProviderRowView` branches on `ProviderID.localIDs.contains(state.id)` (`private var isLocal`) replacing the `tokens·USD·balance` HStack with `LocalRowSecondaryView` for local rows; LOCAL-06 anti-feature enforced at rendering layer — `tokenText()`/`usdText()`/`balanceText()` unreachable from `isLocal=true` branch (source-walk test asserts); D-04 `placeholderMessage` highest-priority branch; VRAM suffix `"X.X GB VRAM"` via `Double(vramBytes)/1_073_741_824` suppressed when `vramBytes==0` (OQ-4); Phase 3 invariants preserved: `arrow.up.right.square` ×1, D-11 `"usage temporarily unavailable"` subtitle; 23 new Swift Testing cases (16 `LocalRowSecondaryViewTests` + 7 `ProviderRowViewLocalRowTests`); pbxproj wired via AA040700 UUID namespace (12 entries). Commit: d4a9d0a.)
 **Last Updated (previous):** 2026-05-19 (Phase 4 Plan 04-06 complete — `LlamaCppProvider` actor concurrent fan-out `async let` on `GET /health` + `GET /v1/models`; opportunistic `GET /slots`; state-E "loading model" HTTP-200 → `.ok` + `raw["loadingModel"]="true"` (never `.error`, OQ-1); OQ-3 unknown status leniency → treated as running; `LlamaCppHealthResponse` nil-tolerant discriminator helpers (`isOK`/`isLoading`/`isErrorStatus`/`hasNoSlot`); `LlamaCppV1ModelsResponse.modelBasename` via `URL(fileURLWithPath:).lastPathComponent`; `LlamaCppSlotsResponse` custom `unkeyedContainer` decode for top-level JSON array; `ProviderState.placeholder(placeholderMessage: String? = nil)` + `AggregateStore.seedPlaceholder(placeholderMessage: String? = nil)` extended (D-04 carrier, zero-blast-radius back-compat); D-04 verbatim: `"Set [llamacpp] port in config.toml to enable"`; `placeholderFactory_carriesNotRunningStatus` asserts BOTH `status==.notRunning` AND exact message; LOCAL-06: `tokensToday=nil`/`costTodayUSD=nil`/`quota=nil` always; `bearer: nil` on all probes (SEC-01); no CircuitBreaker (D-12); never throws; 33 new Swift Testing cases (15 `LlamaCppProviderTests` + 11 `LlamaCppResponsesCodableTests` + 5 `ProviderStatePlaceholderMessageTests` + 5 `AggregateStoreSeedPlaceholderMessageTests`); 6 JSON fixtures; pbxproj wired via AA040600 UUID namespace (44 entries). Commit: 83b48b4.)
@@ -45,12 +45,12 @@ Phase: 03 (remote-api-providers-codex-gemini) — AWAITING UAT (9/9 plans execut
 
 - **Milestone:** v1 (initial release)
 - **Phase:** 5 of 6 (first run ux + settings polish)
-- **Plan:** Not started
-- **Status:** Ready to plan
-- **Progress:** [█████████░] 94% (32/34 plans executed; Phase 4 all 9 plans complete; Phase 3 + Phase 4 both awaiting UAT reviewer approval)
+- **Plan:** Not started (6 plans drafted — ready to execute)
+- **Status:** Ready to execute
+- **Progress:** [█████████░] 85% (34/40 plans executed; Phase 5 planning done; Phase 3 + Phase 4 both awaiting UAT reviewer approval)
 
 ```
-[███████████████████████████████████████████████████████████████░░░░░░░] 94% (32/34 plans executed; Phase 4 code-complete AWAITING UAT signal — `approved` / `failed: <test#>` / `deferred: <test#>`; Phase 3 also AWAITING UAT)
+[████████████████████████████████████████████████████████░░░░░░░░░░░░░] 85% (34/40 plans executed; Phase 5 6/6 plans drafted — ready for /gsd-execute-phase 05; Phase 4 AWAITING UAT; Phase 3 AWAITING UAT)
 ```
 
 ## Performance Metrics
