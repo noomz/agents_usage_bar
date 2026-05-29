@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-05-19T21:00:00.000Z"
+status: ready_to_plan
+last_updated: 2026-05-20T08:22:19.464Z
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 34
-  completed_plans: 32
-  percent: 94
+  completed_plans: 34
+  percent: 50
+stopped_at: Phase 04 complete (9/9) — ready to discuss Phase 5
 ---
 
 # Project State: Agents Usage Bar
@@ -35,7 +36,7 @@ progress:
 
 **What This Is:** A macOS menu bar app that surfaces today's AI agent usage across Claude, OpenAI Codex, Gemini, OpenRouter, and local agents (Ollama, LM Studio, llama.cpp) — tokens used, USD spent, quota remaining per provider — with native notifications at threshold crossings.
 
-**Current Focus:** Phase 04 — local-llm-presence-ollama-lm-studio-llama-cpp
+**Current Focus:** Phase 5 — first run ux + settings polish
 
 ## Current Position
 
@@ -43,9 +44,9 @@ Phase: 04 (local-llm-presence-ollama-lm-studio-llama-cpp) — AWAITING UAT (9/9 
 Phase: 03 (remote-api-providers-codex-gemini) — AWAITING UAT (9/9 plans executed — reviewer signal blocks Phase 3 close-out)
 
 - **Milestone:** v1 (initial release)
-- **Phase:** 4 of 6 (local llm presence (ollama + lm studio + llama.cpp))
-- **Plan:** 9 of 9 plans executed (04-01..04-09 complete) — Phase 4 code-complete
-- **Status:** AWAITING UAT — phase exit BLOCKED on reviewer signal for 04-UAT.md
+- **Phase:** 5 of 6 (first run ux + settings polish)
+- **Plan:** Not started
+- **Status:** Ready to plan
 - **Progress:** [█████████░] 94% (32/34 plans executed; Phase 4 all 9 plans complete; Phase 3 + Phase 4 both awaiting UAT reviewer approval)
 
 ```

@@ -105,14 +105,14 @@ Plans:
 **Plans:** 9/9 plans drafted 2026-05-18 — ready for `/gsd-execute-phase 04`
 Plans:
 - [x] 04-01-PLAN.md — Foundation: `ProviderStatus.notRunning` (non-terminal) + `UsageSnapshot.raw` key conventions + `ProviderID` constants + `ProviderError.classifyLocalhost(error:lastSuccess:)` (LOCAL-04, LOCAL-05) — Wave 1
-- [ ] 04-02-PLAN.md — Config: `OllamaConfig` + `LMStudioConfig` + `LlamaCppConfig` value types + `[ollama]`/`[lmstudio]`/`[llamacpp]` TOML parse + `AppConfig` extension (LOCAL-01, LOCAL-02, LOCAL-03) — Wave 1
-- [ ] 04-03-PLAN.md — Infrastructure: `URLSessionHTTPClient(timeoutSeconds:)` parameterization + localhost-tier 2s instance (LOCAL-01, LOCAL-02, LOCAL-03, LOCAL-05, POLL-08) — Wave 1
-- [ ] 04-04-PLAN.md — OllamaProvider actor (`/api/ps` + `/api/tags`) + lenient Codable + D-03 multi-model `+N more` row state (LOCAL-01) — Wave 2 (depends 04-01, 04-02, 04-03)
-- [ ] 04-05-PLAN.md — LMStudioProvider actor (`/api/v0/models` with `/v1/models` fallback) + lenient Codable (LOCAL-02) — Wave 2 (depends 04-01, 04-02, 04-03)
-- [ ] 04-06-PLAN.md — LlamaCppProvider actor (`/health` + `/slots` + `/v1/models`) + `"loading model"` row state + D-04 unconfigured placeholder seed + `seedPlaceholder(placeholderMessage:)` extension (LOCAL-03, LOCAL-04, LOCAL-05) — Wave 2 (depends 04-01, 04-02, 04-03)
-- [ ] 04-07-PLAN.md — UI: `ProviderRowView` secondary-line branching (D-02/D-03 five states) + `LocalRowSecondaryView` helper + `StatusDot.notRunning → .gray` + tooltip wiring + LOCAL-06 UI enforcement (LOCAL-04, LOCAL-06) — Wave 3 (depends 04-04, 04-05, 04-06)
-- [ ] 04-08-PLAN.md — Composition: `AppDependencies.makeProduction()` three new registration blocks + `ThresholdEngine` nil-quota skip regression + `AggregateStore.rollupTotals` D-07 regression for locals (LOCAL-01..06 composition) — Wave 3 (depends 04-02, 04-04, 04-05, 04-06)
-- [ ] 04-09-PLAN.md — 04-UAT.md walkthrough (5 manual + 5 unit-test attestation tests) + BLOCKING reviewer checkpoint mirroring Phase 2/3 UAT shape (LOCAL-01..06 verification) — Wave 4 (depends 04-07, 04-08)
+- [x] 04-02-PLAN.md — Config: `OllamaConfig` + `LMStudioConfig` + `LlamaCppConfig` value types + `[ollama]`/`[lmstudio]`/`[llamacpp]` TOML parse + `AppConfig` extension (LOCAL-01, LOCAL-02, LOCAL-03) — Wave 1
+- [x] 04-03-PLAN.md — Infrastructure: `URLSessionHTTPClient(timeoutSeconds:)` parameterization + localhost-tier 2s instance (LOCAL-01, LOCAL-02, LOCAL-03, LOCAL-05, POLL-08) — Wave 1
+- [x] 04-04-PLAN.md — OllamaProvider actor (`/api/ps` + `/api/tags`) + lenient Codable + D-03 multi-model `+N more` row state (LOCAL-01) — Wave 2 (depends 04-01, 04-02, 04-03)
+- [x] 04-05-PLAN.md — LMStudioProvider actor (`/api/v0/models` with `/v1/models` fallback) + lenient Codable (LOCAL-02) — Wave 2 (depends 04-01, 04-02, 04-03)
+- [x] 04-06-PLAN.md — LlamaCppProvider actor (`/health` + `/slots` + `/v1/models`) + `"loading model"` row state + D-04 unconfigured placeholder seed + `seedPlaceholder(placeholderMessage:)` extension (LOCAL-03, LOCAL-04, LOCAL-05) — Wave 2 (depends 04-01, 04-02, 04-03)
+- [x] 04-07-PLAN.md — UI: `ProviderRowView` secondary-line branching (D-02/D-03 five states) + `LocalRowSecondaryView` helper + `StatusDot.notRunning → .gray` + tooltip wiring + LOCAL-06 UI enforcement (LOCAL-04, LOCAL-06) — Wave 3 (depends 04-04, 04-05, 04-06)
+- [x] 04-08-PLAN.md — Composition: `AppDependencies.makeProduction()` three new registration blocks + `ThresholdEngine` nil-quota skip regression + `AggregateStore.rollupTotals` D-07 regression for locals (LOCAL-01..06 composition) — Wave 3 (depends 04-02, 04-04, 04-05, 04-06)
+- [x] 04-09-PLAN.md — 04-UAT.md walkthrough (5 manual + 5 unit-test attestation tests) + BLOCKING reviewer checkpoint mirroring Phase 2/3 UAT shape (LOCAL-01..06 verification) — Wave 4 (depends 04-07, 04-08)
 **UI hint:** yes
 **Phase exit:** BLOCKED on UAT — reviewer runs `.planning/phases/04-local-llm-presence-ollama-lm-studio-llama-cpp/04-UAT.md` then replies `approved` / `failed: <test>` / `deferred: <test>`.
 
