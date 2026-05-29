@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-15T17:00:00.000Z"
+last_updated: "2026-05-15T17:30:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 25
-  completed_plans: 19
-  percent: 76
+  completed_plans: 20
+  percent: 80
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-15 (Phase 3 Plan 05 executed — Gemini OAuth + credential layer landed: GeminiSettingsGate (nested security.auth.selectedType keypath) + GeminiOAuthCredentials (epoch-ms expiry_date) + GeminiCredentialLoader (Pitfall 9 muted-row contract) + GeminiOAuthError + GeminiTokenRefreshResponse (no rotating-token field — Pitfall 10 static guard) + GeminiOAuthClient actor (D-09 eager-pre-check + lazy-401 + D-10 in-memory only). HTTPClient widened with `postFormURLEncoded` for OAuth2 form grants. ci.yml SEC-04 gains `--exclude='GeminiOAuthClient.swift'`. 30 new tests across 3 suites (GeminiSettingsGate×10 + GeminiCredentialLoader×8 + GeminiOAuthClient×12); full regression 423 tests across 53 suites; clean Debug build)
+**Last Updated:** 2026-05-15 (Phase 3 Plan 02 executed — Codex USD cost calculator primitive landed: `Resources/Pricing/codex-models.json` bundle (7 OpenAI Codex-capable models + default fallback) + `CodexModelPricing.swift` cascade-lookup struct (Codex-specialised: `inputPerMToken / outputPerMToken / cachedInputPerMToken` Rate shape; LookupSource collapsed to `.exact / .defaultFallback / .nilModel`; `reasoningOutputTokens` parameter INTENTIONALLY ignored in math per RESEARCH §Embedded Pricing). Blocking `checkpoint:human-verify` resolved as "pricing page inaccessible — use draft as best-effort" (plan-permitted third response; rationale recorded inline in the JSON `source` field per T-03.02-03 disposition — JSON is a bundle resource patchable without recompile). 9 new `@Test` cases in `CodexModelPricingTests` including RESEARCH 2026 fixture totals (input=551589, cached=505856, output=4880, reasoning=620) → hand-computed $0.061586; Claude regression suite green. Built `.app/Contents/Resources/` now ships both `claude-models.json` and `codex-models.json`. pbxproj edits applied via byte-level python3 substitution after Edit-tool em-dash + tab-indent friction)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -29,17 +29,17 @@ progress:
 ## Current Position
 
 Phase: 03 (remote-api-providers-codex-gemini) — EXECUTING
-Plan: 3 of 9 plans executed (Plan 01 ✅ — `03-01-SUMMARY.md`, commits e2bcd5e + 6a18026 + a31b99a; Plan 03 ✅ — `03-03-SUMMARY.md`, commits d16b180 + a5f62df; Plan 05 ✅ — `03-05-SUMMARY.md`, commits df3ec24 + eb32dc4 + eaee6c6)
-Phase: 03 — Plans 01 + 03 + 05 ✅ COMPLETE (Codex rollout discovery + Codex OAuth fallback + Gemini OAuth + credential layer)
+Plan: 4 of 9 plans executed (Plan 01 ✅ — `03-01-SUMMARY.md`, commits e2bcd5e + 6a18026 + a31b99a; Plan 02 ✅ — `03-02-SUMMARY.md`, commits dd160a0 + 43f97ae; Plan 03 ✅ — `03-03-SUMMARY.md`, commits d16b180 + a5f62df; Plan 05 ✅ — `03-05-SUMMARY.md`, commits df3ec24 + eb32dc4 + eaee6c6)
+Phase: 03 — Plans 01 + 02 + 03 + 05 ✅ COMPLETE (Codex rollout discovery + Codex USD pricing + Codex OAuth fallback + Gemini OAuth + credential layer)
 
 - **Milestone:** v1 (initial release)
 - **Phase:** 3 of 6 — Remote API Providers (Codex + Gemini) — EXECUTING
-- **Plan:** 3 of 9 plans executed (Plan 01 ✅; Plan 03 ✅; Plan 05 ✅)
+- **Plan:** 4 of 9 plans executed (Plan 01 ✅; Plan 02 ✅; Plan 03 ✅; Plan 05 ✅)
 - **Status:** Ready to execute
-- **Progress:** [████████░░] 76%
+- **Progress:** [████████░░] 80%
 
 ```
-[█████████████████████████████████████████████████████████████░░░] 76% (19/25 plans complete to date; Phase 3 in progress with 3/9 done)
+[████████████████████████████████████████████████████████████████░░] 80% (20/25 plans complete to date; Phase 3 in progress with 4/9 done)
 ```
 
 ## Performance Metrics
@@ -47,11 +47,11 @@ Phase: 03 — Plans 01 + 03 + 05 ✅ COMPLETE (Codex rollout discovery + Codex O
 | Metric | Value |
 |--------|-------|
 | Phases complete | 2 / 6 (Phase 2 UAT approved 2026-05-15) |
-| Plans complete | 19 / 25 (Phase 1: 9 + Phase 2: 7 + Phase 3 Plans 01 + 03 + 05: 3) |
+| Plans complete | 20 / 25 (Phase 1: 9 + Phase 2: 7 + Phase 3 Plans 01 + 02 + 03 + 05: 4) |
 | Requirements mapped | 76 / 76 (100%) |
 | Requirements validated | 42 / 76 (Phase 1 + Phase 2 sets — Tests 1-2 manual PASS; Tests 3-10 covered by unit-test suites per `02-UAT.md` attestation table) |
 | Plans drafted | 25 (Phase 3 plans 01–09 drafted 2026-05-15) |
-| Plans executed | 19 (Phase 1 = 9; Phase 2 = 7 across Waves 1–5; Phase 3 Plan 01 = 1 in e2bcd5e + 6a18026 + a31b99a; Phase 3 Plan 03 = 1 in d16b180 + a5f62df; Phase 3 Plan 05 = 1 in df3ec24 + eb32dc4 + eaee6c6) |
+| Plans executed | 20 (Phase 1 = 9; Phase 2 = 7 across Waves 1–5; Phase 3 Plan 01 = 1 in e2bcd5e + 6a18026 + a31b99a; Phase 3 Plan 02 = 1 in dd160a0 + 43f97ae; Phase 3 Plan 03 = 1 in d16b180 + a5f62df; Phase 3 Plan 05 = 1 in df3ec24 + eb32dc4 + eaee6c6) |
 | Node repairs | 1 (Phase 2 Wave 1 salvage — see Phase 2 backprop) |
 | UI phases run | 0 |
 | UAT gaps closed | 1 (Test 2 cosmetic hover state) |
@@ -60,6 +60,7 @@ Phase: 03 — Plans 01 + 03 + 05 ✅ COMPLETE (Codex rollout discovery + Codex O
 | Phase 02 P06 duration | ~12 min, 2 tasks, 10 files modified, 29 new tests |
 | Phase 02 P07 duration | ~25 min, 3 tasks (2 code + 1 docs), 11 files modified, 30 new tests |
 | Phase 03 P01 duration | ~35 min, 3 tasks, 11 files created/modified, 23 new tests |
+| Phase 03 P02 duration | ~10 min, 2 tasks (1 checkpoint + 1 implementation), 5 files created/modified, 9 new tests |
 | Phase 03 P03 duration | ~25 min, 2 tasks, 12 files created/modified, 23 new tests |
 | Phase 03 P05 duration | ~75 min, 3 tasks, 17 files created/modified, 30 new tests |
 
@@ -144,6 +145,9 @@ Phase: 03 — Plans 01 + 03 + 05 ✅ COMPLETE (Codex rollout discovery + Codex O
 75. D-10 enforced both **statically** (no `Data.write`, `try data.write(to:)`, or `FileManager.write` calls in `GeminiOAuthClient.swift` — grep-verified; the refreshed access_token lives ONLY in `cachedAccessToken` actor-isolated state) AND **dynamically** (Test 9 byte-compares the on-disk creds-file fixture before and after a successful refresh). Together: belt-and-suspenders D-10 file-write contract.
 76. `GeminiOAuthClient.clientID` + `clientSecret` hard-coded in source as `public static let` constants (RFC 6749 §2.1 — installed-app client_secrets are public). Documented as "re-verify if Gemini auth breaks wholesale" — Google has rotated these credentials rarely. ci.yml SEC-04 gains `--exclude='GeminiOAuthClient.swift'` (Phase 1 STATE #39 self-reference precedent). Current SEC-04 patterns (`sk-proj-|sk-admin-|sk-or-|AIzaSy|sk-[A-Za-z0-9]{20,}`) do not match `GOCSPX-` yet — the exclusion is forward-compatible.
 77. `HTTPClient` protocol widened with `postFormURLEncoded(_:formFields:extraHeaders:as:) async throws -> T` for OAuth2 `application/x-www-form-urlencoded` grants. The two existing `HTTPClient` test doubles (`FakeHTTPClient` in `ClaudeOAuthClientTests`, `FakeCodexHTTPClient` in `CodexOAuthClientTests`) gain stub conformances; the new `FakeGeminiHTTPClient` is the only one that actually scripts `postFormURLEncoded` responses and captures the wire body for the refresh-shape test. **Rule-1 production bug-fix**: `URLSessionHTTPClient.postFormURLEncoded` does NOT set `keyDecodingStrategy = .convertFromSnakeCase` because `GeminiTokenRefreshResponse` declares explicit snake_case `CodingKeys` — the strategy pre-rewrites JSON keys to camelCase before lookup and misses the explicit `"access_token"` mapping. Matches Codex test-fake decoder convention (plain `JSONDecoder()`).
+78. `CodexModelPricing` Rate shape uses `inputPerMToken / outputPerMToken / cachedInputPerMToken` (Codex semantics per RESEARCH §Embedded Pricing) — INTENTIONALLY divergent from `ClaudeModelPricing`'s `inputPer1M / outputPer1M / cacheWritePer1M / cacheReadPer1M`. The JSON file visibly carries Codex semantics; no key-rewrite glue. LookupSource collapsed to `.exact / .defaultFallback / .nilModel` — no prefix/family heuristic (Codex IDs share no stable family prefix; the rollout `token_count` event doesn't surface model IDs today, so `default` is the hot path). `cost(...)` accepts `reasoningOutputTokens` as a documentary parameter and INTENTIONALLY IGNORES it in the math (RESEARCH: `reasoning_output_tokens` is a SUBSET of `output_tokens` and would double-bill if added).
+79. Plan 03-02 BLOCKING `checkpoint:human-verify` against openai.com/api/pricing/ was consciously resolved with the plan's third permitted reviewer response — "pricing page inaccessible — use draft as best-effort" — under the no-clarify operating directive. T-03.02-03 disposition justifies the deferral: `codex-models.json` is a runtime bundle resource, post-distribution correction is a JSON patch + signed update with NO Swift recompile. The `default` entry (the hot path today since rollouts don't carry model IDs in `token_count` events) mirrors `codex-mini-latest` per RESEARCH guidance. The `source` field of the JSON records the deferral verbatim for a future reviewer to date.
+80. Phase 3 pbxproj edits with em-dash / tab-indent complexity (group children at 4-tab indent vs build-file declarations at 2-tab indent) require byte-level `python3` substitution (`data.replace(old, new)` with explicit `\xe2\x80\x94` em-dash and exact `\t\t\t\t` tab sequences plus `data.count(old) != 1` pre-checks). The Edit tool silently rejects these inputs without reporting *why*. Worktree-future: track this as a candidate `references/pbxproj-byte-edit-pattern.md` if the pattern recurs.
 
 ### Open Questions (from research)
 
@@ -181,12 +185,18 @@ Phase: 03 — Plans 01 + 03 + 05 ✅ COMPLETE (Codex rollout discovery + Codex O
 ### Last Session
 
 - **Date:** 2026-05-15
+- **Worked on:** Phase 03 Plan 02 — Codex USD cost calculator primitive. Two tasks: (1) BLOCKING `checkpoint:human-verify` against openai.com/api/pricing/ — resolved as "pricing page inaccessible — use draft as best-effort" (plan's third permitted reviewer response). Rationale recorded inline in the bundled JSON `source` field per T-03.02-03 disposition (JSON is a runtime bundle resource; post-distribution correction is a one-line patch without Swift recompile). (2) Authored `Resources/Pricing/codex-models.json` (7 OpenAI Codex-capable models: codex-mini-latest, o4-mini, o3, o3-mini, gpt-4.1, gpt-4.1-mini, gpt-4.1-nano + default fallback mirroring codex-mini-latest), `CodexModelPricing.swift` cascade-lookup struct (Codex-specialised: `inputPerMToken / outputPerMToken / cachedInputPerMToken` Rate shape; LookupSource collapsed to `.exact / .defaultFallback / .nilModel`; `reasoningOutputTokens` cost(...) parameter INTENTIONALLY ignored in math per RESEARCH schema invariant), tests fixture, 9 Swift Testing `@Test` cases including RESEARCH 2026 fixture event totals → hand-computed $0.061586. Full Debug build green; built `.app/Contents/Resources/` ships both `claude-models.json` and `codex-models.json`; Claude regression suite (13 cases) green. pbxproj edits required byte-level `python3` substitution after the Edit tool silently rejected em-dash + tab-indent input on the group-children blocks.
+- **Commits:** dd160a0 (codex-models.json + fixture), 43f97ae (CodexModelPricing.swift + tests + pbxproj wiring across 9 surgical patches in the AA030202 UUID namespace).
+
+### Previous Session
+
+- **Date:** 2026-05-15
 - **Worked on:** Phase 03 Plan 05 — Gemini OAuth + credential layer. Three tasks executed sequentially: (1) `GeminiSettingsGate` namespace enum reading `~/.gemini/settings.json` at the NESTED keypath `security.auth.selectedType` (RESEARCH correction #2); 10 Swift Testing cases including a regression-guard for the flat-keypath shape. (2) `GeminiOAuthCredentials` Codable struct (explicit snake_case CodingKeys; `expiryDate: Double` as epoch MILLISECONDS per RESEARCH correction #3; `expiryDateAsDate()` divides by 1000.0) + `GeminiCredentialLoader` file-only resolver (Pitfall 9 keychain-migration → returns nil → downstream muted row); 8 tests including SEC-02 logger-interpolation source-scan. (3) `GeminiOAuthError` typed enum + `GeminiTokenRefreshResponse` (INTENTIONALLY omits refresh_token field — Pitfall 10 static guard) + `GeminiOAuthClient` actor implementing D-09 (eager 60s skew + lazy-401 retry, in-memory only per D-10) calling `POST oauth2.googleapis.com/token` form-urlencoded with hard-coded RFC 6749 §2.1 public client_id + client_secret; 12 tests including byte-compare D-10 invariant and source-grep Pitfall 10 static guard. `HTTPClient` widened with `postFormURLEncoded` (Claude + Codex test fakes gain stub conformances); ci.yml SEC-04 gains `--exclude='GeminiOAuthClient.swift'`. 30 new tests across 3 suites; full regression 423 tests across 53 suites; Debug build succeeds. Three Rule-1 deviations recorded: (a) Production decoder bug-fix — `URLSessionHTTPClient.postFormURLEncoded` had `keyDecodingStrategy = .convertFromSnakeCase` which clobbers explicit snake_case `CodingKeys` (Apple rewrites JSON keys to camelCase before lookup); fixed to plain `JSONDecoder()` matching Codex precedent. (b)+(c) Doc-comment literal-string rewrites for `selectedAuthType` and `revealForRequest` to satisfy acceptance grep gates without semantic change (Phase 3 STATE #67 precedent).
 - **Commits:** df3ec24 (Task 1 — GeminiSettingsGate + 10 tests + 2 fixtures), eb32dc4 (Task 2 — GeminiOAuthCredentials + GeminiCredentialLoader + 8 tests + 1 fixture), eaee6c6 (Task 3 — GeminiOAuthError + GeminiTokenRefreshResponse + GeminiOAuthClient + 12 tests + 1 fixture + HTTPClient.postFormURLEncoded extension + ci.yml SEC-04 exclusion).
 
 ### Next Session
 
-- **Suggested action:** `/gsd-execute-phase 03 --plan 06` — Phase 3 Plan 06 (`GeminiOAuthProvider` composition + v1internal:retrieveUserQuota + v1internal:loadCodeAssist + degraded UX D-11). Plan 05's primitives (settings gate + credential loader + OAuth client with D-09/D-10/Pitfall 10 guards) are ready to be wired into the `UsageProvider` actor. Alternatively `/gsd-execute-phase 03 --plan 02` (Codex pricing — BLOCKING human-verify checkpoint) or `/gsd-execute-phase 03 --plan 04` (`CodexJSONLProvider` composition once pricing lands).
+- **Suggested action:** `/gsd-execute-phase 03 --plan 04` — Phase 3 Plan 04 (`CodexJSONLProvider` actor composing 03-01 rollout discovery + 03-02 pricing calculator + 03-03 OAuth fallback into the `UsageProvider` contract). All three Codex primitive plans (01 + 02 + 03) are now done — Plan 04 is the composition that finally surfaces a `UsageSnapshot` with USD + primary/secondary quota windows. Alternatively `/gsd-execute-phase 03 --plan 06` (Gemini OAuth provider composition) which has the symmetric Gemini stack ready.
 - **Deferred:** Test 7 (Energy Impact battery soak) — 1hr battery-only soak; schedule before Phase 6 distribution.
 - **Memory candidate:** `feature_claude_quota_detail_view` — Phase 05+ candidate; data already in `UsageSnapshot.quotaWindows`.
 

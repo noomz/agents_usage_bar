@@ -77,10 +77,10 @@ Plans:
   3. When `~/.gemini/oauth_creds.json` is present with `selectedAuthType:"oauth-personal"`, the Gemini row shows per-model `remainingFraction` + ISO `resetTime`, refreshes the bearer automatically when expired, and surfaces tier label in row tooltip.
   4. If Gemini's `v1internal:retrieveUserQuota` endpoint returns 4xx/5xx, the Gemini row reads "Gemini usage temporarily unavailable" — other provider rows continue refreshing unaffected.
   5. Every provider row has a one-click "Open dashboard" button that launches the provider's web console in the default browser.
-**Plans:** 3/9 executed
+**Plans:** 4/9 executed
 Plans:
 - [x] 03-01-PLAN.md — CodexRolloutScanner (today+yesterday YYYY/MM/DD walk + symlink canonicalisation) + CodexRolloutEvent lenient Codable + CodexRolloutParser fold-to-last-token-count (CODEX-01 partial, CODEX-03 partial) — see `03-01-SUMMARY.md`, commits e2bcd5e + 6a18026 + a31b99a ✓ 2026-05-15
-- [ ] 03-02-PLAN.md — `Resources/Pricing/codex-models.json` bundle + CodexModelPricing cascade-lookup + BLOCKING checkpoint:human-verify against openai.com/api/pricing/ (CODEX-04)
+- [x] 03-02-PLAN.md — `Resources/Pricing/codex-models.json` bundle (7 models + default) + CodexModelPricing cascade-lookup (Codex-specialised Rate shape + reasoningOutputTokens-not-double-counted invariant) + BLOCKING checkpoint:human-verify resolved as "pricing page inaccessible — use draft as best-effort" per T-03.02-03 (CODEX-04 partial — primitive complete; full satisfaction requires Plan 03-04 composition) — see `03-02-SUMMARY.md`, commits dd160a0 + 43f97ae ✓ 2026-05-15
 - [x] 03-03-PLAN.md — CodexCredentialLoader (~/.codex/auth.json: tokens.access_token + optional ChatGPT-Account-Id) + CodexOAuthClient (GET /backend-api/wham/usage) + CodexUsageResponse Codable (CODEX-02) — see `03-03-SUMMARY.md`, commits d16b180 + a5f62df ✓ 2026-05-15
 - [ ] 03-04-PLAN.md — CodexJSONLProvider actor composing 03-01/02/03 + UsageSnapshot.tooltipLabel extension (CODEX-01..04 composition + D-05 max(primary, secondary) + D-15 plan_type tooltip)
 - [x] 03-05-PLAN.md — GeminiSettingsGate (nested security.auth.selectedType — RESEARCH correction #2) + GeminiCredentialLoader (oauth_creds.json with expiry_date epoch-ms — correction #3) + GeminiOAuthClient (eager-pre-check + lazy-401, in-memory token D-10, refresh_token never rotated Pitfall 10) (GEMINI-01) — see `03-05-SUMMARY.md`, commits df3ec24 + eb32dc4 + eaee6c6 ✓ 2026-05-15
