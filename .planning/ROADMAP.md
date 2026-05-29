@@ -104,7 +104,7 @@ Plans:
   5. None of the local rows ever display a cumulative-token count (LOCAL-06 anti-feature is honored); only presence + model name surfaces in the UI.
 **Plans:** 9/9 plans drafted 2026-05-18 — ready for `/gsd-execute-phase 04`
 Plans:
-- [ ] 04-01-PLAN.md — Foundation: `ProviderStatus.notRunning` (non-terminal) + `UsageSnapshot.raw` key conventions + `ProviderID` constants + `ProviderError.classifyLocalhost(error:lastSuccess:)` (LOCAL-04, LOCAL-05) — Wave 1
+- [x] 04-01-PLAN.md — Foundation: `ProviderStatus.notRunning` (non-terminal) + `UsageSnapshot.raw` key conventions + `ProviderID` constants + `ProviderError.classifyLocalhost(error:lastSuccess:)` (LOCAL-04, LOCAL-05) — Wave 1
 - [ ] 04-02-PLAN.md — Config: `OllamaConfig` + `LMStudioConfig` + `LlamaCppConfig` value types + `[ollama]`/`[lmstudio]`/`[llamacpp]` TOML parse + `AppConfig` extension (LOCAL-01, LOCAL-02, LOCAL-03) — Wave 1
 - [ ] 04-03-PLAN.md — Infrastructure: `URLSessionHTTPClient(timeoutSeconds:)` parameterization + localhost-tier 2s instance (LOCAL-01, LOCAL-02, LOCAL-03, LOCAL-05, POLL-08) — Wave 1
 - [ ] 04-04-PLAN.md — OllamaProvider actor (`/api/ps` + `/api/tags`) + lenient Codable + D-03 multi-model `+N more` row state (LOCAL-01) — Wave 2 (depends 04-01, 04-02, 04-03)
