@@ -80,3 +80,87 @@ jobs:
             -destination 'platform=macOS' \
             -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+
+  # Phase 6 Plan 06-04 (REL-08 / REL-09) — entitlement / Hardened-Runtime /
+  # Sandbox regression guard. Intentionally reads SOURCE plists + pbxproj,
+  # not a signed artifact, so it runs on every push/PR WITHOUT requiring
+  # any Apple credentials (Developer ID cert, ASC API key, etc.). The
+  # signed-artifact verification is deferred to plan 06-05's UAT once live
+  # credentials exist.
+  #
+  # plutil -extract keypath note: the entitlement key
+  # `com.apple.security.network.client` contains literal dots that plutil
+  # would otherwise interpret as nested-keypath separators. Backslash-escape
+  # each dot so plutil treats the whole string as a single top-level key.
+  entitlements-guard:
+    name: Entitlements + ATS + Hardened Runtime guard (REL-08/REL-09)
+    runs-on: macos-15
+    needs: [secret-scan]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert REL-09 — only network.client entitlement is present
+        run: |
+          set -euo pipefail
+          ENT=AgentsUsageBar/Resources/Entitlements.plist
+          # (a) network.client MUST be true (REL-09 — Sparkle + provider HTTP).
+          # Dots escaped because the key is literal, not a nested path.
+          VAL=$(plutil -extract 'com\.apple\.security\.network\.client' raw "$ENT")
+          if [ "$VAL" = "true" ]; then
+            echo "OK (REL-09): com.apple.security.network.client = true"
+          else
+            echo "FAIL (REL-09): com.apple.security.network.client must be true in $ENT (got: $VAL)"
+            exit 1
+          fi
+          # (b) Forbidden entitlements MUST be absent (REL-09 — least privilege)
+          for forbidden in disable-library-validation allow-jit allow-dyld-environment-variables app-sandbox; do
+            if grep -q "$forbidden" "$ENT"; then
+              echo "FAIL (REL-09): forbidden entitlement '$forbidden' found in $ENT"
+              exit 1
+            fi
+            echo "OK (REL-09): forbidden entitlement '$forbidden' is absent"
+          done
+
+      - name: Assert REL-08 — NSAllowsLocalNetworking is true in Info.plist
+        run: |
+          set -euo pipefail
+          INFO=AgentsUsageBar/Resources/Info.plist
+          # NSAppTransportSecurity is a dict; NSAllowsLocalNetworking is a
+          # nested key — this IS a real nested keypath so the dot is the
+          # path separator (no escape).
+          VAL=$(plutil -extract NSAppTransportSecurity.NSAllowsLocalNetworking raw "$INFO")
+          if [ "$VAL" = "true" ]; then
+            echo "OK (REL-08): NSAppTransportSecurity.NSAllowsLocalNetworking = true"
+          else
+            echo "FAIL (REL-08): NSAppTransportSecurity.NSAllowsLocalNetworking must be true in $INFO (got: $VAL)"
+            exit 1
+          fi
+
+      - name: Assert pbxproj — Hardened Runtime ON, App Sandbox OFF
+        run: |
+          set -euo pipefail
+          PBXPROJ=AgentsUsageBar.xcodeproj/project.pbxproj
+          # Hardened Runtime ENABLED (REL-09 prerequisite for notarization)
+          if grep -q "ENABLE_HARDENED_RUNTIME = YES" "$PBXPROJ"; then
+            echo "OK (REL-09): ENABLE_HARDENED_RUNTIME = YES in pbxproj"
+          else
+            echo "FAIL (REL-09): pbxproj must set ENABLE_HARDENED_RUNTIME = YES (notarization gate)"
+            exit 1
+          fi
+          # App Sandbox DISABLED (D-08 — must read ~/.claude, ~/.codex,
+          # ~/.gemini, ~/.ccs without security-scoped bookmarks)
+          if grep -q "ENABLE_APP_SANDBOX = NO" "$PBXPROJ"; then
+            echo "OK (REL-09): ENABLE_APP_SANDBOX = NO in pbxproj"
+          else
+            echo "FAIL (REL-09): pbxproj must set ENABLE_APP_SANDBOX = NO (DMG-only v1; sandbox would block dotfile reads)"
+            exit 1
+          fi
+          # Sanity: assert ENABLE_HARDENED_RUNTIME is NEVER turned off anywhere
+          if grep -q "ENABLE_HARDENED_RUNTIME = NO" "$PBXPROJ"; then
+            echo "FAIL (REL-09): pbxproj contains ENABLE_HARDENED_RUNTIME = NO somewhere — must always be YES"
+            exit 1
+          fi
+          # Sanity: assert ENABLE_APP_SANDBOX is NEVER turned on anywhere
+          if grep -q "ENABLE_APP_SANDBOX = YES" "$PBXPROJ"; then
+            echo "FAIL (REL-09): pbxproj contains ENABLE_APP_SANDBOX = YES somewhere — must always be NO (D-08)"
+            exit 1
+          fi
