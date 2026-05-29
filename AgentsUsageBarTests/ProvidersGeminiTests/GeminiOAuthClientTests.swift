@@ -405,6 +405,49 @@ struct GeminiOAuthClientTests {
                 "ci.yml must add --exclude='GeminiOAuthClient.swift' so the RFC 6749 §2.1 client_secret constant doesn't trip SEC-04")
     }
 
+    // MARK: - Test 13: CR-02 — retryAfter401 forces a POST even when the
+    // on-disk file still holds the rejected access_token (stuck-loop guard).
+
+    @Test func retryAfter401_forcesRefresh_evenWhenDiskHoldsRejectedToken() async throws {
+        let now = Date(timeIntervalSince1970: 1_780_000_000)
+        let http = FakeGeminiHTTPClient()
+        // Only the retry POST is scripted — the first freshAccessToken should
+        // serve from the disk fast-path with zero HTTP calls.
+        http.postFormResponses = [.success(try loadFixtureData("gemini-token-refresh-fixture.json"))]
+
+        let staleToken = "FAKE-stale-AAAAA"
+        let credsURL = try writeCredsFile(
+            // Both the file's accessToken AND its expiry are valid — the bug
+            // CR-02 protected against was retryAfter401 re-seeding this same
+            // value back from disk after the caller saw it rejected.
+            accessToken: staleToken,
+            refreshToken: "FAKE-1//0gb-XXXX",
+            expiryDate: (now.timeIntervalSince1970 + 600) * 1000.0
+        )
+        let client = GeminiOAuthClient(
+            http: http,
+            credentialLoader: GeminiCredentialLoader(credentialsPath: credsURL),
+            clock: VirtualClock(fixed: now)
+        )
+
+        // 1. First fetch hits the disk fast-path — zero POSTs.
+        _ = try await client.freshAccessToken(now: now)
+        #expect(http.calls.isEmpty)
+
+        // 2. Caller sees 401 → retryAfter401 must fire a POST oauth2/token,
+        // NOT re-seed the same staleToken from disk.
+        _ = try await client.retryAfter401(now: now)
+        #expect(http.calls.count == 1)
+        let postCall = try #require(http.calls.first)
+        #expect(postCall.url == GeminiOAuthClient.tokenURL)
+        #expect(postCall.method == "POST")
+
+        // 3. A follow-up freshAccessToken call (still inside the skew window
+        // of the freshly refreshed token) serves from cache — no extra POST.
+        _ = try await client.freshAccessToken(now: now)
+        #expect(http.calls.count == 1)
+    }
+
     // MARK: - Helpers
 
     private func repoRootFromTestFile() -> URL {

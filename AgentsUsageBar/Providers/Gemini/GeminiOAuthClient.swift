@@ -70,6 +70,14 @@ public actor GeminiOAuthClient {
     /// Never used as a bearer; never logged.
     private var lastRefreshTokenSeen: String?
 
+    /// The most recent access_token a downstream caller saw rejected with 401.
+    /// `freshAccessToken(now:)` STEP 3 will skip the on-disk fast-path when the
+    /// file still holds this exact value — otherwise `retryAfter401` would just
+    /// re-seed the same rejected bearer from disk and lock callers into a
+    /// stuck `.error(401)` loop until `oauth_creds.json` mtime changes (CR-02).
+    /// Cleared after a successful POST oauth2.googleapis.com/token.
+    private var lastRejectedAccessToken: String?
+
     // MARK: - Init
 
     /// - Parameters:
@@ -114,8 +122,11 @@ public actor GeminiOAuthClient {
         lastRefreshTokenSeen = result.credentials.refreshToken
 
         // STEP 3: Eager pre-check against the file's cached access_token.
+        // Skip if this exact token was just rejected with 401 — otherwise
+        // retryAfter401 would re-seed the same bearer from disk (CR-02).
         if let fileAccess = result.credentials.accessToken,
-           !fileAccess.isEmpty
+           !fileAccess.isEmpty,
+           fileAccess != lastRejectedAccessToken
         {
             let fileExpiry = result.credentials.expiryDateAsDate()
             if fileExpiry.timeIntervalSince(now) > Self.refreshSkewSeconds {
@@ -132,13 +143,26 @@ public actor GeminiOAuthClient {
         )
         cachedAccessToken = refreshed.accessToken
         cachedExpiryDate = refreshed.expiryDate
+        // A successful refresh supersedes any prior 401-rejected bearer.
+        lastRejectedAccessToken = nil
         return Secret(refreshed.accessToken)
     }
 
-    /// Lazy 401 catch: invalidates the cache and forces a refresh on the
-    /// next `freshAccessToken(now:)`. Callers in Plan 03-06 must enforce
-    /// at-most-one retry per high-level request.
+    /// Lazy 401 catch: records the rejected bearer so the next
+    /// `freshAccessToken(now:)` skips the on-disk fast-path and forces a
+    /// fresh POST oauth2.googleapis.com/token, even if the file still
+    /// contains the same access_token (CR-02). Callers in Plan 03-06 must
+    /// enforce at-most-one retry per high-level request.
     public func retryAfter401(now: Date) async throws -> Secret {
+        // Capture whichever bearer the caller saw rejected — cache first,
+        // then fall back to whatever is currently on disk.
+        if let cached = cachedAccessToken {
+            lastRejectedAccessToken = cached
+        } else if let fileAccess = credentialLoader.loadCredentials()?.credentials.accessToken,
+                  !fileAccess.isEmpty
+        {
+            lastRejectedAccessToken = fileAccess
+        }
         cachedAccessToken = nil
         cachedExpiryDate = nil
         return try await freshAccessToken(now: now)
