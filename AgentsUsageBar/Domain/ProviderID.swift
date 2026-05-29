@@ -14,6 +14,11 @@ extension ProviderID {
     /// Plans 01.04 and 01.05 use this constant as the key for HTTP fetching and cache storage.
     public static let openrouter = ProviderID(rawValue: "openrouter")
 
+    /// Claude — Anthropic's Claude models via JSONL transcript files + OAuth quota API.
+    /// Plan 02.04 uses this constant as the provider ID for `ClaudeJSONLProvider`.
+    /// `displayHint` already returns "Claude" for this rawValue (Phase 1 declaration).
+    public static let claude = ProviderID(rawValue: "claude")
+
     /// Human-readable display hint for this provider.
     ///
     /// Used by `ThresholdEngine` to populate `NotificationDecision.displayName` (B3),

@@ -218,7 +218,7 @@ struct ClaudeOAuthClientTests {
         http.getResponses = [.failure(HTTPError(status: 429))]
 
         let creds = FakeCredentialResolver()
-        creds.loadResult = makeResult(oauth: makeOAuth(expiresAt: nil, refreshToken: nil))
+        creds.loadResult = makeResult(oauth: makeOAuth(refreshToken: nil, expiresAt: nil))
         creds.needsRefreshResult = false
 
         let client = ClaudeOAuthClient(http: http, credentials: creds)
@@ -234,7 +234,7 @@ struct ClaudeOAuthClientTests {
         http.getResponses = [.failure(HTTPError(status: 500))]
 
         let creds = FakeCredentialResolver()
-        creds.loadResult = makeResult(oauth: makeOAuth(expiresAt: nil, refreshToken: nil))
+        creds.loadResult = makeResult(oauth: makeOAuth(refreshToken: nil, expiresAt: nil))
         creds.needsRefreshResult = false
 
         let client = ClaudeOAuthClient(http: http, credentials: creds)
@@ -251,7 +251,7 @@ struct ClaudeOAuthClientTests {
         http.getResponses = [.success(usageData)]
 
         let creds = FakeCredentialResolver()
-        creds.loadResult = makeResult(oauth: makeOAuth(expiresAt: nil, refreshToken: nil))
+        creds.loadResult = makeResult(oauth: makeOAuth(refreshToken: nil, expiresAt: nil))
         creds.needsRefreshResult = false
 
         let client = ClaudeOAuthClient(http: http, credentials: creds)
@@ -269,7 +269,7 @@ struct ClaudeOAuthClientTests {
         http.getResponses = [.success(usageData)]
 
         let creds = FakeCredentialResolver()
-        creds.loadResult = makeResult(oauth: makeOAuth(expiresAt: nil, refreshToken: nil))
+        creds.loadResult = makeResult(oauth: makeOAuth(refreshToken: nil, expiresAt: nil))
         creds.needsRefreshResult = false
 
         let client = ClaudeOAuthClient(http: http, credentials: creds)

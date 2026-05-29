@@ -135,6 +135,15 @@
 		AA020300000000000000022A /* oauth-usage-success.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000022B /* oauth-usage-success.json */; };
 		AA020300000000000000023A /* oauth-usage-partial.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000023B /* oauth-usage-partial.json */; };
 		AA020300000000000000024A /* oauth-refresh-success.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000024B /* oauth-refresh-success.json */; };
+		/* Plan 02.04 — ClaudeJSONLProvider + ClaudeRoots sources (app target) */
+		AA020400000000000000001A /* ClaudeJSONLProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020400000000000000001B /* ClaudeJSONLProvider.swift */; };
+		AA020400000000000000002A /* ClaudeRoots.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020400000000000000002B /* ClaudeRoots.swift */; };
+		/* Plan 02.04 — ClaudeJSONLProviderTests (test target) */
+		AA020400000000000000010A /* ClaudeJSONLProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020400000000000000010B /* ClaudeJSONLProviderTests.swift */; };
+		/* Plan 02.04 — JSONL fixture resources (test target) */
+		AA020400000000000000020A /* multifile-session-a.jsonl in Resources */ = {isa = PBXBuildFile; fileRef = AA020400000000000000020B /* multifile-session-a.jsonl */; };
+		AA020400000000000000021A /* multifile-session-b.jsonl in Resources */ = {isa = PBXBuildFile; fileRef = AA020400000000000000021B /* multifile-session-b.jsonl */; };
+		AA020400000000000000022A /* duplicate-requestids.jsonl in Resources */ = {isa = PBXBuildFile; fileRef = AA020400000000000000022B /* duplicate-requestids.jsonl */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -261,7 +270,11 @@
 		AA020300000000000000001B /* QuotaWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaWindow.swift; sourceTree = "<group>"; };
 		AA020300000000000000002B /* KeychainReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainReader.swift; sourceTree = "<group>"; };
 		AA020300000000000000003B /* ClaudeCredentialLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCredentialLoader.swift; sourceTree = "<group>"; };
+		AA020300000000000000004B /* ClaudeOAuthResponses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeOAuthResponses.swift; sourceTree = "<group>"; };
+		AA020300000000000000005B /* ClaudeOAuthClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeOAuthClient.swift; sourceTree = "<group>"; };
 		AA020300000000000000010B /* ClaudeCredentialLoaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCredentialLoaderTests.swift; sourceTree = "<group>"; };
+		AA020300000000000000011B /* ClaudeOAuthResponsesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeOAuthResponsesTests.swift; sourceTree = "<group>"; };
+		AA020300000000000000012B /* ClaudeOAuthClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeOAuthClientTests.swift; sourceTree = "<group>"; };
 		/* Plan 02.01 — FileCacheStore schema v2 test file reference */
 		AA020100000000000000020B /* FileCacheStoreSchemaV2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStoreSchemaV2Tests.swift; sourceTree = "<group>"; };
 		AA020300000000000000020B /* credentials-claudeAiOauth-shape.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "credentials-claudeAiOauth-shape.json"; sourceTree = "<group>"; };
@@ -269,6 +282,15 @@
 		AA020300000000000000022B /* oauth-usage-success.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oauth-usage-success.json"; sourceTree = "<group>"; };
 		AA020300000000000000023B /* oauth-usage-partial.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oauth-usage-partial.json"; sourceTree = "<group>"; };
 		AA020300000000000000024B /* oauth-refresh-success.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oauth-refresh-success.json"; sourceTree = "<group>"; };
+		/* Plan 02.04 — ClaudeJSONLProvider source file references */
+		AA020400000000000000001B /* ClaudeJSONLProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeJSONLProvider.swift; sourceTree = "<group>"; };
+		AA020400000000000000002B /* ClaudeRoots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeRoots.swift; sourceTree = "<group>"; };
+		/* Plan 02.04 — ClaudeJSONLProviderTests test file reference */
+		AA020400000000000000010B /* ClaudeJSONLProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeJSONLProviderTests.swift; sourceTree = "<group>"; };
+		/* Plan 02.04 — JSONL fixture file references */
+		AA020400000000000000020B /* multifile-session-a.jsonl */ = {isa = PBXFileReference; lastKnownFileType = text; path = "multifile-session-a.jsonl"; sourceTree = "<group>"; };
+		AA020400000000000000021B /* multifile-session-b.jsonl */ = {isa = PBXFileReference; lastKnownFileType = text; path = "multifile-session-b.jsonl"; sourceTree = "<group>"; };
+		AA020400000000000000022B /* duplicate-requestids.jsonl */ = {isa = PBXFileReference; lastKnownFileType = text; path = "duplicate-requestids.jsonl"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -399,10 +421,14 @@
 			children = (
 				AA020100000000000000002B /* TranscriptRecord.swift */,
 				AA020100000000000000003B /* TranscriptReader.swift */,
-				AA020300000000000000002B /* KeychainReader.swift */,
-				AA020300000000000000003B /* ClaudeCredentialLoader.swift */,
 				AA020100000000000000004B /* TranscriptDirectoryScanner.swift */,
 				AA020202000000000000003B /* ClaudeModelPricing.swift */,
+				AA020300000000000000002B /* KeychainReader.swift */,
+				AA020300000000000000003B /* ClaudeCredentialLoader.swift */,
+				AA020300000000000000004B /* ClaudeOAuthResponses.swift */,
+				AA020300000000000000005B /* ClaudeOAuthClient.swift */,
+				AA020400000000000000002B /* ClaudeRoots.swift */,
+				AA020400000000000000001B /* ClaudeJSONLProvider.swift */,
 			);
 			path = Claude;
 			sourceTree = "<group>";
@@ -608,13 +634,16 @@
 				AA020100000000000000011B /* TranscriptReaderTests.swift */,
 				AA020100000000000000012B /* TranscriptDirectoryScannerTests.swift */,
 				AA020300000000000000010B /* ClaudeCredentialLoaderTests.swift */,
+				AA020300000000000000011B /* ClaudeOAuthResponsesTests.swift */,
+				AA020300000000000000012B /* ClaudeOAuthClientTests.swift */,
 				AA020202000000000000010B /* ClaudeModelPricingTests.swift */,
+				AA020400000000000000010B /* ClaudeJSONLProviderTests.swift */,
 				AA020202000000000000031B /* Fixtures */,
 			);
 			path = ProvidersClaudeTests;
 			sourceTree = "<group>";
 		};
-		/* Plan 02.02 — ProvidersClaudeTests Fixtures subgroup */
+		/* Plan 02.02/02.03/02.04 — ProvidersClaudeTests Fixtures subgroup */
 		AA020202000000000000031B /* Fixtures */ = {
 			isa = PBXGroup;
 			children = (
@@ -624,6 +653,9 @@
 				AA020300000000000000022B /* oauth-usage-success.json */,
 				AA020300000000000000023B /* oauth-usage-partial.json */,
 				AA020300000000000000024B /* oauth-refresh-success.json */,
+				AA020400000000000000020B /* multifile-session-a.jsonl */,
+				AA020400000000000000021B /* multifile-session-b.jsonl */,
+				AA020400000000000000022B /* duplicate-requestids.jsonl */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -744,6 +776,10 @@
 				AA020300000000000000022A /* oauth-usage-success.json in Resources */,
 				AA020300000000000000023A /* oauth-usage-partial.json in Resources */,
 				AA020300000000000000024A /* oauth-refresh-success.json in Resources */,
+				/* Plan 02.04 — JSONL fixture files */
+				AA020400000000000000020A /* multifile-session-a.jsonl in Resources */,
+				AA020400000000000000021A /* multifile-session-b.jsonl in Resources */,
+				AA020400000000000000022A /* duplicate-requestids.jsonl in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -814,6 +850,12 @@
 				AA020300000000000000003A /* ClaudeCredentialLoader.swift in Sources */,
 				/* Plan 02.02 — Claude model pricing loader + calculator */
 				AA020202000000000000003A /* ClaudeModelPricing.swift in Sources */,
+				/* Plan 02.03 — Claude OAuth responses + client */
+				AA020300000000000000004A /* ClaudeOAuthResponses.swift in Sources */,
+				AA020300000000000000005A /* ClaudeOAuthClient.swift in Sources */,
+				/* Plan 02.04 — ClaudeJSONLProvider + ClaudeRoots */
+				AA020400000000000000001A /* ClaudeJSONLProvider.swift in Sources */,
+				AA020400000000000000002A /* ClaudeRoots.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -852,6 +894,11 @@
 				AA020100000000000000020A /* FileCacheStoreSchemaV2Tests.swift in Sources */,
 				/* Plan 02.02 — Claude model pricing tests */
 				AA020202000000000000010A /* ClaudeModelPricingTests.swift in Sources */,
+				/* Plan 02.03 — Claude OAuth tests */
+				AA020300000000000000011A /* ClaudeOAuthResponsesTests.swift in Sources */,
+				AA020300000000000000012A /* ClaudeOAuthClientTests.swift in Sources */,
+				/* Plan 02.04 — ClaudeJSONLProviderTests */
+				AA020400000000000000010A /* ClaudeJSONLProviderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

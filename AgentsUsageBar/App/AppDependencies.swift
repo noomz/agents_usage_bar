@@ -83,13 +83,52 @@ public enum AppDependencies {
             registry.append(provider)
         }
 
-        // 6. Threshold engine (warning-at-80% gate per D-11)
+        // 6. Claude provider (Plan 02.04 — always wired; degrades to local-only when no OAuth creds)
+        let credLoader = ClaudeCredentialLoader()
+        let oauthClient: (any ClaudeOAuthClientProtocol)?
+        if credLoader.loadCredentials() != nil {
+            oauthClient = ClaudeOAuthClient(http: http, credentials: credLoader, clock: clock)
+        } else {
+            oauthClient = nil
+        }
+
+        let claudePricing: ClaudeModelPricing
+        do {
+            claudePricing = try ClaudeModelPricing.loadBundled()
+        } catch {
+            os.Logger(subsystem: "app.agents-usage-bar", category: "composition")
+                .error("Claude pricing load failed: \(error.localizedDescription, privacy: .public)")
+            // Degrade to a hardcoded fallback rather than crash (T-02.02-03).
+            claudePricing = ClaudeModelPricing(
+                schemaVersion: 1,
+                lastUpdated: "fallback",
+                default: .init(
+                    inputPer1M: 3.00,
+                    outputPer1M: 15.00,
+                    cacheWritePer1M: 3.75,
+                    cacheReadPer1M: 0.30
+                ),
+                models: [:]
+            )
+        }
+
+        let claudeProvider = ClaudeJSONLProvider(
+            reader: TranscriptReader(),
+            scanner: TranscriptDirectoryScanner(),
+            pricing: claudePricing,
+            oauth: oauthClient,
+            cache: cache,
+            clock: clock
+        )
+        registry.append(claudeProvider)
+
+        // 7. Threshold engine (warning-at-80% gate per D-11)
         let thresholds = ThresholdEngine(warningFraction: config.threshold)
 
-        // 7. Notification manager (lazy auth NOTIF-06, coalescing B3+NOTIF-07, clock-injected B8)
+        // 8. Notification manager (lazy auth NOTIF-06, coalescing B3+NOTIF-07, clock-injected B8)
         let notifications: any NotificationManager = UNNotificationManager(clock: clock)
 
-        // 8. Aggregate store — seeds from cache immediately for cold-launch rendering (UI-07)
+        // 9. Aggregate store — seeds from cache immediately for cold-launch rendering (UI-07)
         let store = AggregateStore(
             registry: registry,
             clock: clock,
@@ -98,13 +137,29 @@ public enum AppDependencies {
             notifications: notifications
         )
 
-        // 9. Seed "not configured" placeholder row when api key is absent (B10)
-        //    seedPlaceholder declared in Plan 01.05's AggregateStore.swift
-        //    ProviderState.placeholder declared in Plan 01.02's Domain/ProviderState.swift
-        if registry.isEmpty {
+        // 10. Seed placeholder rows when providers are not configured (B10)
+        //     seedPlaceholder declared in Plan 01.05's AggregateStore.swift
+        //     ProviderState.placeholder declared in Plan 01.02's Domain/ProviderState.swift
+
+        // OpenRouter placeholder: only when api key is absent AND Claude is also absent
+        // (if Claude is present the store is non-empty and OpenRouter row is optional).
+        // Preserve Phase 1 invariant: when registry has neither provider, seed OpenRouter.
+        let hasOpenRouter = config.openrouter.apiKey != nil
+        if !hasOpenRouter {
             store.seedPlaceholder(
                 providerID: ProviderID.openrouter,
                 displayName: "OpenRouter",
+                status: .unauthenticated
+            )
+        }
+
+        // Claude placeholder: when neither OAuth credentials NOR any JSONL root exists (B10).
+        let claudeRoots = ClaudeRoots.defaultRoots
+        let hasTranscripts = claudeRoots.contains { FileManager.default.fileExists(atPath: $0.path) }
+        if oauthClient == nil && !hasTranscripts {
+            store.seedPlaceholder(
+                providerID: ProviderID.claude,
+                displayName: "Claude",
                 status: .unauthenticated
             )
         }
