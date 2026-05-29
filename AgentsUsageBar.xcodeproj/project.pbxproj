@@ -138,6 +138,10 @@
 		AA030500000000000000012A /* GeminiOAuthClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000012B /* GeminiOAuthClientTests.swift */; };
 		/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test (test target) */
 		AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */; };
+		/* Plan 03-04 Task 2 — CodexJSONLProvider (app target) + provider/fallback tests */
+		AA030400000000000000001A /* CodexJSONLProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000001B /* CodexJSONLProvider.swift */; };
+		AA030400000000000000011A /* CodexJSONLProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000011B /* CodexJSONLProviderTests.swift */; };
+		AA030400000000000000012A /* CodexJSONLProviderFallbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000012B /* CodexJSONLProviderFallbackTests.swift */; };
 		/* Plan 02.01 — Claude transcript primitives (app target) */
 		AA020100000000000000001A /* TranscriptOffset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000001B /* TranscriptOffset.swift */; };
 		AA020100000000000000002A /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000002B /* TranscriptRecord.swift */; };
@@ -257,6 +261,9 @@
 		/* Plan 01.02 — Test file references */
 		AA020200000000000000020B /* SecretTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretTests.swift; sourceTree = "<group>"; };
 		AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageSnapshotTooltipLabelTests.swift; sourceTree = "<group>"; };
+		AA030400000000000000001B /* CodexJSONLProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexJSONLProvider.swift; sourceTree = "<group>"; };
+		AA030400000000000000011B /* CodexJSONLProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexJSONLProviderTests.swift; sourceTree = "<group>"; };
+		AA030400000000000000012B /* CodexJSONLProviderFallbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexJSONLProviderFallbackTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000021B /* TodayHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHelperTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000022B /* QuotaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000023B /* ThresholdStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdStateTests.swift; sourceTree = "<group>"; };
@@ -601,6 +608,8 @@
 				AA030200000000000000004B /* CodexOAuthClient.swift */,
 				/* Plan 03-02 - Codex pricing source */
 				AA030202000000000000001B /* CodexModelPricing.swift */,
+				/* Plan 03-04 - Codex provider actor */
+				AA030400000000000000001B /* CodexJSONLProvider.swift */,
 				AA030100000000000000051B /* Models */,
 			);
 			path = Codex;
@@ -883,6 +892,9 @@
 				AA030200000000000000012B /* CodexOAuthClientTests.swift */,
 				/* Plan 03-02 - Codex pricing tests */
 				AA030202000000000000010B /* CodexModelPricingTests.swift */,
+				/* Plan 03-04 - CodexJSONLProvider tests */
+				AA030400000000000000011B /* CodexJSONLProviderTests.swift */,
+				AA030400000000000000012B /* CodexJSONLProviderFallbackTests.swift */,
 				AA030100000000000000061B /* Fixtures */,
 			);
 			path = ProvidersCodexTests;
@@ -1160,6 +1172,8 @@
 				AA030200000000000000004A /* CodexOAuthClient.swift in Sources */,
 				/* Plan 03-02 - CodexModelPricing source */
 				AA030202000000000000001A /* CodexModelPricing.swift in Sources */,
+				/* Plan 03-04 — CodexJSONLProvider actor */
+				AA030400000000000000001A /* CodexJSONLProvider.swift in Sources */,
 				/* Plan 03-05 — Gemini settings gate + credential loader + OAuth client */
 				AA030500000000000000001A /* GeminiSettingsGate.swift in Sources */,
 				AA030500000000000000002A /* GeminiOAuthCredentials.swift in Sources */,
@@ -1249,6 +1263,9 @@
 				AA030500000000000000012A /* GeminiOAuthClientTests.swift in Sources */,
 				/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test */
 				AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */,
+				/* Plan 03-04 Task 2 — CodexJSONLProvider tests */
+				AA030400000000000000011A /* CodexJSONLProviderTests.swift in Sources */,
+				AA030400000000000000012A /* CodexJSONLProviderFallbackTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
