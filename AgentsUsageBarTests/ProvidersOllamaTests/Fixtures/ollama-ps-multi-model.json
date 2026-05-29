@@ -1,0 +1,5 @@
+{"models":[
+  {"name":"llama3:8b","details":{"family":"llama","parameter_size":"8.0B","quantization_level":"Q4_0"},"size_vram":5137025024},
+  {"name":"mistral:7b","details":{"family":"llama"},"size_vram":4500000000},
+  {"name":"phi3:mini","details":{"family":"phi"},"size_vram":2000000000}
+]}

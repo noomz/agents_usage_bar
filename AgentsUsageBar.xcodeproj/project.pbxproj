@@ -172,6 +172,13 @@
 		AA040200000000000000011A /* ConfigStoreLocalSectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040200000000000000011B /* ConfigStoreLocalSectionsTests.swift */; };
 		/* Plan 04-03 — URLSessionHTTPClient timeoutSeconds tier test */
 		AA040300000000000000010A /* URLSessionHTTPClientTimeoutTierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040300000000000000010B /* URLSessionHTTPClientTimeoutTierTests.swift */; };
+		/* Plan 04-04 — OllamaProvider + response models (app target) */
+		AA040404000000000000001A /* OllamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000001B /* OllamaProvider.swift */; };
+		AA040404000000000000002A /* OllamaPsResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000002B /* OllamaPsResponse.swift */; };
+		AA040404000000000000003A /* OllamaTagsResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000003B /* OllamaTagsResponse.swift */; };
+		/* Plan 04-04 — OllamaProvider test sources (test target) */
+		AA040404000000000000010A /* OllamaProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000010B /* OllamaProviderTests.swift */; };
+		AA040404000000000000011A /* OllamaResponsesCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000011B /* OllamaResponsesCodableTests.swift */; };
 		/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test (test target) */
 		AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */; };
 		/* Plan 03-04 Task 2 — CodexJSONLProvider (app target) + provider/fallback tests */
@@ -443,6 +450,19 @@
 		AA040200000000000000011B /* ConfigStoreLocalSectionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStoreLocalSectionsTests.swift; sourceTree = "<group>"; };
 		/* Plan 04-03 — URLSessionHTTPClientTimeoutTierTests file reference */
 		AA040300000000000000010B /* URLSessionHTTPClientTimeoutTierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionHTTPClientTimeoutTierTests.swift; sourceTree = "<group>"; };
+		/* Plan 04-04 — OllamaProvider + response models file references */
+		AA040404000000000000001B /* OllamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaProvider.swift; sourceTree = "<group>"; };
+		AA040404000000000000002B /* OllamaPsResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaPsResponse.swift; sourceTree = "<group>"; };
+		AA040404000000000000003B /* OllamaTagsResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaTagsResponse.swift; sourceTree = "<group>"; };
+		/* Plan 04-04 — test file references */
+		AA040404000000000000010B /* OllamaProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaProviderTests.swift; sourceTree = "<group>"; };
+		AA040404000000000000011B /* OllamaResponsesCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaResponsesCodableTests.swift; sourceTree = "<group>"; };
+		/* Plan 04-04 — fixture file references (loaded via #filePath, not bundle) */
+		AA040404000000000000020B /* ollama-ps-single-model.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ollama-ps-single-model.json"; sourceTree = "<group>"; };
+		AA040404000000000000021B /* ollama-ps-multi-model.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ollama-ps-multi-model.json"; sourceTree = "<group>"; };
+		AA040404000000000000022B /* ollama-ps-empty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ollama-ps-empty.json"; sourceTree = "<group>"; };
+		AA040404000000000000023B /* ollama-tags-non-empty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ollama-tags-non-empty.json"; sourceTree = "<group>"; };
+		AA040404000000000000024B /* ollama-tags-empty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ollama-tags-empty.json"; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -647,8 +667,30 @@
 				AA020100000000000000050B /* Claude */,
 				AA030100000000000000050B /* Codex */,
 				AA030500000000000000050B /* Gemini */,
+				/* Plan 04-04 — Ollama local provider */
+				AA040404000000000000030B /* Ollama */,
 			);
 			path = Providers;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-04 — Ollama provider subgroup */
+		AA040404000000000000030B /* Ollama */ = {
+			isa = PBXGroup;
+			children = (
+				AA040404000000000000001B /* OllamaProvider.swift */,
+				AA040404000000000000031B /* Models */,
+			);
+			path = Ollama;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-04 — Ollama Models subgroup */
+		AA040404000000000000031B /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AA040404000000000000002B /* OllamaPsResponse.swift */,
+				AA040404000000000000003B /* OllamaTagsResponse.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		/* Plan 03-05 — Gemini provider subgroup */
@@ -954,8 +996,34 @@
 				AA020100000000000000060B /* ProvidersClaudeTests */,
 				AA030100000000000000060B /* ProvidersCodexTests */,
 				AA030500000000000000060B /* ProvidersGeminiTests */,
+				/* Plan 04-04 — Ollama provider tests */
+				AA040404000000000000060B /* ProvidersOllamaTests */,
 			);
 			path = AgentsUsageBarTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-04 — ProvidersOllamaTests group */
+		AA040404000000000000060B /* ProvidersOllamaTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA040404000000000000010B /* OllamaProviderTests.swift */,
+				AA040404000000000000011B /* OllamaResponsesCodableTests.swift */,
+				AA040404000000000000061B /* Fixtures */,
+			);
+			path = ProvidersOllamaTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-04 — ProvidersOllamaTests Fixtures subgroup (loaded via #filePath, not bundle) */
+		AA040404000000000000061B /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				AA040404000000000000020B /* ollama-ps-single-model.json */,
+				AA040404000000000000021B /* ollama-ps-multi-model.json */,
+				AA040404000000000000022B /* ollama-ps-empty.json */,
+				AA040404000000000000023B /* ollama-tags-non-empty.json */,
+				AA040404000000000000024B /* ollama-tags-empty.json */,
+			);
+			path = Fixtures;
 			sourceTree = "<group>";
 		};
 		/* Plan 03-05 — ProvidersGeminiTests group */
@@ -1303,6 +1371,10 @@
 				/* Plan 03-07 — UI dashboard button + environment key */
 				AA030700000000000000001A /* ProviderDashboardURL.swift in Sources */,
 				AA030700000000000000002A /* OpenDashboardURLEnvironmentKey.swift in Sources */,
+				/* Plan 04-04 — OllamaProvider actor + response models */
+				AA040404000000000000001A /* OllamaProvider.swift in Sources */,
+				AA040404000000000000002A /* OllamaPsResponse.swift in Sources */,
+				AA040404000000000000003A /* OllamaTagsResponse.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1416,6 +1488,9 @@
 				AA040100000000000000011A /* ProviderIDLocalConstantsTests.swift in Sources */,
 				AA040100000000000000012A /* ProviderErrorLocalhostClassifierTests.swift in Sources */,
 				AA040100000000000000013A /* StatusDotNotRunningTests.swift in Sources */,
+				/* Plan 04-04 — OllamaProvider tests */
+				AA040404000000000000010A /* OllamaProviderTests.swift in Sources */,
+				AA040404000000000000011A /* OllamaResponsesCodableTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

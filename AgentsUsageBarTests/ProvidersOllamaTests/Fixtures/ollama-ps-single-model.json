@@ -1,0 +1,1 @@
+{"models":[{"name":"llama3:8b","model":"llama3:8b","size":5137025024,"digest":"abc","details":{"family":"llama","parameter_size":"8.0B","quantization_level":"Q4_0"},"expires_at":"2026-06-04T14:38:31Z","size_vram":5137025024}]}
