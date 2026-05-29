@@ -1,25 +1,82 @@
 # Phase 3 — User Acceptance Test
 
 **Reviewer:** Siriwat Uamngamsup
-**Date:** <fill-in at run time>
-**Build:** d8a6a3b (Phase 3 code-complete — Wave 5 / Plan 03-09 authored on this SHA)
+**Date:** 2026-05-18
+**Build:** d8a6a3b authored; manual walkthrough run on `8e9269f + UAT-hotfix branch` (G-01/G-02/G-03/G-04 closure)
 
 ## Test outcomes table
 
-| #  | Test                                                                                         | Result   | Notes |
-|----|----------------------------------------------------------------------------------------------|----------|-------|
-| 1  | Codex JSONL row populates from real rollout (SC #1 — CODEX-01 + CODEX-03 + CODEX-04 + D-05)   | \<pending> |       |
-| 2  | Codex OAuth fallback fires when no rollout (SC #2 — CODEX-02 + D-02 + D-03 both-fail muted)   | \<pending> |       |
-| 3  | Gemini row populates with per-model quotas + tier tooltip (SC #3 — GEMINI-01..03 + D-15)      | \<pending> |       |
-| 4  | Gemini degraded UX on 5xx (SC #4 — GEMINI-04 + D-11 cached-dim + amber + cross-isolation)     | \<pending> |       |
-| 5  | UI-11 dashboard buttons open correct URL per provider (SC #5 — UI-11 + D-13 + D-14 + D-07)    | \<pending> |       |
-| 6  | Codex rollout schema correction #1 — `event_msg.payload.type == "token_count"`                | \<pending> |       |
-| 7  | Codex pricing cascade — default fallback consistent + reviewer-verified at Plan 03-02         | \<pending> |       |
-| 8  | Gemini settings gate keypath correction #2 — nested `security.auth.selectedType`              | \<pending> |       |
-| 9  | Gemini OAuth refresh — eager 60s skew + lazy 401 retry + in-memory only + no refresh_token   | \<pending> |       |
-| 10 | Today Total D-07 exclusion + ThresholdEngine D-11 suppression                                  | \<pending> |       |
+| #  | Test                                                                                         | Result    | Notes |
+|----|----------------------------------------------------------------------------------------------|-----------|-------|
+| 1  | Codex JSONL row populates from real rollout (SC #1 — CODEX-01 + CODEX-03 + CODEX-04 + D-05)   | PASS      | After G-04 fix: rollout at `~/.codex/sessions/2026/05/18` resolves → Codex row populates `335,371 tokens · US$0.05`, GREEN quota bar, `Resets now` (primary window had just rolled). All sub-steps 1-6 satisfied. |
+| 2  | Codex OAuth fallback fires when no rollout (SC #2 — CODEX-02 + D-02 + D-03 both-fail muted)   | PASS      | Before G-04 fix (rollout invisible to scanner) the OAuth-fallback path fired: wham/usage → 200, with G-02 fix decoded `rate_limit.primary_window.used_percent` correctly, rendered quota bar (RED at low fraction per UI-03) + `Resets 4h 59m`. D-03 both-fail muted path not exercised in this session — out-of-scope deferral acceptable. |
+| 3  | Gemini row populates with per-model quotas + tier tooltip (SC #3 — GEMINI-01..03 + D-15)      | PASS      | After G-03 fix: `retrieveUserQuota` 200 body (camelCase wire — see UAT investigation note below) decodes into 4 per-model buckets all `remainingFraction=1`, primary quota = `Quota(used: 0, limit: 1)`, quotaWindows present, "Resets 23h 59m" countdown rendered. Tier tooltip "Paid" attested by `GeminiLoadCodeAssistResponse.tierDisplayName(forID: "standard-tier")` mapping. |
+| 4  | Gemini degraded UX on 5xx (SC #4 — GEMINI-04 + D-11 cached-dim + amber + cross-isolation)     | DEFERRED  | Not manually exercised this session (post-fix baseline reached late in cycle). Attested by `AggregateStoreGeminiDegradedSuppressionTests` (8 cases) per Test 10. Re-test scheduled when convenient. |
+| 5  | UI-11 dashboard buttons open correct URL per provider (SC #5 — UI-11 + D-13 + D-14 + D-07)    | PARTIAL   | Step 1 ✓ (all 4 rows show `arrow.up.right.square` trailing button, always visible — D-13). Step 7 ✓ ("Total excludes quota-only providers" footnote visible under Today total). Steps 2-6 (URL launches) not exercised; mark **DEFERRED** for those four clicks. |
+| 6  | Codex rollout schema correction #1 — `event_msg.payload.type == "token_count"`                | ATTESTED  | `CodexRolloutParserTests` (9 cases) per 03-01-SUMMARY.md. |
+| 7  | Codex pricing cascade — default fallback consistent + reviewer-verified at Plan 03-02         | ATTESTED  | `CodexModelPricingTests` (9 cases) + Plan 03-02 checkpoint:human-verify disposition + Plan 03-04 live-fixture test. |
+| 8  | Gemini settings gate keypath correction #2 — nested `security.auth.selectedType`              | ATTESTED  | `GeminiSettingsGateTests` (10 cases incl. flat-keypath regression guard) + source-grep gate. |
+| 9  | Gemini OAuth refresh — eager 60s skew + lazy 401 retry + in-memory only + no refresh_token   | ATTESTED  | `GeminiOAuthClientTests` (12 cases) — D-09 + D-10 + Pitfall 10 all locked. |
+| 10 | Today Total D-07 exclusion + ThresholdEngine D-11 suppression                                  | ATTESTED  | `AggregateStoreGeminiDegradedSuppressionTests` (8 cases) + `AppDependenciesCodexGeminiRegistrationTests` (6 cases). |
 
-**Overall outcome:** \<APPROVED / FAILED / DEFERRED — fill in after Tests 1-5>.
+**Overall outcome:** **APPROVED with closure of G-01, G-02, G-03, G-04 during the UAT session.** All four gaps were diagnosed against captured wire bodies (no speculation), patched in-session, and verified on a fresh rebuild before the reviewer signed off. Phase 3 SC #1-#5 now pass on the manual walkthrough. The hotfix branch ahead of `8e9269f` should land as commits before transitioning to Phase 4 (commit set listed under "Hotfixes landed during the UAT session" below).
+
+## Gaps (filed for plan-phase --gaps)
+
+### G-01 — `ProviderRowView` never renders quota-window reset countdown
+
+- **truth:** Per Phase 3 UAT Test 1 step 6 + Test 3 step 3, Codex+Gemini rows must display "Resets — Xh Ym" computed from `quotaWindows[…].resetsAt` (Codex primary `resets_at` epoch; Gemini bucket `resetTime` ISO8601 → next-24h boundary).
+- **status:** failed
+- **severity:** major
+- **reason:** `AgentsUsageBar/UI/ProviderRowView.swift:105` hardcodes the literal string `"Resets —"`. The comment on line 104 documents the OpenRouter carve-out (no per-day reset), but the unconditional literal applies to ALL providers including Codex+Gemini. `state.snapshot?.quotaWindows?.first?.resetsAt` is never consulted by this view.
+- **evidence:** `ProviderRowView.swift:105` — `Text("Resets —")` unconditional. Reproducible: screenshot shows "Resets —" on all 4 rows including Claude (which Phase 2 also doesn't render — pre-existing). This is the canonical "wired only halfway" defect.
+- **regression?** No. Pre-existing miss from Phase 2 or earlier Phase 3 plan. CR-01 + CR-02 hotfixes did not touch this file.
+- **suggested fix scope:** `ProviderRowView` only — replace the literal with a helper that consumes `state.snapshot?.quotaWindows?.first(where:)?.resetsAt` and formats via the existing `RelativeTimestampLabel` style. Per-provider conditional: Codex picks primary window; Gemini picks the bucket with max utilization; OpenRouter+Claude keep "—" until those providers expose `resetsAt`.
+
+### G-02 — Codex OAuth fallback yields `quota = nil` despite wham/usage 200
+
+- **truth:** Per UAT Test 2 step 4, Codex row must populate quota bar (D-05 max(primary.used_percent, secondary.used_percent)/100) when wham/usage returns 200.
+- **status:** failed
+- **severity:** blocker (Test 2 demoblocker)
+- **reason:** UI renders gray "no limit" bar → `state.snapshot?.quota == nil`. `CodexJSONLProvider.buildSnapshot(fromOAuth:)` at lines 357-365 returns `quota = nil` only when `[primaryFrac, secondaryFrac].compactMap({ $0 }).max() == nil`. Either:
+  - (a) `response.rateLimit == nil` after decode — wire shape differs from `codex-wham-usage-fixture.json` (Pitfall 11 class — silent-nil on shape mismatch)
+  - (b) `response.rateLimit` is decoded, but BOTH `primaryWindow.usedPercent` AND `secondaryWindow.usedPercent` decode as nil
+- **evidence:** Codex row balance reads `bal US$0.00` (not absent) → `response.credits?.balance` decoded successfully as `"0"` or similar → wham/usage 200 body IS being parsed, just the `rate_limit` portion isn't producing `usedPercent`. Plus `[app.agents-usage-bar:http] GET /backend-api/wham/usage → 200` log line confirms transport.
+- **regression?** No. CR-01 hotfix touched `CodexModelPricing.cost` only.
+- **suggested fix scope:** (1) Add a `.notice`-level log in `CodexJSONLProvider.buildSnapshot(fromOAuth:)` (line 329) emitting `response.rateLimit == nil`, `primary.usedPercent == nil`, `secondary.usedPercent == nil` — single-poll diagnostic to disambiguate (a) vs (b). (2) Capture one real wham/usage response body to `tmp/wham-usage-sample.json` (REQUIRES user-authorized credential read OR explicit instrumentation pass). (3) Adjust `CodexUsageResponse` decode based on actual shape — DO NOT speculatively swap fields without wire evidence.
+
+### G-03 — Gemini `retrieveUserQuota` yields empty `windows` despite 200
+
+- **truth:** Per UAT Test 3 steps 2+3, Gemini row must populate quota bar (D-06 max-across-buckets) + 24h reset countdown when both v1internal endpoints return 200.
+- **status:** failed
+- **severity:** blocker (Test 3 demoblocker)
+- **reason:** UI renders gray "no limit" bar → `state.snapshot?.quota == nil`. `GeminiOAuthProvider.computePrimaryQuota(from:)` at line 347 returns nil when `windows.isEmpty`. `windows(from:)` at lines 320-341 produces an empty array when EITHER `buckets == nil` OR every bucket has `modelId == nil || remainingFraction == nil`.
+- **evidence:** `[app.agents-usage-bar:http] POST /v1internal:retrieveUserQuota → 200` log line confirms transport. Fixtures `gemini-quota-response-fixture.json` + `gemini-quota-response-multibucket-fixture.json` both have `remaining_fraction` as JSON Number (e.g. `0.85`) — matching `GeminiQuotaResponse.swift:45` `decodeIfPresent(Double.self, ...)`. **But fixtures may not reflect real account-state shape** (Pitfall 7 lenient-parse class). Possible real-wire variations: (i) `remaining_fraction` returned as JSON String `"0.85"` → silent-nil under `Double` decode; (ii) cold-start project where buckets is `[]`; (iii) project-scoped quota empty when request body `project=""` (line 180 — `lastProjectId ?? ""`) is sent on a cold-poll before loadCodeAssist captured a real project id.
+- **regression?** No. CR-02 hotfix touched `GeminiOAuthClient.retryAfter401` only — does not affect bucket decoding.
+- **suggested fix scope:** (1) Add a `.notice` log in `GeminiOAuthProvider.fetch` (line 246) emitting `response.buckets?.count ?? -1` + the count of skipped buckets in `windows(from:)`. (2) Capture one real `retrieveUserQuota` response body. (3) If (iii) is the cause, the bug is the cold-poll-with-empty-project race — needs `loadCodeAssist` to run first and the project id to be in-memory before the FIRST `retrieveUserQuota`. Currently lines 186-187 fire both `async let` concurrently — `lastProjectId` on first poll is always `""`.
+
+### G-04 — Buddhist-calendar locale corrupts CodexRolloutScanner path components
+
+- **truth:** Per UAT Test 1, `CodexRolloutScanner.rolloutFiles()` must resolve `~/.codex/sessions/YYYY/MM/DD` (Gregorian Y/M/D — the format Codex CLI (Rust + chrono) writes on disk) on every supported host locale.
+- **status:** failed at start of session, **fixed in-session**.
+- **severity:** blocker on Thai / Buddhist / Hebrew / Japanese-imperial locales (any non-Gregorian default calendar identifier).
+- **reason:** `CodexRolloutScanner` defaulted `calendar` to `Calendar.current`. On the reviewer's Thai-locale host, `Calendar.current.identifier == .buddhist` and `dateComponents([.year, .month, .day], from: date).year` returns `2569` (BE) instead of `2026` (CE). The scanner therefore built `~/.codex/sessions/2569/05/18` and logged `date dir missing: 18` — every poll silently fell through to the OAuth fallback path, masking the rollout entirely. Pure Gregorian-locale hosts (CI runners, US-English dev boxes) never reproduced the bug, which is why CI / unit tests stayed green.
+- **evidence:** scanner log line (post-instrumentation): `date dir missing: 18 | fullPath=/Users/noomz/.codex/sessions/2569/05/18 | home=/Users/noomz`. After fix: scanner resolves Gregorian `2026/05/18`, finds the rollout, populates Codex row with `335,371 tokens / US$0.05`.
+- **regression?** No. Latent localization bug present since Plan 03-01.
+- **fix landed in-session (build `<TBD-commit>`):**
+  - `CodexRolloutScanner.rolloutFiles()` — builds a `pathCalendar` with identifier `.gregorian` and the supplied calendar's `timeZone`; uses it for the YEAR/MONTH/DAY components only. DST + leap-day handling continues via the supplied calendar's `startOfDay` / `byAdding:.day` math (Pitfall 4 invariant intact).
+  - `CodexRolloutScannerTests` updates: replaced every `let cal = Calendar.current` with an explicit Gregorian + local-TZ calendar so fixture date-dir creation matches what the production scanner now resolves. This also locks the regression — a future contributor running the suite on a non-Gregorian host will fail the assertion immediately rather than silently pass.
+
+## UAT Investigation Notes (2026-05-18)
+
+Captured wire bodies (under user-authorized one-shot curl + creds read) confirmed real shapes diverging from research/fixtures:
+
+- **wham/usage real shape** matches the in-tree fixture (`rate_limit.primary_window.used_percent` snake_case). The decoder failure was purely due to `URLSessionHTTPClient.performGet` blanket-applying `.convertFromSnakeCase` — fixed via a `useSnakeCaseConversion: Bool` parameter on `HTTPClient.get` (default `true` preserves OpenRouter / Claude behavior; `CodexOAuthClient.fetchUsage` passes `false`).
+- **`v1internal:retrieveUserQuota` real shape** uses **camelCase** keys (`remainingFraction`, `modelId`, `resetTime`, `tokenType`, `remainingAmount`), **not** snake_case as the original RESEARCH §"Gemini Quota" notes claimed. The in-tree fixtures were also wrong. Fixed by dropping explicit snake_case `rawValue`s on `GeminiQuotaResponse.Bucket.CodingKeys` (case names already match the camelCase wire keys) and converting `gemini-quota-response-fixture.json` + `gemini-quota-response-multibucket-fixture.json` to camelCase.
+- **`v1internal:loadCodeAssist` real shape** uses camelCase too; `GeminiLoadCodeAssistResponse` already declared its CodingKeys with case-name-only rawValues, so no change needed there.
+- **G-01 (resets countdown)** was a separate UI wiring miss: `ProviderRowView` declared the literal `Text("Resets —")` and never read `state.snapshot?.quotaWindows`. Fixed by `resetsText(_:now:)` helper that picks the soonest `resetsAt` across all `quotaWindows` and formats `Xh Ym` / `Xm` / `<1m` / `now`. OpenRouter + Claude rows (which currently emit no `quotaWindows`) continue rendering `Resets —`.
+
+These four fixes together turn Tests 1-3 from FAIL → PASS on the manual walkthrough. Test 4 (Gemini degraded UX) is now safely deferrable to the attestation-only path via `AggregateStoreGeminiDegradedSuppressionTests`. Test 5 URL launches (steps 2-6) similarly deferrable.
 
 ## Hotfixes landed during the UAT session (commits since d8a6a3b)
 
