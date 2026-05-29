@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-13T11:55:58.045Z"
+last_updated: "2026-05-14T12:00:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 16
-  completed_plans: 13
-  percent: 81
+  completed_plans: 14
+  percent: 87
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-14 (after Phase 2 Wave 2 — Plan 02-04 ClaudeJSONLProvider landed)
+**Last Updated:** 2026-05-14 (after Phase 2 Wave 3 — Plan 02-05 Threshold FSM v2 + snooze landed)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -28,17 +28,17 @@ progress:
 
 ## Current Position
 
-Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — WAVE 2 COMPLETE
-Plan: 4 of 7 executed
+Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — WAVE 3 COMPLETE
+Plan: 5 of 7 executed
 
 - **Milestone:** v1 (initial release)
 - **Phase:** 2 of 6 — Claude Provider + Threshold/Rollover + JSONL Streaming — IN PROGRESS
-- **Plan:** 4 of 7 plans executed (Wave 1 = {01 ✅, 02 ✅, 03 ✅}; Wave 2 = {04 ✅}; Wave 3 = {05}; Wave 4 = {06}; Wave 5 = {07})
-- **Status:** Wave 2 (Plan 02-04 ClaudeJSONLProvider) landed; ready for `/gsd-execute-phase 02 --wave 3`
-- **Progress:** [████████░░░░░░] 57% (4/7 Phase 2 plans)
+- **Plan:** 5 of 7 plans executed (Wave 1 = {01 ✅, 02 ✅, 03 ✅}; Wave 2 = {04 ✅}; Wave 3 = {05 ✅}; Wave 4 = {06}; Wave 5 = {07})
+- **Status:** Wave 3 (Plan 02-05 Threshold FSM v2 + UNNotificationCategory + snooze) landed; ready for `/gsd-execute-phase 02 --wave 4`
+- **Progress:** [██████████░░░░] 71% (5/7 Phase 2 plans)
 
 ```
-[██████████████████████████████████████████████████████░░░░░░] 81% (13/16 plans complete)
+[██████████████████████████████████████████████████████████░░] 87% (14/16 plans complete)
 ```
 
 ## Performance Metrics
@@ -46,15 +46,16 @@ Plan: 4 of 7 executed
 | Metric | Value |
 |--------|-------|
 | Phases complete | 1 / 6 |
-| Plans complete | 13 / 16 (Phase 1: 9 plans + Phase 2 Waves 1+2: 02-01/02/03/04) |
+| Plans complete | 14 / 16 (Phase 1: 9 plans + Phase 2 Waves 1+2+3: 02-01/02/03/04/05) |
 | Requirements mapped | 76 / 76 (100%) |
-| Requirements validated | 33 / 76 (Phase 1 set unchanged; Phase 2 Waves 1+2 CLAUDE-01..05 covered by ClaudeJSONLProviderTests, end-to-end UAT deferred to Plan 02-07) |
+| Requirements validated | 38 / 76 (Phase 1 set unchanged; Phase 2 Waves 1+2+3 cover CLAUDE-01..05 + NOTIF-01..05; end-to-end UAT deferred to Plan 02-07) |
 | Plans drafted | 16 |
-| Plans executed | 13 (Phase 1 = 9; Phase 2 Wave 1 = 3 bundled in salvage commit 2bf5bf6; Phase 2 Wave 2 = 1 in commits e703320 + 3e3f9cf) |
+| Plans executed | 14 (Phase 1 = 9; Phase 2 Wave 1 = 3 bundled in salvage commit 2bf5bf6; Phase 2 Wave 2 = 1 in commits e703320 + 3e3f9cf; Phase 2 Wave 3 = 1 in commit ea07831) |
 | Node repairs | 1 (Phase 2 Wave 1 salvage — see Phase 2 backprop) |
 | UI phases run | 0 |
 | UAT gaps closed | 1 (Test 2 cosmetic hover state) |
 | Phase 02 P04 duration | ~90 min, 1 task, 7 files modified |
+| Phase 02 P05 duration | ~60 min, 2 tasks, 13 files modified, 42 new tests |
 
 ## Accumulated Context
 
@@ -104,6 +105,14 @@ Plan: 4 of 7 executed
 42. Primary Claude quota = `max(fiveHour.utilization, sevenDay.utilization)` per RESEARCH Open Question 4; bonus per-model windows (7d-sonnet, 7d-opus) appear in `quotaWindows` but excluded from the main progress bar.
 43. `TranscriptReader` uses synchronous `FileHandle.readToEnd()` instead of `fh.bytes.lines` AsyncSequence — avoids `CancellationError` when the enclosing Swift concurrency task is cancelled under parallel test load; synchronous I/O is safe for KB-range JSONL delta chunks.
 44. `TranscriptDirectoryScanner.scanRoots` resolves symlinks via `url.resolvingSymlinksInPath()` before returning URLs — ensures cache keys are canonical across `/var` vs `/private/var` path forms on macOS (FileManager.enumerator returns `/private/var`; URL construction via temporaryDirectory returns `/var`).
+45. `ThresholdBand: Comparable + Codable` — Comparable enables `newBand > oldBand` upward gate (NOTIF-02); Codable required because `NotificationStateRecord` JSON-round-trips through `UserDefaults` and synthesises `Codable` from its `lastBand: ThresholdBand` field.
+46. `ThresholdEngine` exposes two parallel surfaces: Phase 1 `decisions(for:now:snoozedUntil:)` (warn80-only) wraps the Phase 2 FSM overload `decisions(for:now:snoozedUntilDay:lastBands:)` — back-compat preserved without code duplication; Phase 1 NotificationsTests pass unchanged.
+47. `NotificationStateStorage` is intentionally a thin UserDefaults shim, NOT a peer of `CacheStore` (no `NoopNotificationStateStore`-style B9 abstraction) — scope is solely the per-(provider,day) FSM state, not generic cache fallbacks.
+48. Snooze "today" suppresses ALL bands per provider until local-midnight rollover (default decision #2 — explicit) via `snoozedUntilDay[snap.providerID] == today` short-circuit BEFORE band-transition check; never confuse with snoozing only the current band.
+49. `UNNotificationManager.registerCategories(on:)` is a static, called from `AgentsUsageBarApp.init()` BEFORE the first `schedule(_:)` invocation (Pitfall 6). The protocol seam does not expose `setNotificationCategories(_:)` so the static downcasts the concrete `UNUserNotificationCenter`.
+50. `NotificationActionHandler` is held strongly by the `Dependencies` bag for app lifetime — `UNUserNotificationCenter.current().delegate` is `weak`, so without the strong reference the handler would deallocate and snooze taps would no-op silently.
+51. Coalesced ID extends from Phase 1's hardcoded `:warn80` to `:warn80|crit95|exceed100` derived from `max(decisions.band)`; coalesced title percent (80/95/100) reflects the same highest band — `bandSuffix(for:)` + `bandPercent(for:)` are public statics on `ThresholdEngine` shared with `NotificationManager`.
+52. Test `now`-Date pinned to noon UTC, NOT a PT/local timezone — `TodayHelper.formatYYYYMMDD(now)` uses `Calendar.current`, so a PT-noon date crosses to the next calendar day in UTC+8+ developer machines; noon UTC stays on the same calendar day across UTC-12..UTC+12 hosts.
 
 ### Open Questions (from research)
 
@@ -114,8 +123,8 @@ Plan: 4 of 7 executed
 
 ### Active TODOs
 
-- **CONFIG**: Re-evaluate `workflow.use_worktrees` in `.planning/config.json`. Currently `false` — caused Wave 1 parallel-isolation slip (see Phase 2 Wave 1 backprop). Wave 2 ran cleanly sequentially. Decide before Wave 3.
-- **WAVE 3**: Plan 02-05 (ThresholdEngine FSM v2 + snooze) depends on 02-04 (now ✅) — unblocked.
+- **CONFIG**: Re-evaluate `workflow.use_worktrees` in `.planning/config.json`. Currently `false` — caused Wave 1 parallel-isolation slip (see Phase 2 Wave 1 backprop). Waves 2 and 3 both ran cleanly sequentially. Decide before Wave 4 (Plan 02-06 RetryPolicy + CircuitBreaker is heavier).
+- **WAVE 4**: Plan 02-06 (PowerObserver + RetryPolicy + CircuitBreaker) depends on 02-03/04/05 (all ✅) — unblocked.
 
 ### Blockers
 
@@ -139,14 +148,14 @@ Plan: 4 of 7 executed
 
 ### Last Session
 
-- **Date:** 2026-05-13
-- **Worked on:** Phase 02 Plan 02-04 — ClaudeJSONLProvider actor (Wave 2). Composed TranscriptReader + ClaudeModelPricing + ClaudeOAuthClient into the headline UsageProvider. Wired into AppDependencies registry. Debugged and fixed 3 test suite root causes: (1) AsyncSequence CancellationError in TranscriptReader → replaced with synchronous readToEnd(), (2) /var vs /private/var symlink mismatch in TranscriptDirectoryScanner → added resolvingSymlinksInPath(), (3) Swift multiline literal missing trailing \n → all 13 active ClaudeJSONLProviderTests now pass in full suite runs.
-- **Commits:** e703320 (feat — ClaudeJSONLProvider + ClaudeRoots + ProviderID.claude + AppDependencies wiring), 3e3f9cf (fix — 3 root causes in test suite).
+- **Date:** 2026-05-14
+- **Worked on:** Phase 02 Plan 02-05 — Threshold FSM v2 + snooze (Wave 3). Added `ThresholdBand: Comparable + Codable`, `NotificationStateStore` (UserDefaults + InMemory), FSM-aware `ThresholdEngine` overload (warning / critical / exceeded upward-only emission with `snoozedUntilDay[pid] == today` gate), `NotificationActionHandler` routing snooze taps into `AggregateStore.snoozeToday` / `snoozeAllToday`, `UNNotificationCategory("usage.warning")` registration in `AgentsUsageBarApp.init()` (Pitfall 6), and 3-band coalesced ID/title extension in `NotificationManager`. Fixed 4 root causes during green phase: (1) missing Codable on ThresholdBand, (2) Swift 6 sendability on completionHandler, (3) ProviderStatus.ok signature, (4) test now-Date timezone mismatch (PT-noon vs Bangkok host).
+- **Commits:** ea07831 (feat — Threshold FSM v2 + UNNotificationCategory + snooze action handler, 15 files, +1707/-92, 42 new tests).
 
 ### Next Session
 
-- **Suggested action:** `/gsd-execute-phase 02 --wave 3`. Plan 02-05 is next (Wave 3).
-- **Pre-work:** Confirm `xcodebuild test -scheme AgentsUsageBar` passes (it does at HEAD 3e3f9cf). Re-read 02-04-SUMMARY.md for the ClaudeJSONLProvider fetch boundary before reading Plan 02-05's task list.
+- **Suggested action:** `/gsd-execute-phase 02 --wave 4`. Plan 02-06 is next (Wave 4) — PowerObserver + RetryPolicy + CircuitBreaker.
+- **Pre-work:** Confirm `xcodebuild test -scheme AgentsUsageBar` still passes at HEAD ea07831 (291/0/1 at landing). Re-read 02-05-SUMMARY.md for ThresholdEngine entry points + AggregateStore.snoozeToday signature before reading Plan 02-06's task list.
 
 ### Notes
 
