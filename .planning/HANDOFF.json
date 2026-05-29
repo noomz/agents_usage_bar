@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-25T03:34:05Z",
+  "phase": "06",
+  "phase_name": "distribution-sign-notarize-dmg-sparkle-oss-hygiene",
+  "phase_dir": ".planning/phases/06-distribution-sign-notarize-dmg-sparkle-oss-hygiene",
+  "plan": 5,
+  "task": 1,
+  "total_tasks": 3,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": "06-02", "name": "Sparkle 2.9.2 SPM + Info.plist update keys + version build settings + ExportOptions.plist", "status": "done", "commit": "15aa98a+9a10b09+a885ebc"},
+    {"id": "06-03", "name": "MIT LICENSE + SECURITY.md + docs/entitlements.md + docs/release-setup.md + README privacy section", "status": "done", "commit": "359a598+9559c63+9a10b09+4c02e9a"},
+    {"id": "06-01", "name": "SEC-03 ConfigStore 0o600 creation + world-readable warning + 7 Swift Testing cases", "status": "done", "commit": "b161e27+bc10fc0+ee17211"},
+    {"id": "06-04", "name": "release.yml tag-triggered sign/notarize/staple/DMG/Sparkle/appcast pipeline + entitlements-guard CI job + appcast template/helper", "status": "done", "commit": "4a3960c+af0273a+68999d0+42e524a"},
+    {"id": "06-state", "name": "STATE.md + 06-01-PLAN.md frontmatter bookkeeping", "status": "done", "commit": "72de26c"}
+  ],
+  "remaining_tasks": [
+    {"id": "06-05-T1", "name": "Provision secrets + Info.plist real values + gh-pages + Pages", "status": "not_started", "type": "checkpoint:human-action", "gate": "blocking"},
+    {"id": "06-05-T2", "name": "Push v* tag and verify unattended notarized release (stapler validate + spctl + clean-account offline Gatekeeper open)", "status": "not_started", "type": "checkpoint:human-verify", "gate": "blocking"},
+    {"id": "06-05-T3", "name": "Verify Sparkle N→N+1 update + capture menubar-popover.png screenshot + author 06-UAT.md", "status": "not_started", "type": "checkpoint:human-verify", "gate": "blocking"}
+  ],
+  "blockers": [
+    {
+      "description": "Apple Developer ID Application cert not yet exported to .p12; App Store Connect API key (.p8) not yet created; Sparkle EdDSA key pair not yet generated",
+      "type": "human_action",
+      "workaround": "Follow docs/release-setup.md step-by-step runbook (committed in 06-03)"
+    },
+    {
+      "description": "7 GitHub repository secrets not yet provisioned",
+      "type": "human_action",
+      "workaround": "gh secret set DEVELOPER_ID_CERT_P12/DEVELOPER_ID_CERT_PASSWORD/ASC_API_KEY_P8/ASC_API_KEY_ID/ASC_API_ISSUER_ID/SPARKLE_ED_PRIVATE_KEY/DEVELOPMENT_TEAM"
+    },
+    {
+      "description": "Info.plist SUFeedURL contains literal 'OWNER' placeholder; SUPublicEDKey is empty string",
+      "type": "human_action",
+      "workaround": "Replace after running ./bin/generate_keys (Sparkle SPM artifact) and choosing GitHub Pages owner handle"
+    },
+    {
+      "description": "gh-pages branch not initialized; GitHub Pages not enabled",
+      "type": "human_action",
+      "workaround": "Copy scripts/appcast.template.xml to appcast.xml on a new gh-pages branch; push; Settings → Pages → Deploy from branch → gh-pages"
+    }
+  ],
+  "human_actions_pending": [
+    {"action": "Export Developer ID Application cert to .p12 + base64-encode + set DEVELOPER_ID_CERT_P12 + DEVELOPER_ID_CERT_PASSWORD secrets", "context": "Required for codesign step in release.yml", "blocking": true},
+    {"action": "Create ASC API key + set ASC_API_KEY_P8 + ASC_API_KEY_ID + ASC_API_ISSUER_ID secrets", "context": "Required for notarytool authentication (D-04)", "blocking": true},
+    {"action": "Run Sparkle generate_keys; paste public key into Info.plist SUPublicEDKey; set SPARKLE_ED_PRIVATE_KEY secret", "context": "Required for sign_update + appcast EdDSA verification (REL-06)", "blocking": true},
+    {"action": "Set DEVELOPMENT_TEAM secret (10-char Apple Team ID)", "context": "Consumed by ExportOptions.plist via $(DEVELOPMENT_TEAM) variable", "blocking": true},
+    {"action": "Replace 'OWNER' substring in Info.plist SUFeedURL with real GitHub owner handle", "context": "SUFeedURL is currently https://OWNER.github.io/agents_usage_bar/appcast.xml", "blocking": true},
+    {"action": "Initialize gh-pages branch from scripts/appcast.template.xml + enable GitHub Pages", "context": "release.yml pushes appcast updates to gh-pages; branch + Pages source must exist first", "blocking": true},
+    {"action": "Push first v* tag (e.g. git tag v0.1.0 && git push origin v0.1.0) and watch unattended release run", "context": "Live verification of REL-01..REL-06 pipeline", "blocking": true},
+    {"action": "Verify stapler validate + spctl on downloaded DMG + clean-account offline Gatekeeper open", "context": "Live evidence for REL-02/REL-03", "blocking": true},
+    {"action": "Push second v* tag (e.g. v0.1.1) + confirm Sparkle update dialog appears in installed N + app relaunches at N+1", "context": "Live verification of REL-06 end-to-end auto-update", "blocking": true},
+    {"action": "Capture menu-bar popover screenshot → docs/screenshots/menubar-popover.png", "context": "README placeholder added in 06-03 awaits this file", "blocking": true},
+    {"action": "Author .planning/phases/06-distribution-sign-notarize-dmg-sparkle-oss-hygiene/06-UAT.md mirroring 05-UAT.md shape (5-criteria outcomes table + attestation block + reviewer-signal protocol)", "context": "Phase 6 phase-exit gate, mirrors Phase 2-5 convention", "blocking": true},
+    {"action": "Sign 06-UAT.md as approved / failed: <test#> / deferred: <test#>", "context": "Closes Phase 6 + milestone v1.0", "blocking": true}
+  ],
+  "decisions": [
+    {"decision": "Sparkle SPM auto-embeds via packageProductDependencies on macOS app target — DO NOT add manual PBXCopyFilesBuildPhase Embed Frameworks", "rationale": "Plan 06-02 deviation: Task 1 initial manual copy phase tried to copy non-existent 'Sparkle' (no .framework suffix) from Build/Products/Debug/ and broke build; removed and Xcode 16 auto-embedded correctly", "phase": "06"},
+    {"decision": "Use defer { checkAndWarnPermissions() } in ConfigStore.load() rather than tail-position call", "rationale": "Fires through any early-return paths — strictly stronger than the plan's prescription, no downside", "phase": "06"},
+    {"decision": "ci.yml plutil extract uses backslash-escaped dotted key form 'com\\.apple\\.security\\.network\\.client'", "rationale": "plutil treats . as nested-keypath separator; bare 'com.apple.security.network.client' returns 'No value at that key path'. Plan 06-04 verify line had this bug; ci.yml fix includes inline gotcha comment", "phase": "06"},
+    {"decision": "release.yml comments avoid literal forbidden tokens (--deep, altool)", "rationale": "Plan's negative-grep gates match literal tokens anywhere in file including comments; reworded as 'codesign recursive-deep-sign flag' / 'deprecated pre-notarytool submission CLI'", "phase": "06"},
+    {"decision": "Entitlements.plist byte-unchanged across entire Phase 6", "rationale": "D-08 + REL-09 — only entitlement is com.apple.security.network.client; no disable-library-validation/allow-jit/allow-dyld-environment-variables added (Sparkle 2.x on Hardened Runtime + non-sandbox does not require them)", "phase": "06"},
+    {"decision": "ExportOptions.plist uses correctly-spelled 'hardenedRuntime' (not RESEARCH typo 'hardendedRuntime')", "rationale": "Apple's actual export-options key; the typo would silently disable Hardened Runtime in the export step", "phase": "06"},
+    {"decision": "Plan 06-05 deferred end-to-end; cannot be substituted by CLI/API", "rationale": "D-02 — Apple Developer portal access + ASC admin + repo admin + clean macOS account all required; documented in CLAUDE.md sandbox-decision + Phase 6 RESEARCH 'Autonomous vs Human-Gated Split'", "phase": "06"}
+  ],
+  "uncommitted_files": [],
+  "untracked_files": ["AGENTS.md"],
+  "next_action": "When user returns with secrets provisioned: invoke /gsd-resume-work or /gsd-execute-phase 06 to resume at Plan 06-05 Task 1 (checkpoint:human-action gate). User signal 'provisioned' after gh secret list shows all 7 names + Info.plist SUPublicEDKey non-empty + SUFeedURL OWNER replaced + gh-pages live + Pages enabled.",
+  "context_notes": "Phase 6 code-complete (4/4 autonomous plans landed across Waves 1+2 in single uninterrupted session, 12 commits). All autonomous verification gates green: xcodebuild build PASS, xcodebuild test PASS (7 SEC-03 cases × 2 destinations), yaml.safe_load(release.yml) + yaml.safe_load(ci.yml) ok, xmllint(appcast.template.xml) + xmllint(generated appcast item) ok, plutil extracts confirm REL-08/REL-09 invariants. SourceKit diagnostics 'No such module Sparkle' + 'Cannot find type EnvReader/AppLogger/AppConfig/etc.' in ConfigStore.swift are editor-index lag artifacts from the new SPM dep — actual builds compile cleanly. Phase 6 STATUS = code-complete; phase exit BLOCKED on user provisioning per Plan 06-05 (3 checkpoint tasks, all autonomous=false). docs/release-setup.md is the runbook the user follows. After provisioning, the workflow is: push v* tag → unattended green release → download DMG → spctl + stapler validate + clean-account offline open → push second v* tag → Sparkle N→N+1 dialog + relaunch → screenshot → 06-UAT.md → reviewer signal. milestone v1.0 = 6/6 phases pending only this final gate."
+}
