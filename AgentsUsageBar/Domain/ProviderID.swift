@@ -32,6 +32,30 @@ extension ProviderID {
     /// for this rawValue.
     public static let gemini = ProviderID(rawValue: "gemini")
 
+    /// Ollama — http://localhost:11434 (LOCAL-01). Plan 04-04 introduces this
+    /// constant for `OllamaProvider`. `displayHint` already returns "Ollama"
+    /// for this rawValue (Phase 1 declaration).
+    public static let ollama = ProviderID(rawValue: "ollama")
+
+    /// LM Studio — http://localhost:1234 by default, port overridable via
+    /// `[lmstudio].port` in config.toml (LOCAL-02). Plan 04-05 introduces
+    /// this constant for `LMStudioProvider`. `displayHint` already returns
+    /// "LM Studio" for this rawValue.
+    public static let lmstudio = ProviderID(rawValue: "lmstudio")
+
+    /// llama.cpp / llamafile — port REQUIRED in `[llamacpp].port` in
+    /// config.toml; no scanning (LOCAL-03). Plan 04-06 introduces this
+    /// constant for `LlamaCppProvider`. `displayHint` already returns
+    /// "llama.cpp" for this rawValue.
+    public static let llamacpp = ProviderID(rawValue: "llamacpp")
+
+    /// Plan 04-01 — Phase 4 lookup constant. The three localhost-runtime IDs
+    /// whose `ProviderCapabilities.isLocal == true`.
+    ///
+    /// `ProviderRowView` (Plan 04-07) keys on this `Set` when the provider
+    /// registry isn't available in the view environment.
+    public static let localIDs: Set<ProviderID> = [.ollama, .lmstudio, .llamacpp]
+
     /// Human-readable display hint for this provider.
     ///
     /// Used by `ThresholdEngine` to populate `NotificationDecision.displayName` (B3),

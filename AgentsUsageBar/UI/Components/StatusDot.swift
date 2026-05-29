@@ -7,6 +7,7 @@ import SwiftUI
 ///   - `.stale(_, _)`       → yellow (data is stale — prior success exists but fetch failed)
 ///   - `.error(_)`          → red    (fetch failed, no prior success)
 ///   - `.unauthenticated`   → gray   (no API key configured or key rejected)
+///   - `.notRunning`        → gray   (localhost runtime not listening — muted, never red; Plan 04-01 / LOCAL-04)
 ///   - `.disabled`          → gray dimmed (explicitly disabled by user)
 ///
 /// Plan 02.07 (UI-08): the `isStale` flag dims the dot to 40% opacity when the
@@ -55,6 +56,8 @@ public struct StatusDot: View {
             base = .red
         case .unauthenticated:
             base = .gray
+        case .notRunning:
+            base = .gray
         case .disabled:
             return .gray.opacity(0.4)  // .disabled already encodes its own dim
         }
@@ -77,6 +80,8 @@ public struct StatusDot: View {
             return "Status: Error" + suffix
         case .unauthenticated:
             return "Status: Not authenticated" + suffix
+        case .notRunning:
+            return "Status: Not running" + suffix
         case .disabled:
             return "Status: Disabled" + suffix
         }
@@ -102,6 +107,11 @@ public struct StatusDot: View {
 
 #Preview("StatusDot — unauthenticated (gray)") {
     StatusDot(status: .unauthenticated)
+        .padding()
+}
+
+#Preview("StatusDot — notRunning (gray)") {
+    StatusDot(status: .notRunning)
         .padding()
 }
 
