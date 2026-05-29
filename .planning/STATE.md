@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-14T12:00:00.000Z"
+last_updated: "2026-05-14T14:30:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 16
-  completed_plans: 15
-  percent: 94
+  completed_plans: 16
+  percent: 100
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-14 (after Phase 2 Wave 4 — Plan 02-06 PowerObserver + RetryPolicy + CircuitBreaker landed)
+**Last Updated:** 2026-05-14 (after Phase 2 Wave 5 — Plan 02-07 UI extensions code-complete; UAT pending reviewer)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -28,35 +28,36 @@ progress:
 
 ## Current Position
 
-Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — WAVE 4 COMPLETE
-Plan: 6 of 7 executed
+Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — WAVE 5 CODE-COMPLETE; UAT PENDING
+Plan: 7 of 7 executed (code); Phase exit gated on Task 3 human-verify checkpoint
 
 - **Milestone:** v1 (initial release)
-- **Phase:** 2 of 6 — Claude Provider + Threshold/Rollover + JSONL Streaming — IN PROGRESS
-- **Plan:** 6 of 7 plans executed (Wave 1 = {01 ✅, 02 ✅, 03 ✅}; Wave 2 = {04 ✅}; Wave 3 = {05 ✅}; Wave 4 = {06 ✅}; Wave 5 = {07})
-- **Status:** Wave 4 (Plan 02-06 PowerObserver + RetryPolicy + CircuitBreaker) landed; ready for `/gsd-execute-phase 02 --wave 5`
-- **Progress:** [████████████░░] 86% (6/7 Phase 2 plans)
+- **Phase:** 2 of 6 — Claude Provider + Threshold/Rollover + JSONL Streaming — CODE-COMPLETE; awaiting UAT sign-off
+- **Plan:** 7 of 7 plans executed (Wave 1 = {01 ✅, 02 ✅, 03 ✅}; Wave 2 = {04 ✅}; Wave 3 = {05 ✅}; Wave 4 = {06 ✅}; Wave 5 = {07 ✅ code, ⬜ UAT})
+- **Status:** Wave 5 (Plan 02-07 UI extensions UI-03/05/08/09 + 02-UAT.md) landed; reviewer must run UAT before `/gsd-transition`
+- **Progress:** [██████████████] 100% (7/7 Phase 2 plans code-complete)
 
 ```
-[██████████████████████████████████████████████████████████████░] 94% (15/16 plans complete)
+[████████████████████████████████████████████████████████████████] 100% (16/16 plans code-complete; Phase 2 UAT pending)
 ```
 
 ## Performance Metrics
 
 | Metric | Value |
 |--------|-------|
-| Phases complete | 1 / 6 |
-| Plans complete | 15 / 16 (Phase 1: 9 plans + Phase 2 Waves 1+2+3+4: 02-01/02/03/04/05/06) |
+| Phases complete | 1 / 6 (Phase 2 code-complete; UAT pending) |
+| Plans complete | 16 / 16 code-complete (Phase 1: 9 plans + Phase 2 Waves 1+2+3+4+5: 02-01/02/03/04/05/06/07) |
 | Requirements mapped | 76 / 76 (100%) |
-| Requirements validated | 42 / 76 (Phase 1 set unchanged; Phase 2 Waves 1+2+3+4 cover CLAUDE-01..05 + NOTIF-01..05 + POLL-04..06 + POLL-09 partial; end-to-end UAT deferred to Plan 02-07) |
+| Requirements validated | 42 / 76 automated (Phase 1 set unchanged; Phase 2 Waves 1+2+3+4+5 cover CLAUDE-01..05 + NOTIF-01..05 + POLL-04..06 + POLL-09 + UI-03/05/08/09 — end-to-end UAT pending in `02-UAT.md`) |
 | Plans drafted | 16 |
-| Plans executed | 15 (Phase 1 = 9; Phase 2 Wave 1 = 3 bundled in salvage commit 2bf5bf6; Phase 2 Wave 2 = 1 in commits e703320 + 3e3f9cf; Phase 2 Wave 3 = 1 in commit ea07831; Phase 2 Wave 4 = 1 in commits 4121cfe + afc7825) |
+| Plans executed | 16 (Phase 1 = 9; Phase 2 Wave 1 = 3 bundled in salvage commit 2bf5bf6; Phase 2 Wave 2 = 1 in commits e703320 + 3e3f9cf; Phase 2 Wave 3 = 1 in commit ea07831; Phase 2 Wave 4 = 1 in commits 4121cfe + afc7825; Phase 2 Wave 5 = 1 in commits 5f042c8 + 6be6396 + 4895ae8) |
 | Node repairs | 1 (Phase 2 Wave 1 salvage — see Phase 2 backprop) |
 | UI phases run | 0 |
 | UAT gaps closed | 1 (Test 2 cosmetic hover state) |
 | Phase 02 P04 duration | ~90 min, 1 task, 7 files modified |
 | Phase 02 P05 duration | ~60 min, 2 tasks, 13 files modified, 42 new tests |
 | Phase 02 P06 duration | ~12 min, 2 tasks, 10 files modified, 29 new tests |
+| Phase 02 P07 duration | ~25 min, 3 tasks (2 code + 1 docs), 11 files modified, 30 new tests |
 
 ## Accumulated Context
 
@@ -120,6 +121,10 @@ Plan: 6 of 7 executed
 56. `AggregateStore.perProviderBreakers: [ProviderID: CircuitBreaker]` is lazily populated via `breaker(for:)` helper. `performRefresh(now:)` pre-decides per-provider gate: terminal `.unauthenticated` providers (POLL-06) contribute NO task at all (breaker untouched); open-breaker providers (POLL-05) surface a synthesised `"circuit-open"` failure result. Success → `recordSuccess`; non-auth failures → `recordFailure(now:)`; auth/paymentRequired → breaker untouched (POLL-06 terminal).
 57. `ClaudeJSONLProvider.oauthBreaker = CircuitBreaker(threshold: 3, cooldown: 300)` is scoped ONLY to the `/api/oauth/usage` endpoint's 429 responses. Non-429 OAuth errors (refresh failed, no creds, network) do NOT increment the breaker — they're caller-side issues, not endpoint flakiness. 5xx OAuth errors also fall through to the general AggregateStore-level breaker, not this 3-strike one. JSONL collection continues regardless of OAuth breaker state (CLAUDE-04 graceful-degrade).
 58. `PollSchedulerSleepWakeTests/scheduler_start_after_stop_resumes_polling` uses a `VirtualClock` that advances 10s per `now()` call (same pattern as `PollSchedulerTests/updateIntervalReplacesLoop`) — guarantees the 2nd refresh after `start()` bypasses POLL-03's 5s `AggregateStore.refresh(now:)` debounce. SystemClock would race the debounce and flake.
+59. `TodayHelper.resetClockText` uses `calendar.timeZone.abbreviation(for: now)` for DST-correctness (Pitfall 4 / Pitfall 7). Modern Apple Foundation emits GMT-offset strings ("GMT-7", "GMT-8") instead of historical abbreviations ("PDT", "PST") in recent macOS releases. Tests in `TodayHelperResetClockTests` accept BOTH shapes via `text.hasSuffix("PDT") || text.hasSuffix("GMT-7")`; DST correctness is asserted by checking that the suffix flips at the 2026-03-08 02:00 transition boundary.
+60. `AggregateStore.maxQuotaFraction` returns the cross-provider max of each provider's `max(quota.fraction, quotaWindows.utilization.max)`. Empty providers map → 0 (default healthy). `AggregateStore.menuBarTint` is SwiftUI `Color` and lives on the store (not in the App layer) — `import SwiftUI` was added to `AggregateStore.swift`; the architectural decision is recorded in inline doc as "acceptable: AggregateStore is already an @Observable view-model concern".
+61. Plan 02.07's `ProviderRowView` moves the staleness computation INSIDE the existing `TimelineView(.periodic(by: 1))` context closure so the dimming updates each second as time crosses the 2× threshold (UI-08). Cost is constant-time per row — accepted per T-02.07-02 disposition.
+62. Plan 02.07 ships the `MenuBarExtra` in the explicit-label form (not the `(title:systemImage:)` shorthand) so `Image(systemName:).symbolRenderingMode(.hierarchical).foregroundStyle(dependencies.store.menuBarTint)` can dynamically retint as `@Observable` re-renders. Snap transitions (no animation) acceptable per Pitfall 9 / RESEARCH §H.3.
 
 ### Open Questions (from research)
 
@@ -130,12 +135,12 @@ Plan: 6 of 7 executed
 
 ### Active TODOs
 
-- **CONFIG**: `workflow.use_worktrees` remains `false`. Waves 2, 3, 4 all ran cleanly sequentially. Decide before Wave 5 (Plan 02-07 UI extensions + UAT) — likely keep `false` since 02-07 is the only remaining Phase 2 plan.
-- **WAVE 5**: Plan 02-07 (UI extensions UI-03/05/08/09 + 02-UAT.md) depends on 02-04/05/06 (all ✅) — unblocked. NOT autonomous (`autonomous: false`) — requires user-driven UAT checkpoint between code landing and phase verification.
+- **UAT (BLOCKING)**: Plan 02-07 Task 3 is a `gate="blocking"` human-verify checkpoint. Reviewer must walk through `.planning/phases/02-claude-provider-threshold-rollover-jsonl-streaming/02-UAT.md` (10 tests mapped to Phase 2 success criteria 1–5 + UI add-ons) and respond `approved` to mark Phase 2 fully complete, OR file failed steps for `/gsd-plan-phase 02 --gaps` remediation.
+- **CONFIG**: `workflow.use_worktrees` remains `false`. Wave 5 ran cleanly sequentially.
 
 ### Blockers
 
-(None.)
+- **Phase 2 exit**: BLOCKED on manual UAT (Plan 02-07 Task 3). Code work is complete and green; phase cannot transition to `complete` until reviewer approves `02-UAT.md`.
 
 ## Risk Register
 
@@ -156,13 +161,14 @@ Plan: 6 of 7 executed
 ### Last Session
 
 - **Date:** 2026-05-14
-- **Worked on:** Phase 02 Plan 02-06 — Energy + resilience layer (Wave 4). Added `RetryPolicy` (decorrelated jitter value type, unwired primitive), `CircuitBreaker` (actor, 3-state machine, default 5-strike/300s for POLL-05), `PowerObserver` (@MainActor, NSWorkspace willSleep/didWake → scheduler.stop/start + store.refresh). Extended `ClaudeJSONLProvider` with 3-strike OAuth-usage-specific breaker (Pitfall 5), `AggregateStore` with `perProviderBreakers` map + POLL-06 terminal-unauthenticated skip + POLL-05 open-breaker skip, `ProviderStatus.unauthenticated` doc (POLL-06 terminality), `AppDependencies.Dependencies.powerObserver` strong-reference, and `AgentsUsageBarApp` force-realize before scheduler.start (Pitfall 4). Fixed 2 root causes during green phase: (1) Swift 6 strict-concurrency deinit access — `nonisolated(unsafe)` on observer tokens + notificationCenter; (2) `PollSchedulerSleepWakeTests/scheduler_start_after_stop_resumes_polling` flake — POLL-03 5s coalescing window was skipping the 2nd refresh under SystemClock; fix = VirtualClock advancing 10s/call.
-- **Commits:** 4121cfe (feat — RetryPolicy + CircuitBreaker primitives), afc7825 (feat — PowerObserver + per-provider CircuitBreaker + POLL-06 unauthenticated terminal), 0eed73a (docs — SUMMARY). 29 new Swift Testing assertions; full xcodebuild test = 320 pass / 0 fail / 1 pre-existing skip.
+- **Worked on:** Phase 02 Plan 02-07 — UI extensions + Phase 2 UAT (Wave 5). Added `TodayHelper.resetClockText(_:calendar:)` (UI-05 footer caption helper, DST-correct), `AggregateStore.isStale(_:now:)` (UI-08 stale predicate, 2× currentInterval), `AggregateStore.maxQuotaFraction` + `menuBarTint: Color` (UI-09). Extended `StatusDot` and `RelativeTimestampLabel` with additive `isStale: Bool = false` overloads (opacity 0.4 for dot, `.tertiary` foregroundStyle for label). `ProviderRowView` moves staleness compute INSIDE the existing `TimelineView` context closure so the dimming updates every second. `FooterView` adds the "Resets HH:mm <TZ>" caption row. `AgentsUsageBarApp` switches `MenuBarExtra` to the explicit-label form with `Image(systemName:).symbolRenderingMode(.hierarchical).foregroundStyle(dependencies.store.menuBarTint)` (Pitfall 9 snap transition). `QuotaBar` gains a top-of-file UI-03 reconciliation doc comment locking the ClaudeBar 50%/20% convention. Created `02-UAT.md` — the 10-step reviewer script gating Phase 2 exit. Fixed 1 root cause during green phase: Apple Foundation `TimeZone.abbreviation(for:)` now emits `"GMT-7"`/`"GMT-8"` instead of `"PDT"`/`"PST"` — tests loosened to accept either shape; DST correctness still asserted via the spring-forward boundary flip.
+- **Commits:** 5f042c8 (feat — TodayHelper.resetClockText + AggregateStore stale/tint surfaces), 6be6396 (feat — UI extensions for stale dimming, reset caption, menu bar tint), 4895ae8 (docs — Phase 2 UAT script). 30 new Swift Testing assertions across 5 suites; full xcodebuild test = 343 pass / 0 fail / 1 pre-existing skip.
 
 ### Next Session
 
-- **Suggested action:** `/gsd-execute-phase 02 --wave 5`. Plan 02-07 is the final Phase 2 plan (Wave 5) — UI extensions (UI-03 last-error tooltip, UI-05 stale dimming, UI-08 menu-bar tint pulse, UI-09 footer reset countdown) + Phase 2 UAT script (`02-UAT.md`). NOT autonomous — runs through UAT checkpoint.
-- **Pre-work:** Confirm `xcodebuild test -scheme AgentsUsageBar` still passes at HEAD 0eed73a (320/0/1 at landing). Re-read 02-06-SUMMARY.md for PowerObserver + AggregateStore.perProviderBreakers entry points (UAT script needs to reference them). Plan 02-07 has UI work — keep `workflow.use_worktrees=false` for sequential single-plan execution.
+- **Suggested action:** **Reviewer runs `02-UAT.md`.** Launch the app from the freshly-built `.app` bundle, walk through Tests 1–10, fill in the outcomes table at the top. On `approved` → `/gsd-transition` to Phase 3. On any failure → `/gsd-plan-phase 02 --gaps` to file the remediation plan.
+- **Pre-work for the UAT session:** Confirm `xcodebuild build -scheme AgentsUsageBar -configuration Debug` exits 0 at HEAD `4895ae8`. Ensure `~/.claude/projects/**/*.jsonl` has at least one recent session OR run Claude Code for 30s during Test 1 setup. Optionally set `OPENROUTER_API_KEY` env var for Tests 5 + 10 (cross-provider coalesce + tint).
+- **Once Phase 2 is approved:** Phase 3 (Codex + Gemini providers) is unblocked. Reuses TranscriptReader + TranscriptDirectoryScanner (Plan 02.01), ThresholdEngine v2 FSM (Plan 02.05), and CircuitBreaker + PowerObserver (Plan 02.06). Plan 03.01 would be Codex rollout-*.jsonl parser; Plan 03.02 Codex provider actor; Plan 03.03 Gemini OAuth-personal client.
 
 ### Notes
 
