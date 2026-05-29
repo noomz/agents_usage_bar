@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-05-13T00:00:00.000Z"
+status: in_progress
+last_updated: "2026-05-13T16:45:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 16
-  completed_plans: 9
-  percent: 56
+  completed_plans: 12
+  percent: 75
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-13 (after Phase 2 planning — 7 plans drafted across 5 waves)
+**Last Updated:** 2026-05-13 (after Phase 2 Wave 1 salvage commit — plans 02-01/02/03 landed)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -24,21 +24,21 @@ progress:
 
 **What This Is:** A macOS menu bar app that surfaces today's AI agent usage across Claude, OpenAI Codex, Gemini, OpenRouter, and local agents (Ollama, LM Studio, llama.cpp) — tokens used, USD spent, quota remaining per provider — with native notifications at threshold crossings.
 
-**Current Focus:** Phase 02 — Claude Provider + Threshold/Rollover + JSONL Streaming (7 plans planned, ready to execute)
+**Current Focus:** Phase 02 — Wave 1 complete (3 of 7 plans). Wave 2 (Plan 02-04, ClaudeProvider integration) is next.
 
 ## Current Position
 
-Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — PLANNING COMPLETE
-Plan: 0 of 7 executed (planning ready)
+Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — WAVE 1 COMPLETE
+Plan: 3 of 7 executed
 
 - **Milestone:** v1 (initial release)
-- **Phase:** 2 of 6 — Claude Provider + Threshold/Rollover + JSONL Streaming — PLANS DRAFTED
-- **Plan:** 0 of 7 plans executed (Wave 1 = {01, 02, 03}; Wave 2 = {04}; Wave 3 = {05}; Wave 4 = {06}; Wave 5 = {07})
-- **Status:** Phase 02 planning complete; awaiting `/gsd-execute-phase 02`
-- **Progress:** [░░░░░░░░░░] 0% (Phase 2 execution)
+- **Phase:** 2 of 6 — Claude Provider + Threshold/Rollover + JSONL Streaming — IN PROGRESS
+- **Plan:** 3 of 7 plans executed (Wave 1 = {01 ✅, 02 ✅, 03 ✅}; Wave 2 = {04}; Wave 3 = {05}; Wave 4 = {06}; Wave 5 = {07})
+- **Status:** Wave 1 landed as a single salvage commit (see backprop notes); ready for `/gsd-execute-phase 02 --wave 2`
+- **Progress:** [████░░░░░░░░░░] 43% (3/7 Phase 2 plans)
 
 ```
-[============================================================] 100% (9/9 plans complete)
+[████████████████████████████████████████████████████░░░░░░░░] 75% (12/16 plans complete)
 ```
 
 ## Performance Metrics
@@ -46,12 +46,12 @@ Plan: 0 of 7 executed (planning ready)
 | Metric | Value |
 |--------|-------|
 | Phases complete | 1 / 6 |
-| Plans complete | 9 / 9 (Phase 1 fully complete incl. UAT gap closure) |
+| Plans complete | 12 / 16 (Phase 1: 9 plans + Phase 2 Wave 1: 02-01/02/03) |
 | Requirements mapped | 76 / 76 (100%) |
-| Requirements validated | 28 / 76 (all Phase 1: SHELL-01,02,03,04,06 + SEC-01,SEC-02,SEC-04,SEC-05 + UI-01,02,04,06,07,10 + POLL-01,02,03,07,08 + NOTIF-06,07 + CFG-01,02 + ROUTER-01,02,03,04) |
-| Plans drafted | 9 |
-| Plans executed | 9 (01.09 cosmetic gap closure — 1 task, 4 files; HoverableBorderedButtonStyle + FooterView modifier swap; B5 + W7 preserved) |
-| Node repairs | 0 |
+| Requirements validated | 28 / 76 (Phase 1 set unchanged; Phase 2 Wave 1 tests passing but UAT-level validation deferred to Plan 02-04 end-to-end) |
+| Plans drafted | 16 |
+| Plans executed | 12 (Phase 1 = 9; Phase 2 Wave 1 = 3 — bundled in salvage commit 2bf5bf6) |
+| Node repairs | 1 (Phase 2 Wave 1 salvage — see Phase 2 backprop) |
 | UI phases run | 0 |
 | UAT gaps closed | 1 (Test 2 cosmetic hover state) |
 
@@ -109,7 +109,8 @@ Plan: 0 of 7 executed (planning ready)
 
 ### Active TODOs
 
-(None yet — populated by phase planning.)
+- **CONFIG**: Re-evaluate `workflow.use_worktrees` in `.planning/config.json`. Currently `false` — caused Wave 1 parallel-isolation slip (see Phase 2 Wave 1 backprop). Either set to `true` (so Agent isolation actually isolates) or run subsequent waves sequentially / interactively.
+- **WAVE 2**: Plan 02-04 (Claude provider integration) waits on Wave 1 — now unblocked.
 
 ### Blockers
 
@@ -134,14 +135,14 @@ Plan: 0 of 7 executed (planning ready)
 ### Last Session
 
 - **Date:** 2026-05-13
-- **Worked on:** Phase 02 planning — 7 plans drafted (5 waves) for Claude provider + threshold FSM + JSONL streaming + power/retry/breaker + UI extensions + UAT script.
-- **Result:** 8 new SwiftUI files (ClockEnvironmentKey + 3 components + TotalsHeaderView + 3 replaced Wave 0 views) + 3 test suites. 20 new Swift Testing assertions (8 QuotaBar B4 + 9 RelativeTimestampLabel W2 + 3 FooterView W7). Full suite 122 assertions pass. BUILD SUCCEEDED. B4 color thresholds verified, B5 ClockKey sole-declaration verified, UI-07 no loading flash guaranteed by AggregateStore cache seed.
-- **Commits:** ae7ec37 (Task 1 — components + tests), b341836 (Task 2 — popover scene views)
+- **Worked on:** Phase 02 Wave 1 execution + salvage. Launched 3 parallel `gsd-executor` agents (one per plan 02-01/02/03) with `isolation="worktree"` requested. The agents ignored isolation because `workflow.use_worktrees=false` in `.planning/config.json` — all three wrote to the main checkout, producing one interleaved diff and a broken test target. Two agents were killed mid-flight; one (02-02) signaled completion. SUMMARY.md files were never written by the agents.
+- **Salvage:** Triaged the merged diff in place; build was actually green (SourceKit errors were indexing lag, not real). Tests had 3 real failures: AggFakeCacheStore conformance missing (last-edit of killed 02-01 agent), FileCacheStoreSchemaV2Tests v1 fixture using JSON-object form instead of Swift's actual JSON-array form for `[ProviderID: T]`, and ClaudeModelPricingTests path navigation + Bundle.main assumption mismatch with app-hosted test target. All 3 patched. Full test suite green.
+- **Commits:** 10f01cb (gitignore .claude/.omc), 2bf5bf6 (Wave 1 code — 31 files, +2977 lines), 1c5c9b6 / 4dd07ef / b62b742 (3 SUMMARY docs).
 
 ### Next Session
 
-- **Suggested action:** Execute Phase 02 — `/gsd-execute-phase 02`. Wave 1 (plans 01/02/03) runs in parallel.
-- **Pre-work:** None — all Phase 2 plans reference Phase 1 SUMMARYs + 02-RESEARCH.md as authoritative sources.
+- **Suggested action:** Decide worktree-isolation config first (TODO above), THEN `/gsd-execute-phase 02 --wave 2`. Plan 02-04 is the Claude provider integration that wires Wave 1's pieces (TranscriptReader + pricing + OAuth) into a working ClaudeProvider conforming to the existing Provider protocol.
+- **Pre-work:** Confirm `xcodebuild test -scheme AgentsUsageBar` passes (it does at HEAD `b62b742`). Re-read `.planning/phases/02-claude-provider-threshold-rollover-jsonl-streaming/02.0[1-3]-SUMMARY.md` for Wave 1's contract before reading Plan 02-04's task list.
 
 ### Notes
 

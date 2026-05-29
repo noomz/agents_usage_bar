@@ -54,11 +54,11 @@ Plans:
   3. At local midnight (tester verifies in `America/Los_Angeles` at 11:59pm), all "today" totals reset to zero — never UTC-bucketed and never an off-by-one across DST.
   4. Crossing 80% on any provider fires exactly one macOS notification (stable id `"<providerID>:<yyyy-MM-dd>:warn80"`); "Snooze for today" action suppresses further fires until midnight; multiple providers crossing within one poll coalesce into a single "N providers crossed 80%" notification.
   5. After 1 hour idle on battery, macOS Energy Impact reports the app as "Low"; sleep pauses polling and wake triggers a single immediate refresh with exponential backoff + jitter on 429/5xx and circuit-breaker after 5 consecutive failures.
-**Plans:** 7 plans planned (5 waves) — ready for `/gsd-execute-phase 02`
+**Plans:** 7 plans planned (5 waves) — Wave 1 ✅ (plans 01/02/03); next: `/gsd-execute-phase 02 --wave 2`
 Plans:
-- [ ] 02-01-PLAN.md — TranscriptReader + offset cache schema v1→v2 + directory scanner (CLAUDE-01..03)
-- [ ] 02-02-PLAN.md — Bundled `claude-models.json` + ClaudeModelPricing cascade-lookup cost calculator (CLAUDE-05)
-- [ ] 02-03-PLAN.md — Anthropic OAuth client + ClaudeCredentialLoader + KeychainReader + QuotaWindow (CLAUDE-04)
+- [x] 02-01-PLAN.md — TranscriptReader + offset cache schema v1→v2 + directory scanner (CLAUDE-01..03) — see `02.01-SUMMARY.md`, commit `2bf5bf6`
+- [x] 02-02-PLAN.md — Bundled `claude-models.json` + ClaudeModelPricing cascade-lookup cost calculator (CLAUDE-05) — see `02.02-SUMMARY.md`, commit `2bf5bf6`
+- [x] 02-03-PLAN.md — Anthropic OAuth client + ClaudeCredentialLoader + KeychainReader + QuotaWindow (CLAUDE-04) — see `02.03-SUMMARY.md`, commit `2bf5bf6`
 - [ ] 02-04-PLAN.md — ClaudeJSONLProvider composing 02.01+02+03 + AppDependencies wiring (CLAUDE-01..05 composition)
 - [ ] 02-05-PLAN.md — ThresholdEngine FSM v2 (Comparable bands) + UNNotificationCategory + snooze + AggregateStore wiring (NOTIF-01..05)
 - [ ] 02-06-PLAN.md — PowerObserver (sleep/wake) + RetryPolicy + CircuitBreaker (per-provider 5-strike + OAuth-usage 3-strike) (POLL-04..06, POLL-09)
