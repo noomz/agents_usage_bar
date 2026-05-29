@@ -114,6 +114,11 @@
 		AA030200000000000000001A /* CodexCredentialLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000001B /* CodexCredentialLoader.swift */; };
 		AA030200000000000000002A /* CodexOAuthError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000002B /* CodexOAuthError.swift */; };
 		AA030200000000000000010A /* CodexCredentialLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000010B /* CodexCredentialLoaderTests.swift */; };
+		/* Plan 03-03 Task 2 — CodexUsageResponse + CodexOAuthClient (app target) + tests */
+		AA030200000000000000003A /* CodexUsageResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000003B /* CodexUsageResponse.swift */; };
+		AA030200000000000000004A /* CodexOAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000004B /* CodexOAuthClient.swift */; };
+		AA030200000000000000011A /* CodexUsageResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000011B /* CodexUsageResponseTests.swift */; };
+		AA030200000000000000012A /* CodexOAuthClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000012B /* CodexOAuthClientTests.swift */; };
 		/* Plan 02.01 — Claude transcript primitives (app target) */
 		AA020100000000000000001A /* TranscriptOffset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000001B /* TranscriptOffset.swift */; };
 		AA020100000000000000002A /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000002B /* TranscriptRecord.swift */; };
@@ -311,6 +316,12 @@
 		AA030200000000000000020B /* codex-auth-subscription.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-auth-subscription.json"; sourceTree = "<group>"; };
 		AA030200000000000000021B /* codex-auth-apikey.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-auth-apikey.json"; sourceTree = "<group>"; };
 		AA030200000000000000022B /* codex-auth-empty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-auth-empty.json"; sourceTree = "<group>"; };
+		/* Plan 03-03 Task 2 — CodexUsageResponse + CodexOAuthClient + tests file references */
+		AA030200000000000000003B /* CodexUsageResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageResponse.swift; sourceTree = "<group>"; };
+		AA030200000000000000004B /* CodexOAuthClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexOAuthClient.swift; sourceTree = "<group>"; };
+		AA030200000000000000011B /* CodexUsageResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageResponseTests.swift; sourceTree = "<group>"; };
+		AA030200000000000000012B /* CodexOAuthClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexOAuthClientTests.swift; sourceTree = "<group>"; };
+		AA030200000000000000023B /* codex-wham-usage-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-wham-usage-fixture.json"; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -520,6 +531,7 @@
 				AA030100000000000000005B /* CodexRolloutParser.swift */,
 				/* Plan 03-03 — Codex OAuth fallback */
 				AA030200000000000000001B /* CodexCredentialLoader.swift */,
+				AA030200000000000000004B /* CodexOAuthClient.swift */,
 				AA030100000000000000051B /* Models */,
 			);
 			path = Codex;
@@ -532,6 +544,7 @@
 				AA030100000000000000004B /* CodexRolloutEvent.swift */,
 				/* Plan 03-03 — Codex OAuth fallback */
 				AA030200000000000000002B /* CodexOAuthError.swift */,
+				AA030200000000000000003B /* CodexUsageResponse.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -771,6 +784,8 @@
 				AA030100000000000000011B /* CodexRolloutParserTests.swift */,
 				/* Plan 03-03 — Codex OAuth fallback tests */
 				AA030200000000000000010B /* CodexCredentialLoaderTests.swift */,
+				AA030200000000000000011B /* CodexUsageResponseTests.swift */,
+				AA030200000000000000012B /* CodexOAuthClientTests.swift */,
 				AA030100000000000000061B /* Fixtures */,
 			);
 			path = ProvidersCodexTests;
@@ -782,10 +797,11 @@
 			children = (
 				AA030100000000000000020B /* codex-rollout-2026-fixture.jsonl */,
 				AA030100000000000000021B /* codex-rollout-2025-legacy.jsonl */,
-				/* Plan 03-03 — Codex OAuth auth.json fixtures */
+				/* Plan 03-03 — Codex OAuth auth.json + wham/usage fixtures */
 				AA030200000000000000020B /* codex-auth-subscription.json */,
 				AA030200000000000000021B /* codex-auth-apikey.json */,
 				AA030200000000000000022B /* codex-auth-empty.json */,
+				AA030200000000000000023B /* codex-wham-usage-fixture.json */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -1038,6 +1054,9 @@
 				/* Plan 03-03 — CodexCredentialLoader + CodexOAuthError */
 				AA030200000000000000001A /* CodexCredentialLoader.swift in Sources */,
 				AA030200000000000000002A /* CodexOAuthError.swift in Sources */,
+				/* Plan 03-03 — CodexUsageResponse + CodexOAuthClient */
+				AA030200000000000000003A /* CodexUsageResponse.swift in Sources */,
+				AA030200000000000000004A /* CodexOAuthClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1107,6 +1126,9 @@
 				AA030100000000000000011A /* CodexRolloutParserTests.swift in Sources */,
 				/* Plan 03-03 Task 1 — CodexCredentialLoader tests */
 				AA030200000000000000010A /* CodexCredentialLoaderTests.swift in Sources */,
+				/* Plan 03-03 Task 2 — CodexUsageResponse + CodexOAuthClient tests */
+				AA030200000000000000011A /* CodexUsageResponseTests.swift in Sources */,
+				AA030200000000000000012A /* CodexOAuthClientTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,0 +1,20 @@
+{
+  "plan_type": "plus",
+  "rate_limit": {
+    "primary_window": {
+      "used_percent": 48,
+      "reset_at": 1777970900,
+      "limit_window_seconds": 18000
+    },
+    "secondary_window": {
+      "used_percent": 26,
+      "reset_at": 1778060488,
+      "limit_window_seconds": 604800
+    }
+  },
+  "credits": {
+    "has_credits": false,
+    "unlimited": false,
+    "balance": null
+  }
+}
