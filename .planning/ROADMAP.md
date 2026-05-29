@@ -14,7 +14,7 @@
 - [x] **Phase 2: Claude Provider + Threshold/Rollover + JSONL Streaming** — De-risk the headline provider; ship the streaming JSONL primitive Codex will reuse, local-midnight rollover, and the full notification FSM with snooze. ✅ UAT approved 2026-05-15 (Tests 1-2 manual PASS; 3-10 unit-test attestation; Test 7 battery soak deferred to pre-distribution).
 - [x] **Phase 3: Remote API Providers (Codex + Gemini)** — Drop in remaining hosted-AI providers using primitives from phases 1–2; cross-provider "today total" becomes meaningful. (completed 2026-05-18)
 - [ ] **Phase 4: Local LLM Presence (Ollama + LM Studio + llama.cpp)** — Differentiator: tri-state running/idle rows for localhost services; "Not running" is muted, never red.
-- [ ] **Phase 5: First-Run UX + Settings Polish** — First-run provider detection screen, full Settings scene, refined stale indicator, theme handling, open-dashboard affordance.
+- [x] **Phase 5: First-Run UX + Settings Polish** — First-run provider detection screen, full Settings scene, refined stale indicator, theme handling, open-dashboard affordance. (completed 2026-05-21)
 - [ ] **Phase 6: Distribution (Sign + Notarize + DMG + Sparkle + OSS hygiene)** — GitHub Actions release pipeline, notarized stapled DMG, Sparkle EdDSA appcast, README/LICENSE/SECURITY/entitlements docs.
 
 ## Phase Details
@@ -150,7 +150,7 @@ Plans:
   4. Theme changes apply live via `@Environment(\.colorScheme)`; light/dark/auto each render correctly on a fresh popover open.
   5. Shell RC files (`~/.zshrc`, `~/.bashrc`, fish config) are never read at any point in the first-run flow or Settings — env vars come from `ProcessInfo.environment` only (CFG-06 anti-feature is honored).
 
-**Plans:** 4/6 plans executed
+**Plans:** 6/6 plans complete
 Plans:
 **Wave 1**
 
@@ -167,11 +167,11 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 05-05-PLAN.md — WelcomeWindowController + WelcomeRootView + WelcomeProviderRow + AppDependencies wiring (CFG-03, CFG-04, CFG-05) — Wave 4 (depends 05-02, 05-04)
+- [x] 05-05-PLAN.md — WelcomeWindowController + WelcomeRootView + WelcomeProviderRow + AppDependencies wiring (CFG-03, CFG-04, CFG-05) — Wave 4 (depends 05-02, 05-04)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 05-06-PLAN.md — SettingsAboutTab + CFG-06 CI grep step + 05-UAT.md walkthrough (5 manual + 5 attestation) + BLOCKING reviewer checkpoint — Wave 5 (depends 05-03, 05-04, 05-05)
+- [x] 05-06-PLAN.md — SettingsAboutTab + CFG-06 CI grep step + 05-UAT.md walkthrough (5 manual + 5 attestation) + BLOCKING reviewer checkpoint — Wave 5 (depends 05-03, 05-04, 05-05)
 
 **UI hint:** yes
 
@@ -199,7 +199,7 @@ Plans:
 | 2. Claude Provider + Threshold/Rollover + JSONL Streaming | 7/7 | ✅ Complete | 2026-05-15 |
 | 3. Remote API Providers (Codex + Gemini) | 9/9 | Awaiting UAT | - |
 | 4. Local LLM Presence (Ollama + LM Studio + llama.cpp) | 0/9 | Planned 2026-05-18 | - |
-| 5. First-Run UX + Settings Polish | 4/6 | In Progress|  |
+| 5. First-Run UX + Settings Polish | 6/6 | Complete   | 2026-05-21 |
 | 6. Distribution (Sign + Notarize + DMG + Sparkle + OSS hygiene) | 0/0 | Not started | - |
 
 ## Coverage
