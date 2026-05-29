@@ -64,7 +64,7 @@
 - [ ] **UI-08**: Stale-data indicator: status dot dims and "Updated 7m ago" label appears when last successful refresh is older than 2× the configured interval
 - [ ] **UI-09**: Menu bar icon tints reflect highest-percent quota across enabled providers (green / yellow / red)
 - [ ] **UI-10**: Manual "Refresh now" button in popover footer (also Cmd-R)
-- [ ] **UI-11**: Each provider row has a one-click "Open dashboard" action linking to the provider's web console
+- [x] **UI-11**: Each provider row has a one-click "Open dashboard" action linking to the provider's web console
 
 ### Polling, Scheduling, and Background Behavior
 
@@ -206,7 +206,7 @@
 | UI-08 | Phase 2 | Pending |
 | UI-09 | Phase 2 | Pending |
 | UI-10 | Phase 1 | Complete |
-| UI-11 | Phase 3 | Pending |
+| UI-11 | Phase 3 | Complete |
 | POLL-01 | Phase 1 | Complete |
 | POLL-02 | Phase 1 | Complete |
 | POLL-03 | Phase 1 | Complete |

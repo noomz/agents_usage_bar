@@ -77,7 +77,7 @@ Plans:
   3. When `~/.gemini/oauth_creds.json` is present with `selectedAuthType:"oauth-personal"`, the Gemini row shows per-model `remainingFraction` + ISO `resetTime`, refreshes the bearer automatically when expired, and surfaces tier label in row tooltip.
   4. If Gemini's `v1internal:retrieveUserQuota` endpoint returns 4xx/5xx, the Gemini row reads "Gemini usage temporarily unavailable" — other provider rows continue refreshing unaffected.
   5. Every provider row has a one-click "Open dashboard" button that launches the provider's web console in the default browser.
-**Plans:** 7/9 plans executed
+**Plans:** 8/9 plans executed
 Plans:
 - [x] 03-01-PLAN.md — CodexRolloutScanner (today+yesterday YYYY/MM/DD walk + symlink canonicalisation) + CodexRolloutEvent lenient Codable + CodexRolloutParser fold-to-last-token-count (CODEX-01 partial, CODEX-03 partial) — see `03-01-SUMMARY.md`, commits e2bcd5e + 6a18026 + a31b99a ✓ 2026-05-15
 - [x] 03-02-PLAN.md — `Resources/Pricing/codex-models.json` bundle (7 models + default) + CodexModelPricing cascade-lookup (Codex-specialised Rate shape + reasoningOutputTokens-not-double-counted invariant) + BLOCKING checkpoint:human-verify resolved as "pricing page inaccessible — use draft as best-effort" per T-03.02-03 (CODEX-04 partial — primitive complete; full satisfaction requires Plan 03-04 composition) — see `03-02-SUMMARY.md`, commits dd160a0 + 43f97ae ✓ 2026-05-15
@@ -85,7 +85,7 @@ Plans:
 - [x] 03-04-PLAN.md — CodexJSONLProvider actor composing 03-01/02/03 + UsageSnapshot.tooltipLabel extension (CODEX-01..04 composition + D-05 max(primary, secondary) + D-15 plan_type tooltip)
 - [x] 03-05-PLAN.md — GeminiSettingsGate (nested security.auth.selectedType — RESEARCH correction #2) + GeminiCredentialLoader (oauth_creds.json with expiry_date epoch-ms — correction #3) + GeminiOAuthClient (eager-pre-check + lazy-401, in-memory token D-10, refresh_token never rotated Pitfall 10) (GEMINI-01) — see `03-05-SUMMARY.md`, commits df3ec24 + eb32dc4 + eaee6c6 ✓ 2026-05-15
 - [x] 03-06-PLAN.md — GeminiOAuthProvider actor — concurrent quota+tier async let (STATE #25) + per-model lowest-remainingFraction fold (D-06) + tier display map (free→Free / legacy→Legacy / standard→Paid; verbatim future tiers; nil silent for Pitfall 8 cold-start) + lazy-401 single-shot retry + D-11 cached-dim degraded UX with "usage-temporarily-unavailable" marker + D-07 today-total exclusion + GEMINI-04 cross-provider isolation (only .refreshFailed propagates) + HTTPClient.postJSON bearer overload via useSnakeCaseConversion flag (camelCase preservation for v1internal:loadCodeAssist body) (GEMINI-02, GEMINI-03, GEMINI-04) — see `03-06-SUMMARY.md`, commits 8187562 + 2e76a5e + 43f6e81 ✓ 2026-05-18
-- [ ] 03-07-PLAN.md — ProviderDashboardURL lookup (4 hard-coded URLs per D-14) + ProviderRowView trailing arrow.up.right.square button + .help() tooltip wiring + TotalsHeaderView "excludes quota-only providers" footnote (UI-11)
+- [x] 03-07-PLAN.md — ProviderDashboardURL lookup (4 hard-coded URLs per D-14) + ProviderRowView trailing arrow.up.right.square button + .help() tooltip wiring + TotalsHeaderView "excludes quota-only providers" footnote (UI-11)
 - [x] 03-08-PLAN.md — AppConfig + ConfigStore [codex] / [gemini] TOML sections + AppDependencies.makeProduction() Codex/Gemini registration + AggregateStore D-07 rollupTotals exclusion + ThresholdEngine D-11 suppression (CodexConfig + GeminiConfig structs with env > toml > defaults precedence per D-17; CODEX_BEARER_TOKEN + GEMINI_PROJECT_ID env-only Secret/String? handling per STATE #22; ThresholdEngine.degradedTag public constant single-sourced + GeminiOAuthProvider.degradedNote alias; AggregateStore.hasTokensByID + hasAnyQuotaOnlyProvider + rollupTotals D-07 exclusion; Codex+Gemini registration gated on config.enabled AND (creds OR rollouts/settings-gate); seedPlaceholder fall-through ensures four-provider rows always present) (GEMINI-04) — see `03-08-SUMMARY.md`, commits 1899ccf + ade63ce + 78b7ad8 ✓ 2026-05-18
 - [ ] 03-09-PLAN.md — 03-UAT.md walkthrough (5 manual + 5 attestation tests mirroring Phase 2 02-UAT format) + BLOCKING reviewer checkpoint
 **UI hint:** yes
@@ -138,7 +138,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Skeleton + OpenRouter Vertical Slice | 9/9 | ✅ Complete | 2026-05-13 |
 | 2. Claude Provider + Threshold/Rollover + JSONL Streaming | 7/7 | ✅ Complete | 2026-05-15 |
-| 3. Remote API Providers (Codex + Gemini) | 6/9 | In Progress|  |
+| 3. Remote API Providers (Codex + Gemini) | 8/9 | In Progress|  |
 | 4. Local LLM Presence (Ollama + LM Studio + llama.cpp) | 0/0 | Not started | - |
 | 5. First-Run UX + Settings Polish | 0/0 | Not started | - |
 | 6. Distribution (Sign + Notarize + DMG + Sparkle + OSS hygiene) | 0/0 | Not started | - |
