@@ -63,12 +63,13 @@ public struct ProviderState: Sendable, Equatable, Codable {
     public static func placeholder(
         providerID: ProviderID,
         displayName: String,
+        placeholderMessage: String? = nil,
         status: ProviderStatus = .unauthenticated
     ) -> ProviderState {
         ProviderState(
             id: providerID,
             displayName: displayName,
-            placeholderMessage: nil,
+            placeholderMessage: placeholderMessage,
             snapshot: nil,
             status: status,
             lastSuccess: nil

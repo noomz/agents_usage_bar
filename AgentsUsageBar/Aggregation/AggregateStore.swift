@@ -183,11 +183,13 @@ public final class AggregateStore {
     public func seedPlaceholder(
         providerID: ProviderID,
         displayName: String,
+        placeholderMessage: String? = nil,
         status: ProviderStatus = .unauthenticated
     ) {
         providers[providerID] = ProviderState.placeholder(
             providerID: providerID,
             displayName: displayName,
+            placeholderMessage: placeholderMessage,
             status: status
         )
         rollupTotals()

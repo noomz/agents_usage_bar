@@ -482,6 +482,23 @@
 		AA040500000000000000021B /* lmstudio-v0-models-all-loaded.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "lmstudio-v0-models-all-loaded.json"; sourceTree = "<group>"; };
 		AA040500000000000000022B /* lmstudio-v0-models-none-loaded.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "lmstudio-v0-models-none-loaded.json"; sourceTree = "<group>"; };
 		AA040500000000000000023B /* lmstudio-v1-models-fallback.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "lmstudio-v1-models-fallback.json"; sourceTree = "<group>"; };
+		/* Plan 04-06 — LlamaCppProvider + response models file references */
+		AA040600000000000000001B /* LlamaCppProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppProvider.swift; sourceTree = "<group>"; };
+		AA040600000000000000002B /* LlamaCppHealthResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppHealthResponse.swift; sourceTree = "<group>"; };
+		AA040600000000000000003B /* LlamaCppV1ModelsResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppV1ModelsResponse.swift; sourceTree = "<group>"; };
+		AA040600000000000000004B /* LlamaCppSlotsResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppSlotsResponse.swift; sourceTree = "<group>"; };
+		/* Plan 04-06 — test file references */
+		AA040600000000000000010B /* LlamaCppProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppProviderTests.swift; sourceTree = "<group>"; };
+		AA040600000000000000011B /* LlamaCppResponsesCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppResponsesCodableTests.swift; sourceTree = "<group>"; };
+		AA040600000000000000012B /* ProviderStatePlaceholderMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderStatePlaceholderMessageTests.swift; sourceTree = "<group>"; };
+		AA040600000000000000013B /* AggregateStoreSeedPlaceholderMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreSeedPlaceholderMessageTests.swift; sourceTree = "<group>"; };
+		/* Plan 04-06 — fixture file references (loaded via #filePath, not bundle) */
+		AA040600000000000000020B /* llamacpp-health-ok.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "llamacpp-health-ok.json"; sourceTree = "<group>"; };
+		AA040600000000000000021B /* llamacpp-health-loading.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "llamacpp-health-loading.json"; sourceTree = "<group>"; };
+		AA040600000000000000022B /* llamacpp-health-error.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "llamacpp-health-error.json"; sourceTree = "<group>"; };
+		AA040600000000000000023B /* llamacpp-health-no-slot.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "llamacpp-health-no-slot.json"; sourceTree = "<group>"; };
+		AA040600000000000000024B /* llamacpp-v1-models.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "llamacpp-v1-models.json"; sourceTree = "<group>"; };
+		AA040600000000000000025B /* llamacpp-slots.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "llamacpp-slots.json"; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -658,6 +675,8 @@
 				AA040100000000000000010B /* ProviderStatusNotRunningTests.swift */,
 				AA040100000000000000011B /* ProviderIDLocalConstantsTests.swift */,
 				AA040100000000000000012B /* ProviderErrorLocalhostClassifierTests.swift */,
+				/* Plan 04-06 — ProviderState placeholder message test */
+				AA040600000000000000012B /* ProviderStatePlaceholderMessageTests.swift */,
 			);
 			path = DomainTests;
 			sourceTree = "<group>";
@@ -690,6 +709,8 @@
 				AA040404000000000000030B /* Ollama */,
 				/* Plan 04-05 — LM Studio local provider */
 				AA040500000000000000030B /* LMStudio */,
+				/* Plan 04-06 — llama.cpp local provider */
+				AA040600000000000000030B /* LlamaCpp */,
 			);
 			path = Providers;
 			sourceTree = "<group>";
@@ -730,6 +751,27 @@
 			children = (
 				AA040500000000000000002B /* LMStudioV0ModelsResponse.swift */,
 				AA040500000000000000003B /* LMStudioV1ModelsResponse.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-06 — LlamaCpp provider subgroup */
+		AA040600000000000000030B /* LlamaCpp */ = {
+			isa = PBXGroup;
+			children = (
+				AA040600000000000000001B /* LlamaCppProvider.swift */,
+				AA040600000000000000031B /* Models */,
+			);
+			path = LlamaCpp;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-06 — LlamaCpp Models subgroup */
+		AA040600000000000000031B /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AA040600000000000000002B /* LlamaCppHealthResponse.swift */,
+				AA040600000000000000003B /* LlamaCppV1ModelsResponse.swift */,
+				AA040600000000000000004B /* LlamaCppSlotsResponse.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -924,6 +966,8 @@
 				/* Plan 03-08 — D-11 ThresholdEngine suppression + AppDependencies registration tests */
 				AA030800000000000000012B /* AggregateStoreGeminiDegradedSuppressionTests.swift */,
 				AA030800000000000000013B /* AppDependenciesCodexGeminiRegistrationTests.swift */,
+				/* Plan 04-06 — AggregateStore seedPlaceholder message test */
+				AA040600000000000000013B /* AggregateStoreSeedPlaceholderMessageTests.swift */,
 			);
 			path = AggregationTests;
 			sourceTree = "<group>";
@@ -1041,6 +1085,8 @@
 				AA040404000000000000060B /* ProvidersOllamaTests */,
 				/* Plan 04-05 — LM Studio provider tests */
 				AA040500000000000000060B /* ProvidersLMStudioTests */,
+				/* Plan 04-06 — LlamaCpp provider tests */
+				AA040600000000000000060B /* ProvidersLlamaCppTests */,
 			);
 			path = AgentsUsageBarTests;
 			sourceTree = "<group>";
@@ -1088,6 +1134,31 @@
 				AA040500000000000000021B /* lmstudio-v0-models-all-loaded.json */,
 				AA040500000000000000022B /* lmstudio-v0-models-none-loaded.json */,
 				AA040500000000000000023B /* lmstudio-v1-models-fallback.json */,
+			);
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-06 — ProvidersLlamaCppTests group */
+		AA040600000000000000060B /* ProvidersLlamaCppTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA040600000000000000010B /* LlamaCppProviderTests.swift */,
+				AA040600000000000000011B /* LlamaCppResponsesCodableTests.swift */,
+				AA040600000000000000061B /* Fixtures */,
+			);
+			path = ProvidersLlamaCppTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-06 — ProvidersLlamaCppTests Fixtures subgroup (loaded via #filePath, not bundle) */
+		AA040600000000000000061B /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				AA040600000000000000020B /* llamacpp-health-ok.json */,
+				AA040600000000000000021B /* llamacpp-health-loading.json */,
+				AA040600000000000000022B /* llamacpp-health-error.json */,
+				AA040600000000000000023B /* llamacpp-health-no-slot.json */,
+				AA040600000000000000024B /* llamacpp-v1-models.json */,
+				AA040600000000000000025B /* llamacpp-slots.json */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -1445,6 +1516,11 @@
 				AA040500000000000000001A /* LMStudioProvider.swift in Sources */,
 				AA040500000000000000002A /* LMStudioV0ModelsResponse.swift in Sources */,
 				AA040500000000000000003A /* LMStudioV1ModelsResponse.swift in Sources */,
+				/* Plan 04-06 — LlamaCppProvider actor + response models */
+				AA040600000000000000001A /* LlamaCppProvider.swift in Sources */,
+				AA040600000000000000002A /* LlamaCppHealthResponse.swift in Sources */,
+				AA040600000000000000003A /* LlamaCppV1ModelsResponse.swift in Sources */,
+				AA040600000000000000004A /* LlamaCppSlotsResponse.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1564,6 +1640,11 @@
 				/* Plan 04-05 — LMStudioProvider tests */
 				AA040500000000000000010A /* LMStudioProviderTests.swift in Sources */,
 				AA040500000000000000011A /* LMStudioResponsesCodableTests.swift in Sources */,
+				/* Plan 04-06 — LlamaCppProvider tests + placeholder message tests */
+				AA040600000000000000010A /* LlamaCppProviderTests.swift in Sources */,
+				AA040600000000000000011A /* LlamaCppResponsesCodableTests.swift in Sources */,
+				AA040600000000000000012A /* ProviderStatePlaceholderMessageTests.swift in Sources */,
+				AA040600000000000000013A /* AggregateStoreSeedPlaceholderMessageTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
