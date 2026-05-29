@@ -1,0 +1,74 @@
+{
+  "providers": [
+    {
+      "providerID": "openrouter",
+      "displayName": "OpenRouter",
+      "detectionDescription": "Set OPENROUTER_API_KEY environment variable or add [openrouter].api_key to config.toml.",
+      "envSnippet": "export OPENROUTER_API_KEY=<your-openrouter-key>",
+      "envNote": "Restart Agents Usage Bar to apply environment variable changes.",
+      "tomlSnippet": "[openrouter]\napi_key = \"<your-openrouter-key>\"",
+      "tomlNote": "Save the file — changes apply on next poll.",
+      "docsURL": "https://openrouter.ai/keys"
+    },
+    {
+      "providerID": "claude",
+      "displayName": "Claude",
+      "detectionDescription": "Run Claude Code (ccs) at least once to create ~/.claude/projects/ transcript files, or sign in via Claude CLI to create ~/.claude/.credentials.json.",
+      "envSnippet": "# Claude is detected automatically from ~/.claude/ — no manual key needed.",
+      "envNote": "Claude Code creates credential files automatically when you log in.",
+      "tomlSnippet": "# No TOML config needed for Claude — detected from ~/.claude/ automatically.",
+      "tomlNote": "Run `claude login` or use Claude Code to create the required files.",
+      "docsURL": "https://docs.anthropic.com/claude-code"
+    },
+    {
+      "providerID": "codex",
+      "displayName": "Codex",
+      "detectionDescription": "Run OpenAI Codex CLI at least once to create ~/.codex/sessions/ files, or sign in to create ~/.codex/auth.json.",
+      "envSnippet": "# Codex is detected automatically from ~/.codex/ — no manual key needed.",
+      "envNote": "Codex CLI creates credential files automatically when you log in.",
+      "tomlSnippet": "# No TOML config needed for Codex — detected from ~/.codex/ automatically.",
+      "tomlNote": "Run `codex login` to create the required files.",
+      "docsURL": "https://github.com/openai/codex"
+    },
+    {
+      "providerID": "gemini",
+      "displayName": "Gemini",
+      "detectionDescription": "Run gemini-cli and select 'Login with Google' (oauth-personal) to create ~/.gemini/oauth_creds.json and set selectedAuthType in ~/.gemini/settings.json.",
+      "envSnippet": "# Gemini is detected automatically from ~/.gemini/ — no manual key needed.",
+      "envNote": "Gemini CLI creates credential files automatically when you log in.",
+      "tomlSnippet": "# No TOML config needed for Gemini — detected from ~/.gemini/ automatically.",
+      "tomlNote": "Run `gemini login` and select the oauth-personal auth method.",
+      "docsURL": "https://github.com/google-gemini/gemini-cli"
+    },
+    {
+      "providerID": "ollama",
+      "displayName": "Ollama",
+      "detectionDescription": "Start Ollama — detected via HTTP probe on localhost:11434.",
+      "envSnippet": "# Start Ollama: ollama serve",
+      "envNote": "Ollama is detected when running on its default port (11434). No configuration needed.",
+      "tomlSnippet": "# No TOML config needed — Ollama detected automatically on port 11434.",
+      "tomlNote": "Pull a model first: ollama pull llama3",
+      "docsURL": "https://ollama.ai"
+    },
+    {
+      "providerID": "lmstudio",
+      "displayName": "LM Studio",
+      "detectionDescription": "Start LM Studio server — detected via HTTP probe on localhost:1234 (default port).",
+      "envSnippet": "# Start LM Studio server from the LM Studio app UI.",
+      "envNote": "LM Studio is detected when its server is running. Default port is 1234.",
+      "tomlSnippet": "[lmstudio]\nport = 1234  # change if you use a custom port",
+      "tomlNote": "Save the file — port change applies on next app restart.",
+      "docsURL": "https://lmstudio.ai"
+    },
+    {
+      "providerID": "llamacpp",
+      "displayName": "llama.cpp",
+      "detectionDescription": "Configure the port in config.toml, then start llama-server — detected via HTTP probe on that port.",
+      "envSnippet": "# Start: llama-server --port 8080 -m your-model.gguf",
+      "envNote": "llama.cpp requires a port in config.toml first — it is never auto-scanned.",
+      "tomlSnippet": "[llamacpp]\nport = 8080  # replace with your llama-server port",
+      "tomlNote": "Save the file — changes apply on next app restart.",
+      "docsURL": "https://github.com/ggml-org/llama.cpp"
+    }
+  ]
+}

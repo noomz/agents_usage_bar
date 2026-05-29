@@ -48,9 +48,23 @@
 		/* Plan 05-02 — UserPreferencesStore + AppEnvironmentKeys app sources */
 		AA050200000000000000001A /* UserPreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000001B /* UserPreferencesStore.swift */; };
 		AA050200000000000000002A /* AppEnvironmentKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000002B /* AppEnvironmentKeys.swift */; };
+		/* Plan 05-04 Task 1 — DetectionProbe + OnboardingCopy app sources */
+		AA050400000000000000001A /* DetectionProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050400000000000000001B /* DetectionProbe.swift */; };
+		AA050400000000000000002A /* OnboardingCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050400000000000000002B /* OnboardingCopy.swift */; };
+		/* Plan 05-04 Task 1 — providers.json bundle resource (app target) */
+		AA050400000000000000003A /* providers.json in Resources */ = {isa = PBXBuildFile; fileRef = AA050400000000000000003B /* providers.json */; };
+		/* Plan 05-04 Task 2 — SettingsProvidersTab replacement app source */
+		/* (SettingsProvidersTab.swift already wired as AA050100000000000000004A — reuses that entry) */
+		/* Plan 05-04 Task 2 — test sources */
+		AA050400000000000000010A /* DetectionProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050400000000000000010B /* DetectionProbeTests.swift */; };
+		AA050400000000000000011A /* OnboardingCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050400000000000000011B /* OnboardingCopyTests.swift */; };
+		AA050400000000000000012A /* SettingsProvidersTabTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050400000000000000012B /* SettingsProvidersTabTests.swift */; };
 		/* Plan 05-02 — UserPreferencesStoreTests + ConfigStorePrecedenceTests test sources */
 		AA050200000000000000010A /* UserPreferencesStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000010B /* UserPreferencesStoreTests.swift */; };
 		AA050200000000000000011A /* ConfigStorePrecedenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000011B /* ConfigStorePrecedenceTests.swift */; };
+		/* Plan 05-03 — SettingsGeneralTabTests + AggregateStoreUpdateWarningFractionTests test sources */
+		AA050302000000000000010A /* SettingsGeneralTabTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050302000000000000010B /* SettingsGeneralTabTests.swift */; };
+		AA050302000000000000011A /* AggregateStoreUpdateWarningFractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050302000000000000011B /* AggregateStoreUpdateWarningFractionTests.swift */; };
 		/* Plan 01.03 — Config sources */
 		AA030300000000000000001A /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000001B /* AppConfig.swift */; };
 		AA030300000000000000002A /* EnvReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000002B /* EnvReader.swift */; };
@@ -356,6 +370,18 @@
 		/* Plan 05-02 — Test file references */
 		AA050200000000000000010B /* UserPreferencesStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferencesStoreTests.swift; sourceTree = "<group>"; };
 		AA050200000000000000011B /* ConfigStorePrecedenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStorePrecedenceTests.swift; sourceTree = "<group>"; };
+		/* Plan 05-03 — SettingsGeneralTabTests + AggregateStoreUpdateWarningFractionTests file references */
+		AA050302000000000000010B /* SettingsGeneralTabTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsGeneralTabTests.swift; sourceTree = "<group>"; };
+		AA050302000000000000011B /* AggregateStoreUpdateWarningFractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreUpdateWarningFractionTests.swift; sourceTree = "<group>"; };
+		/* Plan 05-04 Task 1 — DetectionProbe + OnboardingCopy file references */
+		AA050400000000000000001B /* DetectionProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionProbe.swift; sourceTree = "<group>"; };
+		AA050400000000000000002B /* OnboardingCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCopy.swift; sourceTree = "<group>"; };
+		/* Plan 05-04 Task 1 — providers.json bundle resource */
+		AA050400000000000000003B /* providers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "providers.json"; sourceTree = "<group>"; };
+		/* Plan 05-04 Task 2 — test file references */
+		AA050400000000000000010B /* DetectionProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionProbeTests.swift; sourceTree = "<group>"; };
+		AA050400000000000000011B /* OnboardingCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCopyTests.swift; sourceTree = "<group>"; };
+		AA050400000000000000012B /* SettingsProvidersTabTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsProvidersTabTests.swift; sourceTree = "<group>"; };
 		/* Plan 01.03 — Config file references */
 		AA030300000000000000001B /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		AA030300000000000000002B /* EnvReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvReader.swift; sourceTree = "<group>"; };
@@ -1046,8 +1072,20 @@
 				AA060600000000000000031B /* Environment */,
 				/* Plan 05-01 — Settings scene scaffold */
 				AA050100000000000000030B /* Settings */,
+				/* Plan 05-04 — Welcome detection + onboarding copy */
+				AA050400000000000000030B /* Welcome */,
 			);
 			path = UI;
+			sourceTree = "<group>";
+		};
+		/* Plan 05-04 — UI/Welcome subgroup */
+		AA050400000000000000030B /* Welcome */ = {
+			isa = PBXGroup;
+			children = (
+				AA050400000000000000001B /* DetectionProbe.swift */,
+				AA050400000000000000002B /* OnboardingCopy.swift */,
+			);
+			path = Welcome;
 			sourceTree = "<group>";
 		};
 		/* Plan 05-01 — UI Settings subgroup */
@@ -1113,6 +1151,8 @@
 				AA040700000000000000011B /* ProviderRowViewLocalRowTests.swift */,
 				/* Plan 05-01 — Settings tests subgroup */
 				AA050100000000000000031B /* SettingsTests */,
+				/* Plan 05-04 — Welcome tests subgroup */
+				AA050400000000000000032B /* WelcomeTests */,
 			);
 			path = UITests;
 			sourceTree = "<group>";
@@ -1122,8 +1162,20 @@
 			isa = PBXGroup;
 			children = (
 				AA050100000000000000010B /* WindowActivationObserverTests.swift */,
+				/* Plan 05-04 Task 2 — SettingsProvidersTabTests */
+				AA050400000000000000012B /* SettingsProvidersTabTests.swift */,
 			);
 			path = SettingsTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 05-04 — UITests/WelcomeTests subgroup */
+		AA050400000000000000032B /* WelcomeTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA050400000000000000010B /* DetectionProbeTests.swift */,
+				AA050400000000000000011B /* OnboardingCopyTests.swift */,
+			);
+			path = WelcomeTests;
 			sourceTree = "<group>";
 		};
 		/* Plan 01.07 — NotificationsTests group */
@@ -1149,8 +1201,19 @@
 				AA0000010000000000000091 /* Info.plist */,
 				AA0000010000000000000092 /* Entitlements.plist */,
 				AA020202000000000000030B /* Pricing */,
+				/* Plan 05-04 — Onboarding snippets resource subgroup */
+				AA050400000000000000031B /* Onboarding */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		/* Plan 05-04 — Resources/Onboarding subgroup */
+		AA050400000000000000031B /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				AA050400000000000000003B /* providers.json */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		/* Plan 02.02 — Pricing resource subgroup */
@@ -1463,6 +1526,8 @@
 				AA020202000000000000001A /* claude-models.json in Resources */,
 				/* Plan 03-02 - Bundled Codex pricing table */
 				AA030202000000000000002A /* codex-models.json in Resources */,
+				/* Plan 05-04 Task 1 — Bundled onboarding snippets */
+				AA050400000000000000003A /* providers.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1628,6 +1693,9 @@
 				/* Plan 05-02 — UserPreferencesStore + AppEnvironmentKeys */
 				AA050200000000000000001A /* UserPreferencesStore.swift in Sources */,
 				AA050200000000000000002A /* AppEnvironmentKeys.swift in Sources */,
+				/* Plan 05-04 Task 1 — DetectionProbe + OnboardingCopy */
+				AA050400000000000000001A /* DetectionProbe.swift in Sources */,
+				AA050400000000000000002A /* OnboardingCopy.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1764,6 +1832,10 @@
 				/* Plan 05-02 — UserPreferencesStore + ConfigStore precedence tests */
 				AA050200000000000000010A /* UserPreferencesStoreTests.swift in Sources */,
 				AA050200000000000000011A /* ConfigStorePrecedenceTests.swift in Sources */,
+				/* Plan 05-04 Task 2 — DetectionProbe + OnboardingCopy + SettingsProvidersTab tests */
+				AA050400000000000000010A /* DetectionProbeTests.swift in Sources */,
+				AA050400000000000000011A /* OnboardingCopyTests.swift in Sources */,
+				AA050400000000000000012A /* SettingsProvidersTabTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
