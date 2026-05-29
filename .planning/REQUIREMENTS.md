@@ -85,8 +85,8 @@
 - [ ] **NOTIF-03**: Stable identifier per notification: `"<providerID>:<yyyy-MM-dd>:warnXX"` so OS dedupes replays
 - [ ] **NOTIF-04**: Default threshold = 80%; configurable per-provider in Settings (post-MVP can globalize)
 - [ ] **NOTIF-05**: "Snooze for today" action on every notification persists a snooze flag cleared at local midnight
-- [ ] **NOTIF-06**: `UNUserNotificationCenter` authorization requested lazily on first dispatch — never at launch
-- [ ] **NOTIF-07**: Multiple providers crossing threshold within a single poll coalesce into one notification ("3 providers crossed 80%")
+- [x] **NOTIF-06**: `UNUserNotificationCenter` authorization requested lazily on first dispatch — never at launch
+- [x] **NOTIF-07**: Multiple providers crossing threshold within a single poll coalesce into one notification ("3 providers crossed 80%")
 
 ### Configuration & Onboarding
 
@@ -221,8 +221,8 @@
 | NOTIF-03 | Phase 2 | Pending |
 | NOTIF-04 | Phase 2 | Pending |
 | NOTIF-05 | Phase 2 | Pending |
-| NOTIF-06 | Phase 1 | Pending |
-| NOTIF-07 | Phase 1 | Pending |
+| NOTIF-06 | Phase 1 | Complete |
+| NOTIF-07 | Phase 1 | Complete |
 | CFG-01 | Phase 1 | Complete |
 | CFG-02 | Phase 1 | Complete |
 | CFG-03 | Phase 5 | Pending |

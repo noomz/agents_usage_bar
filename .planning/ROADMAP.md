@@ -38,7 +38,7 @@ Plans:
 - [x] 01.04-openrouter-provider-PLAN.md — OpenRouterProvider actor + Codable responses + baseline-delta + cache codec (ROUTER-01..04)
 - [x] 01.05-aggregation-store-PLAN.md — AggregateStore @Observable @MainActor + PollScheduler actor (POLL-01, POLL-02, POLL-03, POLL-07)
 - [x] 01.06-popover-ui-PLAN.md — PopoverRootView + ProviderRowView + FooterView + QuotaBar/StatusDot/RelativeTimestampLabel (UI-01, UI-02, UI-06, UI-07, UI-10) ✓ 2026-05-12
-- [ ] 01.07-notifications-PLAN.md — ThresholdEngine value type + UNNotificationManager (lazy auth) (NOTIF-06, NOTIF-07)
+- [x] 01.07-notifications-PLAN.md — ThresholdEngine value type + UNNotificationManager (lazy auth) (NOTIF-06, NOTIF-07)
 - [ ] 01.08-composition-ci-PLAN.md — AppDependencies composition root + MenuBarExtra scene + CI workflow + README + manual 5-criterion verification checkpoint (SEC-04)
 **UI hint:** yes
 
