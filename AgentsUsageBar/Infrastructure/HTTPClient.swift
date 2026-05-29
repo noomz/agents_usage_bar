@@ -36,4 +36,29 @@ public protocol HTTPClient: Sendable {
         extraHeaders: [String: String],
         as type: T.Type
     ) async throws -> T
+
+    /// Performs a POST request with a JSON-encoded body.
+    ///
+    /// CLAUDE-04 OAuth refresh use case: `ClaudeOAuthClient.refreshAccessToken()`
+    /// posts `{grant_type, refresh_token, client_id}` to `platform.claude.com/v1/oauth/token`.
+    ///
+    /// POLL-08 invariant: Uses the shared `URLSession` singleton — do NOT bypass this
+    /// method with a raw `URLSession.shared.data(for:)` call in provider code.
+    ///
+    /// SEC-02: Implementations must log only `url.path` + status, never the request body
+    /// (the body contains the refresh token).
+    ///
+    /// - Parameters:
+    ///   - url: The POST endpoint.
+    ///   - body: Encodable payload. Keys are snake_case-encoded via `.convertToSnakeCase`.
+    ///   - extraHeaders: Additional HTTP headers to include.
+    ///   - type: The expected response `Decodable` type.
+    /// - Throws: `HTTPError` for non-2xx responses; `EncodingError`/`DecodingError` for
+    ///   malformed payloads.
+    func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
+        _ url: URL,
+        body: Body,
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T
 }

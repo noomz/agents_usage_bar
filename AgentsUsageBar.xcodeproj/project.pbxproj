@@ -103,8 +103,38 @@
 		/* Plan 02.01 — Claude transcript primitives (app target) */
 		AA020100000000000000001A /* TranscriptOffset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000001B /* TranscriptOffset.swift */; };
 		AA020100000000000000002A /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000002B /* TranscriptRecord.swift */; };
+		AA020100000000000000003A /* TranscriptReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000003B /* TranscriptReader.swift */; };
+		AA020100000000000000004A /* TranscriptDirectoryScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000004B /* TranscriptDirectoryScanner.swift */; };
 		/* Plan 02.01 — Claude transcript tests (test target) */
 		AA020100000000000000010A /* TranscriptRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000010B /* TranscriptRecordTests.swift */; };
+		AA020100000000000000011A /* TranscriptReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000011B /* TranscriptReaderTests.swift */; };
+		AA020100000000000000012A /* TranscriptDirectoryScannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000012B /* TranscriptDirectoryScannerTests.swift */; };
+		/* Plan 02.02 — Bundled pricing resource (app target) */
+		AA020202000000000000001A /* claude-models.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020202000000000000001B /* claude-models.json */; };
+		/* Plan 02.02 — Pricing test fixture resource (test target) */
+		AA020202000000000000002A /* pricing-test-models.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020202000000000000002B /* pricing-test-models.json */; };
+		/* Plan 02.02 — ClaudeModelPricing Swift source (app target) */
+		AA020202000000000000003A /* ClaudeModelPricing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020202000000000000003B /* ClaudeModelPricing.swift */; };
+		/* Plan 02.02 — ClaudeModelPricingTests Swift source (test target) */
+		AA020202000000000000010A /* ClaudeModelPricingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020202000000000000010B /* ClaudeModelPricingTests.swift */; };
+		/* Plan 02.03 — Domain + Claude OAuth sources (app target) */
+		AA020300000000000000001A /* QuotaWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000001B /* QuotaWindow.swift */; };
+		AA020300000000000000002A /* KeychainReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000002B /* KeychainReader.swift */; };
+		AA020300000000000000003A /* ClaudeCredentialLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000003B /* ClaudeCredentialLoader.swift */; };
+		AA020300000000000000004A /* ClaudeOAuthResponses.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000004B /* ClaudeOAuthResponses.swift */; };
+		AA020300000000000000005A /* ClaudeOAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000005B /* ClaudeOAuthClient.swift */; };
+		/* Plan 02.03 — Test sources (test target) */
+		AA020300000000000000010A /* ClaudeCredentialLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000010B /* ClaudeCredentialLoaderTests.swift */; };
+		/* Plan 02.01 — FileCacheStore schema v2 tests (test target) */
+		AA020100000000000000020A /* FileCacheStoreSchemaV2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000020B /* FileCacheStoreSchemaV2Tests.swift */; };
+		AA020300000000000000011A /* ClaudeOAuthResponsesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000011B /* ClaudeOAuthResponsesTests.swift */; };
+		AA020300000000000000012A /* ClaudeOAuthClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000012B /* ClaudeOAuthClientTests.swift */; };
+		/* Plan 02.03 — JSON fixture resources (test target) */
+		AA020300000000000000020A /* credentials-claudeAiOauth-shape.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000020B /* credentials-claudeAiOauth-shape.json */; };
+		AA020300000000000000021A /* credentials-mcpOAuth-shape.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000021B /* credentials-mcpOAuth-shape.json */; };
+		AA020300000000000000022A /* oauth-usage-success.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000022B /* oauth-usage-success.json */; };
+		AA020300000000000000023A /* oauth-usage-partial.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000023B /* oauth-usage-partial.json */; };
+		AA020300000000000000024A /* oauth-refresh-success.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020300000000000000024B /* oauth-refresh-success.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -217,7 +247,28 @@
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
+		AA020100000000000000003B /* TranscriptReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptReader.swift; sourceTree = "<group>"; };
+		AA020100000000000000004B /* TranscriptDirectoryScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptDirectoryScanner.swift; sourceTree = "<group>"; };
 		AA020100000000000000010B /* TranscriptRecordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecordTests.swift; sourceTree = "<group>"; };
+		AA020100000000000000011B /* TranscriptReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptReaderTests.swift; sourceTree = "<group>"; };
+		AA020100000000000000012B /* TranscriptDirectoryScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptDirectoryScannerTests.swift; sourceTree = "<group>"; };
+		/* Plan 02.02 — Bundled pricing JSON file references */
+		AA020202000000000000001B /* claude-models.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "claude-models.json"; sourceTree = "<group>"; };
+		AA020202000000000000002B /* pricing-test-models.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "pricing-test-models.json"; sourceTree = "<group>"; };
+		AA020202000000000000003B /* ClaudeModelPricing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeModelPricing.swift; sourceTree = "<group>"; };
+		AA020202000000000000010B /* ClaudeModelPricingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeModelPricingTests.swift; sourceTree = "<group>"; };
+		/* Plan 02.03 — Domain + Claude OAuth file references (files present on disk) */
+		AA020300000000000000001B /* QuotaWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaWindow.swift; sourceTree = "<group>"; };
+		AA020300000000000000002B /* KeychainReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainReader.swift; sourceTree = "<group>"; };
+		AA020300000000000000003B /* ClaudeCredentialLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCredentialLoader.swift; sourceTree = "<group>"; };
+		AA020300000000000000010B /* ClaudeCredentialLoaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCredentialLoaderTests.swift; sourceTree = "<group>"; };
+		/* Plan 02.01 — FileCacheStore schema v2 test file reference */
+		AA020100000000000000020B /* FileCacheStoreSchemaV2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStoreSchemaV2Tests.swift; sourceTree = "<group>"; };
+		AA020300000000000000020B /* credentials-claudeAiOauth-shape.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "credentials-claudeAiOauth-shape.json"; sourceTree = "<group>"; };
+		AA020300000000000000021B /* credentials-mcpOAuth-shape.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "credentials-mcpOAuth-shape.json"; sourceTree = "<group>"; };
+		AA020300000000000000022B /* oauth-usage-success.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oauth-usage-success.json"; sourceTree = "<group>"; };
+		AA020300000000000000023B /* oauth-usage-partial.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oauth-usage-partial.json"; sourceTree = "<group>"; };
+		AA020300000000000000024B /* oauth-refresh-success.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "oauth-refresh-success.json"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -291,6 +342,7 @@
 				AA02020000000000000000AB /* Secret.swift */,
 				AA02020000000000000000BB /* TodayHelper.swift */,
 				AA020100000000000000001B /* TranscriptOffset.swift */,
+				AA020300000000000000001B /* QuotaWindow.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -325,6 +377,7 @@
 			children = (
 				AA020200000000000000024B /* FileCacheStoreTests.swift */,
 				AA020200000000000000025B /* URLSessionHTTPClientTests.swift */,
+				AA020100000000000000020B /* FileCacheStoreSchemaV2Tests.swift */,
 			);
 			path = InfrastructureTests;
 			sourceTree = "<group>";
@@ -345,6 +398,11 @@
 			isa = PBXGroup;
 			children = (
 				AA020100000000000000002B /* TranscriptRecord.swift */,
+				AA020100000000000000003B /* TranscriptReader.swift */,
+				AA020300000000000000002B /* KeychainReader.swift */,
+				AA020300000000000000003B /* ClaudeCredentialLoader.swift */,
+				AA020100000000000000004B /* TranscriptDirectoryScanner.swift */,
+				AA020202000000000000003B /* ClaudeModelPricing.swift */,
 			);
 			path = Claude;
 			sourceTree = "<group>";
@@ -512,8 +570,18 @@
 				AA000001000000000000009B /* Assets.xcassets */,
 				AA0000010000000000000091 /* Info.plist */,
 				AA0000010000000000000092 /* Entitlements.plist */,
+				AA020202000000000000030B /* Pricing */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		/* Plan 02.02 — Pricing resource subgroup */
+		AA020202000000000000030B /* Pricing */ = {
+			isa = PBXGroup;
+			children = (
+				AA020202000000000000001B /* claude-models.json */,
+			);
+			path = Pricing;
 			sourceTree = "<group>";
 		};
 		AA00000100000000000000D7 /* AgentsUsageBarTests */ = {
@@ -537,8 +605,27 @@
 			isa = PBXGroup;
 			children = (
 				AA020100000000000000010B /* TranscriptRecordTests.swift */,
+				AA020100000000000000011B /* TranscriptReaderTests.swift */,
+				AA020100000000000000012B /* TranscriptDirectoryScannerTests.swift */,
+				AA020300000000000000010B /* ClaudeCredentialLoaderTests.swift */,
+				AA020202000000000000010B /* ClaudeModelPricingTests.swift */,
+				AA020202000000000000031B /* Fixtures */,
 			);
 			path = ProvidersClaudeTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 02.02 — ProvidersClaudeTests Fixtures subgroup */
+		AA020202000000000000031B /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				AA020202000000000000002B /* pricing-test-models.json */,
+				AA020300000000000000020B /* credentials-claudeAiOauth-shape.json */,
+				AA020300000000000000021B /* credentials-mcpOAuth-shape.json */,
+				AA020300000000000000022B /* oauth-usage-success.json */,
+				AA020300000000000000023B /* oauth-usage-partial.json */,
+				AA020300000000000000024B /* oauth-refresh-success.json */,
+			);
+			path = Fixtures;
 			sourceTree = "<group>";
 		};
 		AA00000100000000000000D8 /* MainGroup */ = {
@@ -632,6 +719,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000001000000000000009A /* Assets.xcassets in Resources */,
+				/* Plan 02.02 — Bundled Claude pricing table */
+				AA020202000000000000001A /* claude-models.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -647,6 +736,14 @@
 				AA040400000000000000021A /* credits.unauthorized.json in Resources */,
 				AA040400000000000000022A /* key.with_limit.json in Resources */,
 				AA040400000000000000023A /* key.no_limit.json in Resources */,
+				/* Plan 02.02 — Claude pricing test fixture */
+				AA020202000000000000002A /* pricing-test-models.json in Resources */,
+				/* Plan 02.03 — Claude OAuth test fixtures */
+				AA020300000000000000020A /* credentials-claudeAiOauth-shape.json in Resources */,
+				AA020300000000000000021A /* credentials-mcpOAuth-shape.json in Resources */,
+				AA020300000000000000022A /* oauth-usage-success.json in Resources */,
+				AA020300000000000000023A /* oauth-usage-partial.json in Resources */,
+				AA020300000000000000024A /* oauth-refresh-success.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -709,6 +806,14 @@
 				/* Plan 02.01 — Claude transcript primitives */
 				AA020100000000000000001A /* TranscriptOffset.swift in Sources */,
 				AA020100000000000000002A /* TranscriptRecord.swift in Sources */,
+				AA020100000000000000003A /* TranscriptReader.swift in Sources */,
+				AA020100000000000000004A /* TranscriptDirectoryScanner.swift in Sources */,
+				/* Plan 02.03 — Domain + Claude OAuth sources */
+				AA020300000000000000001A /* QuotaWindow.swift in Sources */,
+				AA020300000000000000002A /* KeychainReader.swift in Sources */,
+				AA020300000000000000003A /* ClaudeCredentialLoader.swift in Sources */,
+				/* Plan 02.02 — Claude model pricing loader + calculator */
+				AA020202000000000000003A /* ClaudeModelPricing.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -741,6 +846,12 @@
 				AA090900000000000000010A /* HoverableBorderedButtonStyleTests.swift in Sources */,
 				/* Plan 02.01 — Claude transcript tests */
 				AA020100000000000000010A /* TranscriptRecordTests.swift in Sources */,
+				AA020100000000000000011A /* TranscriptReaderTests.swift in Sources */,
+				AA020100000000000000012A /* TranscriptDirectoryScannerTests.swift in Sources */,
+				AA020300000000000000010A /* ClaudeCredentialLoaderTests.swift in Sources */,
+				AA020100000000000000020A /* FileCacheStoreSchemaV2Tests.swift in Sources */,
+				/* Plan 02.02 — Claude model pricing tests */
+				AA020202000000000000010A /* ClaudeModelPricingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

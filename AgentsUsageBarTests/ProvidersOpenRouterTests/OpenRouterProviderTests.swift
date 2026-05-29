@@ -63,6 +63,22 @@ final class FakeCacheStore: CacheStore, @unchecked Sendable {
     func seedBaseline(_ record: BaselineRecord, for id: ProviderID) {
         baselines[id] = record
     }
+
+    // MARK: - CacheStore transcript offset conformance (Plan 02.01)
+
+    private var transcriptOffsets: [String: TranscriptOffset] = [:]
+
+    func transcriptOffset(forURL urlString: String) -> TranscriptOffset? {
+        transcriptOffsets[urlString]
+    }
+
+    func setTranscriptOffset(_ offset: TranscriptOffset) {
+        transcriptOffsets[offset.url] = offset
+    }
+
+    func allTranscriptOffsets() -> [String: TranscriptOffset] {
+        transcriptOffsets
+    }
 }
 
 // MARK: - Fixture helpers

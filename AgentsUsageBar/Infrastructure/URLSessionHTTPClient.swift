@@ -70,6 +70,41 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
         try await performGet(url: url, bearer: bearer, extraHeaders: extraHeaders, as: type)
     }
 
+    // MARK: - HTTPClient POST conformance
+
+    public func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
+        _ url: URL,
+        body: Body,
+        extraHeaders: [String: String] = [:],
+        as type: T.Type
+    ) async throws -> T {
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        for (key, value) in extraHeaders {
+            req.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        req.httpBody = try encoder.encode(body)
+
+        let (data, response) = try await session.data(for: req)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+        // SEC-02 / Pitfall 11: log path + status ONLY. Never log request body
+        // (it contains the refresh token — SEC-NOTE from ClaudeOAuthClient).
+        logger.info("POST \(url.path, privacy: .public) → \(status, privacy: .public)")
+
+        guard (200..<300).contains(status) else {
+            throw HTTPError(status: status, message: nil)
+        }
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(T.self, from: data)
+    }
+
     // MARK: - Private
 
     private func performGet<T: Decodable & Sendable>(

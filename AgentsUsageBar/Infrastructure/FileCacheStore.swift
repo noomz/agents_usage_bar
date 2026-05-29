@@ -8,9 +8,16 @@ import os.log
 /// D-08: Writes are atomic — Foundation writes to a temp file then renames, so a
 /// crash mid-write never leaves a partial file visible.
 ///
-/// D-09: The file carries `schemaVersion: 1`. On schema mismatch or malformed JSON,
-/// `loadAll()` returns `[:]` (cold-launch semantics) — never crashes, never shows stale
-/// data from an incompatible format.
+/// D-09: The file carries `schemaVersion: 2` (Plan 02.01). On schema mismatch or
+/// malformed JSON, `loadAll()` returns `[:]` (cold-launch semantics) — never crashes,
+/// never shows stale data from an incompatible format.
+///
+/// schemaVersion history:
+/// - 1: providers + baselines (Phase 1)
+/// - 2: + transcripts: [String: TranscriptOffset] (Plan 02.01)
+///   v1 → v2 migration: a v1 file on disk is automatically upgraded on first load;
+///   existing `providers` and `baselines` are preserved (HIGH-risk migration mitigated
+///   — see RESEARCH schemaVersion bump risk: HIGH).
 ///
 /// Thread safety: A concurrent `DispatchQueue` with `.barrier` for writes and plain
 /// `.sync` for reads serialises all file access. `@unchecked Sendable` is safe because
@@ -19,21 +26,33 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
 
     // MARK: - Nested types
 
-    /// The on-disk representation. `schemaVersion` guards against format evolution.
+    /// The on-disk representation for schemaVersion 2.
+    /// `schemaVersion` guards against format evolution.
     private struct CacheEnvelope: Codable, Sendable {
         let schemaVersion: Int
         let providers: [ProviderID: ProviderState]
         let baselines: [ProviderID: BaselineRecord]
+        let transcripts: [String: TranscriptOffset]
 
         init(
-            schemaVersion: Int = 1,
+            schemaVersion: Int = 2,
             providers: [ProviderID: ProviderState],
-            baselines: [ProviderID: BaselineRecord]
+            baselines: [ProviderID: BaselineRecord],
+            transcripts: [String: TranscriptOffset] = [:]
         ) {
             self.schemaVersion = schemaVersion
             self.providers = providers
             self.baselines = baselines
+            self.transcripts = transcripts
         }
+    }
+
+    /// Codable mirror of the schemaVersion 1 envelope — used solely in the v1→v2 migration path.
+    /// Fields match exactly what Phase 1 wrote to disk.
+    private struct CacheEnvelopeV1: Codable, Sendable {
+        let schemaVersion: Int
+        let providers: [ProviderID: ProviderState]
+        let baselines: [ProviderID: BaselineRecord]
     }
 
     // MARK: - Properties
@@ -82,9 +101,10 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
         queue.sync(flags: .barrier) {
             let existing = _loadEnvelope()
             let envelope = CacheEnvelope(
-                schemaVersion: 1,
+                schemaVersion: 2,
                 providers: providers,
-                baselines: existing?.baselines ?? [:]
+                baselines: existing?.baselines ?? [:],
+                transcripts: existing?.transcripts ?? [:]
             )
             _writeEnvelope(envelope)
         }
@@ -96,7 +116,7 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
 
     public func maintainBaseline(for id: ProviderID, now: Date, currentValue: Double) {
         queue.sync(flags: .barrier) {
-            let envelope = _loadEnvelope() ?? CacheEnvelope(providers: [:], baselines: [:])
+            let envelope = _loadEnvelope() ?? CacheEnvelope(providers: [:], baselines: [:], transcripts: [:])
             let today = TodayHelper.formatYYYYMMDD(now)
             let existing = envelope.baselines[id]
 
@@ -133,29 +153,67 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
             var updatedBaselines = envelope.baselines
             updatedBaselines[id] = newRecord
             let updated = CacheEnvelope(
-                schemaVersion: 1,
+                schemaVersion: 2,
                 providers: envelope.providers,
-                baselines: updatedBaselines
+                baselines: updatedBaselines,
+                transcripts: envelope.transcripts
             )
             _writeEnvelope(updated)
         }
+    }
+
+    // MARK: - CacheStore transcript offset methods (Plan 02.01 — CLAUDE-02)
+
+    public func transcriptOffset(forURL urlString: String) -> TranscriptOffset? {
+        queue.sync { _loadEnvelope()?.transcripts[urlString] }
+    }
+
+    public func setTranscriptOffset(_ offset: TranscriptOffset) {
+        queue.sync(flags: .barrier) {
+            let envelope = _loadEnvelope() ?? CacheEnvelope(providers: [:], baselines: [:], transcripts: [:])
+            var ts = envelope.transcripts
+            ts[offset.url] = offset
+            let updated = CacheEnvelope(
+                schemaVersion: 2,
+                providers: envelope.providers,
+                baselines: envelope.baselines,
+                transcripts: ts
+            )
+            _writeEnvelope(updated)
+        }
+    }
+
+    public func allTranscriptOffsets() -> [String: TranscriptOffset] {
+        queue.sync { _loadEnvelope()?.transcripts ?? [:] }
     }
 
     // MARK: - Private helpers (call only from within `queue`)
 
     private func _loadEnvelope() -> CacheEnvelope? {
         guard let data = try? Data(contentsOf: url) else { return nil }
-        do {
-            let env = try JSONDecoder().decode(CacheEnvelope.self, from: data)
-            guard env.schemaVersion == 1 else {
-                logger.notice("cache schemaVersion mismatch (\(env.schemaVersion, privacy: .public)); ignoring")
-                return nil
-            }
-            return env
-        } catch {
-            logger.warning("cache decode failed; cold-start: \(error.localizedDescription, privacy: .public)")
-            return nil
+
+        // Try schemaVersion 2 first (fast path — the normal case after first write).
+        if let v2 = try? JSONDecoder().decode(CacheEnvelope.self, from: data),
+           v2.schemaVersion == 2 {
+            return v2
         }
+
+        // v1 → v2 migration: decode v1 shape, synthesise v2 with empty transcripts.
+        // This path runs exactly once per installation — subsequent writes are v2.
+        if let v1 = try? JSONDecoder().decode(CacheEnvelopeV1.self, from: data),
+           v1.schemaVersion == 1 {
+            logger.notice("cache schemaVersion 1 → 2 migrated (transcripts: empty)")
+            return CacheEnvelope(
+                schemaVersion: 2,
+                providers: v1.providers,
+                baselines: v1.baselines,
+                transcripts: [:]
+            )
+        }
+
+        // schemaVersion 0, >2, or unknown — cold-start without crashing (D-09).
+        logger.warning("cache decode failed; cold-start")
+        return nil
     }
 
     private func _writeEnvelope(_ envelope: CacheEnvelope) {

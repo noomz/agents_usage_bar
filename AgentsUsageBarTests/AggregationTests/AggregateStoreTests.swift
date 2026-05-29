@@ -58,6 +58,22 @@ final class AggFakeCacheStore: CacheStore, @unchecked Sendable {
     func baseline(for id: ProviderID, on now: Date) -> BaselineRecord? { nil }
 
     func maintainBaseline(for id: ProviderID, now: Date, currentValue: Double) {}
+
+    // MARK: - CacheStore transcript offset conformance (Plan 02.01)
+
+    private var transcriptOffsets: [String: TranscriptOffset] = [:]
+
+    func transcriptOffset(forURL urlString: String) -> TranscriptOffset? {
+        transcriptOffsets[urlString]
+    }
+
+    func setTranscriptOffset(_ offset: TranscriptOffset) {
+        transcriptOffsets[offset.url] = offset
+    }
+
+    func allTranscriptOffsets() -> [String: TranscriptOffset] {
+        transcriptOffsets
+    }
 }
 
 /// Spy notification manager that records schedule calls.

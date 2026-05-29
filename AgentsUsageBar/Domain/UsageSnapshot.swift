@@ -34,6 +34,16 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
     /// Phase 1 always ships `[:]`; Phase 5 Settings exposes this for developer inspection.
     public let raw: [String: String]
 
+    /// Time-bounded quota windows from the Anthropic OAuth usage endpoint (CLAUDE-04).
+    ///
+    /// Populated by `ClaudeOAuthClient.getUsage()` in Plan 02.04. All Phase 1 providers
+    /// (OpenRouter) and existing tests omit this parameter — default `nil` preserves
+    /// backwards-compat.
+    ///
+    /// Open Question 4 (RESEARCH): Only Claude Max/Pro accounts expose quota windows;
+    /// pay-per-token accounts return an empty or absent `quota_windows` array.
+    public let quotaWindows: [QuotaWindow]?
+
     public init(
         providerID: ProviderID,
         asOf: Date,
@@ -41,7 +51,8 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         costTodayUSD: Decimal?,
         balanceUSD: Decimal?,
         quota: Quota?,
-        raw: [String: String]
+        raw: [String: String],
+        quotaWindows: [QuotaWindow]? = nil
     ) {
         self.providerID = providerID
         self.asOf = asOf
@@ -50,5 +61,6 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         self.balanceUSD = balanceUSD
         self.quota = quota
         self.raw = raw
+        self.quotaWindows = quotaWindows
     }
 }

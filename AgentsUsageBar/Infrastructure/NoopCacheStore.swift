@@ -14,4 +14,10 @@ public struct NoopCacheStore: CacheStore {
     public func save(_ providers: [ProviderID: ProviderState]) {}
     public func baseline(for id: ProviderID, on now: Date) -> BaselineRecord? { nil }
     public func maintainBaseline(for id: ProviderID, now: Date, currentValue: Double) {}
+
+    // MARK: - Transcript offset stubs (Plan 02.01 — CLAUDE-02)
+
+    public func transcriptOffset(forURL urlString: String) -> TranscriptOffset? { nil }
+    public func setTranscriptOffset(_ offset: TranscriptOffset) {}
+    public func allTranscriptOffsets() -> [String: TranscriptOffset] { [:] }
 }

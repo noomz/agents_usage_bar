@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "lastUpdated": "2026-01-01",
+  "default": {
+    "inputPer1M":      2.00,
+    "outputPer1M":     10.00,
+    "cacheWritePer1M": 2.50,
+    "cacheReadPer1M":  0.20
+  },
+  "models": {
+    "test-model-exact":  { "inputPer1M": 1.00, "outputPer1M": 5.00, "cacheWritePer1M": 1.25, "cacheReadPer1M": 0.10 },
+    "test-model-prefix": { "inputPer1M": 4.00, "outputPer1M": 20.00, "cacheWritePer1M": 5.00, "cacheReadPer1M": 0.40 },
+    "claude-opus-test":  { "inputPer1M": 15.00, "outputPer1M": 75.00, "cacheWritePer1M": 18.75, "cacheReadPer1M": 1.50 }
+  }
+}

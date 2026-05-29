@@ -1,0 +1,5 @@
+{
+  "access_token":  "fake-rotated-access-token-XXXX",
+  "refresh_token": "fake-rotated-refresh-token-YYYY",
+  "expires_in":    3600
+}

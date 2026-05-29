@@ -52,4 +52,24 @@ public protocol CacheStore: Sendable {
     /// - Same day, positive delta → keep baseline, update `lastValue`.
     /// - Same day, negative delta → log warning and reset baseline (D-04).
     func maintainBaseline(for id: ProviderID, now: Date, currentValue: Double)
+
+    // MARK: - Transcript offset methods (Plan 02.01 — CLAUDE-02)
+    //
+    // These three methods store and retrieve per-file JSONL byte-offset cursors,
+    // persisted in the FileCacheStore envelope schemaVersion 2.
+    //
+    // v1 → v2 migration: a v1 envelope on disk is automatically upgraded on first
+    // load; existing `providers` and `baselines` are preserved (HIGH-risk migration
+    // mitigated — see RESEARCH §A schemaVersion bump risk: HIGH).
+
+    /// Returns the persisted `TranscriptOffset` for `urlString`, or `nil` if none exists.
+    func transcriptOffset(forURL urlString: String) -> TranscriptOffset?
+
+    /// Upserts `offset` into the transcript map keyed by `offset.url`.
+    /// Overwrites any prior offset stored for the same URL (delta semantics — CLAUDE-02).
+    func setTranscriptOffset(_ offset: TranscriptOffset)
+
+    /// Returns a snapshot of all persisted transcript offsets.
+    /// Mutating the returned dict has no side effect (Swift value-type copy).
+    func allTranscriptOffsets() -> [String: TranscriptOffset]
 }
