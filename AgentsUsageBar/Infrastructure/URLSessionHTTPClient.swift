@@ -1,0 +1,107 @@
+import Foundation
+import os.log
+
+/// Production `HTTPClient` implementation backed by a single shared `URLSession`.
+///
+/// POLL-08 / CLAUDE.md: One `URLSession` instance per app. The session is configured
+/// once in `init()` and is immutable thereafter (`@unchecked Sendable` is safe).
+///
+/// Configuration (per CLAUDE.md "Concurrency & Polling Pattern"):
+/// - `timeoutIntervalForRequest = 8`      — per-request timeout
+/// - `timeoutIntervalForResource = 30`    — overall resource timeout
+/// - `waitsForConnectivity = false`       — fail-fast when offline
+/// - `httpMaximumConnectionsPerHost = 6`  — matches HTTP/1.1 concurrency ceiling
+/// - `requestCachePolicy = .reloadIgnoringLocalCacheData` — always fresh from server
+///
+/// SEC-02 / Pitfall 11: Log lines contain ONLY `url.path` and HTTP status — never
+/// `url.absoluteString`, `url.query`, request headers, or response body.
+public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
+
+    private let session: URLSession
+    private let logger = AppLogger.logger(category: "http")
+
+    // MARK: - Production initializer
+
+    /// Creates the URLSession singleton with the locked POLL-08 configuration.
+    public init() {
+        let cfg = URLSessionConfiguration.default
+        cfg.timeoutIntervalForRequest = 8
+        cfg.timeoutIntervalForResource = 30
+        cfg.waitsForConnectivity = false
+        cfg.httpMaximumConnectionsPerHost = 6
+        cfg.requestCachePolicy = .reloadIgnoringLocalCacheData
+        self.session = URLSession(configuration: cfg)
+    }
+
+    // MARK: - Test seam initializer
+
+    /// Initialises with a pre-configured `URLSession` (e.g. one with `StubURLProtocol`).
+    ///
+    /// Internal access — only used from `AgentsUsageBarTests`.
+    internal init(session: URLSession) {
+        self.session = session
+    }
+
+    // MARK: - Configuration inspection (test support)
+
+    /// Returns the configuration of the underlying URLSession.
+    /// Internal access — used by `URLSessionHTTPClientTests` to verify POLL-08 settings.
+    internal func configurationSnapshot() -> URLSessionConfiguration {
+        session.configuration
+    }
+
+    // MARK: - HTTPClient conformance
+
+    public func get<T: Decodable & Sendable>(
+        _ url: URL,
+        bearer: Secret,
+        extraHeaders: [String: String] = [:],
+        as type: T.Type
+    ) async throws -> T {
+        try await performGet(url: url, bearer: bearer, extraHeaders: extraHeaders, as: type)
+    }
+
+    public func get<T: Decodable & Sendable>(
+        _ url: URL,
+        bearer: Secret?,
+        extraHeaders: [String: String] = [:],
+        as type: T.Type
+    ) async throws -> T {
+        try await performGet(url: url, bearer: bearer, extraHeaders: extraHeaders, as: type)
+    }
+
+    // MARK: - Private
+
+    private func performGet<T: Decodable & Sendable>(
+        url: URL,
+        bearer: Secret?,
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T {
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+
+        // SEC-01: revealForRequest() is the ONLY sanctioned call site in the entire
+        // Phase 1 codebase. Do not add additional call sites elsewhere.
+        if let bearer {
+            req.setValue("Bearer \(bearer.revealForRequest())", forHTTPHeaderField: "Authorization")
+        }
+        for (key, value) in extraHeaders {
+            req.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: req)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+        // SEC-02 / Pitfall 11: log path + status ONLY. Never log absoluteString or query.
+        logger.info("GET \(url.path, privacy: .public) → \(status, privacy: .public)")
+
+        guard (200..<300).contains(status) else {
+            throw HTTPError(status: status, message: nil)
+        }
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(T.self, from: data)
+    }
+}
