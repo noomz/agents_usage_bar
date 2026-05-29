@@ -80,13 +80,29 @@ public struct ProviderState: Sendable, Equatable, Codable {
 
     /// Returns a copy updated with a successful fetch result.
     ///
-    /// Plan 04 hotfix: `placeholderMessage` is cleared on first successful snapshot.
+    /// Plan 04 hotfix H-01: `placeholderMessage` is cleared on first successful snapshot.
     /// Invariant: `placeholderMessage != nil` only while the provider is in pure-placeholder
-    /// state (no snapshot, no `lastSuccess`). Once a live probe lands, the discoverability
-    /// hint is no longer relevant — and stale `placeholderMessage` would otherwise outrank
-    /// real model data in `LocalRowSecondaryView`'s priority-order layout.
+    /// state (no snapshot, no `lastSuccess`).
+    ///
+    /// Plan 04 hotfix H-02: local-provider actors (Ollama / LM Studio / llama.cpp) return a
+    /// `UsageSnapshot` even on connection-refused, with `raw["providerStatus"] == "notRunning"`
+    /// as a sentinel. Without this branch, the actor's `.notRunning` classification is dead
+    /// code — `AggregateStore.apply(.success(_))` would force status to `.ok` and the UI would
+    /// render "Idle — 0 models loaded" indistinguishable from a healthy probe. When the
+    /// sentinel is present, set status `.notRunning` and DO NOT advance `lastSuccess` —
+    /// the row never had a real success, just a classified outage.
     public func applying(snapshot: UsageSnapshot, at now: Date) -> ProviderState {
-        ProviderState(
+        if snapshot.raw["providerStatus"] == "notRunning" {
+            return ProviderState(
+                id: id,
+                displayName: displayName,
+                placeholderMessage: nil,
+                snapshot: snapshot,
+                status: .notRunning,
+                lastSuccess: lastSuccess   // preserve — not a real success
+            )
+        }
+        return ProviderState(
             id: id,
             displayName: displayName,
             placeholderMessage: nil,

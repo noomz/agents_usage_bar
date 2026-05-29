@@ -264,6 +264,9 @@ public actor LlamaCppProvider: UsageProvider {
     // MARK: - Snapshot helpers
 
     /// Snapshot for the "not running" state A — empty payload, all nils.
+    ///
+    /// Plan 04 hotfix H-02: encode `providerStatus = "notRunning"` so `ProviderState.applying`
+    /// overrides the default `.ok` status — UI renders state A "Not running" + gray dot.
     private func mutedNotRunningSnapshot(now: Date) -> UsageSnapshot {
         UsageSnapshot(
             providerID: id,
@@ -272,7 +275,7 @@ public actor LlamaCppProvider: UsageProvider {
             costTodayUSD: nil,
             balanceUSD: nil,
             quota: nil,
-            raw: ["modelCount": "0", "source": "llamacpp", "port": "\(port)"],
+            raw: ["modelCount": "0", "source": "llamacpp", "port": "\(port)", "providerStatus": "notRunning"],
             quotaWindows: nil,
             tooltipLabel: nil
         )

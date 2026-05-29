@@ -199,6 +199,10 @@ public actor OllamaProvider: UsageProvider {
     }
 
     /// Snapshot for the "not running" state A — empty payload, all nils.
+    ///
+    /// Plan 04 hotfix H-02: encode `providerStatus = "notRunning"` so AggregateStore's
+    /// `ProviderState.applying(snapshot:)` can override the default `.ok` status and the UI
+    /// renders state A "Not running" + gray dot instead of state B "Idle — 0 models loaded".
     private func mutedNotRunningSnapshot(now: Date) -> UsageSnapshot {
         UsageSnapshot(
             providerID: id,
@@ -207,7 +211,7 @@ public actor OllamaProvider: UsageProvider {
             costTodayUSD: nil,
             balanceUSD: nil,
             quota: nil,
-            raw: ["modelCount": "0", "source": "ollama"],
+            raw: ["modelCount": "0", "source": "ollama", "providerStatus": "notRunning"],
             quotaWindows: nil,
             tooltipLabel: nil
         )

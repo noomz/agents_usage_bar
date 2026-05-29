@@ -140,4 +140,66 @@ struct ProviderStatePlaceholderMessageTests {
         let next = pure.applyingError(StubError(), at: Date(timeIntervalSince1970: 1_700_000_500))
         #expect(next.placeholderMessage == "Set [llamacpp] port in config.toml to enable")
     }
+
+    // MARK: - Plan 04 hotfix H-02 — sentinel raw["providerStatus"] = "notRunning" overrides .ok
+
+    @Test func applyingSnapshot_honorsNotRunningSentinel() {
+        // Reviewer scenario Test 4: stop llama-server with model previously loaded.
+        // Actor returns mutedNotRunningSnapshot (never throws — GEMINI-04 isolation).
+        // AggregateStore.apply(.success(snap)) MUST yield status=.notRunning + preserve
+        // lastSuccess (not a real probe success). Without this branch, UI shows
+        // state B "Idle — 0 models loaded" indistinguishable from a running runtime.
+        let priorSuccess = Date(timeIntervalSince1970: 1_700_000_000)
+        let withSuccess = ProviderState(
+            id: .ollama,
+            displayName: "Ollama",
+            placeholderMessage: nil,
+            snapshot: UsageSnapshot(
+                providerID: .ollama,
+                asOf: priorSuccess,
+                tokensToday: nil,
+                costTodayUSD: nil,
+                balanceUSD: nil,
+                quota: nil,
+                raw: ["source": "ollama", "modelCount": "1", "modelName": "llama3:8b"]
+            ),
+            status: .ok(lastSuccess: priorSuccess),
+            lastSuccess: priorSuccess
+        )
+        let mutedSnap = UsageSnapshot(
+            providerID: .ollama,
+            asOf: Date(timeIntervalSince1970: 1_700_000_500),
+            tokensToday: nil,
+            costTodayUSD: nil,
+            balanceUSD: nil,
+            quota: nil,
+            raw: ["modelCount": "0", "source": "ollama", "providerStatus": "notRunning"]
+        )
+        let next = withSuccess.applying(snapshot: mutedSnap, at: Date(timeIntervalSince1970: 1_700_000_500))
+        #expect(next.status == .notRunning)
+        #expect(next.lastSuccess == priorSuccess)   // NOT advanced — outage isn't a success
+        #expect(next.snapshot != nil)               // muted snapshot stored for raw inspection
+    }
+
+    @Test func applyingSnapshot_okPathUnchangedWhenSentinelAbsent() {
+        // Regression guard: a normal successful probe (no sentinel) still yields .ok and
+        // advances lastSuccess. The H-02 branch must not affect the happy path.
+        let initial = ProviderState.placeholder(
+            providerID: .ollama,
+            displayName: "Ollama",
+            status: .notRunning
+        )
+        let liveSnap = UsageSnapshot(
+            providerID: .ollama,
+            asOf: Date(timeIntervalSince1970: 1_700_000_500),
+            tokensToday: nil,
+            costTodayUSD: nil,
+            balanceUSD: nil,
+            quota: nil,
+            raw: ["source": "ollama", "modelCount": "1", "modelName": "llama3:8b"]
+        )
+        let next = initial.applying(snapshot: liveSnap, at: Date(timeIntervalSince1970: 1_700_000_500))
+        if case .ok = next.status { /* ok */ } else { Issue.record("expected .ok, got \(next.status)") }
+        #expect(next.lastSuccess == Date(timeIntervalSince1970: 1_700_000_500))
+    }
 }
