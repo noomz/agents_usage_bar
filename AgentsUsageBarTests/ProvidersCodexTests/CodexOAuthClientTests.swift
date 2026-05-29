@@ -71,6 +71,19 @@ final class FakeCodexHTTPClient: HTTPClient, @unchecked Sendable {
         return try decode(type)
     }
 
+    func postFormURLEncoded<T: Decodable & Sendable>(
+        _ url: URL,
+        formFields: [(String, String)],
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T {
+        // Codex never posts a form — the conformance exists solely so the
+        // type still satisfies HTTPClient after Plan 03-05 widened the
+        // protocol surface.
+        calls.append(Call(url: url, method: "POST", bearer: nil, extraHeaders: extraHeaders))
+        return try decode(type)
+    }
+
     private func decode<T: Decodable>(_ type: T.Type) throws -> T {
         guard !getResponses.isEmpty else {
             throw HTTPError(status: 500, message: "FakeCodexHTTPClient: no response scripted")

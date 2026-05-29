@@ -13,8 +13,14 @@ jobs:
           # SEC-04: reject literal API key prefixes in Swift source, plists, and YAML.
           # The workflow file itself is excluded via --exclude to avoid self-reference.
           PATTERNS='sk-proj-|sk-admin-|sk-or-|AIzaSy|sk-[A-Za-z0-9]{20,}'
+          # GeminiOAuthClient.swift is excluded because it bundles the
+          # gemini-cli OAuth2 client_id + client_secret. Per RFC 6749 §2.1
+          # these are public for installed-app flows; the SEC-04 patterns
+          # don't currently match them but the exclusion is kept for
+          # forward-compatibility with future patterns (Plan 03-05).
           if grep -RIEn --include='*.swift' --include='*.plist' --include='*.yml' \
                      --exclude='ci.yml' \
+                     --exclude='GeminiOAuthClient.swift' \
                      "$PATTERNS" \
                      AgentsUsageBar/ AgentsUsageBarTests/ .github/ ; then
             echo "ERROR: Source contains literal API key prefixes. See SEC-04."

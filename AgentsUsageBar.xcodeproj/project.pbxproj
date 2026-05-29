@@ -126,6 +126,11 @@
 		AA030500000000000000002A /* GeminiOAuthCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000002B /* GeminiOAuthCredentials.swift */; };
 		AA030500000000000000003A /* GeminiCredentialLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000003B /* GeminiCredentialLoader.swift */; };
 		AA030500000000000000011A /* GeminiCredentialLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000011B /* GeminiCredentialLoaderTests.swift */; };
+		/* Plan 03-05 Task 3 — GeminiOAuthError + GeminiTokenRefreshResponse + GeminiOAuthClient (app target) + tests */
+		AA030500000000000000004A /* GeminiOAuthError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000004B /* GeminiOAuthError.swift */; };
+		AA030500000000000000005A /* GeminiTokenRefreshResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000005B /* GeminiTokenRefreshResponse.swift */; };
+		AA030500000000000000006A /* GeminiOAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000006B /* GeminiOAuthClient.swift */; };
+		AA030500000000000000012A /* GeminiOAuthClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000012B /* GeminiOAuthClientTests.swift */; };
 		/* Plan 02.01 — Claude transcript primitives (app target) */
 		AA020100000000000000001A /* TranscriptOffset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000001B /* TranscriptOffset.swift */; };
 		AA020100000000000000002A /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000002B /* TranscriptRecord.swift */; };
@@ -339,6 +344,12 @@
 		AA030500000000000000003B /* GeminiCredentialLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiCredentialLoader.swift; sourceTree = "<group>"; };
 		AA030500000000000000011B /* GeminiCredentialLoaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiCredentialLoaderTests.swift; sourceTree = "<group>"; };
 		AA030500000000000000022B /* gemini-oauth-creds-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-oauth-creds-fixture.json"; sourceTree = "<group>"; };
+		/* Plan 03-05 Task 3 — GeminiOAuthError + GeminiTokenRefreshResponse + GeminiOAuthClient + tests file references */
+		AA030500000000000000004B /* GeminiOAuthError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiOAuthError.swift; sourceTree = "<group>"; };
+		AA030500000000000000005B /* GeminiTokenRefreshResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiTokenRefreshResponse.swift; sourceTree = "<group>"; };
+		AA030500000000000000006B /* GeminiOAuthClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiOAuthClient.swift; sourceTree = "<group>"; };
+		AA030500000000000000012B /* GeminiOAuthClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiOAuthClientTests.swift; sourceTree = "<group>"; };
+		AA030500000000000000023B /* gemini-token-refresh-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-token-refresh-fixture.json"; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -546,6 +557,7 @@
 			children = (
 				AA030500000000000000001B /* GeminiSettingsGate.swift */,
 				AA030500000000000000003B /* GeminiCredentialLoader.swift */,
+				AA030500000000000000006B /* GeminiOAuthClient.swift */,
 				AA030500000000000000051B /* Models */,
 			);
 			path = Gemini;
@@ -556,6 +568,8 @@
 			isa = PBXGroup;
 			children = (
 				AA030500000000000000002B /* GeminiOAuthCredentials.swift */,
+				AA030500000000000000004B /* GeminiOAuthError.swift */,
+				AA030500000000000000005B /* GeminiTokenRefreshResponse.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -821,6 +835,7 @@
 			children = (
 				AA030500000000000000010B /* GeminiSettingsGateTests.swift */,
 				AA030500000000000000011B /* GeminiCredentialLoaderTests.swift */,
+				AA030500000000000000012B /* GeminiOAuthClientTests.swift */,
 				AA030500000000000000061B /* Fixtures */,
 			);
 			path = ProvidersGeminiTests;
@@ -833,6 +848,7 @@
 				AA030500000000000000020B /* gemini-settings-fixture.json */,
 				AA030500000000000000021B /* gemini-settings-other-auth.json */,
 				AA030500000000000000022B /* gemini-oauth-creds-fixture.json */,
+				AA030500000000000000023B /* gemini-token-refresh-fixture.json */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -1118,10 +1134,13 @@
 				/* Plan 03-03 — CodexUsageResponse + CodexOAuthClient */
 				AA030200000000000000003A /* CodexUsageResponse.swift in Sources */,
 				AA030200000000000000004A /* CodexOAuthClient.swift in Sources */,
-				/* Plan 03-05 — Gemini settings gate + credential loader */
+				/* Plan 03-05 — Gemini settings gate + credential loader + OAuth client */
 				AA030500000000000000001A /* GeminiSettingsGate.swift in Sources */,
 				AA030500000000000000002A /* GeminiOAuthCredentials.swift in Sources */,
 				AA030500000000000000003A /* GeminiCredentialLoader.swift in Sources */,
+				AA030500000000000000004A /* GeminiOAuthError.swift in Sources */,
+				AA030500000000000000005A /* GeminiTokenRefreshResponse.swift in Sources */,
+				AA030500000000000000006A /* GeminiOAuthClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1198,6 +1217,8 @@
 				AA030500000000000000010A /* GeminiSettingsGateTests.swift in Sources */,
 				/* Plan 03-05 Task 2 — GeminiCredentialLoader tests */
 				AA030500000000000000011A /* GeminiCredentialLoaderTests.swift in Sources */,
+				/* Plan 03-05 Task 3 — GeminiOAuthClient tests */
+				AA030500000000000000012A /* GeminiOAuthClientTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

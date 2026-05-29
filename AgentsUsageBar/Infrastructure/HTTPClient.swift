@@ -61,4 +61,34 @@ public protocol HTTPClient: Sendable {
         extraHeaders: [String: String],
         as type: T.Type
     ) async throws -> T
+
+    /// Performs a POST request with an `application/x-www-form-urlencoded`
+    /// body. Used by Gemini's OAuth refresh path (`POST oauth2.googleapis.com/token`)
+    /// which requires form-encoded credentials, not JSON.
+    ///
+    /// The request is **unauthenticated at the transport layer** — the body
+    /// itself carries `refresh_token`. Do NOT add a `bearer:` parameter to
+    /// this method; conflating "refresh credential in body" with "bearer in
+    /// header" is exactly the SEC-01 pitfall the protocol shape is designed
+    /// to prevent.
+    ///
+    /// Implementations MUST percent-encode each `formFields` value (keys
+    /// are ASCII), join `key=value` pairs with `&`, set the Content-Type
+    /// header, and never log the body (SEC-02; the body contains a
+    /// long-lived refresh token).
+    ///
+    /// POLL-08 invariant: routed through the shared `URLSession` singleton.
+    ///
+    /// - Parameters:
+    ///   - url: The form-POST endpoint.
+    ///   - formFields: Key-value pairs (preserves caller-specified order).
+    ///   - extraHeaders: Additional HTTP headers.
+    ///   - type: The expected response `Decodable` type.
+    /// - Throws: `HTTPError` for non-2xx; `DecodingError` for malformed JSON.
+    func postFormURLEncoded<T: Decodable & Sendable>(
+        _ url: URL,
+        formFields: [(String, String)],
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T
 }

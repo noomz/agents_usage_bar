@@ -54,6 +54,26 @@ final class FakeHTTPClient: HTTPClient, @unchecked Sendable {
         return try decode(type, from: &postResponses)
     }
 
+    func postFormURLEncoded<T: Decodable & Sendable>(
+        _ url: URL,
+        formFields: [(String, String)],
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T {
+        // Not exercised by ClaudeOAuthClientTests; this conformance keeps
+        // the FakeHTTPClient compilable now that HTTPClient adds a new
+        // requirement (Plan 03-05).
+        let encoded = formFields
+            .map { key, value -> String in
+                let v = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
+                return "\(key)=\(v)"
+            }
+            .joined(separator: "&")
+        capturedPostBodyData = encoded.data(using: .utf8)
+        calls.append(Call(url: url, method: "POST", bearer: nil, extraHeaders: extraHeaders))
+        return try decode(type, from: &postResponses)
+    }
+
     /// Raw encoded POST body from the most recent postJSON call.
     var capturedPostBodyData: Data?
 

@@ -72,6 +72,54 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
 
     // MARK: - HTTPClient POST conformance
 
+    /// `application/x-www-form-urlencoded` POST — Gemini OAuth refresh.
+    ///
+    /// SEC-02: the request body contains a long-lived refresh_token; the
+    /// log line carries only `url.path` + status, never the body.
+    public func postFormURLEncoded<T: Decodable & Sendable>(
+        _ url: URL,
+        formFields: [(String, String)],
+        extraHeaders: [String: String] = [:],
+        as type: T.Type
+    ) async throws -> T {
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        for (key, value) in extraHeaders {
+            req.setValue(value, forHTTPHeaderField: key)
+        }
+
+        // Percent-encode each value (keys are always ASCII tokens by
+        // RFC 6749 §A.x). `.urlQueryAllowed` is the standard char set for
+        // application/x-www-form-urlencoded.
+        let encoded = formFields
+            .map { key, value -> String in
+                let v = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
+                return "\(key)=\(v)"
+            }
+            .joined(separator: "&")
+        req.httpBody = encoded.data(using: .utf8)
+
+        let (data, response) = try await session.data(for: req)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+        // SEC-02 / Pitfall 11: log path + status ONLY. Never log the
+        // form body (it carries the refresh credential).
+        logger.info("POST \(url.path, privacy: .public) → \(status, privacy: .public)")
+
+        guard (200..<300).contains(status) else {
+            throw HTTPError(status: status, message: nil)
+        }
+
+        // Plan 03-05: response decoders that use `postFormURLEncoded`
+        // (currently only `GeminiTokenRefreshResponse`) declare explicit
+        // snake_case `CodingKeys`. A `convertFromSnakeCase` strategy would
+        // pre-rewrite the JSON keys to camelCase before key lookup and
+        // miss the explicit `"access_token"` mapping. Plain `JSONDecoder()`
+        // matches the Codex precedent.
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
     public func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
         _ url: URL,
         body: Body,
