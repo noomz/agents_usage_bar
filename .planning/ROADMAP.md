@@ -102,8 +102,19 @@ Plans:
   3. The llama.cpp row only activates when the user explicitly configures a port in `config.toml` (no scanning); when configured, it probes `/health`, `/slots`, `/v1/models`.
   4. When any localhost runtime is not running (connection refused), the row renders as muted "Not running" with model name absent — never red, never as an error message, never blocking other providers.
   5. None of the local rows ever display a cumulative-token count (LOCAL-06 anti-feature is honored); only presence + model name surfaces in the UI.
-**Plans:** TBD
+**Plans:** 9/9 plans drafted 2026-05-18 — ready for `/gsd-execute-phase 04`
+Plans:
+- [ ] 04-01-PLAN.md — Foundation: `ProviderStatus.notRunning` (non-terminal) + `UsageSnapshot.raw` key conventions + `ProviderID` constants + `ProviderError.classifyLocalhost(error:lastSuccess:)` (LOCAL-04, LOCAL-05) — Wave 1
+- [ ] 04-02-PLAN.md — Config: `OllamaConfig` + `LMStudioConfig` + `LlamaCppConfig` value types + `[ollama]`/`[lmstudio]`/`[llamacpp]` TOML parse + `AppConfig` extension (LOCAL-01, LOCAL-02, LOCAL-03) — Wave 1
+- [ ] 04-03-PLAN.md — Infrastructure: `URLSessionHTTPClient(timeoutSeconds:)` parameterization + localhost-tier 2s instance (LOCAL-01, LOCAL-02, LOCAL-03, LOCAL-05, POLL-08) — Wave 1
+- [ ] 04-04-PLAN.md — OllamaProvider actor (`/api/ps` + `/api/tags`) + lenient Codable + D-03 multi-model `+N more` row state (LOCAL-01) — Wave 2 (depends 04-01, 04-02, 04-03)
+- [ ] 04-05-PLAN.md — LMStudioProvider actor (`/api/v0/models` with `/v1/models` fallback) + lenient Codable (LOCAL-02) — Wave 2 (depends 04-01, 04-02, 04-03)
+- [ ] 04-06-PLAN.md — LlamaCppProvider actor (`/health` + `/slots` + `/v1/models`) + `"loading model"` row state + D-04 unconfigured placeholder seed + `seedPlaceholder(placeholderMessage:)` extension (LOCAL-03, LOCAL-04, LOCAL-05) — Wave 2 (depends 04-01, 04-02, 04-03)
+- [ ] 04-07-PLAN.md — UI: `ProviderRowView` secondary-line branching (D-02/D-03 five states) + `LocalRowSecondaryView` helper + `StatusDot.notRunning → .gray` + tooltip wiring + LOCAL-06 UI enforcement (LOCAL-04, LOCAL-06) — Wave 3 (depends 04-04, 04-05, 04-06)
+- [ ] 04-08-PLAN.md — Composition: `AppDependencies.makeProduction()` three new registration blocks + `ThresholdEngine` nil-quota skip regression + `AggregateStore.rollupTotals` D-07 regression for locals (LOCAL-01..06 composition) — Wave 3 (depends 04-02, 04-04, 04-05, 04-06)
+- [ ] 04-09-PLAN.md — 04-UAT.md walkthrough (5 manual + 5 unit-test attestation tests) + BLOCKING reviewer checkpoint mirroring Phase 2/3 UAT shape (LOCAL-01..06 verification) — Wave 4 (depends 04-07, 04-08)
 **UI hint:** yes
+**Phase exit:** BLOCKED on UAT — reviewer runs `.planning/phases/04-local-llm-presence-ollama-lm-studio-llama-cpp/04-UAT.md` then replies `approved` / `failed: <test>` / `deferred: <test>`.
 
 ### Phase 5: First-Run UX + Settings Polish
 **Goal:** A first-time user sees a "what's detected, what's missing" welcome screen and can adjust refresh interval, threshold, per-provider toggles, theme, and login behavior from a native Settings window.
@@ -139,7 +150,7 @@ Plans:
 | 1. Skeleton + OpenRouter Vertical Slice | 9/9 | ✅ Complete | 2026-05-13 |
 | 2. Claude Provider + Threshold/Rollover + JSONL Streaming | 7/7 | ✅ Complete | 2026-05-15 |
 | 3. Remote API Providers (Codex + Gemini) | 9/9 | Awaiting UAT | - |
-| 4. Local LLM Presence (Ollama + LM Studio + llama.cpp) | 0/0 | Not started | - |
+| 4. Local LLM Presence (Ollama + LM Studio + llama.cpp) | 0/9 | Planned 2026-05-18 | - |
 | 5. First-Run UX + Settings Polish | 0/0 | Not started | - |
 | 6. Distribution (Sign + Notarize + DMG + Sparkle + OSS hygiene) | 0/0 | Not started | - |
 
@@ -163,4 +174,4 @@ Plans:
 | **Total** | **76** | All 76 v1 requirements covered exactly once — see REQUIREMENTS.md Traceability table for the authoritative per-requirement mapping. |
 
 ---
-*Roadmap created: 2026-05-11. Phase 3 planned: 2026-05-15. Ready for `/gsd-execute-phase 03`.*
+*Roadmap created: 2026-05-11. Phase 3 planned: 2026-05-15. Phase 4 planned: 2026-05-18. Ready for `/gsd-execute-phase 04`.*
