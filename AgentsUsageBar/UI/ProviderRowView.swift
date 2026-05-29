@@ -97,14 +97,21 @@ public struct ProviderRowView: View {
                         .frame(maxWidth: .infinity)
                         .opacity(isStale || isDegraded ? 0.6 : 1.0)
 
-                    // Reset countdown + relative timestamp
+                    // Reset countdown + relative timestamp.
+                    //
+                    // G-01 (UAT 2026-05-18): the countdown reads the soonest
+                    // `resetsAt` across all `quotaWindows`. Codex provides
+                    // primary+secondary windows (rollout or wham/usage path);
+                    // Gemini provides per-model buckets. OpenRouter / Claude
+                    // currently emit no `quotaWindows`, so `resetsText` returns
+                    // "Resets —" — preserving the prior literal for those rows.
                     HStack(spacing: 8) {
                         RelativeTimestampLabel(date: state.lastSuccess, isStale: isStale)
                         Spacer()
-                        // OpenRouter has no per-day reset countdown (RESEARCH Open Question #4)
-                        Text("Resets —")
+                        Text(resetsText(state.snapshot, now: ctx.date))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+                            .monospacedDigit()
                     }
 
                     // Plan 03-07 / D-11 — degraded subtitle. Placed AFTER the
@@ -161,6 +168,34 @@ public struct ProviderRowView: View {
     private func balanceText(_ snapshot: UsageSnapshot?) -> String? {
         guard let s = snapshot, let bal = s.balanceUSD else { return nil }
         return "bal " + bal.formatted(.currency(code: "USD"))
+    }
+
+    /// Countdown to the soonest `quotaWindows[*].resetsAt`. Returns "Resets —"
+    /// when the snapshot has no quotaWindows or every window's `resetsAt` is
+    /// nil (OpenRouter, Claude). When the soonest reset is already in the
+    /// past, returns "Resets now" until the next poll rebases the window.
+    ///
+    /// Format: `Resets Xh Ym` (≥ 1h), `Resets Xm` (≥ 1m), `Resets <1m` (< 1m).
+    private func resetsText(_ snapshot: UsageSnapshot?, now: Date) -> String {
+        guard let windows = snapshot?.quotaWindows,
+              let soonest = windows.compactMap(\.resetsAt).min()
+        else {
+            return "Resets —"
+        }
+        let interval = soonest.timeIntervalSince(now)
+        if interval <= 0 {
+            return "Resets now"
+        }
+        let totalMinutes = Int(interval / 60)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours >= 1 {
+            return "Resets \(hours)h \(minutes)m"
+        }
+        if totalMinutes >= 1 {
+            return "Resets \(totalMinutes)m"
+        }
+        return "Resets <1m"
     }
 }
 
