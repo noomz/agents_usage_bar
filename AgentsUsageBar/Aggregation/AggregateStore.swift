@@ -37,6 +37,9 @@ public final class AggregateStore {
     private let cache: any CacheStore
     private let thresholds: ThresholdEngine
     private let notifications: any NotificationManager
+    /// Plan 02.05 — per-(provider, day) FSM persistence + snooze (NOTIF-04 / NOTIF-05).
+    /// Defaulted to `InMemoryNotificationStateStore()` so existing tests stay back-compat.
+    private let notificationState: any NotificationStateStorage
 
     // MARK: - Coalescing state
 
@@ -57,17 +60,41 @@ public final class AggregateStore {
         clock: any Clock,
         cache: any CacheStore,
         thresholds: ThresholdEngine,
-        notifications: any NotificationManager
+        notifications: any NotificationManager,
+        notificationState: any NotificationStateStorage = InMemoryNotificationStateStore()
     ) {
         self.registry = registry
         self.clock = clock
         self.cache = cache
         self.thresholds = thresholds
         self.notifications = notifications
+        self.notificationState = notificationState
 
         // UI-07: seed from cache synchronously before any view reads occur.
         self.providers = cache.loadAll()
         rollupTotals()
+    }
+
+    // MARK: - Plan 02.05 — Snooze API (NOTIF-05 + default decision #2)
+
+    /// Records "snoozed for today" for `providerID`, suppressing every threshold band on
+    /// that provider until local-midnight rollover. Persists via `NotificationStateStorage`.
+    public func snoozeToday(providerID: ProviderID, on now: Date) {
+        let day = TodayHelper.formatYYYYMMDD(now)
+        let existing = notificationState.record(forProviderID: providerID, day: day)
+        let updated = NotificationStateRecord(
+            lastBand: existing?.lastBand ?? .normal,
+            snoozedUntilDay: day
+        )
+        notificationState.setRecord(updated, forProviderID: providerID, day: day)
+    }
+
+    /// Snoozes ALL currently-seeded providers for today. Used when the user taps Snooze
+    /// on a coalesced notification — see `NotificationActionHandler`.
+    public func snoozeAllToday(on now: Date) {
+        for id in providers.keys {
+            snoozeToday(providerID: id, on: now)
+        }
     }
 
     // MARK: - Public API
@@ -180,11 +207,38 @@ public final class AggregateStore {
         totals = DailyTotals(tokens: totalTokens, costUSD: totalCost)
     }
 
-    /// Calls `ThresholdEngine.decisions` and dispatches results to `NotificationManager`.
-    /// Plan 01.07 fills in the real engine; the stub returns `[]` so this is a no-op in Phase 1.
+    /// Calls the FSM-aware `ThresholdEngine.decisions(for:now:snoozedUntilDay:lastBands:)`
+    /// overload (Plan 02.05) and dispatches results to `NotificationManager`. Persists the
+    /// new band per fired decision so the next poll's lastBand comparison is correct.
     private func fireThresholdNotificationsIfNeeded(now: Date) async {
         let snapshots = providers.values.compactMap(\.snapshot)
-        let decisions = thresholds.decisions(for: snapshots, now: now, snoozedUntil: [:])
+        let day = TodayHelper.formatYYYYMMDD(now)
+        let allRecords = notificationState.allRecordsForToday(day)
+        let lastBands: [ProviderID: ThresholdBand] = Dictionary(
+            uniqueKeysWithValues: allRecords.map { ($0.0, $0.1.lastBand) }
+        )
+        let snoozedUntilDay: [ProviderID: String] = Dictionary(
+            uniqueKeysWithValues: allRecords.compactMap { pid, rec in
+                rec.snoozedUntilDay.map { (pid, $0) }
+            }
+        )
+
+        let decisions = thresholds.decisions(
+            for: snapshots,
+            now: now,
+            snoozedUntilDay: snoozedUntilDay,
+            lastBands: lastBands
+        )
         await notifications.schedule(decisions)
+
+        // Persist newly fired band per provider; preserve any existing snooze state.
+        for decision in decisions {
+            let existing = notificationState.record(forProviderID: decision.providerID, day: day)
+            let updated = NotificationStateRecord(
+                lastBand: decision.band,
+                snoozedUntilDay: existing?.snoozedUntilDay
+            )
+            notificationState.setRecord(updated, forProviderID: decision.providerID, day: day)
+        }
     }
 }

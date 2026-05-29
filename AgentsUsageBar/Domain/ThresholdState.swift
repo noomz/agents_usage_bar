@@ -8,7 +8,7 @@ import Foundation
 /// - Note: `ThresholdBand` serves the same semantic role as `ThresholdState` but is the
 ///   type returned by `ThresholdEngine.currentBand(for:)`. Both live here to avoid a
 ///   separate file, since they share the same breakpoint semantics.
-public enum ThresholdBand: Sendable, Equatable, CaseIterable {
+public enum ThresholdBand: Sendable, Equatable, CaseIterable, Codable {
     /// Quota fraction < 80%.
     case normal
     /// Quota fraction >= 80% and < 95%.
@@ -17,6 +17,25 @@ public enum ThresholdBand: Sendable, Equatable, CaseIterable {
     case critical
     /// Quota fraction >= 100%.
     case exceeded
+}
+
+/// Comparable conformance (Plan 02.05 / NOTIF-01) — orders by severity rank so the
+/// Phase 2 FSM can detect UPWARD-only transitions via `newBand > oldBand` (NOTIF-02).
+///
+/// Rank: normal(0) < warning(1) < critical(2) < exceeded(3). See RESEARCH §E.1.
+extension ThresholdBand: Comparable {
+    private var rank: Int {
+        switch self {
+        case .normal:   return 0
+        case .warning:  return 1
+        case .critical: return 2
+        case .exceeded: return 3
+        }
+    }
+
+    public static func < (lhs: ThresholdBand, rhs: ThresholdBand) -> Bool {
+        lhs.rank < rhs.rank
+    }
 }
 
 /// FSM enum modeling quota utilization severity.

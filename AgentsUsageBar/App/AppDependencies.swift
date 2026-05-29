@@ -7,16 +7,26 @@ import os
 /// - `store` — the `@Observable @MainActor` source of truth for all provider states.
 /// - `scheduler` — the long-lived poll-loop actor driving `store.refresh(now:)`.
 /// - `clock` — the `Clock` implementation for `.environment(\.clockService, ...)` injection.
+/// - `actionHandler` — Plan 02.05 — `UNUserNotificationCenterDelegate` that routes
+///   snooze actions; held strongly for app lifetime so the OS delegate weak-reference
+///   does not deallocate the handler.
 @MainActor
 public final class Dependencies {
     public let store: AggregateStore
     public let scheduler: PollScheduler
     public let clock: any Clock
+    public let actionHandler: NotificationActionHandler
 
-    public init(store: AggregateStore, scheduler: PollScheduler, clock: any Clock) {
+    public init(
+        store: AggregateStore,
+        scheduler: PollScheduler,
+        clock: any Clock,
+        actionHandler: NotificationActionHandler
+    ) {
         self.store = store
         self.scheduler = scheduler
         self.clock = clock
+        self.actionHandler = actionHandler
     }
 }
 
@@ -125,8 +135,13 @@ public enum AppDependencies {
         // 7. Threshold engine (warning-at-80% gate per D-11)
         let thresholds = ThresholdEngine(warningFraction: config.threshold)
 
-        // 8. Notification manager (lazy auth NOTIF-06, coalescing B3+NOTIF-07, clock-injected B8)
+        // 8a. Notification manager (lazy auth NOTIF-06, coalescing B3+NOTIF-07, clock-injected B8)
         let notifications: any NotificationManager = UNNotificationManager(clock: clock)
+
+        // 8b. Plan 02.05 — Per-(provider, day) FSM persistence + snooze (NOTIF-04 / NOTIF-05).
+        //     Prunes records older than 7 days at app launch — bounds the UserDefaults footprint.
+        let notificationState = UserDefaultsNotificationStateStore()
+        notificationState.pruneOldKeys(olderThan: 7, today: TodayHelper.formatYYYYMMDD(clock.now()))
 
         // 9. Aggregate store — seeds from cache immediately for cold-launch rendering (UI-07)
         let store = AggregateStore(
@@ -134,7 +149,8 @@ public enum AppDependencies {
             clock: clock,
             cache: cache,
             thresholds: thresholds,
-            notifications: notifications
+            notifications: notifications,
+            notificationState: notificationState
         )
 
         // 10. Seed placeholder rows when providers are not configured (B10)
@@ -167,6 +183,11 @@ public enum AppDependencies {
         // 10. Poll scheduler — wired to store; start() called from .task modifier in AgentsUsageBarApp
         let scheduler = PollScheduler(store: store, clock: clock, interval: config.refreshInterval)
 
-        return Dependencies(store: store, scheduler: scheduler, clock: clock)
+        // 11. Plan 02.05 — Notification action handler. Installed as UNUserNotificationCenter
+        //     delegate inside AgentsUsageBarApp's `.task { ... }` modifier, AFTER
+        //     registerCategories(on:) has run in init() (Pitfall 6).
+        let actionHandler = NotificationActionHandler(store: store, clock: clock)
+
+        return Dependencies(store: store, scheduler: scheduler, clock: clock, actionHandler: actionHandler)
     }
 }

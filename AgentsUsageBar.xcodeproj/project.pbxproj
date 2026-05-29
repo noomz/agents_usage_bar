@@ -144,6 +144,15 @@
 		AA020400000000000000020A /* multifile-session-a.jsonl in Resources */ = {isa = PBXBuildFile; fileRef = AA020400000000000000020B /* multifile-session-a.jsonl */; };
 		AA020400000000000000021A /* multifile-session-b.jsonl in Resources */ = {isa = PBXBuildFile; fileRef = AA020400000000000000021B /* multifile-session-b.jsonl */; };
 		AA020400000000000000022A /* duplicate-requestids.jsonl in Resources */ = {isa = PBXBuildFile; fileRef = AA020400000000000000022B /* duplicate-requestids.jsonl */; };
+		/* Plan 02.05 — NotificationStateStore + NotificationActionHandler sources (app target) */
+		AA020500000000000000001A /* NotificationStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020500000000000000001B /* NotificationStateStore.swift */; };
+		AA020500000000000000002A /* NotificationActionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020500000000000000002B /* NotificationActionHandler.swift */; };
+		/* Plan 02.05 — Threshold FSM + StateStore + Manager + ActionHandler + Snooze test files (test target) */
+		AA020500000000000000010A /* ThresholdEngineFSMTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020500000000000000010B /* ThresholdEngineFSMTests.swift */; };
+		AA020500000000000000011A /* NotificationStateStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020500000000000000011B /* NotificationStateStoreTests.swift */; };
+		AA020500000000000000012A /* NotificationManagerCategoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020500000000000000012B /* NotificationManagerCategoryTests.swift */; };
+		AA020500000000000000013A /* NotificationActionHandlerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020500000000000000013B /* NotificationActionHandlerTests.swift */; };
+		AA020500000000000000014A /* AggregateStoreSnoozeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020500000000000000014B /* AggregateStoreSnoozeTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -291,6 +300,15 @@
 		AA020400000000000000020B /* multifile-session-a.jsonl */ = {isa = PBXFileReference; lastKnownFileType = text; path = "multifile-session-a.jsonl"; sourceTree = "<group>"; };
 		AA020400000000000000021B /* multifile-session-b.jsonl */ = {isa = PBXFileReference; lastKnownFileType = text; path = "multifile-session-b.jsonl"; sourceTree = "<group>"; };
 		AA020400000000000000022B /* duplicate-requestids.jsonl */ = {isa = PBXFileReference; lastKnownFileType = text; path = "duplicate-requestids.jsonl"; sourceTree = "<group>"; };
+		/* Plan 02.05 — Notifications source file references */
+		AA020500000000000000001B /* NotificationStateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationStateStore.swift; sourceTree = "<group>"; };
+		AA020500000000000000002B /* NotificationActionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActionHandler.swift; sourceTree = "<group>"; };
+		/* Plan 02.05 — test file references */
+		AA020500000000000000010B /* ThresholdEngineFSMTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdEngineFSMTests.swift; sourceTree = "<group>"; };
+		AA020500000000000000011B /* NotificationStateStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationStateStoreTests.swift; sourceTree = "<group>"; };
+		AA020500000000000000012B /* NotificationManagerCategoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerCategoryTests.swift; sourceTree = "<group>"; };
+		AA020500000000000000013B /* NotificationActionHandlerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActionHandlerTests.swift; sourceTree = "<group>"; };
+		AA020500000000000000014B /* AggregateStoreSnoozeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreSnoozeTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -520,6 +538,8 @@
 				AA050500000000000000002B /* ThresholdEngine.swift */,
 				AA050500000000000000003B /* NotificationManager.swift */,
 				AA070700000000000000001B /* UNUserNotificationCenterProtocol.swift */,
+				AA020500000000000000001B /* NotificationStateStore.swift */,
+				AA020500000000000000002B /* NotificationActionHandler.swift */,
 			);
 			path = Notifications;
 			sourceTree = "<group>";
@@ -530,6 +550,7 @@
 			children = (
 				AA050500000000000000010B /* AggregateStoreTests.swift */,
 				AA050500000000000000011B /* PollSchedulerTests.swift */,
+				AA020500000000000000014B /* AggregateStoreSnoozeTests.swift */,
 			);
 			path = AggregationTests;
 			sourceTree = "<group>";
@@ -586,6 +607,10 @@
 			children = (
 				AA070700000000000000010B /* ThresholdEngineTests.swift */,
 				AA070700000000000000011B /* NotificationManagerTests.swift */,
+				AA020500000000000000010B /* ThresholdEngineFSMTests.swift */,
+				AA020500000000000000011B /* NotificationStateStoreTests.swift */,
+				AA020500000000000000012B /* NotificationManagerCategoryTests.swift */,
+				AA020500000000000000013B /* NotificationActionHandlerTests.swift */,
 			);
 			path = NotificationsTests;
 			sourceTree = "<group>";
@@ -856,6 +881,9 @@
 				/* Plan 02.04 — ClaudeJSONLProvider + ClaudeRoots */
 				AA020400000000000000001A /* ClaudeJSONLProvider.swift in Sources */,
 				AA020400000000000000002A /* ClaudeRoots.swift in Sources */,
+				/* Plan 02.05 — Threshold FSM persistence + snooze action handler */
+				AA020500000000000000001A /* NotificationStateStore.swift in Sources */,
+				AA020500000000000000002A /* NotificationActionHandler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -899,6 +927,12 @@
 				AA020300000000000000012A /* ClaudeOAuthClientTests.swift in Sources */,
 				/* Plan 02.04 — ClaudeJSONLProviderTests */
 				AA020400000000000000010A /* ClaudeJSONLProviderTests.swift in Sources */,
+				/* Plan 02.05 — Threshold FSM + StateStore + ActionHandler + Manager category + Snooze tests */
+				AA020500000000000000010A /* ThresholdEngineFSMTests.swift in Sources */,
+				AA020500000000000000011A /* NotificationStateStoreTests.swift in Sources */,
+				AA020500000000000000012A /* NotificationManagerCategoryTests.swift in Sources */,
+				AA020500000000000000013A /* NotificationActionHandlerTests.swift in Sources */,
+				AA020500000000000000014A /* AggregateStoreSnoozeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
