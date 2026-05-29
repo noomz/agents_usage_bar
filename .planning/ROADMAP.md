@@ -13,8 +13,8 @@
 - [x] **Phase 1: Skeleton + OpenRouter Vertical Slice** — Prove every architectural seam against the lowest-friction provider; menu bar app polls OpenRouter every 5m, shows tokens/USD/quota bar, fires a stub notification at 80%.
 - [x] **Phase 2: Claude Provider + Threshold/Rollover + JSONL Streaming** — De-risk the headline provider; ship the streaming JSONL primitive Codex will reuse, local-midnight rollover, and the full notification FSM with snooze. ✅ UAT approved 2026-05-15 (Tests 1-2 manual PASS; 3-10 unit-test attestation; Test 7 battery soak deferred to pre-distribution).
 - [x] **Phase 3: Remote API Providers (Codex + Gemini)** — Drop in remaining hosted-AI providers using primitives from phases 1–2; cross-provider "today total" becomes meaningful. (completed 2026-05-18)
-- [ ] **Phase 4: Local LLM Presence (Ollama + LM Studio + llama.cpp)** — Differentiator: tri-state running/idle rows for localhost services; "Not running" is muted, never red.
-- [x] **Phase 5: First-Run UX + Settings Polish** — First-run provider detection screen, full Settings scene, refined stale indicator, theme handling, open-dashboard affordance. (completed 2026-05-21)
+- [x] **Phase 4: Local LLM Presence (Ollama + LM Studio + llama.cpp)** — Differentiator: tri-state running/idle rows for localhost services; "Not running" is muted, never red. (UAT approved 2026-05-21; hotfixes H-01/H-02)
+- [x] **Phase 5: First-Run UX + Settings Polish** — First-run provider detection screen, full Settings scene, refined stale indicator, theme handling, open-dashboard affordance. (UAT approved 2026-05-22; hotfix H-01 ffb7cd8 — Settings entry point in popover footer)
 - [ ] **Phase 6: Distribution (Sign + Notarize + DMG + Sparkle + OSS hygiene)** — GitHub Actions release pipeline, notarized stapled DMG, Sparkle EdDSA appcast, README/LICENSE/SECURITY/entitlements docs.
 
 ## Phase Details

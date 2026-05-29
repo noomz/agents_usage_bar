@@ -219,6 +219,8 @@ See `05-05-SUMMARY.md`.
 
 ## Reviewer signal
 
+**VERDICT: `approved` (2026-05-22).** Reviewer confirmed live: Welcome window auto-opens on fresh install (`activation → .regular`); menu-bar popover → Settings opens with all three tabs (General/Providers/About) rendering. One hotfix landed mid-walkthrough — H-01 (`ffb7cd8`, Settings entry point in popover footer); recorded in Hotfixes table above. Phase 5 complete; advance to Phase 6 (Distribution).
+
 Reply with one of:
 
 - `approved` — Phase 5 complete; the executor will commit the marked-up `05-UAT.md`, update `STATE.md` + `ROADMAP.md`, and the orchestrator can run `/gsd-transition` to advance to Phase 6 (Distribution).

@@ -2,19 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-05-21T11:03:54.272Z"
+status: completed
+last_updated: "2026-05-22T08:05:30.386Z"
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 40
-  completed_plans: 38
-  percent: 67
+  completed_plans: 40
+  percent: 83
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-21 (Phase 5 code-complete — all 6 plans executed across 5 waves; 6/6 SUMMARY.md + 05-UAT.md landed on `main`. Wave 1 (05-01 Settings scaffold + WindowActivationObserver) commits 32e2e78+caa8bc4+4074791; Wave 2 (05-02 UserPreferencesStore + ConfigStore precedence overlay) commits a359a04+880afee+16d815f; Wave 3 parallel (05-03 SettingsGeneralTab + hot-reload + observePreferences) bed1a51+56cc887+34b6e33+ffd9426 and (05-04 DetectionProbe + OnboardingCopy + SettingsProvidersTab) 8ca1fee+4899963+b7591f2; Wave 4 (05-05 WelcomeWindowController + WelcomeRootView + WelcomeProviderRow) 53047f8+e42a4f6+9b0447a; Wave 5 (05-06 SettingsAboutTab + CFG-06 CI grep + 05-UAT.md) e6c888f+386486e+342ffcd. All 5 Phase 5 requirements landed: SHELL-05 (05-01+05-03), CFG-03 (05-04+05-05), CFG-04 (05-04+05-05+05-06), CFG-05 (05-02+05-03), CFG-06 (05-04+05-05+05-06 + ci.yml grep step). Regression `xcodebuild build` PASS; full test suite 2 timing flakes only — `PollSchedulerTests/updateIntervalReplacesLoop` (pre-existing Phase-1 flake) and `PowerObserverTests/didWakeObserver_calls_store_refresh_then_scheduler_start` (passes in isolation, parallel-suite timing). 05-UAT.md mirrors Phase 4 04-UAT.md shape exactly: 5 manual + 5 unit-test attestation, reviewer-signal protocol. Phase 5 STATUS = AWAITING UAT; phase exit BLOCKED on reviewer signal (`approved` / `failed: <test#>` / `deferred: <test#>`) per Phase 3/4 precedent; STATE/ROADMAP do NOT mark Phase 5 complete until reviewer signals `approved`.)
+**Last Updated:** 2026-05-22 (Phase 5 UAT APPROVED — reviewer confirmed live: Welcome window auto-opens on fresh install (`activation → .regular`); menu-bar popover → Settings opens with all three tabs (General/Providers/About) rendering. One hotfix landed mid-walkthrough: H-01 `ffb7cd8` — Settings was unreachable from the menu bar after first run (footer had only Refresh + Quit; `showSettingsWindow:` selector dispatch via `NSApp.sendAction(to: nil)` failed silently on LSUIElement). Fixed by adding a gear "Settings" button to FooterView using `@Environment(\.openSettings)` (Apple-supported Settings-scene action that works without a key window). Recorded in 05-UAT.md Hotfixes table (`cd63954`). Phase 5 COMPLETE; milestone v1.0 now 5/6 phases done. Next: Phase 6 (Distribution — sign/notarize/DMG/Sparkle/OSS hygiene), `disk_status: no_directory` → entry-point `/gsd-plan-phase 06` (or `/gsd-progress --next`). Commits: 9dfc645 (code-complete) → ffb7cd8 (H-01 fix) → cd63954 (UAT record) → this transition.)
+**Last Updated (previous):** 2026-05-21 (Phase 5 code-complete — all 6 plans executed across 5 waves; 6/6 SUMMARY.md + 05-UAT.md landed on `main`. Wave 1 (05-01 Settings scaffold + WindowActivationObserver) commits 32e2e78+caa8bc4+4074791; Wave 2 (05-02 UserPreferencesStore + ConfigStore precedence overlay) commits a359a04+880afee+16d815f; Wave 3 parallel (05-03 SettingsGeneralTab + hot-reload + observePreferences) bed1a51+56cc887+34b6e33+ffd9426 and (05-04 DetectionProbe + OnboardingCopy + SettingsProvidersTab) 8ca1fee+4899963+b7591f2; Wave 4 (05-05 WelcomeWindowController + WelcomeRootView + WelcomeProviderRow) 53047f8+e42a4f6+9b0447a; Wave 5 (05-06 SettingsAboutTab + CFG-06 CI grep + 05-UAT.md) e6c888f+386486e+342ffcd. All 5 Phase 5 requirements landed: SHELL-05 (05-01+05-03), CFG-03 (05-04+05-05), CFG-04 (05-04+05-05+05-06), CFG-05 (05-02+05-03), CFG-06 (05-04+05-05+05-06 + ci.yml grep step). Regression `xcodebuild build` PASS; full test suite 2 timing flakes only — `PollSchedulerTests/updateIntervalReplacesLoop` (pre-existing Phase-1 flake) and `PowerObserverTests/didWakeObserver_calls_store_refresh_then_scheduler_start` (passes in isolation, parallel-suite timing). 05-UAT.md mirrors Phase 4 04-UAT.md shape exactly: 5 manual + 5 unit-test attestation, reviewer-signal protocol. Phase 5 STATUS = AWAITING UAT; phase exit BLOCKED on reviewer signal (`approved` / `failed: <test#>` / `deferred: <test#>`) per Phase 3/4 precedent; STATE/ROADMAP do NOT mark Phase 5 complete until reviewer signals `approved`.)
 **Last Updated (previous):** 2026-05-21 (Phase 5 planning complete — 6/6 PLAN.md files drafted at `.planning/phases/05-first-run-ux-settings-polish/05-{01..06}-PLAN.md`. Wave structure: Wave 1 (05-01 Settings scaffold + WindowActivationObserver); Wave 2 (05-02 UserPreferencesStore + ConfigStore precedence overlay); Wave 3 (05-03 SettingsGeneralTab + hot-reload, 05-04 DetectionProbe + OnboardingCopy + SettingsProvidersTab, parallel); Wave 4 (05-05 WelcomeWindowController + WelcomeRootView); Wave 5 (05-06 SettingsAboutTab + CFG-06 CI step + 05-UAT.md). All 5 Phase 5 requirements traced: SHELL-05→05-01/03, CFG-03→05-04/05, CFG-04→05-04/05/06, CFG-05→05-02/03, CFG-06→05-04/05/06. ROADMAP.md Plans field updated from TBD. STATE.md total_plans 34→40. Phase 5 STATUS = READY TO EXECUTE; entry-point `/gsd-execute-phase 05`. Commit: 7d39d63.)
 **Last Updated (previous):** 2026-05-19 (Phase 4 Plan 04-09 complete — `04-UAT.md` authored (243 lines, 10-row test outcomes table, 5 manual + 5 unit-test attestation, pre-conditions checklist, per-test PASS criteria, D-04 verbatim subtitle, LOCAL-01..06 all referenced, 16 named test suites cited, reviewer-signal protocol, Hotfixes stub, Phase 4 Success Criteria Mapping); build SHA pinned `883702b`; force-add per Phase 2/3 precedent; Task 2 (checkpoint:human-verify) deferred to post-merge reviewer per `autonomous:false` + Phase 3 03-09 precedent (e192b0a). Commits: efe829b (UAT walkthrough) + 26896a4 (SUMMARY). Phase 4 STATUS = AWAITING UAT; phase exit BLOCKED on reviewer signal (`approved` / `failed: <test#>` / `deferred: <test#>`); STATE/ROADMAP do NOT mark Phase 4 complete until reviewer signals `approved`.)
 **Last Updated (previous):** 2026-05-19 (Phase 4 Plan 04-08 complete — `AppDependencies.makeProduction()` wired with two-tier URLSessionHTTPClient (8s remote / 2s localhost); Ollama registered when `config.ollama.enabled`; LM Studio registered when `config.lmstudio.enabled` with `config.lmstudio.port`; llama.cpp registered when `config.llamacpp.enabled && port != nil` (LOCAL-03 no-scanning); cold-launch placeholder seeds for Ollama/LM Studio (`.notRunning`, OPTION A visibility); D-04 discoverability placeholder for llama.cpp with verbatim subtitle `"Set [llamacpp] port in config.toml to enable"` when unconfigured; B1/B6/B9 invariants preserved; 16 new Swift Testing cases (7 `AppDependenciesLocalRegistrationTests` + 5 `ThresholdEngineLocalNilQuotaTests` + 4 `AggregateStoreLocalRollupTests`); pre-existing Plan 04-06 build gaps fixed (FakeLlamaCppHTTPClient conformance, wrong test double names, missing PBXBuildFile entries); pbxproj wired via AA040800 UUID namespace (12 entries). Commit: b0223b9.)
@@ -41,14 +42,14 @@ progress:
 
 ## Current Position
 
-Phase: 05 (first-run-ux-settings-polish) — EXECUTING
+Phase: 05 — COMPLETE
 Plan: 1 of 6
 Phase: 03 (remote-api-providers-codex-gemini) — AWAITING UAT (9/9 plans executed — reviewer signal blocks Phase 3 close-out)
 
 - **Milestone:** v1 (initial release)
 - **Phase:** 5 of 6 (first run ux + settings polish)
 - **Plan:** Not started (6 plans drafted — ready to execute)
-- **Status:** Executing Phase 05
+- **Status:** Phase 05 complete
 - **Progress:** [██████████] 95%
 
 ```
