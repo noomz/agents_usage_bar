@@ -119,6 +119,11 @@
 		AA030200000000000000004A /* CodexOAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000004B /* CodexOAuthClient.swift */; };
 		AA030200000000000000011A /* CodexUsageResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000011B /* CodexUsageResponseTests.swift */; };
 		AA030200000000000000012A /* CodexOAuthClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000012B /* CodexOAuthClientTests.swift */; };
+		/* Plan 03-02 Task 2 - CodexModelPricing (app target) + codex-models.json bundle resource */
+		AA030202000000000000001A /* CodexModelPricing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030202000000000000001B /* CodexModelPricing.swift */; };
+		AA030202000000000000002A /* codex-models.json in Resources */ = {isa = PBXBuildFile; fileRef = AA030202000000000000002B /* codex-models.json */; };
+		/* Plan 03-02 Task 2 - CodexModelPricing tests (test target) */
+		AA030202000000000000010A /* CodexModelPricingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030202000000000000010B /* CodexModelPricingTests.swift */; };
 		/* Plan 03-05 Task 1 — GeminiSettingsGate (app target) + tests */
 		AA030500000000000000001A /* GeminiSettingsGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000001B /* GeminiSettingsGate.swift */; };
 		AA030500000000000000010A /* GeminiSettingsGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000010B /* GeminiSettingsGateTests.swift */; };
@@ -332,6 +337,11 @@
 		AA030200000000000000003B /* CodexUsageResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageResponse.swift; sourceTree = "<group>"; };
 		AA030200000000000000004B /* CodexOAuthClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexOAuthClient.swift; sourceTree = "<group>"; };
 		AA030200000000000000011B /* CodexUsageResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageResponseTests.swift; sourceTree = "<group>"; };
+		/* Plan 03-02 Task 2 - CodexModelPricing + codex-models.json file references */
+		AA030202000000000000001B /* CodexModelPricing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexModelPricing.swift; sourceTree = "<group>"; };
+		AA030202000000000000002B /* codex-models.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-models.json"; sourceTree = "<group>"; };
+		AA030202000000000000010B /* CodexModelPricingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexModelPricingTests.swift; sourceTree = "<group>"; };
+		AA030202000000000000020B /* codex-models-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-models-fixture.json"; sourceTree = "<group>"; };
 		AA030200000000000000012B /* CodexOAuthClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexOAuthClientTests.swift; sourceTree = "<group>"; };
 		AA030200000000000000023B /* codex-wham-usage-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-wham-usage-fixture.json"; sourceTree = "<group>"; };
 		/* Plan 03-05 Task 1 — GeminiSettingsGate file references */
@@ -584,6 +594,8 @@
 				/* Plan 03-03 — Codex OAuth fallback */
 				AA030200000000000000001B /* CodexCredentialLoader.swift */,
 				AA030200000000000000004B /* CodexOAuthClient.swift */,
+				/* Plan 03-02 - Codex pricing source */
+				AA030202000000000000001B /* CodexModelPricing.swift */,
 				AA030100000000000000051B /* Models */,
 			);
 			path = Codex;
@@ -807,6 +819,7 @@
 			isa = PBXGroup;
 			children = (
 				AA020202000000000000001B /* claude-models.json */,
+				AA030202000000000000002B /* codex-models.json */,
 			);
 			path = Pricing;
 			sourceTree = "<group>";
@@ -863,6 +876,8 @@
 				AA030200000000000000010B /* CodexCredentialLoaderTests.swift */,
 				AA030200000000000000011B /* CodexUsageResponseTests.swift */,
 				AA030200000000000000012B /* CodexOAuthClientTests.swift */,
+				/* Plan 03-02 - Codex pricing tests */
+				AA030202000000000000010B /* CodexModelPricingTests.swift */,
 				AA030100000000000000061B /* Fixtures */,
 			);
 			path = ProvidersCodexTests;
@@ -879,6 +894,8 @@
 				AA030200000000000000021B /* codex-auth-apikey.json */,
 				AA030200000000000000022B /* codex-auth-empty.json */,
 				AA030200000000000000023B /* codex-wham-usage-fixture.json */,
+				/* Plan 03-02 - Codex pricing fixture (loaded via #filePath, not bundle) */
+				AA030202000000000000020B /* codex-models-fixture.json */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -1012,6 +1029,8 @@
 				AA000001000000000000009A /* Assets.xcassets in Resources */,
 				/* Plan 02.02 — Bundled Claude pricing table */
 				AA020202000000000000001A /* claude-models.json in Resources */,
+				/* Plan 03-02 - Bundled Codex pricing table */
+				AA030202000000000000002A /* codex-models.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1134,6 +1153,8 @@
 				/* Plan 03-03 — CodexUsageResponse + CodexOAuthClient */
 				AA030200000000000000003A /* CodexUsageResponse.swift in Sources */,
 				AA030200000000000000004A /* CodexOAuthClient.swift in Sources */,
+				/* Plan 03-02 - CodexModelPricing source */
+				AA030202000000000000001A /* CodexModelPricing.swift in Sources */,
 				/* Plan 03-05 — Gemini settings gate + credential loader + OAuth client */
 				AA030500000000000000001A /* GeminiSettingsGate.swift in Sources */,
 				AA030500000000000000002A /* GeminiOAuthCredentials.swift in Sources */,
@@ -1213,6 +1234,8 @@
 				/* Plan 03-03 Task 2 — CodexUsageResponse + CodexOAuthClient tests */
 				AA030200000000000000011A /* CodexUsageResponseTests.swift in Sources */,
 				AA030200000000000000012A /* CodexOAuthClientTests.swift in Sources */,
+				/* Plan 03-02 - CodexModelPricing tests */
+				AA030202000000000000010A /* CodexModelPricingTests.swift in Sources */,
 				/* Plan 03-05 Task 1 — GeminiSettingsGate tests */
 				AA030500000000000000010A /* GeminiSettingsGateTests.swift in Sources */,
 				/* Plan 03-05 Task 2 — GeminiCredentialLoader tests */
