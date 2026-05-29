@@ -56,6 +56,12 @@ extension ProviderID {
     /// registry isn't available in the view environment.
     public static let localIDs: Set<ProviderID> = [.ollama, .lmstudio, .llamacpp]
 
+    /// Plan 05-02 — Ordered array of all known providers in display order.
+    /// Used by `UserPreferencesStore.loadAll()` and `SettingsProvidersTab` row enumeration.
+    public static let allKnown: [ProviderID] = [
+        .openrouter, .claude, .codex, .gemini, .ollama, .lmstudio, .llamacpp
+    ]
+
     /// Human-readable display hint for this provider.
     ///
     /// Used by `ThresholdEngine` to populate `NotificationDecision.displayName` (B3),

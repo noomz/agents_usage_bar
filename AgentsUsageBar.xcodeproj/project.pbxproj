@@ -45,6 +45,12 @@
 		AA020200000000000000023A /* ThresholdStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000023B /* ThresholdStateTests.swift */; };
 		AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000024B /* FileCacheStoreTests.swift */; };
 		AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000025B /* URLSessionHTTPClientTests.swift */; };
+		/* Plan 05-02 — UserPreferencesStore + AppEnvironmentKeys app sources */
+		AA050200000000000000001A /* UserPreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000001B /* UserPreferencesStore.swift */; };
+		AA050200000000000000002A /* AppEnvironmentKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000002B /* AppEnvironmentKeys.swift */; };
+		/* Plan 05-02 — UserPreferencesStoreTests + ConfigStorePrecedenceTests test sources */
+		AA050200000000000000010A /* UserPreferencesStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000010B /* UserPreferencesStoreTests.swift */; };
+		AA050200000000000000011A /* ConfigStorePrecedenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000011B /* ConfigStorePrecedenceTests.swift */; };
 		/* Plan 01.03 — Config sources */
 		AA030300000000000000001A /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000001B /* AppConfig.swift */; };
 		AA030300000000000000002A /* EnvReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000002B /* EnvReader.swift */; };
@@ -344,6 +350,12 @@
 		AA020200000000000000023B /* ThresholdStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdStateTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000024B /* FileCacheStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStoreTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000025B /* URLSessionHTTPClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionHTTPClientTests.swift; sourceTree = "<group>"; };
+		/* Plan 05-02 — UserPreferencesStore + AppEnvironmentKeys file references */
+		AA050200000000000000001B /* UserPreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferencesStore.swift; sourceTree = "<group>"; };
+		AA050200000000000000002B /* AppEnvironmentKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironmentKeys.swift; sourceTree = "<group>"; };
+		/* Plan 05-02 — Test file references */
+		AA050200000000000000010B /* UserPreferencesStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferencesStoreTests.swift; sourceTree = "<group>"; };
+		AA050200000000000000011B /* ConfigStorePrecedenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStorePrecedenceTests.swift; sourceTree = "<group>"; };
 		/* Plan 01.03 — Config file references */
 		AA030300000000000000001B /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		AA030300000000000000002B /* EnvReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvReader.swift; sourceTree = "<group>"; };
@@ -939,6 +951,8 @@
 				AA030300000000000000002B /* EnvReader.swift */,
 				AA030300000000000000003B /* TomlReader.swift */,
 				AA030300000000000000004B /* ConfigStore.swift */,
+				/* Plan 05-02 — UserPreferencesStore */
+				AA050200000000000000001B /* UserPreferencesStore.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -955,6 +969,9 @@
 				/* Plan 04-02 — AppConfig + ConfigStore local provider tests */
 				AA040200000000000000010B /* AppConfigLocalProvidersTests.swift */,
 				AA040200000000000000011B /* ConfigStoreLocalSectionsTests.swift */,
+				/* Plan 05-02 — UserPreferencesStore + ConfigStore precedence tests */
+				AA050200000000000000010B /* UserPreferencesStoreTests.swift */,
+				AA050200000000000000011B /* ConfigStorePrecedenceTests.swift */,
 				AA030300000000000000032B /* Fixtures */,
 			);
 			path = ConfigTests;
@@ -1065,6 +1082,8 @@
 			children = (
 				AA060600000000000000001B /* ClockEnvironmentKey.swift */,
 				AA030700000000000000002B /* OpenDashboardURLEnvironmentKey.swift */,
+				/* Plan 05-02 — preferences environment key */
+				AA050200000000000000002B /* AppEnvironmentKeys.swift */,
 			);
 			path = Environment;
 			sourceTree = "<group>";
@@ -1606,6 +1625,9 @@
 				AA050100000000000000003A /* SettingsGeneralTab.swift in Sources */,
 				AA050100000000000000004A /* SettingsProvidersTab.swift in Sources */,
 				AA050100000000000000005A /* SettingsAboutTab.swift in Sources */,
+				/* Plan 05-02 — UserPreferencesStore + AppEnvironmentKeys */
+				AA050200000000000000001A /* UserPreferencesStore.swift in Sources */,
+				AA050200000000000000002A /* AppEnvironmentKeys.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1739,6 +1761,9 @@
 				AA040800000000000000012A /* AggregateStoreLocalRollupTests.swift in Sources */,
 				/* Plan 05-01 — WindowActivationObserver tests */
 				AA050100000000000000010A /* WindowActivationObserverTests.swift in Sources */,
+				/* Plan 05-02 — UserPreferencesStore + ConfigStore precedence tests */
+				AA050200000000000000010A /* UserPreferencesStoreTests.swift in Sources */,
+				AA050200000000000000011A /* ConfigStorePrecedenceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

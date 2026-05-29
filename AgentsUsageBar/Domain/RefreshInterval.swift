@@ -30,6 +30,21 @@ public enum RefreshInterval: Sendable, Equatable, Codable, CaseIterable {
     /// Default polling interval (POLL-02).
     public static let `default`: Self = .m5
 
+    /// The canonical string representation used in TOML config and `UserDefaults` storage.
+    ///
+    /// Plan 05-02: `UserPreferencesStore` stores `RefreshInterval` as this string in
+    /// `UserDefaults` under `aub.refreshInterval`, and round-trips via `parse(_:)`.
+    public var tomlString: String {
+        switch self {
+        case .manual: return "manual"
+        case .m1:     return "1m"
+        case .m2:     return "2m"
+        case .m5:     return "5m"
+        case .m15:    return "15m"
+        case .m30:    return "30m"
+        }
+    }
+
     /// Converts a TOML string value to a `RefreshInterval`.
     ///
     /// Accepted values (D-15): `"manual"`, `"1m"`, `"2m"`, `"5m"`, `"15m"`, `"30m"`.
