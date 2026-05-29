@@ -179,6 +179,13 @@
 		/* Plan 04-04 — OllamaProvider test sources (test target) */
 		AA040404000000000000010A /* OllamaProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000010B /* OllamaProviderTests.swift */; };
 		AA040404000000000000011A /* OllamaResponsesCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000011B /* OllamaResponsesCodableTests.swift */; };
+		/* Plan 04-05 — LMStudioProvider + response models (app target) */
+		AA040500000000000000001A /* LMStudioProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040500000000000000001B /* LMStudioProvider.swift */; };
+		AA040500000000000000002A /* LMStudioV0ModelsResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040500000000000000002B /* LMStudioV0ModelsResponse.swift */; };
+		AA040500000000000000003A /* LMStudioV1ModelsResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040500000000000000003B /* LMStudioV1ModelsResponse.swift */; };
+		/* Plan 04-05 — LMStudioProvider test sources (test target) */
+		AA040500000000000000010A /* LMStudioProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040500000000000000010B /* LMStudioProviderTests.swift */; };
+		AA040500000000000000011A /* LMStudioResponsesCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040500000000000000011B /* LMStudioResponsesCodableTests.swift */; };
 		/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test (test target) */
 		AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */; };
 		/* Plan 03-04 Task 2 — CodexJSONLProvider (app target) + provider/fallback tests */
@@ -463,6 +470,18 @@
 		AA040404000000000000022B /* ollama-ps-empty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ollama-ps-empty.json"; sourceTree = "<group>"; };
 		AA040404000000000000023B /* ollama-tags-non-empty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ollama-tags-non-empty.json"; sourceTree = "<group>"; };
 		AA040404000000000000024B /* ollama-tags-empty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ollama-tags-empty.json"; sourceTree = "<group>"; };
+		/* Plan 04-05 — LMStudioProvider + response models file references */
+		AA040500000000000000001B /* LMStudioProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LMStudioProvider.swift; sourceTree = "<group>"; };
+		AA040500000000000000002B /* LMStudioV0ModelsResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LMStudioV0ModelsResponse.swift; sourceTree = "<group>"; };
+		AA040500000000000000003B /* LMStudioV1ModelsResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LMStudioV1ModelsResponse.swift; sourceTree = "<group>"; };
+		/* Plan 04-05 — test file references */
+		AA040500000000000000010B /* LMStudioProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LMStudioProviderTests.swift; sourceTree = "<group>"; };
+		AA040500000000000000011B /* LMStudioResponsesCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LMStudioResponsesCodableTests.swift; sourceTree = "<group>"; };
+		/* Plan 04-05 — fixture file references (loaded via #filePath, not bundle) */
+		AA040500000000000000020B /* lmstudio-v0-models-mixed-state.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "lmstudio-v0-models-mixed-state.json"; sourceTree = "<group>"; };
+		AA040500000000000000021B /* lmstudio-v0-models-all-loaded.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "lmstudio-v0-models-all-loaded.json"; sourceTree = "<group>"; };
+		AA040500000000000000022B /* lmstudio-v0-models-none-loaded.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "lmstudio-v0-models-none-loaded.json"; sourceTree = "<group>"; };
+		AA040500000000000000023B /* lmstudio-v1-models-fallback.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "lmstudio-v1-models-fallback.json"; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -669,6 +688,8 @@
 				AA030500000000000000050B /* Gemini */,
 				/* Plan 04-04 — Ollama local provider */
 				AA040404000000000000030B /* Ollama */,
+				/* Plan 04-05 — LM Studio local provider */
+				AA040500000000000000030B /* LMStudio */,
 			);
 			path = Providers;
 			sourceTree = "<group>";
@@ -689,6 +710,26 @@
 			children = (
 				AA040404000000000000002B /* OllamaPsResponse.swift */,
 				AA040404000000000000003B /* OllamaTagsResponse.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-05 — LMStudio provider subgroup */
+		AA040500000000000000030B /* LMStudio */ = {
+			isa = PBXGroup;
+			children = (
+				AA040500000000000000001B /* LMStudioProvider.swift */,
+				AA040500000000000000031B /* Models */,
+			);
+			path = LMStudio;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-05 — LMStudio Models subgroup */
+		AA040500000000000000031B /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AA040500000000000000002B /* LMStudioV0ModelsResponse.swift */,
+				AA040500000000000000003B /* LMStudioV1ModelsResponse.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -998,6 +1039,8 @@
 				AA030500000000000000060B /* ProvidersGeminiTests */,
 				/* Plan 04-04 — Ollama provider tests */
 				AA040404000000000000060B /* ProvidersOllamaTests */,
+				/* Plan 04-05 — LM Studio provider tests */
+				AA040500000000000000060B /* ProvidersLMStudioTests */,
 			);
 			path = AgentsUsageBarTests;
 			sourceTree = "<group>";
@@ -1022,6 +1065,29 @@
 				AA040404000000000000022B /* ollama-ps-empty.json */,
 				AA040404000000000000023B /* ollama-tags-non-empty.json */,
 				AA040404000000000000024B /* ollama-tags-empty.json */,
+			);
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-05 — ProvidersLMStudioTests group */
+		AA040500000000000000060B /* ProvidersLMStudioTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA040500000000000000010B /* LMStudioProviderTests.swift */,
+				AA040500000000000000011B /* LMStudioResponsesCodableTests.swift */,
+				AA040500000000000000061B /* Fixtures */,
+			);
+			path = ProvidersLMStudioTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 04-05 — ProvidersLMStudioTests Fixtures subgroup (loaded via #filePath, not bundle) */
+		AA040500000000000000061B /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				AA040500000000000000020B /* lmstudio-v0-models-mixed-state.json */,
+				AA040500000000000000021B /* lmstudio-v0-models-all-loaded.json */,
+				AA040500000000000000022B /* lmstudio-v0-models-none-loaded.json */,
+				AA040500000000000000023B /* lmstudio-v1-models-fallback.json */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -1375,6 +1441,10 @@
 				AA040404000000000000001A /* OllamaProvider.swift in Sources */,
 				AA040404000000000000002A /* OllamaPsResponse.swift in Sources */,
 				AA040404000000000000003A /* OllamaTagsResponse.swift in Sources */,
+				/* Plan 04-05 — LMStudioProvider actor + response models */
+				AA040500000000000000001A /* LMStudioProvider.swift in Sources */,
+				AA040500000000000000002A /* LMStudioV0ModelsResponse.swift in Sources */,
+				AA040500000000000000003A /* LMStudioV1ModelsResponse.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1491,6 +1561,9 @@
 				/* Plan 04-04 — OllamaProvider tests */
 				AA040404000000000000010A /* OllamaProviderTests.swift in Sources */,
 				AA040404000000000000011A /* OllamaResponsesCodableTests.swift in Sources */,
+				/* Plan 04-05 — LMStudioProvider tests */
+				AA040500000000000000010A /* LMStudioProviderTests.swift in Sources */,
+				AA040500000000000000011A /* LMStudioResponsesCodableTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
