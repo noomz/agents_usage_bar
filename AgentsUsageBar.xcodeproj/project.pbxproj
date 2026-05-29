@@ -44,6 +44,19 @@
 		AA020200000000000000023A /* ThresholdStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000023B /* ThresholdStateTests.swift */; };
 		AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000024B /* FileCacheStoreTests.swift */; };
 		AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000025B /* URLSessionHTTPClientTests.swift */; };
+		/* Plan 01.03 — Config sources */
+		AA030300000000000000001A /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000001B /* AppConfig.swift */; };
+		AA030300000000000000002A /* EnvReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000002B /* EnvReader.swift */; };
+		AA030300000000000000003A /* TomlReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000003B /* TomlReader.swift */; };
+		AA030300000000000000004A /* ConfigStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000004B /* ConfigStore.swift */; };
+		/* Plan 01.03 — Config test sources */
+		AA030300000000000000010A /* TomlReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000010B /* TomlReaderTests.swift */; };
+		AA030300000000000000011A /* ConfigStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000011B /* ConfigStoreTests.swift */; };
+		/* Plan 01.03 — TOML fixture resources */
+		AA030300000000000000020A /* valid.toml in Resources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000020B /* valid.toml */; };
+		AA030300000000000000021A /* malformed.toml in Resources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000021B /* malformed.toml */; };
+		AA030300000000000000022A /* empty.toml in Resources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000022B /* empty.toml */; };
+		AA030300000000000000023A /* comments-only.toml in Resources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000023B /* comments-only.toml */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,6 +110,19 @@
 		AA020200000000000000023B /* ThresholdStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdStateTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000024B /* FileCacheStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStoreTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000025B /* URLSessionHTTPClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionHTTPClientTests.swift; sourceTree = "<group>"; };
+		/* Plan 01.03 — Config file references */
+		AA030300000000000000001B /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		AA030300000000000000002B /* EnvReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvReader.swift; sourceTree = "<group>"; };
+		AA030300000000000000003B /* TomlReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TomlReader.swift; sourceTree = "<group>"; };
+		AA030300000000000000004B /* ConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStore.swift; sourceTree = "<group>"; };
+		/* Plan 01.03 — Config test file references */
+		AA030300000000000000010B /* TomlReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TomlReaderTests.swift; sourceTree = "<group>"; };
+		AA030300000000000000011B /* ConfigStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStoreTests.swift; sourceTree = "<group>"; };
+		/* Plan 01.03 — TOML fixture file references */
+		AA030300000000000000020B /* valid.toml */ = {isa = PBXFileReference; lastKnownFileType = text; path = "valid.toml"; sourceTree = "<group>"; };
+		AA030300000000000000021B /* malformed.toml */ = {isa = PBXFileReference; lastKnownFileType = text; path = "malformed.toml"; sourceTree = "<group>"; };
+		AA030300000000000000022B /* empty.toml */ = {isa = PBXFileReference; lastKnownFileType = text; path = "empty.toml"; sourceTree = "<group>"; };
+		AA030300000000000000023B /* comments-only.toml */ = {isa = PBXFileReference; lastKnownFileType = text; path = "comments-only.toml"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,6 +162,7 @@
 				AA00000100000000000000D5 /* UI */,
 				AA00000100000000000000D6 /* Resources */,
 				AA020200000000000000030B /* Infrastructure */,
+				AA030300000000000000030B /* Config */,
 			);
 			path = AgentsUsageBar;
 			sourceTree = "<group>";
@@ -202,6 +229,41 @@
 			path = InfrastructureTests;
 			sourceTree = "<group>";
 		};
+		/* Plan 01.03 — Config source group */
+		AA030300000000000000030B /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				AA030300000000000000001B /* AppConfig.swift */,
+				AA030300000000000000002B /* EnvReader.swift */,
+				AA030300000000000000003B /* TomlReader.swift */,
+				AA030300000000000000004B /* ConfigStore.swift */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		/* Plan 01.03 — ConfigTests group */
+		AA030300000000000000031B /* ConfigTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA030300000000000000010B /* TomlReaderTests.swift */,
+				AA030300000000000000011B /* ConfigStoreTests.swift */,
+				AA030300000000000000032B /* Fixtures */,
+			);
+			path = ConfigTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 01.03 — Fixtures subgroup */
+		AA030300000000000000032B /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				AA030300000000000000020B /* valid.toml */,
+				AA030300000000000000021B /* malformed.toml */,
+				AA030300000000000000022B /* empty.toml */,
+				AA030300000000000000023B /* comments-only.toml */,
+			);
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
 		AA00000100000000000000D4 /* Aggregation */ = {
 			isa = PBXGroup;
 			children = (
@@ -236,6 +298,7 @@
 				AA00000100000000000000AB /* AgentsUsageBarTests.swift */,
 				AA020200000000000000031B /* DomainTests */,
 				AA020200000000000000032B /* InfrastructureTests */,
+				AA030300000000000000031B /* ConfigTests */,
 			);
 			path = AgentsUsageBarTests;
 			sourceTree = "<group>";
@@ -275,6 +338,7 @@
 			buildPhases = (
 				AA00000100000000000000F6 /* Sources */,
 				AA00000100000000000000F2 /* Frameworks */,
+				AA030300000000000000040A /* Resources */,
 			);
 			buildRules = (
 			);
@@ -333,6 +397,17 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA030300000000000000040A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA030300000000000000020A /* valid.toml in Resources */,
+				AA030300000000000000021A /* malformed.toml in Resources */,
+				AA030300000000000000022A /* empty.toml in Resources */,
+				AA030300000000000000023A /* comments-only.toml in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -365,6 +440,10 @@
 				AA020200000000000000013A /* CacheStore.swift in Sources */,
 				AA020200000000000000014A /* FileCacheStore.swift in Sources */,
 				AA020200000000000000015A /* AppLogger.swift in Sources */,
+				AA030300000000000000001A /* AppConfig.swift in Sources */,
+				AA030300000000000000002A /* EnvReader.swift in Sources */,
+				AA030300000000000000003A /* TomlReader.swift in Sources */,
+				AA030300000000000000004A /* ConfigStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -379,6 +458,8 @@
 				AA020200000000000000023A /* ThresholdStateTests.swift in Sources */,
 				AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */,
 				AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */,
+				AA030300000000000000010A /* TomlReaderTests.swift in Sources */,
+				AA030300000000000000011A /* ConfigStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
