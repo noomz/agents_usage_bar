@@ -8,13 +8,13 @@ progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 16
-  completed_plans: 14
-  percent: 87
+  completed_plans: 15
+  percent: 94
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-14 (after Phase 2 Wave 3 — Plan 02-05 Threshold FSM v2 + snooze landed)
+**Last Updated:** 2026-05-14 (after Phase 2 Wave 4 — Plan 02-06 PowerObserver + RetryPolicy + CircuitBreaker landed)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -28,17 +28,17 @@ progress:
 
 ## Current Position
 
-Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — WAVE 3 COMPLETE
-Plan: 5 of 7 executed
+Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — WAVE 4 COMPLETE
+Plan: 6 of 7 executed
 
 - **Milestone:** v1 (initial release)
 - **Phase:** 2 of 6 — Claude Provider + Threshold/Rollover + JSONL Streaming — IN PROGRESS
-- **Plan:** 5 of 7 plans executed (Wave 1 = {01 ✅, 02 ✅, 03 ✅}; Wave 2 = {04 ✅}; Wave 3 = {05 ✅}; Wave 4 = {06}; Wave 5 = {07})
-- **Status:** Wave 3 (Plan 02-05 Threshold FSM v2 + UNNotificationCategory + snooze) landed; ready for `/gsd-execute-phase 02 --wave 4`
-- **Progress:** [██████████░░░░] 71% (5/7 Phase 2 plans)
+- **Plan:** 6 of 7 plans executed (Wave 1 = {01 ✅, 02 ✅, 03 ✅}; Wave 2 = {04 ✅}; Wave 3 = {05 ✅}; Wave 4 = {06 ✅}; Wave 5 = {07})
+- **Status:** Wave 4 (Plan 02-06 PowerObserver + RetryPolicy + CircuitBreaker) landed; ready for `/gsd-execute-phase 02 --wave 5`
+- **Progress:** [████████████░░] 86% (6/7 Phase 2 plans)
 
 ```
-[██████████████████████████████████████████████████████████░░] 87% (14/16 plans complete)
+[██████████████████████████████████████████████████████████████░] 94% (15/16 plans complete)
 ```
 
 ## Performance Metrics
@@ -46,16 +46,17 @@ Plan: 5 of 7 executed
 | Metric | Value |
 |--------|-------|
 | Phases complete | 1 / 6 |
-| Plans complete | 14 / 16 (Phase 1: 9 plans + Phase 2 Waves 1+2+3: 02-01/02/03/04/05) |
+| Plans complete | 15 / 16 (Phase 1: 9 plans + Phase 2 Waves 1+2+3+4: 02-01/02/03/04/05/06) |
 | Requirements mapped | 76 / 76 (100%) |
-| Requirements validated | 38 / 76 (Phase 1 set unchanged; Phase 2 Waves 1+2+3 cover CLAUDE-01..05 + NOTIF-01..05; end-to-end UAT deferred to Plan 02-07) |
+| Requirements validated | 42 / 76 (Phase 1 set unchanged; Phase 2 Waves 1+2+3+4 cover CLAUDE-01..05 + NOTIF-01..05 + POLL-04..06 + POLL-09 partial; end-to-end UAT deferred to Plan 02-07) |
 | Plans drafted | 16 |
-| Plans executed | 14 (Phase 1 = 9; Phase 2 Wave 1 = 3 bundled in salvage commit 2bf5bf6; Phase 2 Wave 2 = 1 in commits e703320 + 3e3f9cf; Phase 2 Wave 3 = 1 in commit ea07831) |
+| Plans executed | 15 (Phase 1 = 9; Phase 2 Wave 1 = 3 bundled in salvage commit 2bf5bf6; Phase 2 Wave 2 = 1 in commits e703320 + 3e3f9cf; Phase 2 Wave 3 = 1 in commit ea07831; Phase 2 Wave 4 = 1 in commits 4121cfe + afc7825) |
 | Node repairs | 1 (Phase 2 Wave 1 salvage — see Phase 2 backprop) |
 | UI phases run | 0 |
 | UAT gaps closed | 1 (Test 2 cosmetic hover state) |
 | Phase 02 P04 duration | ~90 min, 1 task, 7 files modified |
 | Phase 02 P05 duration | ~60 min, 2 tasks, 13 files modified, 42 new tests |
+| Phase 02 P06 duration | ~12 min, 2 tasks, 10 files modified, 29 new tests |
 
 ## Accumulated Context
 
@@ -113,6 +114,12 @@ Plan: 5 of 7 executed
 50. `NotificationActionHandler` is held strongly by the `Dependencies` bag for app lifetime — `UNUserNotificationCenter.current().delegate` is `weak`, so without the strong reference the handler would deallocate and snooze taps would no-op silently.
 51. Coalesced ID extends from Phase 1's hardcoded `:warn80` to `:warn80|crit95|exceed100` derived from `max(decisions.band)`; coalesced title percent (80/95/100) reflects the same highest band — `bandSuffix(for:)` + `bandPercent(for:)` are public statics on `ThresholdEngine` shared with `NotificationManager`.
 52. Test `now`-Date pinned to noon UTC, NOT a PT/local timezone — `TodayHelper.formatYYYYMMDD(now)` uses `Calendar.current`, so a PT-noon date crosses to the next calendar day in UTC+8+ developer machines; noon UTC stays on the same calendar day across UTC-12..UTC+12 hosts.
+53. `CircuitBreaker` is an `actor` with 3-state machine (`.closed` / `.open(until:)` / `.halfOpen`); default 5-strike/300s for POLL-05; Claude OAuth-usage path overrides with 3-strike/300s (Pitfall 5 / default decision #4). Methods take an explicit `now: Date` parameter — never read `Date.now` internally — so VirtualClock-driven tests are deterministic.
+54. `RetryPolicy` ships **unwired** in Plan 02-06 — POLL-05 backoff between polls is achieved via the breaker's `.open(until:)` cooldown rather than per-fetch jitter sleep. Per-fetch retry-with-jitter would block one poll cycle on a single slow provider for up to a minute. RetryPolicy remains available as a primitive for Plan 02-07 UAT or future polish.
+55. `PowerObserver` is `@MainActor public final class`; observer tokens (`sleepToken` / `wakeToken`) and `notificationCenter` are `nonisolated(unsafe)` so Swift 6's nonisolated `deinit` can call `removeObserver(_:)` — safe because tokens write once at init (MainActor) and read solely in deinit, and `NotificationCenter.removeObserver` is documented thread-safe.
+56. `AggregateStore.perProviderBreakers: [ProviderID: CircuitBreaker]` is lazily populated via `breaker(for:)` helper. `performRefresh(now:)` pre-decides per-provider gate: terminal `.unauthenticated` providers (POLL-06) contribute NO task at all (breaker untouched); open-breaker providers (POLL-05) surface a synthesised `"circuit-open"` failure result. Success → `recordSuccess`; non-auth failures → `recordFailure(now:)`; auth/paymentRequired → breaker untouched (POLL-06 terminal).
+57. `ClaudeJSONLProvider.oauthBreaker = CircuitBreaker(threshold: 3, cooldown: 300)` is scoped ONLY to the `/api/oauth/usage` endpoint's 429 responses. Non-429 OAuth errors (refresh failed, no creds, network) do NOT increment the breaker — they're caller-side issues, not endpoint flakiness. 5xx OAuth errors also fall through to the general AggregateStore-level breaker, not this 3-strike one. JSONL collection continues regardless of OAuth breaker state (CLAUDE-04 graceful-degrade).
+58. `PollSchedulerSleepWakeTests/scheduler_start_after_stop_resumes_polling` uses a `VirtualClock` that advances 10s per `now()` call (same pattern as `PollSchedulerTests/updateIntervalReplacesLoop`) — guarantees the 2nd refresh after `start()` bypasses POLL-03's 5s `AggregateStore.refresh(now:)` debounce. SystemClock would race the debounce and flake.
 
 ### Open Questions (from research)
 
@@ -123,8 +130,8 @@ Plan: 5 of 7 executed
 
 ### Active TODOs
 
-- **CONFIG**: Re-evaluate `workflow.use_worktrees` in `.planning/config.json`. Currently `false` — caused Wave 1 parallel-isolation slip (see Phase 2 Wave 1 backprop). Waves 2 and 3 both ran cleanly sequentially. Decide before Wave 4 (Plan 02-06 RetryPolicy + CircuitBreaker is heavier).
-- **WAVE 4**: Plan 02-06 (PowerObserver + RetryPolicy + CircuitBreaker) depends on 02-03/04/05 (all ✅) — unblocked.
+- **CONFIG**: `workflow.use_worktrees` remains `false`. Waves 2, 3, 4 all ran cleanly sequentially. Decide before Wave 5 (Plan 02-07 UI extensions + UAT) — likely keep `false` since 02-07 is the only remaining Phase 2 plan.
+- **WAVE 5**: Plan 02-07 (UI extensions UI-03/05/08/09 + 02-UAT.md) depends on 02-04/05/06 (all ✅) — unblocked. NOT autonomous (`autonomous: false`) — requires user-driven UAT checkpoint between code landing and phase verification.
 
 ### Blockers
 
@@ -149,13 +156,13 @@ Plan: 5 of 7 executed
 ### Last Session
 
 - **Date:** 2026-05-14
-- **Worked on:** Phase 02 Plan 02-05 — Threshold FSM v2 + snooze (Wave 3). Added `ThresholdBand: Comparable + Codable`, `NotificationStateStore` (UserDefaults + InMemory), FSM-aware `ThresholdEngine` overload (warning / critical / exceeded upward-only emission with `snoozedUntilDay[pid] == today` gate), `NotificationActionHandler` routing snooze taps into `AggregateStore.snoozeToday` / `snoozeAllToday`, `UNNotificationCategory("usage.warning")` registration in `AgentsUsageBarApp.init()` (Pitfall 6), and 3-band coalesced ID/title extension in `NotificationManager`. Fixed 4 root causes during green phase: (1) missing Codable on ThresholdBand, (2) Swift 6 sendability on completionHandler, (3) ProviderStatus.ok signature, (4) test now-Date timezone mismatch (PT-noon vs Bangkok host).
-- **Commits:** ea07831 (feat — Threshold FSM v2 + UNNotificationCategory + snooze action handler, 15 files, +1707/-92, 42 new tests).
+- **Worked on:** Phase 02 Plan 02-06 — Energy + resilience layer (Wave 4). Added `RetryPolicy` (decorrelated jitter value type, unwired primitive), `CircuitBreaker` (actor, 3-state machine, default 5-strike/300s for POLL-05), `PowerObserver` (@MainActor, NSWorkspace willSleep/didWake → scheduler.stop/start + store.refresh). Extended `ClaudeJSONLProvider` with 3-strike OAuth-usage-specific breaker (Pitfall 5), `AggregateStore` with `perProviderBreakers` map + POLL-06 terminal-unauthenticated skip + POLL-05 open-breaker skip, `ProviderStatus.unauthenticated` doc (POLL-06 terminality), `AppDependencies.Dependencies.powerObserver` strong-reference, and `AgentsUsageBarApp` force-realize before scheduler.start (Pitfall 4). Fixed 2 root causes during green phase: (1) Swift 6 strict-concurrency deinit access — `nonisolated(unsafe)` on observer tokens + notificationCenter; (2) `PollSchedulerSleepWakeTests/scheduler_start_after_stop_resumes_polling` flake — POLL-03 5s coalescing window was skipping the 2nd refresh under SystemClock; fix = VirtualClock advancing 10s/call.
+- **Commits:** 4121cfe (feat — RetryPolicy + CircuitBreaker primitives), afc7825 (feat — PowerObserver + per-provider CircuitBreaker + POLL-06 unauthenticated terminal), 0eed73a (docs — SUMMARY). 29 new Swift Testing assertions; full xcodebuild test = 320 pass / 0 fail / 1 pre-existing skip.
 
 ### Next Session
 
-- **Suggested action:** `/gsd-execute-phase 02 --wave 4`. Plan 02-06 is next (Wave 4) — PowerObserver + RetryPolicy + CircuitBreaker.
-- **Pre-work:** Confirm `xcodebuild test -scheme AgentsUsageBar` still passes at HEAD ea07831 (291/0/1 at landing). Re-read 02-05-SUMMARY.md for ThresholdEngine entry points + AggregateStore.snoozeToday signature before reading Plan 02-06's task list.
+- **Suggested action:** `/gsd-execute-phase 02 --wave 5`. Plan 02-07 is the final Phase 2 plan (Wave 5) — UI extensions (UI-03 last-error tooltip, UI-05 stale dimming, UI-08 menu-bar tint pulse, UI-09 footer reset countdown) + Phase 2 UAT script (`02-UAT.md`). NOT autonomous — runs through UAT checkpoint.
+- **Pre-work:** Confirm `xcodebuild test -scheme AgentsUsageBar` still passes at HEAD 0eed73a (320/0/1 at landing). Re-read 02-06-SUMMARY.md for PowerObserver + AggregateStore.perProviderBreakers entry points (UAT script needs to reference them). Plan 02-07 has UI work — keep `workflow.use_worktrees=false` for sequential single-plan execution.
 
 ### Notes
 
