@@ -98,10 +98,14 @@ public actor GeminiOAuthProvider: UsageProvider {
         string: "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist"
     )!
 
-    /// D-11 degraded-UX marker. raw["note"]="usage-temporarily-unavailable"
-    /// is a tagging seam read by Plan 03-08 ThresholdEngine filtering to
-    /// suppress notifications while the provider is in the degraded state.
-    public static let degradedNote = "usage-temporarily-unavailable"
+    /// D-11 degraded-UX marker. raw["note"]=degradedNote is a tagging seam
+    /// read by Plan 03-08 ThresholdEngine filtering (`ThresholdEngine.degradedTag`)
+    /// to suppress notifications while the provider is in the degraded state.
+    ///
+    /// Plan 03-08 makes this constant a thin alias of `ThresholdEngine.degradedTag`
+    /// so the literal `"usage-temporarily-unavailable"` is single-sourced — the
+    /// engine, provider, and UI (Plan 03-07) all read the same constant.
+    public static let degradedNote = ThresholdEngine.degradedTag
 
     // MARK: - Actor-isolated state
 

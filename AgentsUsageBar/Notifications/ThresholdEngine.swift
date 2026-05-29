@@ -26,6 +26,22 @@ public struct ThresholdEngine: Sendable {
     /// Defaults to `Calendar.current` (local timezone) per Pitfall 4.
     private let calendar: Calendar
 
+    /// D-11 degraded-provider tag (Plan 03-08).
+    ///
+    /// When a provider's `UsageSnapshot.raw["note"]` equals this string, the
+    /// provider is considered in a degraded operational state — its quota
+    /// figures are cached / dimmed and threshold notifications MUST NOT fire
+    /// for it on this poll. The next non-degraded poll re-applies normal
+    /// band-transition rules (see `decisions(for:now:snoozedUntilDay:lastBands:)`
+    /// doc comment). Plan 03-06's `GeminiOAuthProvider` (and any future
+    /// provider that adopts the degraded-UX convention) stamps `raw["note"]`
+    /// with this exact constant; downstream UI (Plan 03-07) keys on it for
+    /// the "Updated Xm ago — usage temporarily unavailable" subtitle.
+    ///
+    /// Mirrors `GeminiOAuthProvider.degradedNote` — both sites reference
+    /// this constant to keep the literal DRY across the codebase.
+    public static let degradedTag = "usage-temporarily-unavailable"
+
     public init(warningFraction: Double = 0.80, calendar: Calendar = .current) {
         self.warningFraction = warningFraction
         self.calendar = calendar
@@ -39,6 +55,11 @@ public struct ThresholdEngine: Sendable {
     /// `snoozedUntilDay` map synthesized from the absolute-`Date` snooze expiries.
     /// Callers wanting all three bands must use `decisions(for:now:snoozedUntilDay:lastBands:)`
     /// (Plan 02.05 / NOTIF-01).
+    ///
+    /// Plan 03-08 D-11: this overload ALSO honors the `degradedTag` filter so any
+    /// snapshot marked `usage-temporarily-unavailable` is suppressed before
+    /// downstream processing. The FSM-aware overload performs the actual filter;
+    /// the Phase 1 back-compat path inherits it transparently via delegation.
     public func decisions(
         for snapshots: [UsageSnapshot],
         now: Date,
@@ -61,9 +82,20 @@ public struct ThresholdEngine: Sendable {
     // MARK: - Phase 2 FSM-aware surface (NOTIF-01..05)
 
     /// Returns one `NotificationDecision` per provider whose threshold band has
-    /// transitioned UPWARD since the last poll, gated by per-provider snooze.
+    /// transitioned UPWARD since the last poll, gated by per-provider snooze
+    /// and the D-11 degraded-state filter.
     ///
-    /// Algorithm (NOTIF-02 + NOTIF-05 + default decision #2):
+    /// Algorithm (NOTIF-02 + NOTIF-05 + default decision #2 + Plan 03-08 D-11):
+    /// 0. **D-11 (Plan 03-08):** drop any snapshot whose `raw["note"] == degradedTag`
+    ///    BEFORE processing. This is the GeminiOAuthProvider degraded-UX gate —
+    ///    notifications must not fire while a provider reports stale cached values.
+    ///    Cross-poll tracking is unaffected: the FSM persistence in
+    ///    `AggregateStore.fireThresholdNotificationsIfNeeded` only records a band
+    ///    transition when a decision actually fires. On the NEXT poll where the
+    ///    snapshot is no longer degraded, normal `newBand > oldBand` rules apply;
+    ///    if the user crossed 80% while degraded, the first non-degraded poll above
+    ///    80% WILL fire the notification (the threshold breach is detected on
+    ///    recovery — the suppression is only for the duration of the degraded state).
     /// 1. `currentBand(for: quota.fraction)` → `newBand`.
     /// 2. `lastBands[providerID] ?? .normal` → `oldBand`.
     /// 3. Emit only when `newBand > oldBand` AND `newBand != .normal`.
@@ -81,7 +113,13 @@ public struct ThresholdEngine: Sendable {
     ) -> [NotificationDecision] {
         let today = TodayHelper.formatYYYYMMDD(now, calendar: calendar)
 
-        return snapshots.compactMap { snap -> NotificationDecision? in
+        // STEP 0 — Plan 03-08 D-11: drop snapshots marked degraded BEFORE
+        // any band-transition arithmetic. The filter is provider-agnostic; any
+        // future provider that adopts the `usage-temporarily-unavailable` tag
+        // gets the same treatment.
+        let filtered = snapshots.filter { $0.raw["note"] != Self.degradedTag }
+
+        return filtered.compactMap { snap -> NotificationDecision? in
             // D-14: no-limit accounts have nil quota — skip entirely.
             guard let quota = snap.quota else { return nil }
 
