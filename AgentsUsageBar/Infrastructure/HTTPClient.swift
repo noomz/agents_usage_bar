@@ -21,19 +21,31 @@ public protocol HTTPClient: Sendable {
     /// Performs a GET request to `url`, adds `Authorization: Bearer <secret>` and any
     /// `extraHeaders`, decodes the response JSON as `T`.
     ///
+    /// `useSnakeCaseConversion` controls the response decoder:
+    ///   - `true` (default) — applies `keyDecodingStrategy = .convertFromSnakeCase`.
+    ///     The OpenRouter / Claude convention: response models use default camelCase
+    ///     CodingKey rawValues and rely on the strategy.
+    ///   - `false` — plain `JSONDecoder()`. Required for response models that declare
+    ///     explicit snake_case CodingKey rawValues (e.g. `CodexUsageResponse`), which
+    ///     would silently fail to match keys after `.convertFromSnakeCase` rewrites
+    ///     incoming snake_case JSON keys to camelCase.
+    ///
     /// - Throws: `HTTPError` for non-2xx responses; `DecodingError` for malformed JSON.
     func get<T: Decodable & Sendable>(
         _ url: URL,
         bearer: Secret,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T
 
     /// Overload for unauthenticated probes (Phase 4 reuse; Phase 1 uses the bearer form).
+    /// `useSnakeCaseConversion` semantics match the bearer-required variant.
     func get<T: Decodable & Sendable>(
         _ url: URL,
         bearer: Secret?,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T
 
@@ -115,4 +127,45 @@ public protocol HTTPClient: Sendable {
         extraHeaders: [String: String],
         as type: T.Type
     ) async throws -> T
+}
+
+// MARK: - Default-argument convenience overloads
+//
+// The required protocol methods carry the `useSnakeCaseConversion` flag without
+// a default value (Swift protocols disallow parameter defaults). These extension
+// shims preserve the pre-existing call-site ergonomics for OpenRouter / Claude
+// (which want strategy = .convertFromSnakeCase) by forwarding with `true`.
+//
+// Callers that need plain decoding (e.g. Codex's wham/usage) MUST call the
+// required method directly with `useSnakeCaseConversion: false`.
+extension HTTPClient {
+    public func get<T: Decodable & Sendable>(
+        _ url: URL,
+        bearer: Secret,
+        extraHeaders: [String: String] = [:],
+        as type: T.Type
+    ) async throws -> T {
+        try await get(
+            url,
+            bearer: bearer,
+            extraHeaders: extraHeaders,
+            useSnakeCaseConversion: true,
+            as: type
+        )
+    }
+
+    public func get<T: Decodable & Sendable>(
+        _ url: URL,
+        bearer: Secret?,
+        extraHeaders: [String: String] = [:],
+        as type: T.Type
+    ) async throws -> T {
+        try await get(
+            url,
+            bearer: bearer,
+            extraHeaders: extraHeaders,
+            useSnakeCaseConversion: true,
+            as: type
+        )
+    }
 }

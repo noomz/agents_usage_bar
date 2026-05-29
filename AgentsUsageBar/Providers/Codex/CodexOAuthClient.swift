@@ -82,10 +82,16 @@ public actor CodexOAuthClient {
         }
 
         do {
+            // useSnakeCaseConversion: false — CodexUsageResponse declares explicit
+            // snake_case CodingKey rawValues (matches RESEARCH correction #5 schema
+            // for wham/usage). The .convertFromSnakeCase strategy would rewrite
+            // incoming keys to camelCase before lookup, silently producing
+            // `rateLimit == nil` despite a 200 OK body (G-02 root cause).
             return try await http.get(
                 Self.endpoint,
                 bearer: creds.bearer.token,
                 extraHeaders: extraHeaders,
+                useSnakeCaseConversion: false,
                 as: CodexUsageResponse.self
             )
         } catch let httpErr as HTTPError {

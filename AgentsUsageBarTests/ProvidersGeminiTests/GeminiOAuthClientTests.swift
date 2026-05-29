@@ -25,6 +25,7 @@ final class FakeGeminiHTTPClient: HTTPClient, @unchecked Sendable {
         _ url: URL,
         bearer: Secret,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
         calls.append(.init(url: url, method: "GET", bearer: bearer, extraHeaders: extraHeaders, formBody: nil))
@@ -35,6 +36,7 @@ final class FakeGeminiHTTPClient: HTTPClient, @unchecked Sendable {
         _ url: URL,
         bearer: Secret?,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
         calls.append(.init(url: url, method: "GET", bearer: bearer, extraHeaders: extraHeaders, formBody: nil))

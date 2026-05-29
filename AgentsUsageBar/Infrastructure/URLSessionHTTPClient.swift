@@ -56,18 +56,32 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
         _ url: URL,
         bearer: Secret,
         extraHeaders: [String: String] = [:],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
-        try await performGet(url: url, bearer: bearer, extraHeaders: extraHeaders, as: type)
+        try await performGet(
+            url: url,
+            bearer: bearer,
+            extraHeaders: extraHeaders,
+            useSnakeCaseConversion: useSnakeCaseConversion,
+            as: type
+        )
     }
 
     public func get<T: Decodable & Sendable>(
         _ url: URL,
         bearer: Secret?,
         extraHeaders: [String: String] = [:],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
-        try await performGet(url: url, bearer: bearer, extraHeaders: extraHeaders, as: type)
+        try await performGet(
+            url: url,
+            bearer: bearer,
+            extraHeaders: extraHeaders,
+            useSnakeCaseConversion: useSnakeCaseConversion,
+            as: type
+        )
     }
 
     // MARK: - HTTPClient POST conformance
@@ -219,6 +233,7 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
         url: URL,
         bearer: Secret?,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
         var req = URLRequest(url: url)
@@ -244,7 +259,15 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
         }
 
         let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        if useSnakeCaseConversion {
+            // OpenRouter / Claude convention: response models use default
+            // camelCase CodingKey rawValues and rely on the strategy.
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+        }
+        // else: plain decoder — explicit snake_case CodingKey rawValues win
+        // (e.g. CodexUsageResponse). Applying the strategy here would rewrite
+        // incoming snake_case JSON keys to camelCase before lookup and miss
+        // every explicit `"primary_window"`-style mapping (G-02 root cause).
         return try decoder.decode(T.self, from: data)
     }
 }

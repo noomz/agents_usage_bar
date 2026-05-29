@@ -23,20 +23,22 @@ final class FakeHTTPClient: HTTPClient, @unchecked Sendable {
         _ url: URL,
         bearer: Secret,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
         calls.append(Call(url: url, method: "GET", bearer: bearer, extraHeaders: extraHeaders))
-        return try decode(type, from: &getResponses)
+        return try decode(type, from: &getResponses, useSnakeCaseConversion: useSnakeCaseConversion)
     }
 
     func get<T: Decodable & Sendable>(
         _ url: URL,
         bearer: Secret?,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
         calls.append(Call(url: url, method: "GET", bearer: bearer, extraHeaders: extraHeaders))
-        return try decode(type, from: &getResponses)
+        return try decode(type, from: &getResponses, useSnakeCaseConversion: useSnakeCaseConversion)
     }
 
     func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
@@ -94,7 +96,11 @@ final class FakeHTTPClient: HTTPClient, @unchecked Sendable {
     /// Raw encoded POST body from the most recent postJSON call.
     var capturedPostBodyData: Data?
 
-    private func decode<T: Decodable>(_ type: T.Type, from queue: inout [Result<Data, Error>]) throws -> T {
+    private func decode<T: Decodable>(
+        _ type: T.Type,
+        from queue: inout [Result<Data, Error>],
+        useSnakeCaseConversion: Bool = true
+    ) throws -> T {
         guard !queue.isEmpty else {
             throw HTTPError(status: 500, message: "FakeHTTPClient: no response scripted")
         }
@@ -102,7 +108,9 @@ final class FakeHTTPClient: HTTPClient, @unchecked Sendable {
         switch result {
         case .success(let data):
             let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            if useSnakeCaseConversion {
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+            }
             return try decoder.decode(T.self, from: data)
         case .failure(let err):
             throw err

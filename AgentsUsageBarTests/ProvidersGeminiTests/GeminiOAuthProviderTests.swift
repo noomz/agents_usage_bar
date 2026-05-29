@@ -104,6 +104,7 @@ final class FakeProviderHTTPClient: HTTPClient, @unchecked Sendable {
         _ url: URL,
         bearer: Secret,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
         recordCall(.init(url: url, method: "GET", bearer: bearer, bodyData: nil))
@@ -114,6 +115,7 @@ final class FakeProviderHTTPClient: HTTPClient, @unchecked Sendable {
         _ url: URL,
         bearer: Secret?,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
         recordCall(.init(url: url, method: "GET", bearer: bearer, bodyData: nil))

@@ -44,20 +44,22 @@ final class FakeCodexHTTPClient: HTTPClient, @unchecked Sendable {
         _ url: URL,
         bearer: Secret,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
         calls.append(Call(url: url, method: "GET", bearer: bearer, extraHeaders: extraHeaders))
-        return try decode(type)
+        return try decode(type, useSnakeCaseConversion: useSnakeCaseConversion)
     }
 
     func get<T: Decodable & Sendable>(
         _ url: URL,
         bearer: Secret?,
         extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
         as type: T.Type
     ) async throws -> T {
         calls.append(Call(url: url, method: "GET", bearer: bearer, extraHeaders: extraHeaders))
-        return try decode(type)
+        return try decode(type, useSnakeCaseConversion: useSnakeCaseConversion)
     }
 
     func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
@@ -97,13 +99,20 @@ final class FakeCodexHTTPClient: HTTPClient, @unchecked Sendable {
         return try decode(type)
     }
 
-    private func decode<T: Decodable>(_ type: T.Type) throws -> T {
+    private func decode<T: Decodable>(
+        _ type: T.Type,
+        useSnakeCaseConversion: Bool = false
+    ) throws -> T {
         guard !getResponses.isEmpty else {
             throw HTTPError(status: 500, message: "FakeCodexHTTPClient: no response scripted")
         }
         switch getResponses.removeFirst() {
         case .success(let data):
-            return try JSONDecoder().decode(T.self, from: data)
+            let decoder = JSONDecoder()
+            if useSnakeCaseConversion {
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+            }
+            return try decoder.decode(T.self, from: data)
         case .failure(let err):
             throw err
         }
