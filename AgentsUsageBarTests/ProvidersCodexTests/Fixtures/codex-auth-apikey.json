@@ -1,0 +1,10 @@
+{
+  "last_refresh": "2026-05-13T11:47:21Z",
+  "OPENAI_API_KEY": "FAKE-api-key-xyz-direct-bearer-aaaa",
+  "tokens": {
+    "access_token": "FAKE-access-token-should-be-ignored-bbbb",
+    "account_id": "d9295b13-also-ignored-cccc",
+    "id_token": "FAKE-id-token-dddd",
+    "refresh_token": "FAKE-refresh-eeee"
+  }
+}

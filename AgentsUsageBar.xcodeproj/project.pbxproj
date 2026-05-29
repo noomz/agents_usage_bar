@@ -110,6 +110,10 @@
 		AA030100000000000000004A /* CodexRolloutEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000004B /* CodexRolloutEvent.swift */; };
 		AA030100000000000000005A /* CodexRolloutParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000005B /* CodexRolloutParser.swift */; };
 		AA030100000000000000011A /* CodexRolloutParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000011B /* CodexRolloutParserTests.swift */; };
+		/* Plan 03-03 Task 1 — CodexCredentialLoader + CodexOAuthError (app target) + tests */
+		AA030200000000000000001A /* CodexCredentialLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000001B /* CodexCredentialLoader.swift */; };
+		AA030200000000000000002A /* CodexOAuthError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000002B /* CodexOAuthError.swift */; };
+		AA030200000000000000010A /* CodexCredentialLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000010B /* CodexCredentialLoaderTests.swift */; };
 		/* Plan 02.01 — Claude transcript primitives (app target) */
 		AA020100000000000000001A /* TranscriptOffset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000001B /* TranscriptOffset.swift */; };
 		AA020100000000000000002A /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000002B /* TranscriptRecord.swift */; };
@@ -300,6 +304,13 @@
 		AA030100000000000000011B /* CodexRolloutParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRolloutParserTests.swift; sourceTree = "<group>"; };
 		AA030100000000000000020B /* codex-rollout-2026-fixture.jsonl */ = {isa = PBXFileReference; lastKnownFileType = text; path = "codex-rollout-2026-fixture.jsonl"; sourceTree = "<group>"; };
 		AA030100000000000000021B /* codex-rollout-2025-legacy.jsonl */ = {isa = PBXFileReference; lastKnownFileType = text; path = "codex-rollout-2025-legacy.jsonl"; sourceTree = "<group>"; };
+		/* Plan 03-03 Task 1 — CodexCredentialLoader + CodexOAuthError + tests file references */
+		AA030200000000000000001B /* CodexCredentialLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexCredentialLoader.swift; sourceTree = "<group>"; };
+		AA030200000000000000002B /* CodexOAuthError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexOAuthError.swift; sourceTree = "<group>"; };
+		AA030200000000000000010B /* CodexCredentialLoaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexCredentialLoaderTests.swift; sourceTree = "<group>"; };
+		AA030200000000000000020B /* codex-auth-subscription.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-auth-subscription.json"; sourceTree = "<group>"; };
+		AA030200000000000000021B /* codex-auth-apikey.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-auth-apikey.json"; sourceTree = "<group>"; };
+		AA030200000000000000022B /* codex-auth-empty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-auth-empty.json"; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -507,6 +518,8 @@
 				AA030100000000000000002B /* CodexRoots.swift */,
 				AA030100000000000000003B /* CodexRolloutScanner.swift */,
 				AA030100000000000000005B /* CodexRolloutParser.swift */,
+				/* Plan 03-03 — Codex OAuth fallback */
+				AA030200000000000000001B /* CodexCredentialLoader.swift */,
 				AA030100000000000000051B /* Models */,
 			);
 			path = Codex;
@@ -517,6 +530,8 @@
 			isa = PBXGroup;
 			children = (
 				AA030100000000000000004B /* CodexRolloutEvent.swift */,
+				/* Plan 03-03 — Codex OAuth fallback */
+				AA030200000000000000002B /* CodexOAuthError.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -754,6 +769,8 @@
 			children = (
 				AA030100000000000000010B /* CodexRolloutScannerTests.swift */,
 				AA030100000000000000011B /* CodexRolloutParserTests.swift */,
+				/* Plan 03-03 — Codex OAuth fallback tests */
+				AA030200000000000000010B /* CodexCredentialLoaderTests.swift */,
 				AA030100000000000000061B /* Fixtures */,
 			);
 			path = ProvidersCodexTests;
@@ -765,6 +782,10 @@
 			children = (
 				AA030100000000000000020B /* codex-rollout-2026-fixture.jsonl */,
 				AA030100000000000000021B /* codex-rollout-2025-legacy.jsonl */,
+				/* Plan 03-03 — Codex OAuth auth.json fixtures */
+				AA030200000000000000020B /* codex-auth-subscription.json */,
+				AA030200000000000000021B /* codex-auth-apikey.json */,
+				AA030200000000000000022B /* codex-auth-empty.json */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -1014,6 +1035,9 @@
 				/* Plan 03-01 — CodexRolloutEvent + CodexRolloutParser */
 				AA030100000000000000004A /* CodexRolloutEvent.swift in Sources */,
 				AA030100000000000000005A /* CodexRolloutParser.swift in Sources */,
+				/* Plan 03-03 — CodexCredentialLoader + CodexOAuthError */
+				AA030200000000000000001A /* CodexCredentialLoader.swift in Sources */,
+				AA030200000000000000002A /* CodexOAuthError.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1081,6 +1105,8 @@
 				AA030100000000000000010A /* CodexRolloutScannerTests.swift in Sources */,
 				/* Plan 03-01 Task 3 — CodexRolloutParser tests */
 				AA030100000000000000011A /* CodexRolloutParserTests.swift in Sources */,
+				/* Plan 03-03 Task 1 — CodexCredentialLoader tests */
+				AA030200000000000000010A /* CodexCredentialLoaderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

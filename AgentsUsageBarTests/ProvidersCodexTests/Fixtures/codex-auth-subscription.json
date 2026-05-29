@@ -1,0 +1,10 @@
+{
+  "last_refresh": "2026-05-13T11:47:21Z",
+  "OPENAI_API_KEY": null,
+  "tokens": {
+    "access_token": "FAKE-access-token-eyJhbGci-bbbb",
+    "account_id": "d9295b13-fake-account-id-cccc",
+    "id_token": "FAKE-id-token-eyJhbGci-dddd",
+    "refresh_token": "FAKE-rt_MQU-O-refresh-eeee"
+  }
+}
