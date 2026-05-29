@@ -21,19 +21,27 @@ public final class Dependencies {
     /// Retained strongly for the app lifetime — without this reference the observer is
     /// deallocated immediately and sleep/wake notifications are dropped (Pitfall 4).
     public let powerObserver: PowerObserver
+    /// Plan 05-01 — `WindowActivationObserver` flips activation policy
+    /// `.accessory <-> .regular` per Settings/Welcome window lifecycle (D-06 / SHELL-05).
+    /// Retained strongly for the app lifetime so NSWindow open/close notifications stay
+    /// live; without this reference the observer is deallocated and policy flips silently
+    /// drop (Pitfall 4).
+    public let windowActivationObserver: WindowActivationObserver
 
     public init(
         store: AggregateStore,
         scheduler: PollScheduler,
         clock: any Clock,
         actionHandler: NotificationActionHandler,
-        powerObserver: PowerObserver
+        powerObserver: PowerObserver,
+        windowActivationObserver: WindowActivationObserver
     ) {
         self.store = store
         self.scheduler = scheduler
         self.clock = clock
         self.actionHandler = actionHandler
         self.powerObserver = powerObserver
+        self.windowActivationObserver = windowActivationObserver
     }
 }
 
@@ -366,12 +374,20 @@ public enum AppDependencies {
         //     live before any wake event).
         let powerObserver = PowerObserver(store: store, scheduler: scheduler, clock: clock)
 
+        // 13. Plan 05-01 — WindowActivationObserver wires NSWindow didBecomeKey/willClose
+        //     → setActivationPolicy(.regular)/.accessory (D-06 / SHELL-05). MUST be
+        //     constructed before the Settings scene opens for the first time and held
+        //     strongly in Dependencies for the app lifetime (Pitfall 4 — without strong
+        //     retention the observer is deallocated and policy flips silently drop).
+        let windowActivationObserver = WindowActivationObserver()
+
         return Dependencies(
             store: store,
             scheduler: scheduler,
             clock: clock,
             actionHandler: actionHandler,
-            powerObserver: powerObserver
+            powerObserver: powerObserver,
+            windowActivationObserver: windowActivationObserver
         )
     }
 }
