@@ -186,9 +186,9 @@
 | GEMINI-02 | Phase 3 | Pending |
 | GEMINI-03 | Phase 3 | Pending |
 | GEMINI-04 | Phase 3 | Pending |
-| ROUTER-01 | Phase 1 | Pending |
-| ROUTER-02 | Phase 1 | Pending |
-| ROUTER-03 | Phase 1 | Pending |
+| ROUTER-01 | Phase 1 | Complete |
+| ROUTER-02 | Phase 1 | Complete |
+| ROUTER-03 | Phase 1 | Complete |
 | ROUTER-04 | Phase 1 | Complete |
 | LOCAL-01 | Phase 4 | Pending |
 | LOCAL-02 | Phase 4 | Pending |
@@ -214,7 +214,7 @@
 | POLL-05 | Phase 2 | Pending |
 | POLL-06 | Phase 2 | Pending |
 | POLL-07 | Phase 1 | Complete |
-| POLL-08 | Phase 1 | Pending |
+| POLL-08 | Phase 1 | Complete |
 | POLL-09 | Phase 2 | Pending |
 | NOTIF-01 | Phase 2 | Pending |
 | NOTIF-02 | Phase 2 | Pending |
@@ -232,7 +232,7 @@
 | SEC-01 | Phase 1 | Pending |
 | SEC-02 | Phase 1 | Pending |
 | SEC-03 | Phase 6 | Pending |
-| SEC-04 | Phase 1 | Pending |
+| SEC-04 | Phase 1 | Complete |
 | SEC-05 | Phase 1 | Complete |
 | REL-01 | Phase 6 | Pending |
 | REL-02 | Phase 6 | Pending |

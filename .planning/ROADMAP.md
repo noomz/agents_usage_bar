@@ -10,7 +10,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Skeleton + OpenRouter Vertical Slice** — Prove every architectural seam against the lowest-friction provider; menu bar app polls OpenRouter every 5m, shows tokens/USD/quota bar, fires a stub notification at 80%.
+- [x] **Phase 1: Skeleton + OpenRouter Vertical Slice** — Prove every architectural seam against the lowest-friction provider; menu bar app polls OpenRouter every 5m, shows tokens/USD/quota bar, fires a stub notification at 80%.
 - [ ] **Phase 2: Claude Provider + Threshold/Rollover + JSONL Streaming** — De-risk the headline provider; ship the streaming JSONL primitive Codex will reuse, local-midnight rollover, and the full notification FSM with snooze.
 - [ ] **Phase 3: Remote API Providers (Codex + Gemini)** — Drop in remaining hosted-AI providers using primitives from phases 1–2; cross-provider "today total" becomes meaningful.
 - [ ] **Phase 4: Local LLM Presence (Ollama + LM Studio + llama.cpp)** — Differentiator: tri-state running/idle rows for localhost services; "Not running" is muted, never red.
@@ -30,16 +30,16 @@
   3. The popover stays in sync because a single `PollScheduler` actor refreshes every 5 minutes (and on popover open, coalesced within 5s) — confirmable by watching the "Updated Xs ago" label tick.
   4. Quitting via the popover footer or Cmd-click context menu fully terminates the app; relaunch restores cached values immediately (no "Loading…" flash).
   5. No secret strings ever appear in `os.Logger` output or stderr; `Secret`-wrapped credentials render as `"<redacted>"` and the CI grep step rejects any source file containing literal `sk-`, `sk-or-`, or `AIza`.
-**Plans:** 5/8 plans executed
+**Plans:** 8/8 plans executed — Phase 1 COMPLETE ✓ 2026-05-12
 Plans:
 - [x] 01.01-walking-skeleton-PLAN.md — Xcode project scaffold, Info.plist (LSUIElement=YES), Entitlements (network.client only), MenuBarExtra(.window) skeleton, SKELETON.md (SHELL-01..04, SHELL-06) ✓ 2026-05-12
 - [x] 01.02-domain-infrastructure-PLAN.md — Domain value types (Secret, UsageSnapshot, Quota, ProviderID, etc.) + Infrastructure protocols (HTTPClient, Clock, CacheStore, AppLogger) + Swift Testing scaffold (SEC-01, SEC-02, UI-04, POLL-08) ✓ 2026-05-12
 - [x] 01.03-config-toml-PLAN.md — Hand-rolled TOML reader + ConfigStore (env > toml > defaults precedence) (CFG-01, CFG-02, ROUTER-04, SEC-05) ✓ 2026-05-12
-- [x] 01.04-openrouter-provider-PLAN.md — OpenRouterProvider actor + Codable responses + baseline-delta + cache codec (ROUTER-01..04)
-- [x] 01.05-aggregation-store-PLAN.md — AggregateStore @Observable @MainActor + PollScheduler actor (POLL-01, POLL-02, POLL-03, POLL-07)
+- [x] 01.04-openrouter-provider-PLAN.md — OpenRouterProvider actor + Codable responses + baseline-delta + cache codec (ROUTER-01..04) ✓ 2026-05-12
+- [x] 01.05-aggregation-store-PLAN.md — AggregateStore @Observable @MainActor + PollScheduler actor (POLL-01, POLL-02, POLL-03, POLL-07) ✓ 2026-05-12
 - [x] 01.06-popover-ui-PLAN.md — PopoverRootView + ProviderRowView + FooterView + QuotaBar/StatusDot/RelativeTimestampLabel (UI-01, UI-02, UI-06, UI-07, UI-10) ✓ 2026-05-12
-- [x] 01.07-notifications-PLAN.md — ThresholdEngine value type + UNNotificationManager (lazy auth) (NOTIF-06, NOTIF-07)
-- [ ] 01.08-composition-ci-PLAN.md — AppDependencies composition root + MenuBarExtra scene + CI workflow + README + manual 5-criterion verification checkpoint (SEC-04)
+- [x] 01.07-notifications-PLAN.md — ThresholdEngine value type + UNNotificationManager (lazy auth) (NOTIF-06, NOTIF-07) ✓ 2026-05-12
+- [x] 01.08-composition-ci-PLAN.md — AppDependencies composition root + MenuBarExtra scene + CI workflow + README + SEC-04 grep (SEC-04) ✓ 2026-05-12
 **UI hint:** yes
 
 ### Phase 2: Claude Provider + Threshold/Rollover + JSONL Streaming

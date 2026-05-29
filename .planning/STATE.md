@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-12T04:53:45.443Z"
+last_updated: "2026-05-12T12:00:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 8
-  completed_plans: 7
-  percent: 88
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-12 (after Plan 01.07 execution)
+**Last Updated:** 2026-05-12 (after Plan 01.08 execution — Phase 1 COMPLETE)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -24,33 +24,33 @@ progress:
 
 **What This Is:** A macOS menu bar app that surfaces today's AI agent usage across Claude, OpenAI Codex, Gemini, OpenRouter, and local agents (Ollama, LM Studio, llama.cpp) — tokens used, USD spent, quota remaining per provider — with native notifications at threshold crossings.
 
-**Current Focus:** Phase 01 — skeleton-openrouter-vertical-slice (Plan 01.08 next — final plan)
+**Current Focus:** Phase 02 — (next phase to be planned)
 
 ## Current Position
 
-Phase: 01 (skeleton-openrouter-vertical-slice) — EXECUTING
-Plan: 8 of 8
+Phase: 01 (skeleton-openrouter-vertical-slice) — COMPLETE
+Plan: 8 of 8 COMPLETE
 
 - **Milestone:** v1 (initial release)
-- **Phase:** 1 of 6 — Skeleton + OpenRouter Vertical Slice
-- **Plan:** 01.07 COMPLETE — ready for Plan 01.08
-- **Status:** Executing Phase 01
-- **Progress:** [█████████░] 88%
+- **Phase:** 1 of 6 — Skeleton + OpenRouter Vertical Slice — COMPLETE
+- **Plan:** 01.08 COMPLETE — Phase 1 fully executed
+- **Status:** Phase 01 complete; awaiting Phase 02 planning
+- **Progress:** [██████████] 100% (Phase 1)
 
 ```
-[=================================================           ] 88% (7/8 plans)
+[============================================================] 100% (8/8 plans complete)
 ```
 
 ## Performance Metrics
 
 | Metric | Value |
 |--------|-------|
-| Phases complete | 0 / 6 |
-| Plans complete | 7 / 8 |
+| Phases complete | 1 / 6 |
+| Plans complete | 8 / 8 (Phase 1 fully complete) |
 | Requirements mapped | 76 / 76 (100%) |
-| Requirements validated | 20 / 76 (SHELL-01,02,03,04,06 + SEC-01,SEC-02,UI-04,POLL-08 + CFG-01,CFG-02,ROUTER-04,SEC-05 + UI-01,UI-02,UI-06,UI-07,UI-10 + NOTIF-06,NOTIF-07) |
+| Requirements validated | 28 / 76 (all Phase 1: SHELL-01,02,03,04,06 + SEC-01,SEC-02,SEC-04,SEC-05 + UI-01,02,04,06,07,10 + POLL-01,02,03,07,08 + NOTIF-06,07 + CFG-01,02 + ROUTER-01,02,03,04) |
 | Plans drafted | 8 |
-| Plans executed | 8 (01.07 complete — 620s, 2 tasks, 8 files) |
+| Plans executed | 8 (01.08 complete — ~900s, 3 tasks, 11 files) |
 | Node repairs | 0 |
 | UI phases run | 0 |
 
@@ -95,6 +95,9 @@ Plan: 8 of 8
 35. `ThresholdBand` and `ThresholdState` co-located in `ThresholdState.swift` — both enums share identical breakpoints (0.80/0.95/1.00); a separate file would duplicate semantics with no boundary benefit.
 36. `UNNotificationManager` is an `actor` (not class/struct) — `authState` mutation requires actor isolation for Swift 6 strict concurrency; actor boundary provides automatic serialization without manual locks.
 37. `FakeUNUserNotificationCenter` is `@unchecked Sendable` without explicit locks — safe because Swift Testing runs each `@Test async func` in its own structured concurrency scope; no concurrent mutation occurs within a single test.
+38. `AppDependencies.makeProduction()` returns a `Dependencies` bag (store + scheduler + clock) — B1 enforced (no URLSessionConfiguration inline), B6 enforced (ConfigStore instance-method), B9 enforced (NoopCacheStore fallback, no InMemoryCacheStore), B10 enforced (seedPlaceholder called, no cross-plan mutation).
+39. SEC-04 CI grep uses `--exclude='ci.yml'` self-reference guard — the workflow file contains the pattern definition and would otherwise match itself; test fixture fake keys changed from `sk-or-FAKE_FIXTURE_KEY_XXXXXXXXXXXXXXXX` to `fake-or-XXXX` to avoid false positives.
+40. `AppEnvironment.swift` is a comment-only placeholder for Phase 5+ app-level env keys; ClockKey sole declaration remains in `UI/Environment/ClockEnvironmentKey.swift` (B5).
 
 ### Open Questions (from research)
 

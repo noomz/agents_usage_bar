@@ -17,39 +17,55 @@ A single ambient glance shows accurate per-provider AI usage for today, so the u
 ### Active
 
 - [ ] Live in macOS menu bar with a SwiftUI popover panel listing every supported provider
-- [ ] Track Claude usage by reading `ccs` / Claude Code transcript data (study ClaudeBar approach)
-- [ ] Track OpenAI Codex usage from Codex CLI logs **and** OpenAI usage API
-- [ ] Track Gemini usage (Gemini CLI logs and/or API)
-- [ ] Track OpenRouter usage (API: tokens, cost, remaining credits)
-- [ ] Track local agents — Ollama, LM Studio, llama.cpp/llamafile — for tokens and running state
-- [ ] Show today's tokens, USD cost, and quota-remaining per provider
-- [ ] Refresh every 30–60s in the background plus on popover open
-- [ ] Read API keys / endpoints from env vars and existing CLI config files (no Keychain UI in v1)
-- [ ] macOS native notification when any provider quota reaches a warning threshold (default 80%)
-- [ ] Ship as a notarized DMG on a GitHub Releases page (open-source repo)
+- [ ] Track Claude usage from `~/.claude/projects/**/*.jsonl` transcripts (ccusage / ClaudeBar pattern) plus Claude OAuth usage API (`/api/oauth/usage`) when creds available
+- [ ] Track OpenAI Codex usage primarily from `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` `event_msg.token_count` (no-auth) with Codex CLI RPC / OAuth API as fallback
+- [ ] Track Gemini usage via OAuth-personal (`~/.gemini/oauth_creds.json`) + `cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota`
+- [ ] Track OpenRouter usage (`/api/v1/credits` + `/api/v1/key`) — tokens, cost, remaining credits
+- [ ] Track local agents — Ollama (`/api/ps`, `/api/tags`), LM Studio (`/v1/models`, `/api/v0/models`), llama.cpp (`/health`, `/slots`) — running/idle + model name. Cumulative tokens NOT tracked (requires request proxying)
+- [ ] Show today's tokens, USD cost, and quota-remaining per provider, plus a cross-provider "today total" row at top
+- [ ] Refresh every 1–5 minutes in background (default 5m) plus on popover open. Optional Claude Code `Stop` hook for live updates (ClaudeBar pattern)
+- [ ] Read API keys / OAuth tokens from existing CLI config files and env vars (no Keychain UI in v1)
+- [ ] macOS native notification on threshold transition (default 80%), per (provider, window) debounce, "snooze for today" action
+- [ ] Ship as a notarized DMG via GitHub Releases with Sparkle auto-update (open-source repo)
 
 ### Out of Scope
 
 - Windows / Linux builds — macOS menu bar is the product
 - Electron / Tauri / web stack — Swift + SwiftUI only, native feel matters
 - Keychain-based settings UI in v1 — env/config-file ingestion is enough to validate
-- Historical charts / multi-day analytics — today-only aggregation in v1
+- Historical charts / multi-day analytics — today-only aggregation in v1 (in-memory sparkline ring buffer allowed)
 - Per-model breakdowns deeper than provider-level — v1 stays provider-level
 - Cost forecasting / budgeting tools — defer; v1 only reports observed spend
 - App Store distribution — DMG-only in v1
 - Multi-user / team accounts — single local user
+- Browser cookie scraping (Safari/Chrome/Firefox sessions) — requires Full Disk Access + Chrome Safe Storage prompts; looks like spyware
+- Real-time local-agent token interception (proxying `/api/generate` etc.) — port-conflict footgun; local rows show running/idle + model only
+- Shell RC file parsing (`~/.zshrc`, `~/.bashrc`, fish config) — `source` chains are arbitrary code execution; read env from `ProcessInfo.environment` only
+- Auto-launch at login by default — surprises users; opt-in toggle only
 
 ## Context
 
-- Target platform: macOS (Apple Silicon + Intel), latest two macOS versions.
-- User already runs `ccs` (per CLAUDE.md), Claude Code, Codex CLI, and the Gemini CLI, plus local model runtimes. Configs and keys already exist on disk in well-known locations (`~/.ccs/`, `~/.claude/`, `~/.codex/`, `~/.config/`, shell rc files).
-- Inspiration / prior art to study and learn from (NOT copy): **ClaudeBar** (Claude menu bar), **CodexBar** (Codex menu bar). Their parsing approaches for transcripts and CLI session data are the closest reference for the Claude and Codex providers.
-- OpenRouter exposes `/api/v1/auth/key` and `/api/v1/credits` for balance/limits; OpenAI exposes a usage endpoint for daily totals.
-- Local agents typically expose HTTP servers on `localhost`:
-  - Ollama: `http://localhost:11434` (`/api/ps`, `/api/tags`)
-  - LM Studio: `http://localhost:1234/v1` (OpenAI-compatible)
-  - llama.cpp / llamafile: configurable port, usually `8080`
-- Open-source release implies a public-facing README, license, and a story for codesigning + notarization on GitHub Actions.
+- Target platform: macOS 14+ (Apple Silicon + Intel), latest two macOS versions.
+- User already runs Claude Code, OpenAI Codex CLI, Gemini CLI, and local model runtimes. Credentials and usage data already exist on disk:
+  - Claude transcripts: `~/.claude/projects/-${urlsafe-cwd}/*.jsonl`. OAuth creds in `~/.claude/.credentials.json` or Keychain item `Claude Code-credentials`.
+  - Codex rollouts (no auth): `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` last `event_msg.token_count` event yields tokens + rate-limits + reset timestamps + plan. Auth at `~/.codex/auth.json`.
+  - Gemini: `~/.gemini/oauth_creds.json` (+ `settings.json` with `selectedAuthType:"oauth-personal"`).
+  - OpenRouter: `OPENROUTER_API_KEY` env var.
+  - Note: `~/.ccs/` contains agent/instance/hook **configuration**, not Claude API tokens. `rtk gain` reports RTK tool-call savings, NOT Anthropic usage. Claude usage source is `~/.claude/projects/**/*.jsonl`.
+- Inspiration / prior art (study, don't copy):
+  - **ClaudeBar** — https://github.com/tddworks/ClaudeBar — macOS 15+, Swift 6.2, Tuist, Sparkle. Uses a Claude Code shell hook in `~/.claude/claudebar-hook-port` POSTing to `http://localhost:19847/hook` for real-time updates.
+  - **CodexBar** — https://github.com/steipete/CodexBar — macOS 14+, MIT, 29 providers, default 5-min refresh, bundled CLI, WidgetKit widgets.
+  - **ccusage** — https://github.com/ryoppippi/ccusage — npm tool; canonical pattern for local JSONL token+cost scan (Claude and Codex).
+- API surfaces:
+  - Claude OAuth: `GET https://api.anthropic.com/api/oauth/usage` (`anthropic-beta: oauth-2025-04-20`). Web fallback: `https://claude.ai/api/organizations/{orgId}/usage`.
+  - OpenAI/Codex OAuth: `GET https://chatgpt.com/backend-api/wham/usage`. Local rollout file is preferred (no auth).
+  - Gemini quota: `POST https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota`. Refresh: `POST https://oauth2.googleapis.com/token`.
+  - OpenRouter: `GET https://openrouter.ai/api/v1/credits` and `GET https://openrouter.ai/api/v1/key`.
+- Local agents over localhost HTTP — running/idle + model name (cumulative tokens NOT feasible without proxying):
+  - Ollama: `http://localhost:11434/api/ps`, `/api/tags`, `/api/version`.
+  - LM Studio: `http://localhost:1234/v1/models`, `/api/v0/models`.
+  - llama.cpp / llamafile: `http://localhost:8080/health`, `/slots`, `/v1/models` (port configurable; no canonical default).
+- Open-source release: public README, MIT or Apache-2.0 license, codesigning + notarization via GitHub Actions (`xcrun notarytool` + `xcrun stapler staple`), Sparkle EdDSA-signed appcast hosted on GitHub Pages.
 
 ## Constraints
 
@@ -57,20 +73,24 @@ A single ambient glance shows accurate per-provider AI usage for today, so the u
 - **Distribution**: Notarized DMG via GitHub Releases — no App Store in v1
 - **Aggregation window**: Today only (local-midnight reset) — no multi-day persistence in v1
 - **Secrets**: No Keychain entry UI in v1 — read keys from env vars and existing CLI config files
-- **Refresh**: Background poll every 30–60s + on-open refresh — must not noticeably impact battery
-- **Local file access**: Must work inside the macOS sandbox model the app chooses (consider whether app sandbox can be enabled given the need to read `~/.ccs/`, `~/.claude/`, etc.)
+- **Refresh**: Background poll every 1–5 min (default 5m) + on-open refresh — must not noticeably impact battery; JSONL streaming reads only the delta since last poll
+- **Local file access**: Ship unsandboxed with Hardened Runtime + notarization. App Sandbox blocks reads of `~/.claude/projects/**`, `~/.codex/sessions/**`, `~/.gemini/oauth_creds.json` without temporary-exception entitlements deprecated by Apple. Since v1 is DMG-only (no MAS), unsandboxed is correct.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Swift + SwiftUI native (no Tauri/Electron) | Best menu bar UX, smallest binary, native notifications | — Pending |
-| Popover panel UI (not plain NSMenu) | Richer per-provider rows with bars and totals justify SwiftUI panel | — Pending |
-| Today-only aggregation in v1 | Keeps storage and reset logic trivial; matches "ambient glance" framing | — Pending |
-| Read keys from env / config files (no Keychain UI) | User already has working CLI keys on disk; avoids settings UI scope in v1 | — Pending |
-| Codex: CLI logs + OpenAI usage API (both) | CLI logs are real-time; API confirms billable totals | — Pending |
-| Claude usage: study ClaudeBar / CodexBar prior art | Proven parsing approaches for transcript/session data | — Pending |
-| DMG release on GitHub (no App Store) | Faster iteration, no review cycle, open-source friendly | — Pending |
+| macOS 14+ minimum, `MenuBarExtra(.window)` | `@Observable` requires 14+; `MenuBarExtra` style `.window` known-stable on 14+ | — Pending |
+| Popover panel UI (not plain NSMenu) | Richer per-provider rows with bars and totals | — Pending |
+| Today-only aggregation in v1 | Trivial reset logic; matches "ambient glance" framing | — Pending |
+| Read keys/OAuth from env + existing CLI config files | Both reference apps do this; avoids settings UI scope | — Pending |
+| Claude source = `~/.claude/projects/**/*.jsonl` + OAuth API; NOT `~/.ccs/` | Research: `rtk gain` reports tool-call savings, not Anthropic tokens; ccusage/ClaudeBar pattern | — Pending |
+| Codex source = `~/.codex/sessions/**/rollout-*.jsonl` last `token_count` (no auth) | Faster, offline, no token refresh; OAuth API as fallback | — Pending |
+| Default refresh interval = 5 min (range 1m–30m) | Matches CodexBar default; 30s JSONL re-scan drains battery | — Pending |
+| Ship unsandboxed + Hardened Runtime + notarized DMG | App Sandbox blocks dotfile reads; MAS is out of scope | — Pending |
+| Local LLMs = presence + model name only (no cumulative tokens) | Cumulative tokens require request proxying = anti-feature | — Pending |
+| Sparkle auto-update on GitHub Pages appcast | Required for DMG distribution; EdDSA-signed | — Pending |
 
 ## Evolution
 
