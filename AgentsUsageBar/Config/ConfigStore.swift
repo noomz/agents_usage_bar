@@ -12,9 +12,13 @@ import os.log
 ///   - The CI grep step in Plan 01.08 will assert no `.zshrc`, `.bashrc`, `fish/config.fish` literal
 ///     strings appear in this file.
 ///
-/// SEC-03 NOTE (deferred to Phase 6):
-///   - `chmod 0600` creation enforcement and world-readable warning are Phase 6 (SEC-03).
-///     Plan 01.03 only reads the file at the D-19 path; it never creates or modifies it.
+/// SEC-03 (Phase 6 / Plan 06-01 — implemented here):
+///   - `ensureConfigFile(contents:)` creates the file at POSIX mode `0o600` when absent
+///     (owner read/write only). Idempotent: existing files are NOT overwritten or rechmod'd.
+///   - `checkAndWarnPermissions()` is wired into the tail of every `load()` call and warns
+///     (via `os.Logger`, never crashes) when the existing file is world- or group-readable
+///     (`mode & 0o077 != 0`). Phase 1 read-only semantics of `load()` are preserved — it does
+///     NOT call `ensureConfigFile`; the file is created only on explicit caller request.
 public final class ConfigStore: @unchecked Sendable {
 
     // MARK: - Stored state
@@ -47,7 +51,13 @@ public final class ConfigStore: @unchecked Sendable {
     ///
     /// Safe to call multiple times — reads env and file on every call (no caching).
     /// Never throws; invalid TOML lines are logged and skipped (D-18 fail-soft).
+    /// SEC-03: calls `checkAndWarnPermissions()` at the tail so a world/group-readable
+    /// `config.toml` surfaces a warning on every load (never crashes).
     public func load() -> AppConfig {
+        // SEC-03: surface a wide-permission config on every load. Cheap stat() —
+        // runs at the tail so a missing/unreadable file does not block parsing.
+        defer { checkAndWarnPermissions() }
+
         // 1. Read TOML file (nil if absent or unreadable — fail-soft)
         let tomlText = try? String(contentsOf: tomlPath, encoding: .utf8)
         let toml = tomlText.map { TomlReader.parse($0, logger: logger) } ?? [:]
@@ -311,5 +321,90 @@ public final class ConfigStore: @unchecked Sendable {
     /// Plan 01.05 composition root and Plan 01.04 provider construction use this.
     public var openRouterKey: Secret? {
         load().openrouter.apiKey
+    }
+}
+
+// MARK: - SEC-03 / Plan 06-01 — config.toml permission hardening
+
+extension ConfigStore {
+
+    /// Pure predicate that mirrors the production warning gate.
+    ///
+    /// Returns `true` when any group or other permission bit is set
+    /// (`mode & 0o077 != 0`) — i.e. the file is at least partially readable,
+    /// writable, or executable by users other than the owner.
+    ///
+    /// Exposed `static` so unit tests can assert the gate against canonical
+    /// modes without relying on a log sink (mirrors Phase 1 STATE #33
+    /// pure-function test seam pattern).
+    public static func isWorldOrGroupReadable(mode: Int) -> Bool {
+        (mode & 0o077) != 0
+    }
+
+    /// Creates `config.toml` at `tomlPath` with POSIX mode `0o600` when absent.
+    ///
+    /// Idempotent: if the file already exists this method is a no-op — it does
+    /// NOT overwrite contents and does NOT modify permissions (a user who has
+    /// deliberately widened access for a non-secret-bearing config keeps their
+    /// choice; the world-readable warning in `load()` surfaces the risk).
+    ///
+    /// Creates the parent directory (`~/.config/agents-usage-bar/`) with
+    /// intermediate directories when missing.
+    ///
+    /// SEC-03: sets `0o600` both via `createFile(attributes:)` and a
+    /// follow-up `setAttributes(...)` (belt-and-suspenders — `createFile`
+    /// silently ignores `attributes` on some filesystems).
+    ///
+    /// - Parameter contents: Bytes to write into the newly created file.
+    /// - Throws: Filesystem errors from `createDirectory` or `setAttributes`.
+    ///   `createFile` returns a Bool on failure rather than throwing — when it
+    ///   reports `false` we throw a `CocoaError(.fileWriteUnknown)` so callers
+    ///   can react.
+    public func ensureConfigFile(contents: Data) throws {
+        // Idempotent: existing file is left intact (contents AND mode).
+        guard !FileManager.default.fileExists(atPath: tomlPath.path) else { return }
+
+        let parent = tomlPath.deletingLastPathComponent()
+        try FileManager.default.createDirectory(
+            at: parent,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+
+        let attributes: [FileAttributeKey: Any] = [.posixPermissions: 0o600]
+        let created = FileManager.default.createFile(
+            atPath: tomlPath.path,
+            contents: contents,
+            attributes: attributes
+        )
+        guard created else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        // Belt-and-suspenders: re-apply 0o600 — `createFile` is documented to
+        // silently ignore the attributes dictionary on some filesystems.
+        try FileManager.default.setAttributes(attributes, ofItemAtPath: tomlPath.path)
+    }
+
+    /// Inspects `config.toml`'s POSIX permissions and warns via `os.Logger`
+    /// when the file is world- or group-readable.
+    ///
+    /// Silent no-op when the file does not exist or its `posixPermissions`
+    /// attribute is unavailable — SEC-03 explicitly requires "never crashes".
+    ///
+    /// The warning interpolates only the path and octal mode (`privacy: .public`
+    /// — neither is a secret) and surfaces a `chmod 0600 <path>` remediation.
+    /// File contents are NEVER logged (T-06-02 mitigation).
+    public func checkAndWarnPermissions() {
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: tomlPath.path),
+              let modeRaw = attrs[.posixPermissions] as? Int
+        else { return }
+
+        let mode = modeRaw & 0o777
+        guard ConfigStore.isWorldOrGroupReadable(mode: mode) else { return }
+
+        let modeOctal = String(mode, radix: 8)
+        logger.warning(
+            "config.toml at \(self.tomlPath.path, privacy: .public) has permissions \(modeOctal, privacy: .public) — expected 0600. Other local users may read your API keys. Remediate: chmod 0600 \(self.tomlPath.path, privacy: .public)"
+        )
     }
 }
