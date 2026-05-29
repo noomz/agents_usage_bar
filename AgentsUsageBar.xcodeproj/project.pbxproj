@@ -163,6 +163,9 @@
 		AA020600000000000000012A /* PowerObserverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000012B /* PowerObserverTests.swift */; };
 		AA020600000000000000013A /* PollSchedulerSleepWakeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000013B /* PollSchedulerSleepWakeTests.swift */; };
 		AA020600000000000000014A /* ClaudeJSONLProviderCircuitBreakerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000014B /* ClaudeJSONLProviderCircuitBreakerTests.swift */; };
+		/* Plan 02.07 — UI extension test files (test target) — Task 1 subset */
+		AA020700000000000000010A /* TodayHelperResetClockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020700000000000000010B /* TodayHelperResetClockTests.swift */; };
+		AA020700000000000000011A /* AggregateStoreStaleAndTintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020700000000000000011B /* AggregateStoreStaleAndTintTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -329,6 +332,9 @@
 		AA020600000000000000012B /* PowerObserverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerObserverTests.swift; sourceTree = "<group>"; };
 		AA020600000000000000013B /* PollSchedulerSleepWakeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollSchedulerSleepWakeTests.swift; sourceTree = "<group>"; };
 		AA020600000000000000014B /* ClaudeJSONLProviderCircuitBreakerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeJSONLProviderCircuitBreakerTests.swift; sourceTree = "<group>"; };
+		/* Plan 02.07 — UI extension test file references — Task 1 subset */
+		AA020700000000000000010B /* TodayHelperResetClockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHelperResetClockTests.swift; sourceTree = "<group>"; };
+		AA020700000000000000011B /* AggregateStoreStaleAndTintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreStaleAndTintTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -432,6 +438,8 @@
 				AA020200000000000000021B /* TodayHelperTests.swift */,
 				AA020200000000000000022B /* QuotaTests.swift */,
 				AA020200000000000000023B /* ThresholdStateTests.swift */,
+				/* Plan 02.07 — reset-clock caption */
+				AA020700000000000000010B /* TodayHelperResetClockTests.swift */,
 			);
 			path = DomainTests;
 			sourceTree = "<group>";
@@ -581,6 +589,8 @@
 				AA020500000000000000014B /* AggregateStoreSnoozeTests.swift */,
 				/* Plan 02.06 — sleep/wake integration tests */
 				AA020600000000000000013B /* PollSchedulerSleepWakeTests.swift */,
+				/* Plan 02.07 — stale + tint tests */
+				AA020700000000000000011B /* AggregateStoreStaleAndTintTests.swift */,
 			);
 			path = AggregationTests;
 			sourceTree = "<group>";
@@ -975,6 +985,9 @@
 				AA020600000000000000012A /* PowerObserverTests.swift in Sources */,
 				AA020600000000000000013A /* PollSchedulerSleepWakeTests.swift in Sources */,
 				AA020600000000000000014A /* ClaudeJSONLProviderCircuitBreakerTests.swift in Sources */,
+				/* Plan 02.07 — Task 1: reset-clock + stale-and-tint tests */
+				AA020700000000000000010A /* TodayHelperResetClockTests.swift in Sources */,
+				AA020700000000000000011A /* AggregateStoreStaleAndTintTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

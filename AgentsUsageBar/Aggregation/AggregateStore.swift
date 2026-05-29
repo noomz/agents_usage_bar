@@ -1,5 +1,6 @@
 import Observation
 import Foundation
+import SwiftUI
 
 /// @Observable @MainActor aggregation store — the single source of truth for the UI.
 ///
@@ -156,6 +157,65 @@ public final class AggregateStore {
     /// wired in the composition root (Plan 01.08).
     public func setRefreshInterval(_ interval: RefreshInterval) {
         currentInterval = interval
+    }
+
+    // MARK: - Plan 02.07 — Stale-data + max quota fraction + menu bar tint (UI-08 / UI-09)
+
+    /// UI-08: returns `true` when the provider's last successful fetch is older than
+    /// `2 × currentInterval`, signalling that the data on screen is stale and the row's
+    /// `StatusDot` + `RelativeTimestampLabel` should render dimmed.
+    ///
+    /// Returns `false` when:
+    /// - the provider has never produced a `lastSuccess` (no stale baseline yet), OR
+    /// - the current refresh interval is `.manual` (`seconds == nil`) — manual refresh has
+    ///   no expected cadence and so no automatic "stale" inference is meaningful.
+    public func isStale(_ providerID: ProviderID, now: Date) -> Bool {
+        guard let state = providers[providerID], let last = state.lastSuccess else {
+            return false
+        }
+        // `.manual` interval = never auto-stale (no expected refresh cadence).
+        guard let intervalSec = currentInterval.seconds else {
+            return false
+        }
+        return now.timeIntervalSince(last) > 2.0 * intervalSec
+    }
+
+    /// UI-09: the highest quota utilization across all currently-known providers.
+    ///
+    /// For each provider the contribution is `max(primary quota fraction OR snapshot.quotaWindows
+    /// max utilization)`. The cross-provider max of those per-provider values is returned. Returns
+    /// `0` when no providers report quota data — semantically "all clear".
+    ///
+    /// Used by the menu bar icon tint (`menuBarTint`) so the user sees the worst-case quota
+    /// across every provider at a glance without opening the popover.
+    public var maxQuotaFraction: Double {
+        let perProvider: [Double] = providers.values.compactMap { state -> Double? in
+            guard let snap = state.snapshot else { return nil }
+            let primary = snap.quota?.fraction
+            let windowMax = snap.quotaWindows?.compactMap(\.utilization).max()
+            let candidates = [primary, windowMax].compactMap { $0 }
+            return candidates.max()
+        }
+        return perProvider.max() ?? 0
+    }
+
+    /// UI-09 / Pitfall 9: SwiftUI `Color` for the menu bar icon's `.foregroundStyle(...)`.
+    ///
+    /// Bands (matches REQUIREMENTS UI-09 / ThresholdState breakpoints):
+    /// - `>= 0.95` → `.red`     (critical / exceeded)
+    /// - `>= 0.80` → `.yellow`  (warning)
+    /// - otherwise → `.green`   (healthy; includes 0 = no quota data)
+    ///
+    /// Note: SwiftUI `Color` is imported at the file top. `AggregateStore` is already an
+    /// `@Observable` view-model concern, so importing SwiftUI is appropriate; the alternative
+    /// (exposing a `ThresholdBand` and computing `Color` in the App layer) trades a marginal
+    /// architectural purity for an additional indirection in every label binding. Snap
+    /// transitions (no animation) are acceptable per Pitfall 9.
+    public var menuBarTint: Color {
+        let f = maxQuotaFraction
+        if f >= 0.95 { return .red }
+        if f >= 0.80 { return .yellow }
+        return .green
     }
 
     // MARK: - Private refresh logic

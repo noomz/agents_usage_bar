@@ -61,4 +61,30 @@ public enum TodayHelper {
         let comps = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", comps.year!, comps.month!, comps.day!)
     }
+
+    /// Returns the footer caption text for the "today resets at midnight" affordance (UI-05).
+    ///
+    /// Format: `"Resets HH:mm <TZ>"` where:
+    /// - `HH:mm` is always `"00:00"` because Phase 2's aggregation window is local midnight
+    ///   (PROJECT.md constraint — no multi-day persistence in v1).
+    /// - `<TZ>` is the active calendar's time-zone abbreviation at `now` (e.g. `"PT"`, `"PDT"`,
+    ///   `"EST"`, `"GMT"`).
+    ///
+    /// DST-correct: `calendar.timeZone.abbreviation(for: now)` returns the abbreviation that
+    /// applies at the instant of `now`, so on the day of a DST transition the suffix flips
+    /// at the transition boundary (e.g. `"PST"` before 02:00 → `"PDT"` after 03:00 on
+    /// 2026-03-08 in America/Los_Angeles). See Pitfall 4 + Pitfall 7.
+    ///
+    /// Fallback: if the time zone has no published abbreviation for `now` (e.g. an exotic
+    /// fixed-offset zone like `TimeZone(secondsFromGMT: 5400)`), the suffix is omitted and
+    /// only `"Resets 00:00"` is returned. We deliberately do NOT manufacture a synthetic
+    /// `"+0130"` offset string — UI-05 prizes recognisability over completeness.
+    public static func resetClockText(
+        _ now: Date = .now,
+        calendar: Calendar = .current
+    ) -> String {
+        let hhmm = "00:00"
+        let abbrev = calendar.timeZone.abbreviation(for: now) ?? ""
+        return abbrev.isEmpty ? "Resets \(hhmm)" : "Resets \(hhmm) \(abbrev)"
+    }
 }
