@@ -1,0 +1,514 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000001000000000000001A /* AgentsUsageBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000001B /* AgentsUsageBarApp.swift */; };
+		AA000001000000000000002A /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000002B /* AppDependencies.swift */; };
+		AA000001000000000000003A /* AggregateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000003B /* AggregateStore.swift */; };
+		AA000001000000000000004A /* ProviderID.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000004B /* ProviderID.swift */; };
+		AA000001000000000000005A /* ProviderState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000005B /* ProviderState.swift */; };
+		AA000001000000000000006A /* PopoverRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000006B /* PopoverRootView.swift */; };
+		AA000001000000000000007A /* ProviderRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000007B /* ProviderRowView.swift */; };
+		AA000001000000000000008A /* FooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000008B /* FooterView.swift */; };
+		AA000001000000000000009A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000009B /* Assets.xcassets */; };
+		AA00000100000000000000AA /* AgentsUsageBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000100000000000000AB /* AgentsUsageBarTests.swift */; };
+		AA00000100000000000000BA /* AgentsUsageBar.app in Frameworks */ = {isa = PBXBuildFile; fileRef = AA00000100000000000000BB /* AgentsUsageBar.app */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA00000100000000000000CA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA00000100000000000000E0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA00000100000000000000F0;
+			remoteInfo = AgentsUsageBar;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		AA00000100000000000000BB /* AgentsUsageBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgentsUsageBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA000001000000000000001B /* AgentsUsageBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsUsageBarApp.swift; sourceTree = "<group>"; };
+		AA000001000000000000002B /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		AA000001000000000000003B /* AggregateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStore.swift; sourceTree = "<group>"; };
+		AA000001000000000000004B /* ProviderID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderID.swift; sourceTree = "<group>"; };
+		AA000001000000000000005B /* ProviderState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderState.swift; sourceTree = "<group>"; };
+		AA000001000000000000006B /* PopoverRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverRootView.swift; sourceTree = "<group>"; };
+		AA000001000000000000007B /* ProviderRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderRowView.swift; sourceTree = "<group>"; };
+		AA000001000000000000008B /* FooterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FooterView.swift; sourceTree = "<group>"; };
+		AA000001000000000000009B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA0000010000000000000091 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA0000010000000000000092 /* Entitlements.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Entitlements.plist; sourceTree = "<group>"; };
+		AA00000100000000000000AB /* AgentsUsageBarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsUsageBarTests.swift; sourceTree = "<group>"; };
+		AA00000100000000000000DB /* AgentsUsageBarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgentsUsageBarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA00000100000000000000F1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA00000100000000000000F2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000100000000000000BA /* AgentsUsageBar.app in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA00000100000000000000D0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000100000000000000BB /* AgentsUsageBar.app */,
+				AA00000100000000000000DB /* AgentsUsageBarTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA00000100000000000000D1 /* AgentsUsageBar */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000100000000000000D2 /* App */,
+				AA00000100000000000000D3 /* Domain */,
+				AA00000100000000000000D4 /* Aggregation */,
+				AA00000100000000000000D5 /* UI */,
+				AA00000100000000000000D6 /* Resources */,
+			);
+			path = AgentsUsageBar;
+			sourceTree = "<group>";
+		};
+		AA00000100000000000000D2 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				AA000001000000000000001B /* AgentsUsageBarApp.swift */,
+				AA000001000000000000002B /* AppDependencies.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AA00000100000000000000D3 /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				AA000001000000000000004B /* ProviderID.swift */,
+				AA000001000000000000005B /* ProviderState.swift */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		AA00000100000000000000D4 /* Aggregation */ = {
+			isa = PBXGroup;
+			children = (
+				AA000001000000000000003B /* AggregateStore.swift */,
+			);
+			path = Aggregation;
+			sourceTree = "<group>";
+		};
+		AA00000100000000000000D5 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				AA000001000000000000006B /* PopoverRootView.swift */,
+				AA000001000000000000007B /* ProviderRowView.swift */,
+				AA000001000000000000008B /* FooterView.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		AA00000100000000000000D6 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				AA000001000000000000009B /* Assets.xcassets */,
+				AA0000010000000000000091 /* Info.plist */,
+				AA0000010000000000000092 /* Entitlements.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		AA00000100000000000000D7 /* AgentsUsageBarTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000100000000000000AB /* AgentsUsageBarTests.swift */,
+			);
+			path = AgentsUsageBarTests;
+			sourceTree = "<group>";
+		};
+		AA00000100000000000000D8 /* MainGroup */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000100000000000000D1 /* AgentsUsageBar */,
+				AA00000100000000000000D7 /* AgentsUsageBarTests */,
+				AA00000100000000000000D0 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA00000100000000000000F0 /* AgentsUsageBar */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA00000100000000000000C0 /* Build configuration list for PBXNativeTarget "AgentsUsageBar" */;
+			buildPhases = (
+				AA00000100000000000000F3 /* Sources */,
+				AA00000100000000000000F1 /* Frameworks */,
+				AA00000100000000000000F4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AgentsUsageBar;
+			productName = AgentsUsageBar;
+			productReference = AA00000100000000000000BB /* AgentsUsageBar.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AA00000100000000000000F5 /* AgentsUsageBarTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA00000100000000000000C1 /* Build configuration list for PBXNativeTarget "AgentsUsageBarTests" */;
+			buildPhases = (
+				AA00000100000000000000F6 /* Sources */,
+				AA00000100000000000000F2 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA00000100000000000000CB /* PBXTargetDependency */,
+			);
+			name = AgentsUsageBarTests;
+			productName = AgentsUsageBarTests;
+			productReference = AA00000100000000000000DB /* AgentsUsageBarTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA00000100000000000000E0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					AA00000100000000000000F0 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					AA00000100000000000000F5 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = AA00000100000000000000F0;
+					};
+				};
+			};
+			buildConfigurationList = AA00000100000000000000C2 /* Build configuration list for PBXProject "AgentsUsageBar" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA00000100000000000000D8 /* MainGroup */;
+			productRefGroup = AA00000100000000000000D0 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA00000100000000000000F0 /* AgentsUsageBar */,
+				AA00000100000000000000F5 /* AgentsUsageBarTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA00000100000000000000F4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000001000000000000009A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA00000100000000000000F3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000001000000000000001A /* AgentsUsageBarApp.swift in Sources */,
+				AA000001000000000000002A /* AppDependencies.swift in Sources */,
+				AA000001000000000000003A /* AggregateStore.swift in Sources */,
+				AA000001000000000000004A /* ProviderID.swift in Sources */,
+				AA000001000000000000005A /* ProviderState.swift in Sources */,
+				AA000001000000000000006A /* PopoverRootView.swift in Sources */,
+				AA000001000000000000007A /* ProviderRowView.swift in Sources */,
+				AA000001000000000000008A /* FooterView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA00000100000000000000F6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000100000000000000AA /* AgentsUsageBarTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA00000100000000000000CB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA00000100000000000000F0 /* AgentsUsageBar */;
+			targetProxy = AA00000100000000000000CA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AA00000100000000000000C3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA00000100000000000000C4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		AA00000100000000000000C5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = AgentsUsageBar/Resources/Entitlements.plist;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AgentsUsageBar/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.agents-usage-bar;
+				PRODUCT_NAME = AgentsUsageBar;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AA00000100000000000000C6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = AgentsUsageBar/Resources/Entitlements.plist;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AgentsUsageBar/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.agents-usage-bar;
+				PRODUCT_NAME = AgentsUsageBar;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AA00000100000000000000C7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.agents-usage-bar.tests;
+				PRODUCT_NAME = AgentsUsageBarTests;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar";
+			};
+			name = Debug;
+		};
+		AA00000100000000000000C8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.agents-usage-bar.tests;
+				PRODUCT_NAME = AgentsUsageBarTests;
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA00000100000000000000C0 /* Build configuration list for PBXNativeTarget "AgentsUsageBar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000100000000000000C5 /* Debug */,
+				AA00000100000000000000C6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA00000100000000000000C1 /* Build configuration list for PBXNativeTarget "AgentsUsageBarTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000100000000000000C7 /* Debug */,
+				AA00000100000000000000C8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA00000100000000000000C2 /* Build configuration list for PBXProject "AgentsUsageBar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000100000000000000C3 /* Debug */,
+				AA00000100000000000000C4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = AA00000100000000000000E0 /* Project object */;
+}
