@@ -1,0 +1,246 @@
+# Phase 6 Plan 06-04 (REL-01..REL-06) — tag-triggered release pipeline.
+#
+# Triggered on `v*` tag push. Produces a signed, notarized, stapled, EdDSA-
+# signed DMG attached to a GitHub Release with the appcast updated on the
+# `gh-pages` branch.
+#
+# Per Phase 6 CONTEXT D-02 this workflow is written at full fidelity and
+# consumes named secrets. Live unattended execution is verified in plan
+# 06-05 once the user provisions Apple/Sparkle credentials and initializes
+# the `gh-pages` branch + enables GitHub Pages.
+#
+# Anti-patterns (intentionally absent — see 06-RESEARCH.md "Anti-Patterns"):
+#   - codesign recursive-deep-sign flag (Pitfall 2 — Xcode export handles nested signing)
+#   - the deprecated pre-notarytool submission CLI (notarytool only)
+#   - app-specific password (ASC API key `.p8` only)
+#   - fallback unsigned-build branch (D-02 — write the full signed path)
+#   - `Calendar.current` date-formatted version strings (Pitfall 9 — versions
+#     derive from GITHUB_REF_NAME / agvtool only)
+#
+# Security note (workflow injection): every `${{ }}` interpolation used in a
+# `run:` block is routed through `env:` first. Tag refs and repo names are
+# git-controlled (not user-text), but the env-var pattern is applied
+# uniformly so future contributors don't introduce an unsafe interpolation
+# by accident. See
+# https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/.
+#
+# Secret names (exact; documented in docs/release-setup.md):
+#   DEVELOPER_ID_CERT_P12, DEVELOPER_ID_CERT_PASSWORD,
+#   ASC_API_KEY_P8, ASC_API_KEY_ID, ASC_API_ISSUER_ID,
+#   SPARKLE_ED_PRIVATE_KEY, DEVELOPMENT_TEAM
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build, sign, notarize, staple, DMG, appcast, release
+    runs-on: macos-15
+    permissions:
+      contents: write   # gh release create + git push to gh-pages
+      pages: write      # gh-pages deployment (Pitfall 6)
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need full history so `git fetch origin gh-pages` works
+
+      - name: Pin Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
+
+      # Pitfall 7 — pin v7 (not the stale @v3 in CLAUDE.md). Inputs unchanged
+      # from v3 → v7; v7 ships Node24 + security fixes.
+      - name: Import Developer ID Application cert
+        uses: apple-actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
+          p12-password: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+
+      # All version strings derive from the git tag — Pitfall 9 forbids
+      # Calendar.current date formatting (Thai-locale host would produce
+      # Buddhist Era year 2569 instead of 2026).
+      - name: Set VERSION from tag
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${REF_NAME#v}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Resolved VERSION=${VERSION} from tag ${REF_NAME}"
+
+      # Pitfall 1 — Sparkle compares `sparkle:version` against CFBundleVersion
+      # (integer build number), NOT MARKETING_VERSION. Bump both:
+      #   MARKETING_VERSION   = "$VERSION"          (e.g. "1.0.0")
+      #   CURRENT_PROJECT_VERSION = $GITHUB_RUN_NUMBER (monotonically increasing)
+      # Plan 06-02 added CURRENT_PROJECT_VERSION + VERSIONING_SYSTEM so agvtool
+      # works against the hand-authored pbxproj.
+      - name: Bump version in project
+        run: |
+          set -euo pipefail
+          agvtool new-marketing-version "$VERSION"
+          agvtool new-version -all "$GITHUB_RUN_NUMBER"
+
+      - name: Archive
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -project AgentsUsageBar.xcodeproj \
+            -scheme AgentsUsageBar \
+            -configuration Release \
+            -archivePath build/AgentsUsageBar.xcarchive \
+            -destination 'generic/platform=macOS'
+
+      # Xcode -exportArchive automatically re-signs all nested Sparkle helpers
+      # (Installer.xpc, Downloader.xpc, Autoupdate, Updater.app) correctly.
+      # Never invoke codesign with the recursive-deep-sign flag — it corrupts
+      # XPC signatures (Pitfall 2).
+      # DEVELOPMENT_TEAM is passed as a build-setting env var that
+      # ExportOptions.plist resolves via $(DEVELOPMENT_TEAM).
+      - name: Export app (Developer ID)
+        env:
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+        run: |
+          set -euo pipefail
+          xcodebuild -exportArchive \
+            -archivePath build/AgentsUsageBar.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist ExportOptions.plist \
+            DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM}"
+
+      # D-05 — pin create-dmg/create-dmg v1.2.3 (shell). NOT sindresorhus
+      # (Node). Pinned tarball + sudo install for reproducibility.
+      - name: Install create-dmg v1.2.3
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            https://github.com/create-dmg/create-dmg/archive/refs/tags/v1.2.3.tar.gz \
+            | tar xz -C /tmp
+          sudo install /tmp/create-dmg-1.2.3/create-dmg /usr/local/bin/create-dmg
+          create-dmg --version || true
+
+      - name: Create DMG
+        run: |
+          set -euo pipefail
+          create-dmg \
+            --volname "Agents Usage Bar" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 128 \
+            --icon "AgentsUsageBar.app" 150 185 \
+            --app-drop-link 450 185 \
+            "build/AgentsUsageBar-${VERSION}.dmg" \
+            "build/export/AgentsUsageBar.app"
+
+      # D-04 — notarize the DMG directly so the staple lives on the
+      # distribution artifact (Pitfall: notarizing only the .app ZIP leaves
+      # the DMG wrapper unstapled and Gatekeeper prompts on offline open).
+      #
+      # Pitfall 5 — `.p8` written to /tmp must be deleted before job end;
+      # `trap` ensures cleanup even on early failure.
+      - name: Notarize DMG
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          trap 'rm -f /tmp/asc_key.p8' EXIT
+          printf '%s' "$ASC_API_KEY_P8" > /tmp/asc_key.p8
+          chmod 600 /tmp/asc_key.p8
+          xcrun notarytool submit \
+            "build/AgentsUsageBar-${VERSION}.dmg" \
+            --key /tmp/asc_key.p8 \
+            --key-id "$ASC_API_KEY_ID" \
+            --issuer "$ASC_API_ISSUER_ID" \
+            --wait
+          rm -f /tmp/asc_key.p8
+
+      - name: Staple notarization ticket to DMG
+        run: |
+          set -euo pipefail
+          xcrun stapler staple "build/AgentsUsageBar-${VERSION}.dmg"
+          xcrun stapler validate "build/AgentsUsageBar-${VERSION}.dmg"
+
+      # Pinned Sparkle 2.9.2 SPM ZIP — contains the `bin/sign_update` +
+      # `bin/generate_keys` tools.
+      - name: Download Sparkle 2.9.2 bin tools
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            https://github.com/sparkle-project/Sparkle/releases/download/2.9.2/Sparkle-for-Swift-Package-Manager.zip \
+            -o /tmp/sparkle-spm.zip
+          unzip -q /tmp/sparkle-spm.zip -d /tmp/sparkle
+          test -x /tmp/sparkle/bin/sign_update
+
+      # Pitfall 4 — `sign_update` MUST be run on the FINAL stapled DMG.
+      # Pitfall: Sparkle private key piped via stdin (`--ed-key-file -`),
+      # NEVER written to disk (RESEARCH Anti-Patterns + Discussion #2308).
+      # Output line: sparkle:edSignature="..." length="..."
+      - name: Sign DMG with Sparkle EdDSA key and update appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          GH_REPOSITORY: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # Stdin-only key — never echoed and never to disk.
+          SIG_LINE=$(printf '%s' "$SPARKLE_ED_PRIVATE_KEY" \
+            | /tmp/sparkle/bin/sign_update \
+                "build/AgentsUsageBar-${VERSION}.dmg" \
+                --ed-key-file -)
+          unset SPARKLE_ED_PRIVATE_KEY
+          echo "sign_update produced signature line (redacted)"
+
+          # Stash the signed DMG outside the worktree before checking out
+          # gh-pages — gh-pages doesn't carry build/ so a worktree switch
+          # would discard the artifact.
+          mkdir -p /tmp/release-artifacts
+          cp "build/AgentsUsageBar-${VERSION}.dmg" /tmp/release-artifacts/
+
+          # Switch to gh-pages to append the new <item>.
+          git fetch origin gh-pages
+          git checkout gh-pages
+
+          DMG_URL="https://github.com/${GH_REPOSITORY}/releases/download/${REF_NAME}/AgentsUsageBar-${VERSION}.dmg"
+
+          python3 scripts/append_appcast_item.py \
+            --version "$VERSION" \
+            --build-number "$GITHUB_RUN_NUMBER" \
+            --dmg-url "$DMG_URL" \
+            --sig-line "$SIG_LINE" \
+            appcast.xml
+
+          git config user.email "ci@github.com"
+          git config user.name "GitHub Actions"
+          git add appcast.xml
+          git commit -m "appcast: add $VERSION"
+          git push origin gh-pages
+
+          # Return to the release commit so `gh release create` sees the tag.
+          git checkout -
+
+          # Restore the signed DMG to build/ for the release-create step.
+          mkdir -p build
+          cp "/tmp/release-artifacts/AgentsUsageBar-${VERSION}.dmg" \
+             "build/AgentsUsageBar-${VERSION}.dmg"
+          rm -rf /tmp/release-artifacts
+
+      - name: Create GitHub Release and attach DMG
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release create "${REF_NAME}" \
+            --title "v${VERSION}" \
+            --generate-notes \
+            "build/AgentsUsageBar-${VERSION}.dmg"
