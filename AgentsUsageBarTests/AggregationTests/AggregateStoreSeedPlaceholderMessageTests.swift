@@ -21,9 +21,9 @@ struct AggregateStoreSeedPlaceholderMessageTests {
         AggregateStore(
             registry: [],
             clock: SystemClock(),
-            cache: InMemoryCacheStore(),
+            cache: NoopCacheStore(),
             thresholds: ThresholdEngine(),
-            notifications: NoOpNotificationManager()
+            notifications: NoopNotificationManager()
         )
     }
 

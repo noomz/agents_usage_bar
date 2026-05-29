@@ -190,6 +190,20 @@
 		/* Plan 04-05 — LMStudioProvider test sources (test target) */
 		AA040500000000000000010A /* LMStudioProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040500000000000000010B /* LMStudioProviderTests.swift */; };
 		AA040500000000000000011A /* LMStudioResponsesCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040500000000000000011B /* LMStudioResponsesCodableTests.swift */; };
+		/* Plan 04-06 — LlamaCppProvider + response models (app target) */
+		AA040600000000000000001A /* LlamaCppProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040600000000000000001B /* LlamaCppProvider.swift */; };
+		AA040600000000000000002A /* LlamaCppHealthResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040600000000000000002B /* LlamaCppHealthResponse.swift */; };
+		AA040600000000000000003A /* LlamaCppV1ModelsResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040600000000000000003B /* LlamaCppV1ModelsResponse.swift */; };
+		AA040600000000000000004A /* LlamaCppSlotsResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040600000000000000004B /* LlamaCppSlotsResponse.swift */; };
+		/* Plan 04-06 — LlamaCppProvider test sources (test target) */
+		AA040600000000000000010A /* LlamaCppProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040600000000000000010B /* LlamaCppProviderTests.swift */; };
+		AA040600000000000000011A /* LlamaCppResponsesCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040600000000000000011B /* LlamaCppResponsesCodableTests.swift */; };
+		AA040600000000000000012A /* ProviderStatePlaceholderMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040600000000000000012B /* ProviderStatePlaceholderMessageTests.swift */; };
+		AA040600000000000000013A /* AggregateStoreSeedPlaceholderMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040600000000000000013B /* AggregateStoreSeedPlaceholderMessageTests.swift */; };
+		/* Plan 04-08 — AppDependencies local registration + ThresholdEngine nil-quota + AggregateStore local rollup tests */
+		AA040800000000000000010A /* AppDependenciesLocalRegistrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040800000000000000010B /* AppDependenciesLocalRegistrationTests.swift */; };
+		AA040800000000000000011A /* ThresholdEngineLocalNilQuotaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040800000000000000011B /* ThresholdEngineLocalNilQuotaTests.swift */; };
+		AA040800000000000000012A /* AggregateStoreLocalRollupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040800000000000000012B /* AggregateStoreLocalRollupTests.swift */; };
 		/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test (test target) */
 		AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */; };
 		/* Plan 03-04 Task 2 — CodexJSONLProvider (app target) + provider/fallback tests */
@@ -443,6 +457,10 @@
 		AA030800000000000000011B /* ConfigStoreCodexGeminiTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStoreCodexGeminiTests.swift; sourceTree = "<group>"; };
 		AA030800000000000000012B /* AggregateStoreGeminiDegradedSuppressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreGeminiDegradedSuppressionTests.swift; sourceTree = "<group>"; };
 		AA030800000000000000013B /* AppDependenciesCodexGeminiRegistrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependenciesCodexGeminiRegistrationTests.swift; sourceTree = "<group>"; };
+		/* Plan 04-08 — AppDependencies local registration + ThresholdEngine nil-quota + AggregateStore local rollup test file references */
+		AA040800000000000000010B /* AppDependenciesLocalRegistrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependenciesLocalRegistrationTests.swift; sourceTree = "<group>"; };
+		AA040800000000000000011B /* ThresholdEngineLocalNilQuotaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdEngineLocalNilQuotaTests.swift; sourceTree = "<group>"; };
+		AA040800000000000000012B /* AggregateStoreLocalRollupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreLocalRollupTests.swift; sourceTree = "<group>"; };
 		/* Plan 03-07 — UI dashboard button + tooltip + footnote + degraded styling */
 		AA030700000000000000001B /* ProviderDashboardURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderDashboardURL.swift; sourceTree = "<group>"; };
 		AA030700000000000000002B /* OpenDashboardURLEnvironmentKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenDashboardURLEnvironmentKey.swift; sourceTree = "<group>"; };
@@ -976,6 +994,9 @@
 				AA030800000000000000013B /* AppDependenciesCodexGeminiRegistrationTests.swift */,
 				/* Plan 04-06 — AggregateStore seedPlaceholder message test */
 				AA040600000000000000013B /* AggregateStoreSeedPlaceholderMessageTests.swift */,
+				/* Plan 04-08 — AppDependencies local registration + AggregateStore local rollup tests */
+				AA040800000000000000010B /* AppDependenciesLocalRegistrationTests.swift */,
+				AA040800000000000000012B /* AggregateStoreLocalRollupTests.swift */,
 			);
 			path = AggregationTests;
 			sourceTree = "<group>";
@@ -1055,6 +1076,8 @@
 				AA020500000000000000011B /* NotificationStateStoreTests.swift */,
 				AA020500000000000000012B /* NotificationManagerCategoryTests.swift */,
 				AA020500000000000000013B /* NotificationActionHandlerTests.swift */,
+				/* Plan 04-08 — ThresholdEngine nil-quota regression lock */
+				AA040800000000000000011B /* ThresholdEngineLocalNilQuotaTests.swift */,
 			);
 			path = NotificationsTests;
 			sourceTree = "<group>";
@@ -1663,6 +1686,10 @@
 				/* Plan 04-07 — LocalRowSecondaryView + ProviderRowView local-row tests */
 				AA040700000000000000010A /* LocalRowSecondaryViewTests.swift in Sources */,
 				AA040700000000000000011A /* ProviderRowViewLocalRowTests.swift in Sources */,
+				/* Plan 04-08 — AppDependencies local registration + ThresholdEngine nil-quota + AggregateStore local rollup tests */
+				AA040800000000000000010A /* AppDependenciesLocalRegistrationTests.swift in Sources */,
+				AA040800000000000000011A /* ThresholdEngineLocalNilQuotaTests.swift in Sources */,
+				AA040800000000000000012A /* AggregateStoreLocalRollupTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

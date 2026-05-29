@@ -75,6 +75,34 @@ final class FakeLlamaCppHTTPClient: HTTPClient, @unchecked Sendable {
         recordCall(RecordedCall(url: url, bearerIsNil: bearer == nil))
         return try decodeResponse(T.self, path: url.path)
     }
+
+    func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
+        _ url: URL,
+        body: Body,
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T {
+        throw HTTPError(status: 501, message: "FakeLlamaCppHTTPClient: postJSON not scripted")
+    }
+
+    func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
+        _ url: URL,
+        body: Body,
+        bearer: Secret,
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T {
+        throw HTTPError(status: 501, message: "FakeLlamaCppHTTPClient: postJSON(bearer:) not scripted")
+    }
+
+    func postFormURLEncoded<T: Decodable & Sendable>(
+        _ url: URL,
+        formFields: [(String, String)],
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T {
+        throw HTTPError(status: 501, message: "FakeLlamaCppHTTPClient: postFormURLEncoded not scripted")
+    }
 }
 
 // MARK: - Fixture helpers

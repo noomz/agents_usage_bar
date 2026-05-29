@@ -64,11 +64,13 @@ public enum AppDependencies {
         // 1. Wall clock (shared across all subsystems)
         let clock: any Clock = SystemClock()
 
-        // 2. HTTP client
-        // B1: URLSessionConfiguration is OWNED by URLSessionHTTPClient.init().
-        //     POLL-08 (8s timeout, waitsForConnectivity=false, 6 conns/host) lives there.
-        //     Do NOT instantiate URLSessionConfiguration here.
-        let http: any HTTPClient = URLSessionHTTPClient()
+        // 2. HTTP clients — TWO tiers per POLL-08 split (Plan 04-03 + CLAUDE.md):
+        //    - http:          8s remote tier (OpenRouter / Claude / Codex / Gemini)
+        //    - localhostHTTP: 2s localhost tier (Ollama / LM Studio / llama.cpp)
+        // B1 invariant preserved: URLSessionConfiguration is OWNED by URLSessionHTTPClient.init()
+        // and configured per-tier via the timeoutSeconds parameter.
+        let http: any HTTPClient = URLSessionHTTPClient()                       // back-compat default = 8s
+        let localhostHTTP: any HTTPClient = URLSessionHTTPClient(timeoutSeconds: 2)
 
         // 3. Cache store with NoopCacheStore fallback (B9)
         let cache: any CacheStore
@@ -205,6 +207,41 @@ public enum AppDependencies {
             geminiRegistered = false
         }
 
+        // 6.3. Ollama provider (Plan 04-04 — LOCAL-01) — register when config.ollama.enabled.
+        //      Well-known port 11434; no presence detection (always probes — first probe
+        //      writes .notRunning if server is absent per Phase 3 STATE #82 isolation).
+        if config.ollama.enabled {
+            let ollamaProvider = OllamaProvider(http: localhostHTTP, clock: clock)
+            registry.append(ollamaProvider)
+        }
+
+        // 6.4. LM Studio provider (Plan 04-05 — LOCAL-02) — register when config.lmstudio.enabled.
+        //      Default port 1234; override via [lmstudio] port = <int> in config.toml.
+        if config.lmstudio.enabled {
+            let lmstudioProvider = LMStudioProvider(
+                http: localhostHTTP,
+                clock: clock,
+                port: config.lmstudio.port
+            )
+            registry.append(lmstudioProvider)
+        }
+
+        // 6.5. llama.cpp provider (Plan 04-06 — LOCAL-03) — register ONLY when both enabled AND
+        //      port is configured (LOCAL-03 no scanning). Unconfigured → seed D-04 placeholder
+        //      AFTER the store is constructed (see Step 10 below).
+        let llamacppRegistered: Bool
+        if config.llamacpp.enabled, let port = config.llamacpp.port {
+            let llamacppProvider = LlamaCppProvider(
+                http: localhostHTTP,
+                clock: clock,
+                port: port
+            )
+            registry.append(llamacppProvider)
+            llamacppRegistered = true
+        } else {
+            llamacppRegistered = false
+        }
+
         // 7. Threshold engine (warning-at-80% gate per D-11)
         let thresholds = ThresholdEngine(warningFraction: config.threshold)
 
@@ -274,6 +311,46 @@ public enum AppDependencies {
                 status: .unauthenticated
             )
         }
+
+        // Plan 04-08 — Ollama placeholder for cold-launch visibility. The actor is also
+        // registered (it polls every 5 min); this placeholder ensures the row appears
+        // in the popover the moment the user clicks the menu bar icon, BEFORE the first
+        // probe returns.
+        if config.ollama.enabled {
+            store.seedPlaceholder(
+                providerID: ProviderID.ollama,
+                displayName: "Ollama",
+                status: .notRunning
+            )
+        }
+
+        // Plan 04-08 — LM Studio placeholder (same rationale).
+        if config.lmstudio.enabled {
+            store.seedPlaceholder(
+                providerID: ProviderID.lmstudio,
+                displayName: "LM Studio",
+                status: .notRunning
+            )
+        }
+
+        // Plan 04-08 — llama.cpp placeholder when not registered (D-04).
+        // Renders a discoverability subtitle so the user knows the feature exists
+        // without having to read docs. LOCAL-03 invariant preserved: no port scanning.
+        if !llamacppRegistered {
+            store.seedPlaceholder(
+                providerID: ProviderID.llamacpp,
+                displayName: "llama.cpp",
+                placeholderMessage: "Set [llamacpp] port in config.toml to enable",
+                status: .notRunning
+            )
+        }
+
+        // Note: Plan 04-04 / 04-05 do NOT skip placeholders for Ollama / LM Studio.
+        // Their actors are registered unconditionally when enabled (default true) and the
+        // first probe writes a snapshot with .notRunning status if the server is absent.
+        // The row STILL appears immediately because seedPlaceholder runs BEFORE the first
+        // refresh; once the actor probes and returns a snapshot, apply(_:for:now:) replaces
+        // the placeholder state with the live state (Phase 1 STATE #38).
 
         // 10. Poll scheduler — wired to store; start() called from .task modifier in AgentsUsageBarApp
         let scheduler = PollScheduler(store: store, clock: clock, interval: config.refreshInterval)
