@@ -18,28 +18,30 @@ public struct FooterView: View {
     public init() {}
 
     public var body: some View {
-        HStack(spacing: 12) {
-            Button("Refresh now") {
+        HStack(spacing: 8) {
+            Button {
                 Task {
                     await store.refresh(now: clock.now())
                 }
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
             }
             .keyboardShortcut("r", modifiers: .command)
-            .buttonStyle(.borderless)
-            .foregroundStyle(.tint)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(.accentColor)
 
             Spacer()
 
-            Button("Quit Agents Usage Bar") {
+            Button("Quit") {
                 NSApp.terminate(nil)
             }
             .keyboardShortcut("q", modifiers: .command)
-            .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(height: 36)
+        .padding(.vertical, 10)
     }
 }
 

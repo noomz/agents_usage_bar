@@ -24,8 +24,7 @@ public struct TotalsHeaderView: View {
                 .monospacedDigit()
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(height: 56)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Helpers

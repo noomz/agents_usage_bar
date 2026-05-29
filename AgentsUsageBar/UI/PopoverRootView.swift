@@ -26,14 +26,15 @@ public struct PopoverRootView: View {
         VStack(alignment: .leading, spacing: 0) {
             TotalsHeaderView()
             Divider()
-            ForEach(sortedProviderStates(), id: \.id) { state in
+            ForEach(Array(sortedProviderStates().enumerated()), id: \.element.id) { idx, state in
+                if idx > 0 { Divider() }
                 ProviderRowView(state: state)
-                Divider()
             }
+            Divider()
             FooterView()
         }
         .frame(width: 360)
-        .padding(.vertical, 4)
+        .textSelection(.disabled)
         // POLL-03: trigger a refresh on popover open (coalesced if within 5s of last tick)
         .task {
             await store.refresh(now: Date.now)

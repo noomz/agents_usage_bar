@@ -69,8 +69,7 @@ public struct ProviderRowView: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(minHeight: 64, alignment: .top)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Private helpers
