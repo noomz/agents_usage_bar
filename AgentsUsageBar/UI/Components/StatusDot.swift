@@ -13,16 +13,23 @@ import SwiftUI
 /// store reports the provider as stale (no successful refresh within 2× the
 /// current refresh interval). The semantic status colour is preserved; only
 /// the alpha changes so the user notices the data is older than expected.
+///
+/// Plan 03-07 (D-11): the `forceAmber` flag overrides the semantic status
+/// colour with `.orange` so Gemini's "usage-temporarily-unavailable" snapshot
+/// (Plan 03-06) renders as an amber dot rather than red — the v1internal
+/// endpoint is documented unstable; red would be false alarm fatigue. The
+/// stale dimming still composes on top of the amber tint.
 public struct StatusDot: View {
     public let status: ProviderStatus
     public let isStale: Bool
+    public let forceAmber: Bool
 
-    /// Plan 02.07 — additive overload accepting the `isStale` flag from
-    /// `AggregateStore.isStale(_:now:)`. The default `false` preserves Phase 1
-    /// call-site compatibility.
-    public init(status: ProviderStatus, isStale: Bool = false) {
+    /// Plan 02.07 + Plan 03-07 — additive parameters. Defaults preserve every
+    /// existing Phase 1/2 call site.
+    public init(status: ProviderStatus, isStale: Bool = false, forceAmber: Bool = false) {
         self.status = status
         self.isStale = isStale
+        self.forceAmber = forceAmber
     }
 
     // MARK: - View body
@@ -51,8 +58,12 @@ public struct StatusDot: View {
         case .disabled:
             return .gray.opacity(0.4)  // .disabled already encodes its own dim
         }
-        // UI-08: stale dimming on top of the semantic colour.
-        return isStale ? base.opacity(0.4) : base
+        // Plan 03-07 (D-11): forceAmber overrides the semantic colour so the
+        // degraded UX (Gemini "usage-temporarily-unavailable") renders amber
+        // rather than red/green/yellow.
+        let resolved: Color = forceAmber ? .orange : base
+        // UI-08: stale dimming composes on top.
+        return isStale ? resolved.opacity(0.4) : resolved
     }
 
     private var accessibilityLabel: String {

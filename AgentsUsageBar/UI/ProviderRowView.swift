@@ -3,14 +3,21 @@ import SwiftUI
 /// Per-provider row in the popover (UI-02).
 ///
 /// Displays:
-/// - Provider display name (subheadline)
-/// - Status dot (ok/stale/error/unauthenticated/disabled)
+/// - Provider display name (subheadline) with `.help()` tooltip carrying the
+///   `tooltipLabel` (Codex `plan_type` / Gemini tier, D-15 / GEMINI-03)
+/// - Status dot (ok/stale/error/unauthenticated/disabled) with amber override
+///   when the snapshot is in Gemini's D-11 degraded state
 /// - Today tokens ("—" for nil/cold-launch per D-03)
 /// - Today USD cost ("—" for nil/cold-launch)
 /// - Account balance (omitted when nil)
 /// - Color-coded quota bar (QuotaBar) per UI-02 authoritative thresholds (B4)
 /// - "Resets —" countdown (OpenRouter has no reset countdown — RESEARCH Open Question #4)
 /// - "Updated Xs ago" relative timestamp label (ticks via TimelineView every 1s)
+/// - D-11 "Updated Xm ago — usage temporarily unavailable" subtitle when the
+///   snapshot carries `raw["note"] == ThresholdEngine.degradedTag`
+/// - Trailing "Open dashboard" button (UI-11 / D-13 / D-14) invoking the
+///   `openDashboardURL` environment closure with the provider's hard-coded
+///   web-console URL from `ProviderDashboardURL.lookup(_:)`.
 ///
 /// No `@StateObject`, `ObservableObject`, `@Published`, or Combine — pure value render from `ProviderState`.
 public struct ProviderRowView: View {
@@ -19,9 +26,26 @@ public struct ProviderRowView: View {
     /// Available since Plan 01.08 wires both into the SwiftUI environment.
     @Environment(AggregateStore.self) private var store
     @Environment(\.clockService) private var clock
+    /// Plan 03-07 — environment-injected dashboard-launch closure. The
+    /// production default (declared in `OpenDashboardURLEnvironmentKey.swift`)
+    /// opens the URL via AppKit; tests inject a recording closure. Keeping
+    /// AppKit out of this view body satisfies the testability seam from D-13.
+    @Environment(\.openDashboardURL) private var openDashboardURL
 
     public init(state: ProviderState) {
         self.state = state
+    }
+
+    /// Plan 03-07 / D-14 — looked-up dashboard URL for this row. `nil` for
+    /// out-of-scope providers (local LLMs); the button is `.disabled` in that
+    /// case to preserve row layout symmetry.
+    private var dashboardURL: URL? { ProviderDashboardURL.lookup(state.id) }
+
+    /// Plan 03-07 / D-11 — detects Gemini's `"usage-temporarily-unavailable"`
+    /// degraded snapshot via the canonical `ThresholdEngine.degradedTag`
+    /// constant (single-sourced literal per Plan 03-08 STATE #84).
+    private var isDegraded: Bool {
+        state.snapshot?.raw["note"] == ThresholdEngine.degradedTag
     }
 
     public var body: some View {
@@ -31,14 +55,18 @@ public struct ProviderRowView: View {
         TimelineView(.periodic(from: .now, by: 1)) { ctx in
             let isStale = store.isStale(state.id, now: ctx.date)
             HStack(alignment: .top, spacing: 10) {
-                // Status dot aligned to top of content
-                StatusDot(status: state.status, isStale: isStale)
+                // Status dot aligned to top of content — Plan 03-07 wires the
+                // amber override for the D-11 degraded state.
+                StatusDot(status: state.status, isStale: isStale, forceAmber: isDegraded)
                     .padding(.top, 3)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    // Provider name
+                    // Provider name with D-15 / GEMINI-03 tooltip. Passing ""
+                    // for the absent case yields no tooltip (SwiftUI suppresses
+                    // .help when the argument is empty).
                     Text(state.displayName)
                         .font(.subheadline.weight(.semibold))
+                        .help(state.snapshot?.tooltipLabel ?? "")
 
                     // Token count · USD cost · balance
                     HStack(spacing: 4) {
@@ -61,10 +89,13 @@ public struct ProviderRowView: View {
                                 .monospacedDigit()
                         }
                     }
+                    .opacity(isStale || isDegraded ? 0.6 : 1.0)
 
-                    // Quota bar
+                    // Quota bar — opacity composes UI-08 stale dimming and the
+                    // Plan 03-07 / D-11 degraded dimming.
                     QuotaBar(quota: state.snapshot?.quota)
                         .frame(maxWidth: .infinity)
+                        .opacity(isStale || isDegraded ? 0.6 : 1.0)
 
                     // Reset countdown + relative timestamp
                     HStack(spacing: 8) {
@@ -75,7 +106,35 @@ public struct ProviderRowView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
+
+                    // Plan 03-07 / D-11 — degraded subtitle. Placed AFTER the
+                    // existing "Resets —" row so it reads as a footnote to the
+                    // row's data, not a replacement for the timestamp.
+                    if isDegraded {
+                        Text("Updated \(RelativeTimestampLabel.relativeString(from: state.lastSuccess ?? ctx.date, to: ctx.date)) ago — usage temporarily unavailable")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
+
+                // Plan 03-07 (UI-11 / D-13) — trailing dashboard button.
+                // Always visible (no hover-reveal) so the affordance is
+                // one-click discoverable; `.disabled(dashboardURL == nil)`
+                // preserves row layout symmetry for providers without a
+                // mapped dashboard URL (local LLMs).
+                Spacer(minLength: 4)
+                Button {
+                    if let url = dashboardURL { openDashboardURL(url) }
+                } label: {
+                    Image(systemName: "arrow.up.right.square")
+                        .symbolRenderingMode(.monochrome)
+                        .font(.caption)
+                        .frame(width: 16, height: 16)
+                }
+                .buttonStyle(HoverableBorderedButtonStyle())
+                .disabled(dashboardURL == nil)
+                .help("Open \(state.displayName) dashboard")
+                .padding(.top, 2)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -160,6 +219,30 @@ private func previewStore() -> AggregateStore {
         snapshot: nil,
         status: .error(ProviderError(kind: .auth, message: "HTTP 401")),
         lastSuccess: nil
+    )
+    return ProviderRowView(state: state)
+        .environment(previewStore())
+        .frame(width: 360)
+}
+
+#Preview("ProviderRowView — Gemini degraded (D-11)") {
+    let snapshot = UsageSnapshot(
+        providerID: .gemini,
+        asOf: .now,
+        tokensToday: nil,
+        costTodayUSD: nil,
+        balanceUSD: nil,
+        quota: Quota(used: 0.15, limit: 1.0, remaining: 0.85),
+        raw: ["note": "usage-temporarily-unavailable", "degraded": "true"],
+        tooltipLabel: "Free"
+    )
+    let state = ProviderState(
+        id: .gemini,
+        displayName: "Gemini",
+        snapshot: snapshot,
+        status: .stale(lastSuccess: .now.addingTimeInterval(-180),
+                       error: ProviderError(kind: .http, message: "503")),
+        lastSuccess: .now.addingTimeInterval(-180)
     )
     return ProviderRowView(state: state)
         .environment(previewStore())
