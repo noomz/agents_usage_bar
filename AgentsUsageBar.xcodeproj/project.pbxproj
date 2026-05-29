@@ -167,6 +167,9 @@
 		AA040100000000000000011A /* ProviderIDLocalConstantsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040100000000000000011B /* ProviderIDLocalConstantsTests.swift */; };
 		AA040100000000000000012A /* ProviderErrorLocalhostClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040100000000000000012B /* ProviderErrorLocalhostClassifierTests.swift */; };
 		AA040100000000000000013A /* StatusDotNotRunningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040100000000000000013B /* StatusDotNotRunningTests.swift */; };
+		/* Plan 04-02 — AppConfig local provider structs + ConfigStore local sections tests */
+		AA040200000000000000010A /* AppConfigLocalProvidersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040200000000000000010B /* AppConfigLocalProvidersTests.swift */; };
+		AA040200000000000000011A /* ConfigStoreLocalSectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040200000000000000011B /* ConfigStoreLocalSectionsTests.swift */; };
 		/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test (test target) */
 		AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */; };
 		/* Plan 03-04 Task 2 — CodexJSONLProvider (app target) + provider/fallback tests */
@@ -433,6 +436,9 @@
 		AA040100000000000000011B /* ProviderIDLocalConstantsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderIDLocalConstantsTests.swift; sourceTree = "<group>"; };
 		AA040100000000000000012B /* ProviderErrorLocalhostClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderErrorLocalhostClassifierTests.swift; sourceTree = "<group>"; };
 		AA040100000000000000013B /* StatusDotNotRunningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusDotNotRunningTests.swift; sourceTree = "<group>"; };
+		/* Plan 04-02 — test file references */
+		AA040200000000000000010B /* AppConfigLocalProvidersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigLocalProvidersTests.swift; sourceTree = "<group>"; };
+		AA040200000000000000011B /* ConfigStoreLocalSectionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStoreLocalSectionsTests.swift; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -774,6 +780,9 @@
 				/* Plan 03-08 — AppConfig + ConfigStore Codex/Gemini tests */
 				AA030800000000000000010B /* AppConfigCodexGeminiTests.swift */,
 				AA030800000000000000011B /* ConfigStoreCodexGeminiTests.swift */,
+				/* Plan 04-02 — AppConfig + ConfigStore local provider tests */
+				AA040200000000000000010B /* AppConfigLocalProvidersTests.swift */,
+				AA040200000000000000011B /* ConfigStoreLocalSectionsTests.swift */,
 				AA030300000000000000032B /* Fixtures */,
 			);
 			path = ConfigTests;
@@ -1383,6 +1392,9 @@
 				/* Plan 03-08 Task 1 — AppConfig + ConfigStore Codex/Gemini tests */
 				AA030800000000000000010A /* AppConfigCodexGeminiTests.swift in Sources */,
 				AA030800000000000000011A /* ConfigStoreCodexGeminiTests.swift in Sources */,
+				/* Plan 04-02 — AppConfig + ConfigStore local provider tests */
+				AA040200000000000000010A /* AppConfigLocalProvidersTests.swift in Sources */,
+				AA040200000000000000011A /* ConfigStoreLocalSectionsTests.swift in Sources */,
 				/* Plan 03-08 Task 2 — ThresholdEngine D-11 suppression test */
 				AA030800000000000000012A /* AggregateStoreGeminiDegradedSuppressionTests.swift in Sources */,
 				/* Plan 03-08 Task 3 — AppDependencies registration test */

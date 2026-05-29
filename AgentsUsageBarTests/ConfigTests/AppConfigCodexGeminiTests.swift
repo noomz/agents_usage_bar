@@ -40,7 +40,10 @@ struct AppConfigCodexGeminiTests {
             threshold: AppConfig.defaults.threshold,
             openrouter: AppConfig.defaults.openrouter,
             codex: CodexConfig(enabled: false, bearerOverride: nil, sessionWindowDays: 2),
-            gemini: GeminiConfig(enabled: false, projectIDOverride: nil)
+            gemini: GeminiConfig(enabled: false, projectIDOverride: nil),
+            ollama: AppConfig.defaults.ollama,
+            lmstudio: AppConfig.defaults.lmstudio,
+            llamacpp: AppConfig.defaults.llamacpp
         )
         #expect(disabled != AppConfig.defaults)
         #expect(disabled.codex.enabled == false)
@@ -76,7 +79,10 @@ struct AppConfigCodexGeminiTests {
                 enabled: true
             ),
             codex: CodexConfig(enabled: true, bearerOverride: nil, sessionWindowDays: 2),
-            gemini: GeminiConfig(enabled: true, projectIDOverride: nil)
+            gemini: GeminiConfig(enabled: true, projectIDOverride: nil),
+            ollama: OllamaConfig(enabled: true),
+            lmstudio: LMStudioConfig(enabled: true, port: 1234),
+            llamacpp: LlamaCppConfig(enabled: true, port: nil)
         )
         #expect(a == b)
     }

@@ -57,6 +57,10 @@ public final class ConfigStore: @unchecked Sendable {
         // Plan 03-08 — new per-provider sections.
         let codexSection = toml["codex"] ?? [:]
         let geminiSection = toml["gemini"] ?? [:]
+        // Plan 04-02 — local runtime sections (no env override — port + enable are config knobs).
+        let ollamaSection = toml["ollama"] ?? [:]
+        let lmstudioSection = toml["lmstudio"] ?? [:]
+        let llamacppSection = toml["llamacpp"] ?? [:]
 
         let defaults = AppConfig.defaults
 
@@ -180,6 +184,54 @@ public final class ConfigStore: @unchecked Sendable {
             geminiProjectID = nil
         }
 
+        // --- Plan 04-02 — ollama section (toml > defaults; NO env override per CONTEXT Discretion) ---
+
+        // ollama.enabled: TOML only.
+        let ollamaEnabled: Bool
+        if case .bool(let b) = ollamaSection["enabled"] {
+            ollamaEnabled = b
+        } else {
+            ollamaEnabled = defaults.ollama.enabled
+        }
+
+        // --- Plan 04-02 — lmstudio section (toml > defaults; NO env override) ---
+
+        // lmstudio.enabled: TOML only.
+        let lmstudioEnabled: Bool
+        if case .bool(let b) = lmstudioSection["enabled"] {
+            lmstudioEnabled = b
+        } else {
+            lmstudioEnabled = defaults.lmstudio.enabled
+        }
+
+        // lmstudio.port: TOML only; falls back to default 1234 when absent or unparseable.
+        let lmstudioPort: Int
+        if case .int(let i) = lmstudioSection["port"] {
+            lmstudioPort = i
+        } else {
+            lmstudioPort = defaults.lmstudio.port
+        }
+
+        // --- Plan 04-02 — llamacpp section (toml > nil; NO env override; NO default port) ---
+
+        // llamacpp.enabled: TOML only.
+        let llamacppEnabled: Bool
+        if case .bool(let b) = llamacppSection["enabled"] {
+            llamacppEnabled = b
+        } else {
+            llamacppEnabled = defaults.llamacpp.enabled
+        }
+
+        // llamacpp.port: REQUIRED in TOML (LOCAL-03 no scanning). Absent → nil → Plan 04-08
+        // seeds the D-04 discoverability placeholder instead of registering a live actor.
+        // Garbage value (e.g. string instead of int) silently falls to nil per D-18 fail-soft.
+        let llamacppPort: Int?
+        if case .int(let i) = llamacppSection["port"] {
+            llamacppPort = i
+        } else {
+            llamacppPort = nil
+        }
+
         return AppConfig(
             refreshInterval: refreshInterval,
             threshold: threshold,
@@ -198,7 +250,10 @@ public final class ConfigStore: @unchecked Sendable {
             gemini: GeminiConfig(
                 enabled: geminiEnabled,
                 projectIDOverride: geminiProjectID
-            )
+            ),
+            ollama: OllamaConfig(enabled: ollamaEnabled),
+            lmstudio: LMStudioConfig(enabled: lmstudioEnabled, port: lmstudioPort),
+            llamacpp: LlamaCppConfig(enabled: llamacppEnabled, port: llamacppPort)
         )
     }
 
