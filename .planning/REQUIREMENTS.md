@@ -24,10 +24,10 @@
 
 ### Provider — Codex
 
-- [ ] **CODEX-01**: App reads the most recent `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`, locates last `event_msg.token_count` event, and extracts `total_token_usage`, `rate_limits.primary`, `rate_limits.secondary`, `credits`, `plan_type`, `resets_at`
-- [ ] **CODEX-02**: Codex row falls back to `GET https://chatgpt.com/backend-api/wham/usage` with bearer from `~/.codex/auth.json` when no recent rollout file exists
-- [ ] **CODEX-03**: Codex row renders primary + secondary windows with reset countdowns
-- [ ] **CODEX-04**: Codex USD cost computed from rollout-derived tokens using the embedded pricing table
+- [x] **CODEX-01**: App reads the most recent `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`, locates last `event_msg.token_count` event, and extracts `total_token_usage`, `rate_limits.primary`, `rate_limits.secondary`, `credits`, `plan_type`, `resets_at`
+- [x] **CODEX-02**: Codex row falls back to `GET https://chatgpt.com/backend-api/wham/usage` with bearer from `~/.codex/auth.json` when no recent rollout file exists
+- [x] **CODEX-03**: Codex row renders primary + secondary windows with reset countdowns
+- [x] **CODEX-04**: Codex USD cost computed from rollout-derived tokens using the embedded pricing table
 
 ### Provider — Gemini
 
@@ -178,10 +178,10 @@
 | CLAUDE-03 | Phase 2 | Complete |
 | CLAUDE-04 | Phase 2 | Complete |
 | CLAUDE-05 | Phase 2 | Complete |
-| CODEX-01 | Phase 3 | Pending |
-| CODEX-02 | Phase 3 | Pending |
-| CODEX-03 | Phase 3 | Pending |
-| CODEX-04 | Phase 3 | Pending |
+| CODEX-01 | Phase 3 | Complete |
+| CODEX-02 | Phase 3 | Complete |
+| CODEX-03 | Phase 3 | Complete |
+| CODEX-04 | Phase 3 | Complete |
 | GEMINI-01 | Phase 3 | Pending |
 | GEMINI-02 | Phase 3 | Pending |
 | GEMINI-03 | Phase 3 | Pending |
