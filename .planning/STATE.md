@@ -3,18 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-19T16:45:00.000Z"
+last_updated: "2026-05-19T18:00:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 34
-  completed_plans: 29
-  percent: 55
+  completed_plans: 30
+  percent: 57
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-19 (Phase 4 Plan 04-05 complete — `LMStudioProvider` actor probes `GET /api/v0/models` first (LM Studio 0.3.5+ extended schema with per-model `state` field); any non-2xx (404/500) triggers fallback to `GET /v1/models` (OQ-2 disposition); URLError on primary → `.notRunning` immediately (no v1 attempt); `LMStudioV0ModelsResponse.loadedModels` filters `state=="loaded"`, treats nil state as loaded (old-build compat); `LMStudioV1ModelsResponse` OAI-compat fallback treats all listed models as loaded; `private let port: Int` injected at init (LOCAL-02 configurable port, default 1234 from `AppConfig.defaults`); D-03 row states B/C/D; LOCAL-06: `tokensToday=nil`/`costTodayUSD=nil`/`quota=nil` always; `bearer: nil` on all probes (SEC-01); no CircuitBreaker (D-12); never throws; 31 new Swift Testing cases (19 `LMStudioProviderTests` + 12 `LMStudioResponsesCodableTests`); 4 JSON fixtures; pbxproj wired via AA040500 UUID namespace (36 entries). Commit: cebe8b8.)
+**Last Updated:** 2026-05-19 (Phase 4 Plan 04-06 complete — `LlamaCppProvider` actor concurrent fan-out `async let` on `GET /health` + `GET /v1/models`; opportunistic `GET /slots`; state-E "loading model" HTTP-200 → `.ok` + `raw["loadingModel"]="true"` (never `.error`, OQ-1); OQ-3 unknown status leniency → treated as running; `LlamaCppHealthResponse` nil-tolerant discriminator helpers (`isOK`/`isLoading`/`isErrorStatus`/`hasNoSlot`); `LlamaCppV1ModelsResponse.modelBasename` via `URL(fileURLWithPath:).lastPathComponent`; `LlamaCppSlotsResponse` custom `unkeyedContainer` decode for top-level JSON array; `ProviderState.placeholder(placeholderMessage: String? = nil)` + `AggregateStore.seedPlaceholder(placeholderMessage: String? = nil)` extended (D-04 carrier, zero-blast-radius back-compat); D-04 verbatim: `"Set [llamacpp] port in config.toml to enable"`; `placeholderFactory_carriesNotRunningStatus` asserts BOTH `status==.notRunning` AND exact message; LOCAL-06: `tokensToday=nil`/`costTodayUSD=nil`/`quota=nil` always; `bearer: nil` on all probes (SEC-01); no CircuitBreaker (D-12); never throws; 33 new Swift Testing cases (15 `LlamaCppProviderTests` + 11 `LlamaCppResponsesCodableTests` + 5 `ProviderStatePlaceholderMessageTests` + 5 `AggregateStoreSeedPlaceholderMessageTests`); 6 JSON fixtures; pbxproj wired via AA040600 UUID namespace (44 entries). Commit: 83b48b4.)
+**Last Updated (previous):** 2026-05-19 (Phase 4 Plan 04-05 complete — `LMStudioProvider` actor probes `GET /api/v0/models` first (LM Studio 0.3.5+ extended schema with per-model `state` field); any non-2xx (404/500) triggers fallback to `GET /v1/models` (OQ-2 disposition); URLError on primary → `.notRunning` immediately (no v1 attempt); `LMStudioV0ModelsResponse.loadedModels` filters `state=="loaded"`, treats nil state as loaded (old-build compat); `LMStudioV1ModelsResponse` OAI-compat fallback treats all listed models as loaded; `private let port: Int` injected at init (LOCAL-02 configurable port, default 1234 from `AppConfig.defaults`); D-03 row states B/C/D; LOCAL-06: `tokensToday=nil`/`costTodayUSD=nil`/`quota=nil` always; `bearer: nil` on all probes (SEC-01); no CircuitBreaker (D-12); never throws; 31 new Swift Testing cases (19 `LMStudioProviderTests` + 12 `LMStudioResponsesCodableTests`); 4 JSON fixtures; pbxproj wired via AA040500 UUID namespace (36 entries). Commit: cebe8b8.)
 **Last Updated (previous):** 2026-05-19 (Phase 4 Plan 04-04 complete — `OllamaProvider` actor probes `GET /api/ps` + `GET /api/tags` concurrently via `async let`, classifies URLError connection-refused as `.notRunning` (LOCAL-05), folds into D-03 row states A/B/B'/C/D; `OllamaPsResponse` + `OllamaTagsResponse` lenient Decodable with explicit snake_case CodingKeys (Phase 3 STATE #67), `sizeVram: Int64` (Pitfall 11); LOCAL-06 invariant: `tokensToday=nil`/`costTodayUSD=nil`/`quota=nil` always; `bearer: nil` on all `http.get` (SEC-01); no CircuitBreaker (D-12); never throws for transient failures (GEMINI-04 STATE #82); 30 new Swift Testing cases (18 `OllamaProviderTests` + 12 `OllamaResponsesCodableTests`); 5 JSON fixtures; pbxproj wired via AA040404 UUID namespace (38 entries). Commit: 1460a28.)
 **Last Updated (previous):** 2026-05-19 (Phase 4 Plan 04-03 complete — `URLSessionHTTPClient.init(timeoutSeconds: TimeInterval = 8)` additive parameter; `cfg.timeoutIntervalForRequest = timeoutSeconds`; `cfg.timeoutIntervalForResource = max(timeoutSeconds * 4, 30)`; default `8` preserves all Phase 1/2/3 call sites unchanged; `URLSessionHTTPClient(timeoutSeconds: 2)` now constructable for POLL-08 localhost tier (Plan 04-08 wires it); 8 new Swift Testing cases in `URLSessionHTTPClientTimeoutTierTests` (back-compat default, 32s resource scaling, 2s request + 30s resource floor, 15s→60s math, POLL-08 invariants on both tiers, distinct URLSession instances); pbxproj wired via AA040300 UUID namespace (4 entries); full regression PASSED.)
 **Last Updated (previous):** 2026-05-19 (Phase 4 Plan 04-02 complete — `OllamaConfig` + `LMStudioConfig` + `LlamaCppConfig` value-type structs added to `AppConfig.swift`; three new stored properties + updated `init` + updated `.defaults`; `ConfigStore.load()` extended to parse `[ollama]` / `[lmstudio]` / `[llamacpp]` TOML sections with toml > defaults precedence, no env override for locals per CONTEXT Discretion, D-18 fail-soft preserved; `LlamaCppConfig.port: Int?` nil-default is the D-04 placeholder gating signal Plan 04-08 reads; 17 new Swift Testing cases across `AppConfigLocalProvidersTests` (9 cases) + `ConfigStoreLocalSectionsTests` (8 cases); pbxproj wired via AA040200 UUID namespace (8 entries); full regression PASSED. Commit: 362e689.)
@@ -41,12 +42,12 @@ Phase: 03 (remote-api-providers-codex-gemini) — AWAITING UAT (9/9 plans execut
 
 - **Milestone:** v1 (initial release)
 - **Phase:** 4 of 6 (local llm presence (ollama + lm studio + llama.cpp))
-- **Plan:** 9 of 9 plans drafted — 4 of 9 executed (04-01..04-04 complete)
+- **Plan:** 9 of 9 plans drafted — 5 of 9 executed (04-01..04-06 complete)
 - **Status:** Executing Phase 04
-- **Progress:** [████████░░] 85% (29/34 plans executed; Phase 4 plans 04-01..04-04 complete; Phase 3 awaiting UAT approval)
+- **Progress:** [████████░░] 88% (30/34 plans executed; Phase 4 plans 04-01..04-06 complete; Phase 3 awaiting UAT approval)
 
 ```
-[████████████████████████████████████████████████████████░░░░░░░░░░░░░░] 85% (29/34 plans executed; Phase 4 plans 04-01..04-04 complete; Phase 3 BLOCKED on reviewer UAT signal — `approved` / `failed: <test#>` / `deferred: <test#>`)
+[█████████████████████████████████████████████████████████░░░░░░░░░░░░░] 88% (30/34 plans executed; Phase 4 plans 04-01..04-06 complete; Phase 3 BLOCKED on reviewer UAT signal — `approved` / `failed: <test#>` / `deferred: <test#>`)
 ```
 
 ## Performance Metrics
@@ -54,11 +55,11 @@ Phase: 03 (remote-api-providers-codex-gemini) — AWAITING UAT (9/9 plans execut
 | Metric | Value |
 |--------|-------|
 | Phases complete | 2 / 6 (Phase 2 UAT approved 2026-05-15; Phase 3 awaiting UAT 2026-05-18) |
-| Plans complete | 29 / 34 (Phase 1: 9 + Phase 2: 7 + Phase 3 Plans 01–09: 9 + Phase 4 Plans 01–04: 4) |
+| Plans complete | 30 / 34 (Phase 1: 9 + Phase 2: 7 + Phase 3 Plans 01–09: 9 + Phase 4 Plans 01–06: 5) |
 | Requirements mapped | 76 / 76 (100%) |
 | Requirements validated | 50 / 76 (Phase 1 + Phase 2 sets + Phase 3 CODEX-01..04 + GEMINI-02..04 at actor layer + GEMINI-04 at composition layer + UI-11 at row layer — Tests 1-2 manual PASS; Tests 3-10 covered by unit-test suites per `02-UAT.md` attestation table; CODEX-* covered by `CodexJSONLProviderTests` + `CodexJSONLProviderFallbackTests` + `UsageSnapshotTooltipLabelTests`; GEMINI-* covered by `GeminiQuotaResponseTests` + `GeminiLoadCodeAssistResponseTests` + `GeminiOAuthProviderTests` + `GeminiOAuthProviderDegradedTests` + `AggregateStoreGeminiDegradedSuppressionTests` + `AppDependenciesCodexGeminiRegistrationTests`; UI-11 covered by `ProviderDashboardURLTests` + `ProviderRowViewDashboardButtonTests` + `ProviderRowViewTooltipTests` + `ProviderRowViewDegradedTests` + `TotalsHeaderViewFootnoteTests`) |
 | Plans drafted | 34 (Phase 3 plans 01–09 drafted 2026-05-15; Phase 4 plans 01–09 drafted 2026-05-18) |
-| Plans executed | 29 (Phase 1 = 9; Phase 2 = 7 across Waves 1–5; Phase 3 Plan 01 = 1 in e2bcd5e + 6a18026 + a31b99a; Phase 3 Plan 02 = 1 in dd160a0 + 43f97ae; Phase 3 Plan 03 = 1 in d16b180 + a5f62df; Phase 3 Plan 04 = 1 in 88f0521 + 3ad9a5a; Phase 3 Plan 05 = 1 in df3ec24 + eb32dc4 + eaee6c6; Phase 3 Plan 06 = 1 in 8187562 + 2e76a5e + 43f6e81; Phase 3 Plan 07 = 1 in 75e0ac9 + 74a109c + 2efa0d7; Phase 3 Plan 08 = 1 in 1899ccf + ade63ce + 78b7ad8; Phase 3 Plan 09 = 1 in e192b0a; Phase 4 Plan 01 = 67accbe + 50aa22e + 25a3496; Phase 4 Plan 02 = 362e689; Phase 4 Plan 03 = e6a0731 + 3542733; Phase 4 Plan 04 = 1460a28 + 7228863) |
+| Plans executed | 30 (Phase 1 = 9; Phase 2 = 7 across Waves 1–5; Phase 3 Plan 01 = 1 in e2bcd5e + 6a18026 + a31b99a; Phase 3 Plan 02 = 1 in dd160a0 + 43f97ae; Phase 3 Plan 03 = 1 in d16b180 + a5f62df; Phase 3 Plan 04 = 1 in 88f0521 + 3ad9a5a; Phase 3 Plan 05 = 1 in df3ec24 + eb32dc4 + eaee6c6; Phase 3 Plan 06 = 1 in 8187562 + 2e76a5e + 43f6e81; Phase 3 Plan 07 = 1 in 75e0ac9 + 74a109c + 2efa0d7; Phase 3 Plan 08 = 1 in 1899ccf + ade63ce + 78b7ad8; Phase 3 Plan 09 = 1 in e192b0a; Phase 4 Plan 01 = 67accbe + 50aa22e + 25a3496; Phase 4 Plan 02 = 362e689; Phase 4 Plan 03 = e6a0731 + 3542733; Phase 4 Plan 04 = 1460a28 + 7228863; Phase 4 Plan 05 = cebe8b8; Phase 4 Plan 06 = 83b48b4) |
 | Node repairs | 1 (Phase 2 Wave 1 salvage — see Phase 2 backprop) |
 | UI phases run | 0 |
 | UAT gaps closed | 1 (Test 2 cosmetic hover state) |
