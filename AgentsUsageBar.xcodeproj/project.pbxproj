@@ -72,6 +72,15 @@
 		AA040400000000000000021A /* credits.unauthorized.json in Resources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000021B /* credits.unauthorized.json */; };
 		AA040400000000000000022A /* key.with_limit.json in Resources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000022B /* key.with_limit.json */; };
 		AA040400000000000000023A /* key.no_limit.json in Resources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000023B /* key.no_limit.json */; };
+		/* Plan 01.05 — NoopCacheStore (Infrastructure fallback) */
+		AA050500000000000000004A /* NoopCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500000000000000004B /* NoopCacheStore.swift */; };
+		/* Plan 01.05 — Aggregation + Notifications sources */
+		AA050500000000000000001A /* PollScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500000000000000001B /* PollScheduler.swift */; };
+		AA050500000000000000002A /* ThresholdEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500000000000000002B /* ThresholdEngine.swift */; };
+		AA050500000000000000003A /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500000000000000003B /* NotificationManager.swift */; };
+		/* Plan 01.05 — Test sources */
+		AA050500000000000000010A /* AggregateStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500000000000000010B /* AggregateStoreTests.swift */; };
+		AA050500000000000000011A /* PollSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500000000000000011B /* PollSchedulerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -153,6 +162,15 @@
 		AA040400000000000000021B /* credits.unauthorized.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "credits.unauthorized.json"; sourceTree = "<group>"; };
 		AA040400000000000000022B /* key.with_limit.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "key.with_limit.json"; sourceTree = "<group>"; };
 		AA040400000000000000023B /* key.no_limit.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "key.no_limit.json"; sourceTree = "<group>"; };
+		/* Plan 01.05 — NoopCacheStore file reference */
+		AA050500000000000000004B /* NoopCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoopCacheStore.swift; sourceTree = "<group>"; };
+		/* Plan 01.05 — Aggregation + Notifications file references */
+		AA050500000000000000001B /* PollScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollScheduler.swift; sourceTree = "<group>"; };
+		AA050500000000000000002B /* ThresholdEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdEngine.swift; sourceTree = "<group>"; };
+		AA050500000000000000003B /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		/* Plan 01.05 — Test file references */
+		AA050500000000000000010B /* AggregateStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreTests.swift; sourceTree = "<group>"; };
+		AA050500000000000000011B /* PollSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollSchedulerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -194,6 +212,7 @@
 				AA020200000000000000030B /* Infrastructure */,
 				AA030300000000000000030B /* Config */,
 				AA040400000000000000030B /* Providers */,
+				AA050500000000000000030B /* Notifications */,
 			);
 			path = AgentsUsageBar;
 			sourceTree = "<group>";
@@ -236,6 +255,7 @@
 				AA020200000000000000013B /* CacheStore.swift */,
 				AA020200000000000000014B /* FileCacheStore.swift */,
 				AA020200000000000000015B /* AppLogger.swift */,
+				AA050500000000000000004B /* NoopCacheStore.swift */,
 			);
 			path = Infrastructure;
 			sourceTree = "<group>";
@@ -345,8 +365,29 @@
 			isa = PBXGroup;
 			children = (
 				AA000001000000000000003B /* AggregateStore.swift */,
+				AA050500000000000000001B /* PollScheduler.swift */,
 			);
 			path = Aggregation;
+			sourceTree = "<group>";
+		};
+		/* Plan 01.05 — Notifications source group */
+		AA050500000000000000030B /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				AA050500000000000000002B /* ThresholdEngine.swift */,
+				AA050500000000000000003B /* NotificationManager.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
+		/* Plan 01.05 — AggregationTests group */
+		AA050500000000000000031B /* AggregationTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA050500000000000000010B /* AggregateStoreTests.swift */,
+				AA050500000000000000011B /* PollSchedulerTests.swift */,
+			);
+			path = AggregationTests;
 			sourceTree = "<group>";
 		};
 		AA00000100000000000000D5 /* UI */ = {
@@ -377,6 +418,7 @@
 				AA020200000000000000032B /* InfrastructureTests */,
 				AA030300000000000000031B /* ConfigTests */,
 				AA040400000000000000032B /* ProvidersOpenRouterTests */,
+				AA050500000000000000031B /* AggregationTests */,
 			);
 			path = AgentsUsageBarTests;
 			sourceTree = "<group>";
@@ -531,6 +573,10 @@
 				AA040400000000000000003A /* OpenRouterResponses.swift in Sources */,
 				AA040400000000000000004A /* OpenRouterClient.swift in Sources */,
 				AA040400000000000000005A /* OpenRouterProvider.swift in Sources */,
+				AA050500000000000000004A /* NoopCacheStore.swift in Sources */,
+				AA050500000000000000001A /* PollScheduler.swift in Sources */,
+				AA050500000000000000002A /* ThresholdEngine.swift in Sources */,
+				AA050500000000000000003A /* NotificationManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -550,6 +596,8 @@
 				AA040400000000000000010A /* ResponseDecodingTests.swift in Sources */,
 				AA040400000000000000011A /* OpenRouterProviderTests.swift in Sources */,
 				AA040400000000000000012A /* BaselineDeltaTests.swift in Sources */,
+				AA050500000000000000010A /* AggregateStoreTests.swift in Sources */,
+				AA050500000000000000011A /* PollSchedulerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

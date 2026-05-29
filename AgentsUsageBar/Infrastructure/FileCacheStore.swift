@@ -96,7 +96,7 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
 
     public func maintainBaseline(for id: ProviderID, now: Date, currentValue: Double) {
         queue.sync(flags: .barrier) {
-            var envelope = _loadEnvelope() ?? CacheEnvelope(providers: [:], baselines: [:])
+            let envelope = _loadEnvelope() ?? CacheEnvelope(providers: [:], baselines: [:])
             let today = TodayHelper.formatYYYYMMDD(now)
             let existing = envelope.baselines[id]
 

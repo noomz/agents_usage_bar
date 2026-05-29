@@ -21,7 +21,21 @@ public enum AppDependencies {
 
     /// Builds the production container.
     /// Called once from `AgentsUsageBarApp.init()` via `@State`.
+    ///
+    /// Plan 01.08 replaces this stub with the full wiring (URLSessionHTTPClient,
+    /// FileCacheStore, ConfigStore, OpenRouterProvider, PollScheduler).
     public static func makeProduction() -> Container {
-        Container(store: AggregateStore())
+        // FileCacheStore() throws only if Application Support directory cannot be created
+        // (extremely unlikely on a healthy Mac). Fall through to an in-memory noop on error
+        // so the app launches rather than crashing — Plan 01.08 adds proper error reporting.
+        let cache: any CacheStore = (try? FileCacheStore()) ?? NoopCacheStore()
+        let store = AggregateStore(
+            registry: [],
+            clock: SystemClock(),
+            cache: cache,
+            thresholds: ThresholdEngine(),
+            notifications: NoopNotificationManager()
+        )
+        return Container(store: store)
     }
 }

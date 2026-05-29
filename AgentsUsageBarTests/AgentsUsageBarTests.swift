@@ -14,10 +14,19 @@ import Testing
 struct AgentsUsageBarSkeletonTests {
 
     @Test func aggregateStoreSeedsOpenRouterPlaceholder() {
-        let store = AggregateStore()
+        // Plan 01.05: AggregateStore now requires explicit dependency injection.
+        // seedPlaceholder() is the B10 API for pre-populating placeholder rows.
+        let store = AggregateStore(
+            registry: [],
+            clock: SystemClock(),
+            cache: NoopCacheStore(),
+            thresholds: ThresholdEngine(),
+            notifications: NoopNotificationManager()
+        )
+        store.seedPlaceholder(providerID: .openrouter, displayName: "OpenRouter", status: .unauthenticated)
         #expect(store.providers.count == 1)
         #expect(store.providers[.openrouter]?.displayName == "OpenRouter")
-        #expect(store.providers[.openrouter]?.placeholderMessage == "Not configured")
+        #expect(store.providers[.openrouter]?.snapshot == nil)
     }
 
     @Test func providerIDOpenRouterRawValueIsStable() {
