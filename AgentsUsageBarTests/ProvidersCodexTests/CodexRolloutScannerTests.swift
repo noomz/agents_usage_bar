@@ -74,7 +74,10 @@ struct CodexRolloutScannerTests {
 
         // Pin "now" to 2026-04-15 12:00 local — today.
         let now = localNoon(year: 2026, month: 4, day: 15)
-        let cal = Calendar.current
+        // G-04: scanner forces Gregorian for path components (Buddhist-locale
+        // hosts return year=2569 from Calendar.current). Tests must match.
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = Calendar.current.timeZone
         let today = cal.dateComponents([.year, .month, .day], from: cal.startOfDay(for: now))
 
         let todayDir = try createDateDir(in: root, year: today.year!, month: today.month!, day: today.day!)
@@ -92,7 +95,10 @@ struct CodexRolloutScannerTests {
         defer { try? FileManager.default.removeItem(at: root) }
 
         let now = localNoon(year: 2026, month: 4, day: 15)
-        let cal = Calendar.current
+        // G-04: scanner forces Gregorian for path components (Buddhist-locale
+        // hosts return year=2569 from Calendar.current). Tests must match.
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = Calendar.current.timeZone
         let todayDate = cal.startOfDay(for: now)
         let yesterdayDate = cal.date(byAdding: .day, value: -1, to: todayDate)!
 
@@ -114,7 +120,10 @@ struct CodexRolloutScannerTests {
         defer { try? FileManager.default.removeItem(at: root) }
 
         let now = localNoon(year: 2026, month: 4, day: 15)
-        let cal = Calendar.current
+        // G-04: scanner forces Gregorian for path components (Buddhist-locale
+        // hosts return year=2569 from Calendar.current). Tests must match.
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = Calendar.current.timeZone
         let todayDate = cal.startOfDay(for: now)
         let yesterdayDate = cal.date(byAdding: .day, value: -1, to: todayDate)!
         let twoDaysAgoDate = cal.date(byAdding: .day, value: -2, to: todayDate)!
@@ -142,7 +151,10 @@ struct CodexRolloutScannerTests {
         defer { try? FileManager.default.removeItem(at: root) }
 
         let now = localNoon(year: 2026, month: 4, day: 15)
-        let cal = Calendar.current
+        // G-04: scanner forces Gregorian for path components (Buddhist-locale
+        // hosts return year=2569 from Calendar.current). Tests must match.
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = Calendar.current.timeZone
         let today = cal.dateComponents([.year, .month, .day], from: cal.startOfDay(for: now))
 
         // Only today exists; do NOT create yesterday's directory.
@@ -208,7 +220,10 @@ struct CodexRolloutScannerTests {
         defer { try? FileManager.default.removeItem(at: root) }
 
         let now = localNoon(year: 2026, month: 4, day: 15)
-        let cal = Calendar.current
+        // G-04: scanner forces Gregorian for path components (Buddhist-locale
+        // hosts return year=2569 from Calendar.current). Tests must match.
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = Calendar.current.timeZone
         let today = cal.dateComponents([.year, .month, .day], from: cal.startOfDay(for: now))
 
         let todayDir = try createDateDir(in: root, year: today.year!, month: today.month!, day: today.day!)
@@ -233,7 +248,10 @@ struct CodexRolloutScannerTests {
         defer { try? FileManager.default.removeItem(at: root) }
 
         let now = localNoon(year: 2026, month: 4, day: 15)
-        let cal = Calendar.current
+        // G-04: scanner forces Gregorian for path components (Buddhist-locale
+        // hosts return year=2569 from Calendar.current). Tests must match.
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = Calendar.current.timeZone
         let today = cal.dateComponents([.year, .month, .day], from: cal.startOfDay(for: now))
         let todayDir = try createDateDir(in: root, year: today.year!, month: today.month!, day: today.day!)
 
@@ -252,7 +270,10 @@ struct CodexRolloutScannerTests {
         defer { try? FileManager.default.removeItem(at: root) }
 
         let now = localNoon(year: 2026, month: 4, day: 15)
-        let cal = Calendar.current
+        // G-04: scanner forces Gregorian for path components (Buddhist-locale
+        // hosts return year=2569 from Calendar.current). Tests must match.
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = Calendar.current.timeZone
         let today = cal.dateComponents([.year, .month, .day], from: cal.startOfDay(for: now))
         let todayDir = try createDateDir(in: root, year: today.year!, month: today.month!, day: today.day!)
 

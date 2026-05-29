@@ -79,9 +79,22 @@ public struct CodexRolloutScanner: Sendable {
         // always yields a valid Date (24-, 23-, or 25-hour days all handled).
         let yesterdayStart = calendar.date(byAdding: .day, value: -1, to: todayStart)!
 
+        // G-04 (UAT 2026-05-18): the Codex CLI (Rust + chrono) writes rollout
+        // directories using the **Gregorian** Y/M/D in the user's local timezone:
+        //   `~/.codex/sessions/2026/05/18/rollout-...`
+        // On hosts whose `Calendar.current` is non-Gregorian — e.g. a Thai
+        // (Buddhist) locale where `Calendar.current.identifier == .buddhist`
+        // and `dateComponents.year` returns 2569 instead of 2026 — the
+        // scanner was building `/Users/.../sessions/2569/05/18` and silently
+        // missing every rollout file. The fix forces the components to the
+        // Gregorian calendar while preserving the supplied calendar's TZ
+        // so DST / leap-day handling (Pitfall 4) keeps working.
+        var pathCalendar = Calendar(identifier: .gregorian)
+        pathCalendar.timeZone = calendar.timeZone
+
         var results: [URL] = []
         for date in [todayStart, yesterdayStart] {
-            let comps = calendar.dateComponents([.year, .month, .day], from: date)
+            let comps = pathCalendar.dateComponents([.year, .month, .day], from: date)
             // Force-unwrap is safe: `dateComponents([.year,.month,.day],from:)`
             // always populates all three components for a non-nil Date.
             let dir = root
