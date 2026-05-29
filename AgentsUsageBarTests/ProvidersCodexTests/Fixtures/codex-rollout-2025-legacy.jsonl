@@ -1,0 +1,2 @@
+{"timestamp":"2025-09-12T08:00:00.000Z","type":"session_meta","payload":{"model_provider":"openai","cli_version":"0.18.0","cwd":"/Users/example"}}
+{"timestamp":"2025-09-12T08:05:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":50,"output_tokens":20,"total_tokens":170}},"rate_limits":{"primary":{"used_percent":15,"window_minutes":300,"resets_in_seconds":300}}}}
