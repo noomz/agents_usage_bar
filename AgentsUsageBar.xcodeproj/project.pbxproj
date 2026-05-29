@@ -145,6 +145,13 @@
 		AA030600000000000000003A /* GeminiOAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000003B /* GeminiOAuthProvider.swift */; };
 		AA030600000000000000012A /* GeminiOAuthProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000012B /* GeminiOAuthProviderTests.swift */; };
 		AA030600000000000000013A /* GeminiOAuthProviderDegradedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000013B /* GeminiOAuthProviderDegradedTests.swift */; };
+		/* Plan 03-08 Task 1 — AppConfig codex + gemini + ConfigStore tests */
+		AA030800000000000000010A /* AppConfigCodexGeminiTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030800000000000000010B /* AppConfigCodexGeminiTests.swift */; };
+		AA030800000000000000011A /* ConfigStoreCodexGeminiTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030800000000000000011B /* ConfigStoreCodexGeminiTests.swift */; };
+		/* Plan 03-08 Task 2 — ThresholdEngine D-11 suppression + Gemini degraded integration tests */
+		AA030800000000000000012A /* AggregateStoreGeminiDegradedSuppressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030800000000000000012B /* AggregateStoreGeminiDegradedSuppressionTests.swift */; };
+		/* Plan 03-08 Task 3 — AppDependencies registration tests */
+		AA030800000000000000013A /* AppDependenciesCodexGeminiRegistrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030800000000000000013B /* AppDependenciesCodexGeminiRegistrationTests.swift */; };
 		/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test (test target) */
 		AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */; };
 		/* Plan 03-04 Task 2 — CodexJSONLProvider (app target) + provider/fallback tests */
@@ -393,6 +400,11 @@
 		AA030600000000000000022B /* gemini-loadcodeassist-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-loadcodeassist-fixture.json"; sourceTree = "<group>"; };
 		AA030600000000000000023B /* gemini-loadcodeassist-object-project-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-loadcodeassist-object-project-fixture.json"; sourceTree = "<group>"; };
 		AA030600000000000000024B /* gemini-loadcodeassist-coldstart-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-loadcodeassist-coldstart-fixture.json"; sourceTree = "<group>"; };
+		/* Plan 03-08 — Config + Aggregation test file references */
+		AA030800000000000000010B /* AppConfigCodexGeminiTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigCodexGeminiTests.swift; sourceTree = "<group>"; };
+		AA030800000000000000011B /* ConfigStoreCodexGeminiTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStoreCodexGeminiTests.swift; sourceTree = "<group>"; };
+		AA030800000000000000012B /* AggregateStoreGeminiDegradedSuppressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreGeminiDegradedSuppressionTests.swift; sourceTree = "<group>"; };
+		AA030800000000000000013B /* AppDependenciesCodexGeminiRegistrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependenciesCodexGeminiRegistrationTests.swift; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -727,6 +739,9 @@
 			children = (
 				AA030300000000000000010B /* TomlReaderTests.swift */,
 				AA030300000000000000011B /* ConfigStoreTests.swift */,
+				/* Plan 03-08 — AppConfig + ConfigStore Codex/Gemini tests */
+				AA030800000000000000010B /* AppConfigCodexGeminiTests.swift */,
+				AA030800000000000000011B /* ConfigStoreCodexGeminiTests.swift */,
 				AA030300000000000000032B /* Fixtures */,
 			);
 			path = ConfigTests;
@@ -777,6 +792,9 @@
 				AA020600000000000000013B /* PollSchedulerSleepWakeTests.swift */,
 				/* Plan 02.07 — stale + tint tests */
 				AA020700000000000000011B /* AggregateStoreStaleAndTintTests.swift */,
+				/* Plan 03-08 — D-11 ThresholdEngine suppression + AppDependencies registration tests */
+				AA030800000000000000012B /* AggregateStoreGeminiDegradedSuppressionTests.swift */,
+				AA030800000000000000013B /* AppDependenciesCodexGeminiRegistrationTests.swift */,
 			);
 			path = AggregationTests;
 			sourceTree = "<group>";
@@ -1317,6 +1335,13 @@
 				/* Plan 03-06 Task 2 — GeminiOAuthProvider tests */
 				AA030600000000000000012A /* GeminiOAuthProviderTests.swift in Sources */,
 				AA030600000000000000013A /* GeminiOAuthProviderDegradedTests.swift in Sources */,
+				/* Plan 03-08 Task 1 — AppConfig + ConfigStore Codex/Gemini tests */
+				AA030800000000000000010A /* AppConfigCodexGeminiTests.swift in Sources */,
+				AA030800000000000000011A /* ConfigStoreCodexGeminiTests.swift in Sources */,
+				/* Plan 03-08 Task 2 — ThresholdEngine D-11 suppression test */
+				AA030800000000000000012A /* AggregateStoreGeminiDegradedSuppressionTests.swift in Sources */,
+				/* Plan 03-08 Task 3 — AppDependencies registration test */
+				AA030800000000000000013A /* AppDependenciesCodexGeminiRegistrationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

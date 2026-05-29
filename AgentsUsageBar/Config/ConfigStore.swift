@@ -54,6 +54,9 @@ public final class ConfigStore: @unchecked Sendable {
 
         let topLevel = toml[""] ?? [:]
         let orSection = toml["openrouter"] ?? [:]
+        // Plan 03-08 — new per-provider sections.
+        let codexSection = toml["codex"] ?? [:]
+        let geminiSection = toml["gemini"] ?? [:]
 
         let defaults = AppConfig.defaults
 
@@ -134,6 +137,49 @@ public final class ConfigStore: @unchecked Sendable {
             threshold = defaults.threshold
         }
 
+        // --- Plan 03-08 — codex section (env > toml > defaults) ---
+
+        // codex.enabled: TOML only (no env override).
+        let codexEnabled: Bool
+        if case .bool(let b) = codexSection["enabled"] {
+            codexEnabled = b
+        } else {
+            codexEnabled = defaults.codex.enabled
+        }
+
+        // codex.bearerOverride: env CODEX_BEARER_TOKEN ONLY (NOT TOML —
+        // bearer in TOML would surface in shell history; STATE #22 empty-
+        // env-treated-as-absent applies).
+        let codexBearer: Secret?
+        if let envBearer = env.value(forKey: "CODEX_BEARER_TOKEN") {
+            codexBearer = Secret(envBearer)
+        } else {
+            codexBearer = nil
+        }
+
+        // codex.sessionWindowDays: hard-coded 2 in v1 per 03-CONTEXT
+        // "Deferred Ideas — Configurable session_window_days".
+        let codexSessionWindowDays = defaults.codex.sessionWindowDays
+
+        // --- Plan 03-08 — gemini section (env > toml > defaults) ---
+
+        // gemini.enabled: TOML only (no env override).
+        let geminiEnabled: Bool
+        if case .bool(let b) = geminiSection["enabled"] {
+            geminiEnabled = b
+        } else {
+            geminiEnabled = defaults.gemini.enabled
+        }
+
+        // gemini.projectIDOverride: env GEMINI_PROJECT_ID ONLY. NOT
+        // credential material — exposed as plain String?.
+        let geminiProjectID: String?
+        if let envProject = env.value(forKey: "GEMINI_PROJECT_ID") {
+            geminiProjectID = envProject
+        } else {
+            geminiProjectID = nil
+        }
+
         return AppConfig(
             refreshInterval: refreshInterval,
             threshold: threshold,
@@ -143,6 +189,15 @@ public final class ConfigStore: @unchecked Sendable {
                 httpReferer: httpReferer,
                 xTitle: xTitle,
                 enabled: enabled
+            ),
+            codex: CodexConfig(
+                enabled: codexEnabled,
+                bearerOverride: codexBearer,
+                sessionWindowDays: codexSessionWindowDays
+            ),
+            gemini: GeminiConfig(
+                enabled: geminiEnabled,
+                projectIDOverride: geminiProjectID
             )
         )
     }
