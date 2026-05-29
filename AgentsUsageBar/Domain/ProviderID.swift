@@ -25,6 +25,13 @@ extension ProviderID {
     /// `displayHint` already returns "Codex" for this rawValue.
     public static let codex = ProviderID(rawValue: "codex")
 
+    /// Gemini — Google Gemini via OAuth-personal flow against
+    /// `cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota` +
+    /// `:loadCodeAssist`. Plan 03-06 introduces this constant for the
+    /// `GeminiOAuthProvider` actor. `displayHint` already returns "Gemini"
+    /// for this rawValue.
+    public static let gemini = ProviderID(rawValue: "gemini")
+
     /// Human-readable display hint for this provider.
     ///
     /// Used by `ThresholdEngine` to populate `NotificationDecision.displayName` (B3),

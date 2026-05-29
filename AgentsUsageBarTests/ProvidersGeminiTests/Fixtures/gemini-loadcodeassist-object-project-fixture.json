@@ -1,0 +1,13 @@
+{
+  "currentTier": {
+    "id": "standard-tier",
+    "name": "Paid",
+    "hasAcceptedTos": true,
+    "hasOnboardedPreviously": true
+  },
+  "cloudaicompanionProject": {
+    "id": "gen-lang-client-9999999999",
+    "projectId": "gen-lang-client-9999999999"
+  },
+  "allowedTiers": []
+}

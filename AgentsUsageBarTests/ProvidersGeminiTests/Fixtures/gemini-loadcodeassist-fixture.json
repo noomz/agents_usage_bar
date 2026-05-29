@@ -1,0 +1,11 @@
+{
+  "currentTier": {
+    "id": "free-tier",
+    "name": "Free",
+    "hasAcceptedTos": true,
+    "hasOnboardedPreviously": true
+  },
+  "cloudaicompanionProject": "gen-lang-client-0123456789",
+  "allowedTiers": [],
+  "paidTier": null
+}
