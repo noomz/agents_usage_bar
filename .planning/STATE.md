@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-12T12:00:00.000Z"
+last_updated: "2026-05-13T00:00:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 9
+  completed_plans: 9
   percent: 100
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-12 (after Plan 01.08 execution — Phase 1 COMPLETE)
+**Last Updated:** 2026-05-13 (after Plan 01.09 gap-closure execution — Phase 1 UAT Test 2 gap closed)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -28,17 +28,17 @@ progress:
 
 ## Current Position
 
-Phase: 01 (skeleton-openrouter-vertical-slice) — COMPLETE
-Plan: 8 of 8 COMPLETE
+Phase: 01 (skeleton-openrouter-vertical-slice) — COMPLETE (incl. gap closure)
+Plan: 9 of 9 COMPLETE
 
 - **Milestone:** v1 (initial release)
 - **Phase:** 1 of 6 — Skeleton + OpenRouter Vertical Slice — COMPLETE
-- **Plan:** 01.08 COMPLETE — Phase 1 fully executed
-- **Status:** Phase 01 complete; awaiting Phase 02 planning
+- **Plan:** 01.09 COMPLETE — UAT Test 2 cosmetic hover-state gap closed
+- **Status:** Phase 01 complete (8 main + 1 gap-closure); awaiting Phase 02 planning
 - **Progress:** [██████████] 100% (Phase 1)
 
 ```
-[============================================================] 100% (8/8 plans complete)
+[============================================================] 100% (9/9 plans complete)
 ```
 
 ## Performance Metrics
@@ -46,13 +46,14 @@ Plan: 8 of 8 COMPLETE
 | Metric | Value |
 |--------|-------|
 | Phases complete | 1 / 6 |
-| Plans complete | 8 / 8 (Phase 1 fully complete) |
+| Plans complete | 9 / 9 (Phase 1 fully complete incl. UAT gap closure) |
 | Requirements mapped | 76 / 76 (100%) |
 | Requirements validated | 28 / 76 (all Phase 1: SHELL-01,02,03,04,06 + SEC-01,SEC-02,SEC-04,SEC-05 + UI-01,02,04,06,07,10 + POLL-01,02,03,07,08 + NOTIF-06,07 + CFG-01,02 + ROUTER-01,02,03,04) |
-| Plans drafted | 8 |
-| Plans executed | 8 (01.08 complete — ~900s, 3 tasks, 11 files) |
+| Plans drafted | 9 |
+| Plans executed | 9 (01.09 cosmetic gap closure — 1 task, 4 files; HoverableBorderedButtonStyle + FooterView modifier swap; B5 + W7 preserved) |
 | Node repairs | 0 |
 | UI phases run | 0 |
+| UAT gaps closed | 1 (Test 2 cosmetic hover state) |
 
 ## Accumulated Context
 

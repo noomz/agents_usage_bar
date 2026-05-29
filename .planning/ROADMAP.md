@@ -30,7 +30,7 @@
   3. The popover stays in sync because a single `PollScheduler` actor refreshes every 5 minutes (and on popover open, coalesced within 5s) — confirmable by watching the "Updated Xs ago" label tick.
   4. Quitting via the popover footer or Cmd-click context menu fully terminates the app; relaunch restores cached values immediately (no "Loading…" flash).
   5. No secret strings ever appear in `os.Logger` output or stderr; `Secret`-wrapped credentials render as `"<redacted>"` and the CI grep step rejects any source file containing literal `sk-`, `sk-or-`, or `AIza`.
-**Plans:** 8/8 plans executed — Phase 1 COMPLETE ✓ 2026-05-12
+**Plans:** 9/9 plans executed — Phase 1 COMPLETE (incl. UAT gap closure) ✓ 2026-05-13
 Plans:
 - [x] 01.01-walking-skeleton-PLAN.md — Xcode project scaffold, Info.plist (LSUIElement=YES), Entitlements (network.client only), MenuBarExtra(.window) skeleton, SKELETON.md (SHELL-01..04, SHELL-06) ✓ 2026-05-12
 - [x] 01.02-domain-infrastructure-PLAN.md — Domain value types (Secret, UsageSnapshot, Quota, ProviderID, etc.) + Infrastructure protocols (HTTPClient, Clock, CacheStore, AppLogger) + Swift Testing scaffold (SEC-01, SEC-02, UI-04, POLL-08) ✓ 2026-05-12
@@ -40,6 +40,7 @@ Plans:
 - [x] 01.06-popover-ui-PLAN.md — PopoverRootView + ProviderRowView + FooterView + QuotaBar/StatusDot/RelativeTimestampLabel (UI-01, UI-02, UI-06, UI-07, UI-10) ✓ 2026-05-12
 - [x] 01.07-notifications-PLAN.md — ThresholdEngine value type + UNNotificationManager (lazy auth) (NOTIF-06, NOTIF-07) ✓ 2026-05-12
 - [x] 01.08-composition-ci-PLAN.md — AppDependencies composition root + MenuBarExtra scene + CI workflow + README + SEC-04 grep (SEC-04) ✓ 2026-05-12
+- [x] 01.09-hover-style-gap-PLAN.md — HoverableBorderedButtonStyle + FooterView modifier swap (UAT Test 2 cosmetic hover-state gap closure; B5/W7 preserved) ✓ 2026-05-13
 **UI hint:** yes
 
 ### Phase 2: Claude Provider + Threshold/Rollover + JSONL Streaming
