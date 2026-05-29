@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "lastUpdated": "2026-05-15",
+  "source": "fixture copy of production codex-models.json; values mirror RESEARCH §Embedded Pricing",
+  "default": {
+    "inputPerMToken":        0.750,
+    "outputPerMToken":       3.000,
+    "cachedInputPerMToken":  0.025
+  },
+  "models": {
+    "codex-mini-latest": { "inputPerMToken": 0.750, "outputPerMToken": 3.000, "cachedInputPerMToken": 0.025 },
+    "o4-mini":           { "inputPerMToken": 1.100, "outputPerMToken": 4.400, "cachedInputPerMToken": 0.275 },
+    "o3":                { "inputPerMToken": 2.000, "outputPerMToken": 8.000, "cachedInputPerMToken": 0.500 },
+    "o3-mini":           { "inputPerMToken": 1.100, "outputPerMToken": 4.400, "cachedInputPerMToken": 0.550 },
+    "gpt-4.1":           { "inputPerMToken": 2.000, "outputPerMToken": 8.000, "cachedInputPerMToken": 0.500 },
+    "gpt-4.1-mini":      { "inputPerMToken": 0.200, "outputPerMToken": 0.800, "cachedInputPerMToken": 0.100 },
+    "gpt-4.1-nano":      { "inputPerMToken": 0.050, "outputPerMToken": 0.200, "cachedInputPerMToken": 0.025 }
+  }
+}
