@@ -127,7 +127,14 @@ Plans:
   3. Settings exposes refresh interval picker (Manual/1m/2m/5m/15m/30m), default threshold slider, per-provider enable/disable toggles, theme (light/dark/auto), and "Open at login" toggle defaulted OFF.
   4. Theme changes apply live via `@Environment(\.colorScheme)`; light/dark/auto each render correctly on a fresh popover open.
   5. Shell RC files (`~/.zshrc`, `~/.bashrc`, fish config) are never read at any point in the first-run flow or Settings — env vars come from `ProcessInfo.environment` only (CFG-06 anti-feature is honored).
-**Plans:** TBD
+**Plans:** 6/6 plans drafted 2026-05-21 — ready for `/gsd-execute-phase 05`
+Plans:
+- [ ] 05-01-PLAN.md — Settings scaffold (SettingsScene + stub tabs) + WindowActivationObserver (.accessory↔.regular flip) (SHELL-05) — Wave 1
+- [ ] 05-02-PLAN.md — UserPreferencesStore (@Observable UserDefaults wrapper) + ConfigStore.load(preferences:) precedence overlay (CFG-05, CFG-06) — Wave 2 (depends 05-01)
+- [ ] 05-03-PLAN.md — SettingsGeneralTab (4 controls) + AggregateStore.updateWarningFraction + observePreferences hot-reload loop (SHELL-05, CFG-05) — Wave 3 (depends 05-02)
+- [ ] 05-04-PLAN.md — DetectionProbe (7-provider parallel) + OnboardingCopy (providers.json) + SettingsProvidersTab (CFG-03, CFG-04, CFG-06) — Wave 3 (depends 05-02, parallel with 05-03)
+- [ ] 05-05-PLAN.md — WelcomeWindowController + WelcomeRootView + WelcomeProviderRow + AppDependencies wiring (CFG-03, CFG-04, CFG-05) — Wave 4 (depends 05-02, 05-04)
+- [ ] 05-06-PLAN.md — SettingsAboutTab + CFG-06 CI grep step + 05-UAT.md walkthrough (5 manual + 5 attestation) + BLOCKING reviewer checkpoint — Wave 5 (depends 05-03, 05-04, 05-05)
 **UI hint:** yes
 
 ### Phase 6: Distribution (Sign + Notarize + DMG + Sparkle + OSS hygiene)
@@ -151,7 +158,7 @@ Plans:
 | 2. Claude Provider + Threshold/Rollover + JSONL Streaming | 7/7 | ✅ Complete | 2026-05-15 |
 | 3. Remote API Providers (Codex + Gemini) | 9/9 | Awaiting UAT | - |
 | 4. Local LLM Presence (Ollama + LM Studio + llama.cpp) | 0/9 | Planned 2026-05-18 | - |
-| 5. First-Run UX + Settings Polish | 0/0 | Not started | - |
+| 5. First-Run UX + Settings Polish | 0/6 | Planned 2026-05-21 | - |
 | 6. Distribution (Sign + Notarize + DMG + Sparkle + OSS hygiene) | 0/0 | Not started | - |
 
 ## Coverage
@@ -174,4 +181,4 @@ Plans:
 | **Total** | **76** | All 76 v1 requirements covered exactly once — see REQUIREMENTS.md Traceability table for the authoritative per-requirement mapping. |
 
 ---
-*Roadmap created: 2026-05-11. Phase 3 planned: 2026-05-15. Phase 4 planned: 2026-05-18. Ready for `/gsd-execute-phase 04`.*
+*Roadmap created: 2026-05-11. Phase 3 planned: 2026-05-15. Phase 4 planned: 2026-05-18. Phase 5 planned: 2026-05-21. Ready for `/gsd-execute-phase 05`.*
