@@ -51,6 +51,14 @@ public final class AggregateStore {
 
     private var currentInterval: RefreshInterval = .m5
 
+    // MARK: - Plan 02.06 — Per-provider circuit breakers (POLL-05) + POLL-06 terminal skip
+
+    /// Lazy per-provider 5-strike circuit breakers (POLL-05) — separate from any
+    /// provider-internal breaker (e.g. Claude's `/api/oauth/usage` 3-strike OAuth-usage
+    /// breaker inside `ClaudeJSONLProvider`). Keyed by `ProviderID`; instantiated on
+    /// first reference via `breaker(for:)`.
+    private var perProviderBreakers: [ProviderID: CircuitBreaker] = [:]
+
     // MARK: - Init
 
     /// Creates the store, immediately loading cached provider state so the UI shows
@@ -153,8 +161,35 @@ public final class AggregateStore {
     // MARK: - Private refresh logic
 
     private func performRefresh(now: Date) async {
+        // Plan 02.06 — Pre-compute per-provider gating BEFORE fan-out:
+        // 1. POLL-06: skip providers whose lastStatus is `.unauthenticated` (terminal until
+        //    composition changes, which typically requires an app restart).
+        // 2. POLL-05: skip providers whose 5-strike breaker is currently open.
+        var gateDecisions: [(provider: any UsageProvider, allow: Bool, openBreaker: Bool)] = []
+        for p in registry {
+            // POLL-06 — terminal unauthenticated; do not even consult the breaker.
+            if let existing = providers[p.id], case .unauthenticated = existing.status {
+                gateDecisions.append((p, false, false))
+                continue
+            }
+            let cb = breaker(for: p.id)
+            let allow = await cb.canAttempt(now: now)
+            gateDecisions.append((p, allow, !allow))
+        }
+
         await withTaskGroup(of: (ProviderID, Result<UsageSnapshot, Error>).self) { group in
-            for p in registry {
+            for decision in gateDecisions {
+                let p = decision.provider
+                if !decision.allow {
+                    if decision.openBreaker {
+                        // POLL-05: breaker is open — surface as error result so apply(_:for:)
+                        // marks the provider state appropriately.
+                        let openErr = ProviderError(kind: .http, message: "circuit-open")
+                        group.addTask { (p.id, .failure(openErr)) }
+                    }
+                    // (POLL-06 terminal-unauth providers contribute no task — preserve last state.)
+                    continue
+                }
                 group.addTask {
                     do {
                         return (p.id, .success(try await p.fetch(now: now)))
@@ -163,7 +198,22 @@ public final class AggregateStore {
                     }
                 }
             }
+
             for await (id, result) in group {
+                switch result {
+                case .success:
+                    await breaker(for: id).recordSuccess()
+                case .failure(let err):
+                    let pe = ProviderError.from(err)
+                    if pe.kind == .auth || pe.kind == .paymentRequired {
+                        // POLL-06: 4xx (non-429) — terminal unauthenticated; do NOT increment
+                        // the breaker (config-change required, not endpoint flakiness).
+                    } else if pe.message == "circuit-open" {
+                        // Already-open breaker — don't double-count.
+                    } else {
+                        await breaker(for: id).recordFailure(now: now)
+                    }
+                }
                 apply(result, for: id, now: now)
             }
         }
@@ -172,6 +222,20 @@ public final class AggregateStore {
         rollupTotals()
         await fireThresholdNotificationsIfNeeded(now: now)
         cache.save(providers)
+    }
+
+    /// Lazily creates (or returns the existing) per-provider 5-strike POLL-05 circuit breaker.
+    ///
+    /// Default thresholds: `threshold = 5`, `cooldown = 300s` — matches RESEARCH §F.2.
+    /// The provider-internal Claude OAuth-usage breaker (3-strike, Pitfall 5) is SEPARATE
+    /// from this one and lives inside `ClaudeJSONLProvider`.
+    private func breaker(for id: ProviderID) -> CircuitBreaker {
+        if let existing = perProviderBreakers[id] {
+            return existing
+        }
+        let b = CircuitBreaker()
+        perProviderBreakers[id] = b
+        return b
     }
 
     /// Applies a per-provider fetch result, updating the provider's `ProviderState`.

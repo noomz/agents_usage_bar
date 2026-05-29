@@ -49,6 +49,14 @@ public actor ClaudeJSONLProvider: UsageProvider {
     private let clock: any Clock
     private let roots: [URL]
 
+    /// Plan 02.06 — Pitfall 5 (default decision #4):
+    /// A dedicated 3-strike circuit breaker for the `/api/oauth/usage` endpoint that
+    /// trips after 3 consecutive 429 responses (persistent for some Claude Max accounts —
+    /// GitHub issue #30930 / #31021). The cooldown matches the general POLL-05 breaker
+    /// (5 min) so a transient blip recovers quickly while a truly persistent rate-limit
+    /// backs off. Threshold 3 (not the general 5) per RESEARCH Pitfall 5.
+    private let oauthBreaker: CircuitBreaker = CircuitBreaker(threshold: 3, cooldown: 300)
+
     private let logger = AppLogger.logger(category: "claude")
     private var lastStatus: ProviderStatus = .error(ProviderError.notYetFetched)
 
@@ -131,11 +139,30 @@ public actor ClaudeJSONLProvider: UsageProvider {
             let candidateFiles = scanner.scanRoots(roots, modifiedSince: scanFloor)
 
             // 3. Concurrent OAuth fetch (degrades to nil on any error — Pitfall 5).
+            //
+            // Plan 02.06 — Pitfall 5 / default decision #4:
+            // Wrap the OAuth call in a 3-strike circuit breaker keyed to 429 responses on
+            // `/api/oauth/usage`. When the breaker is open we skip the call entirely (returns
+            // nil → quotaWindows = nil → graceful degrade to local-JSONL-only). Non-429
+            // errors do NOT increment the breaker — they are upstream/caller-side issues,
+            // not endpoint flakiness.
             async let oauthResultBox: ClaudeUsageResponse? = {
                 guard let oauth else { return nil }
+                guard await oauthBreaker.canAttempt(now: now) else {
+                    logger.notice("oauth circuit breaker open — degrading to local-only")
+                    return nil
+                }
                 do {
-                    return try await oauth.getUsage()
+                    let response = try await oauth.getUsage()
+                    await oauthBreaker.recordSuccess()
+                    return response
+                } catch ClaudeOAuthError.usageEndpointFailed(status: 429) {
+                    await oauthBreaker.recordFailure(now: now)
+                    logger.notice("oauth /api/oauth/usage 429; breaker count incremented")
+                    return nil
                 } catch {
+                    // Other errors (refresh failed, no creds, network) do NOT trip the
+                    // OAuth-usage breaker — they are upstream issues, not endpoint flakiness.
                     logger.notice(
                         "OAuth degraded: \(String(describing: error), privacy: .public)"
                     )

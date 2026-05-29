@@ -156,10 +156,14 @@
 		/* Plan 02.06 — RetryPolicy + CircuitBreaker + PowerObserver sources (app target) */
 		AA020600000000000000001A /* RetryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000001B /* RetryPolicy.swift */; };
 		AA020600000000000000002A /* CircuitBreaker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000002B /* CircuitBreaker.swift */; };
-				/* Plan 02.06 — test files (test target) */
+		AA020600000000000000003A /* PowerObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000003B /* PowerObserver.swift */; };
+		/* Plan 02.06 — test files (test target) */
 		AA020600000000000000010A /* RetryPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000010B /* RetryPolicyTests.swift */; };
 		AA020600000000000000011A /* CircuitBreakerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000011B /* CircuitBreakerTests.swift */; };
-						/* End PBXBuildFile section */
+		AA020600000000000000012A /* PowerObserverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000012B /* PowerObserverTests.swift */; };
+		AA020600000000000000013A /* PollSchedulerSleepWakeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000013B /* PollSchedulerSleepWakeTests.swift */; };
+		AA020600000000000000014A /* ClaudeJSONLProviderCircuitBreakerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000014B /* ClaudeJSONLProviderCircuitBreakerTests.swift */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		AA00000100000000000000CA /* PBXContainerItemProxy */ = {
@@ -318,10 +322,14 @@
 		/* Plan 02.06 — Infrastructure source file references */
 		AA020600000000000000001B /* RetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicy.swift; sourceTree = "<group>"; };
 		AA020600000000000000002B /* CircuitBreaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircuitBreaker.swift; sourceTree = "<group>"; };
-				/* Plan 02.06 — test file references */
+		AA020600000000000000003B /* PowerObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerObserver.swift; sourceTree = "<group>"; };
+		/* Plan 02.06 — test file references */
 		AA020600000000000000010B /* RetryPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicyTests.swift; sourceTree = "<group>"; };
 		AA020600000000000000011B /* CircuitBreakerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircuitBreakerTests.swift; sourceTree = "<group>"; };
-						/* End PBXFileReference section */
+		AA020600000000000000012B /* PowerObserverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerObserverTests.swift; sourceTree = "<group>"; };
+		AA020600000000000000013B /* PollSchedulerSleepWakeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollSchedulerSleepWakeTests.swift; sourceTree = "<group>"; };
+		AA020600000000000000014B /* ClaudeJSONLProviderCircuitBreakerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeJSONLProviderCircuitBreakerTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		AA00000100000000000000F1 /* Frameworks */ = {
@@ -412,6 +420,7 @@
 				/* Plan 02.06 — Resilience + energy primitives */
 				AA020600000000000000001B /* RetryPolicy.swift */,
 				AA020600000000000000002B /* CircuitBreaker.swift */,
+				AA020600000000000000003B /* PowerObserver.swift */,
 			);
 			path = Infrastructure;
 			sourceTree = "<group>";
@@ -436,6 +445,7 @@
 				/* Plan 02.06 — RetryPolicy + CircuitBreaker tests */
 				AA020600000000000000010B /* RetryPolicyTests.swift */,
 				AA020600000000000000011B /* CircuitBreakerTests.swift */,
+				AA020600000000000000012B /* PowerObserverTests.swift */,
 			);
 			path = InfrastructureTests;
 			sourceTree = "<group>";
@@ -570,6 +580,7 @@
 				AA050500000000000000011B /* PollSchedulerTests.swift */,
 				AA020500000000000000014B /* AggregateStoreSnoozeTests.swift */,
 				/* Plan 02.06 — sleep/wake integration tests */
+				AA020600000000000000013B /* PollSchedulerSleepWakeTests.swift */,
 			);
 			path = AggregationTests;
 			sourceTree = "<group>";
@@ -683,6 +694,7 @@
 				AA020202000000000000010B /* ClaudeModelPricingTests.swift */,
 				AA020400000000000000010B /* ClaudeJSONLProviderTests.swift */,
 				/* Plan 02.06 — OAuth circuit breaker tests */
+				AA020600000000000000014B /* ClaudeJSONLProviderCircuitBreakerTests.swift */,
 				AA020202000000000000031B /* Fixtures */,
 			);
 			path = ProvidersClaudeTests;
@@ -907,6 +919,7 @@
 				/* Plan 02.06 — RetryPolicy + CircuitBreaker + PowerObserver */
 				AA020600000000000000001A /* RetryPolicy.swift in Sources */,
 				AA020600000000000000002A /* CircuitBreaker.swift in Sources */,
+				AA020600000000000000003A /* PowerObserver.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -959,6 +972,9 @@
 				/* Plan 02.06 — RetryPolicy + CircuitBreaker + PowerObserver + sleep/wake + OAuth breaker tests */
 				AA020600000000000000010A /* RetryPolicyTests.swift in Sources */,
 				AA020600000000000000011A /* CircuitBreakerTests.swift in Sources */,
+				AA020600000000000000012A /* PowerObserverTests.swift in Sources */,
+				AA020600000000000000013A /* PollSchedulerSleepWakeTests.swift in Sources */,
+				AA020600000000000000014A /* ClaudeJSONLProviderCircuitBreakerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

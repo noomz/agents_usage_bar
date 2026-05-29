@@ -16,17 +16,24 @@ public final class Dependencies {
     public let scheduler: PollScheduler
     public let clock: any Clock
     public let actionHandler: NotificationActionHandler
+    /// Plan 02.06 — `PowerObserver` subscribes to NSWorkspace willSleep/didWake and
+    /// drives `scheduler.stop()` / `store.refresh + scheduler.start()` (POLL-04 / POLL-09).
+    /// Retained strongly for the app lifetime — without this reference the observer is
+    /// deallocated immediately and sleep/wake notifications are dropped (Pitfall 4).
+    public let powerObserver: PowerObserver
 
     public init(
         store: AggregateStore,
         scheduler: PollScheduler,
         clock: any Clock,
-        actionHandler: NotificationActionHandler
+        actionHandler: NotificationActionHandler,
+        powerObserver: PowerObserver
     ) {
         self.store = store
         self.scheduler = scheduler
         self.clock = clock
         self.actionHandler = actionHandler
+        self.powerObserver = powerObserver
     }
 }
 
@@ -188,6 +195,18 @@ public enum AppDependencies {
         //     registerCategories(on:) has run in init() (Pitfall 6).
         let actionHandler = NotificationActionHandler(store: store, clock: clock)
 
-        return Dependencies(store: store, scheduler: scheduler, clock: clock, actionHandler: actionHandler)
+        // 12. Plan 02.06 — PowerObserver wires NSWorkspace willSleep/didWake → scheduler
+        //     stop/start (POLL-04 / POLL-09). MUST be constructed AFTER scheduler and held
+        //     strongly in Dependencies for the app lifetime (Pitfall 4: observer must be
+        //     live before any wake event).
+        let powerObserver = PowerObserver(store: store, scheduler: scheduler, clock: clock)
+
+        return Dependencies(
+            store: store,
+            scheduler: scheduler,
+            clock: clock,
+            actionHandler: actionHandler,
+            powerObserver: powerObserver
+        )
     }
 }

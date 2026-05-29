@@ -29,6 +29,10 @@ struct AgentsUsageBarApp: App {
                     // Plan 02.05 — install snooze action handler BEFORE the poll loop starts
                     // so any notification fired by the first refresh has its action wired.
                     UNUserNotificationCenter.current().delegate = dependencies.actionHandler
+                    // Plan 02.06 — Pitfall 4: force-realize the PowerObserver strong reference
+                    // BEFORE scheduler.start() so the willSleep/didWake observers are live
+                    // before any wake event the polling loop could race with.
+                    _ = dependencies.powerObserver
                     // Kick off the long-lived PollScheduler loop on first popover open.
                     // Cancelled automatically when the scene tears down (structured concurrency).
                     await dependencies.scheduler.start()
