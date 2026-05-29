@@ -16,7 +16,7 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
     <channel>
         <title>Agents Usage Bar</title>
-        <link>https://github.com/OWNER/agents_usage_bar</link>
+        <link>https://github.com/noomzopendream/agents_usage_bar</link>
         <description>Agents Usage Bar update feed</description>
         <language>en</language>
     </channel>
