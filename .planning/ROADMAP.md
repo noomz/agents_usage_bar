@@ -189,7 +189,24 @@ Plans:
   4. The public repo ships under the chosen MIT or Apache-2.0 license with README (screenshots + privacy promise), LICENSE, SECURITY.md, and `docs/entitlements.md` explaining each entitlement; no telemetry or crash reporter uploads anywhere.
   5. When `~/.config/agents-usage-bar/config.toml` is created by the app, it is `chmod 0600` and the app emits a startup warning if it finds the file world-readable.
 
-**Plans:** TBD
+**Plans:** 5/5 plans drafted 2026-05-22 — ready for `/gsd-execute-phase 06`
+Plans:
+**Wave 1** *(parallel — no file overlap; all autonomous)*
+
+- [ ] 06-01-PLAN.md — SEC-03 ConfigStore: config.toml created 0600 + world-readable startup warning + Swift Testing coverage (SEC-03) — Wave 1
+- [ ] 06-02-PLAN.md — Sparkle 2.9.2 SPM (embed & sign) + SPUStandardUpdaterController + Info.plist SUFeedURL/SUPublicEDKey + CURRENT_PROJECT_VERSION/VERSIONING_SYSTEM + ExportOptions.plist (REL-06 app side; REL-08 preserved) — Wave 1
+- [ ] 06-03-PLAN.md — OSS hygiene: MIT LICENSE + SECURITY.md + README (MIT badge/install/privacy promise SEC-05/screenshot placeholder) + docs/entitlements.md + docs/release-setup.md (exact secret names per D-02) (REL-07) — Wave 1
+
+**Wave 2** *(blocked on 06-02; autonomous)*
+
+- [ ] 06-04-PLAN.md — release.yml (build→exportArchive→create-dmg v1.2.3→notarytool --wait→stapler→Sparkle sign_update→appcast→gh release; import-codesign-certs@v7; no --deep/altool) + ci.yml entitlements-guard (REL-08/REL-09 regression lock, no Apple creds) + scripts/append_appcast_item.py + appcast template (REL-01..06, REL-08, REL-09) — Wave 2 (depends 06-02)
+
+**Wave 3** *(human-gated — live Apple/Sparkle credentials per D-02; autonomous: false)*
+
+- [ ] 06-05-PLAN.md — Provision secrets + real SUPublicEDKey/SUFeedURL + gh-pages/Pages init; push v* tag → verify unattended notarized stapled DMG + offline Gatekeeper open + Sparkle N→N+1 update; capture README screenshot; author 06-UAT.md + BLOCKING reviewer checkpoint (REL-01/02/03/05/06/07 live verification) — Wave 3 (depends 06-02, 06-03, 06-04)
+
+**UI hint:** no
+**Phase exit:** BLOCKED on UAT — reviewer runs `.planning/phases/06-distribution-sign-notarize-dmg-sparkle-oss-hygiene/06-UAT.md` (authored in 06-05) then replies `approved` / `failed: <test>` / `deferred: <test>`. Note: 06-01..06-04 are fully autonomous; 06-05 requires user-provisioned Apple credentials (D-02 deferred).
 
 ## Progress
 
@@ -200,7 +217,7 @@ Plans:
 | 3. Remote API Providers (Codex + Gemini) | 9/9 | Awaiting UAT | - |
 | 4. Local LLM Presence (Ollama + LM Studio + llama.cpp) | 0/9 | Planned 2026-05-18 | - |
 | 5. First-Run UX + Settings Polish | 6/6 | Complete   | 2026-05-21 |
-| 6. Distribution (Sign + Notarize + DMG + Sparkle + OSS hygiene) | 0/0 | Not started | - |
+| 6. Distribution (Sign + Notarize + DMG + Sparkle + OSS hygiene) | 0/5 | Planned 2026-05-22 | - |
 
 ## Coverage
 
