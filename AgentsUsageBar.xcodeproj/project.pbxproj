@@ -153,7 +153,13 @@
 		AA020500000000000000012A /* NotificationManagerCategoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020500000000000000012B /* NotificationManagerCategoryTests.swift */; };
 		AA020500000000000000013A /* NotificationActionHandlerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020500000000000000013B /* NotificationActionHandlerTests.swift */; };
 		AA020500000000000000014A /* AggregateStoreSnoozeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020500000000000000014B /* AggregateStoreSnoozeTests.swift */; };
-/* End PBXBuildFile section */
+		/* Plan 02.06 — RetryPolicy + CircuitBreaker + PowerObserver sources (app target) */
+		AA020600000000000000001A /* RetryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000001B /* RetryPolicy.swift */; };
+		AA020600000000000000002A /* CircuitBreaker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000002B /* CircuitBreaker.swift */; };
+				/* Plan 02.06 — test files (test target) */
+		AA020600000000000000010A /* RetryPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000010B /* RetryPolicyTests.swift */; };
+		AA020600000000000000011A /* CircuitBreakerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020600000000000000011B /* CircuitBreakerTests.swift */; };
+						/* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		AA00000100000000000000CA /* PBXContainerItemProxy */ = {
@@ -309,7 +315,13 @@
 		AA020500000000000000012B /* NotificationManagerCategoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerCategoryTests.swift; sourceTree = "<group>"; };
 		AA020500000000000000013B /* NotificationActionHandlerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActionHandlerTests.swift; sourceTree = "<group>"; };
 		AA020500000000000000014B /* AggregateStoreSnoozeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreSnoozeTests.swift; sourceTree = "<group>"; };
-/* End PBXFileReference section */
+		/* Plan 02.06 — Infrastructure source file references */
+		AA020600000000000000001B /* RetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicy.swift; sourceTree = "<group>"; };
+		AA020600000000000000002B /* CircuitBreaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircuitBreaker.swift; sourceTree = "<group>"; };
+				/* Plan 02.06 — test file references */
+		AA020600000000000000010B /* RetryPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicyTests.swift; sourceTree = "<group>"; };
+		AA020600000000000000011B /* CircuitBreakerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircuitBreakerTests.swift; sourceTree = "<group>"; };
+						/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		AA00000100000000000000F1 /* Frameworks */ = {
@@ -397,6 +409,9 @@
 				AA020200000000000000014B /* FileCacheStore.swift */,
 				AA020200000000000000015B /* AppLogger.swift */,
 				AA050500000000000000004B /* NoopCacheStore.swift */,
+				/* Plan 02.06 — Resilience + energy primitives */
+				AA020600000000000000001B /* RetryPolicy.swift */,
+				AA020600000000000000002B /* CircuitBreaker.swift */,
 			);
 			path = Infrastructure;
 			sourceTree = "<group>";
@@ -418,6 +433,9 @@
 				AA020200000000000000024B /* FileCacheStoreTests.swift */,
 				AA020200000000000000025B /* URLSessionHTTPClientTests.swift */,
 				AA020100000000000000020B /* FileCacheStoreSchemaV2Tests.swift */,
+				/* Plan 02.06 — RetryPolicy + CircuitBreaker tests */
+				AA020600000000000000010B /* RetryPolicyTests.swift */,
+				AA020600000000000000011B /* CircuitBreakerTests.swift */,
 			);
 			path = InfrastructureTests;
 			sourceTree = "<group>";
@@ -551,6 +569,7 @@
 				AA050500000000000000010B /* AggregateStoreTests.swift */,
 				AA050500000000000000011B /* PollSchedulerTests.swift */,
 				AA020500000000000000014B /* AggregateStoreSnoozeTests.swift */,
+				/* Plan 02.06 — sleep/wake integration tests */
 			);
 			path = AggregationTests;
 			sourceTree = "<group>";
@@ -663,6 +682,7 @@
 				AA020300000000000000012B /* ClaudeOAuthClientTests.swift */,
 				AA020202000000000000010B /* ClaudeModelPricingTests.swift */,
 				AA020400000000000000010B /* ClaudeJSONLProviderTests.swift */,
+				/* Plan 02.06 — OAuth circuit breaker tests */
 				AA020202000000000000031B /* Fixtures */,
 			);
 			path = ProvidersClaudeTests;
@@ -884,6 +904,9 @@
 				/* Plan 02.05 — Threshold FSM persistence + snooze action handler */
 				AA020500000000000000001A /* NotificationStateStore.swift in Sources */,
 				AA020500000000000000002A /* NotificationActionHandler.swift in Sources */,
+				/* Plan 02.06 — RetryPolicy + CircuitBreaker + PowerObserver */
+				AA020600000000000000001A /* RetryPolicy.swift in Sources */,
+				AA020600000000000000002A /* CircuitBreaker.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -933,6 +956,9 @@
 				AA020500000000000000012A /* NotificationManagerCategoryTests.swift in Sources */,
 				AA020500000000000000013A /* NotificationActionHandlerTests.swift in Sources */,
 				AA020500000000000000014A /* AggregateStoreSnoozeTests.swift in Sources */,
+				/* Plan 02.06 — RetryPolicy + CircuitBreaker + PowerObserver + sleep/wake + OAuth breaker tests */
+				AA020600000000000000010A /* RetryPolicyTests.swift in Sources */,
+				AA020600000000000000011A /* CircuitBreakerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
