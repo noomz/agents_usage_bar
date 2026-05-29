@@ -1,0 +1,8 @@
+{
+  "access_token": "FAKE-ya29-AaAaAaAaBbBbBbBbCcCcCcCc",
+  "refresh_token": "FAKE-1//0gb-DdDdDdDdEeEeEeEeFfFfFfFf",
+  "scope": "https://www.googleapis.com/auth/cloud-platform.read-only",
+  "id_token": "FAKE-eyJhbGci.eyJfaWQi.signaturePart",
+  "expiry_date": 1778834115287.89,
+  "token_type": "Bearer"
+}
