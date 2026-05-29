@@ -34,6 +34,10 @@ public final class AggregateStore {
     // MARK: - Dependencies
 
     private let registry: [any UsageProvider]
+    /// Authoritative displayName per provider, derived from the registry at init.
+    /// Used to overlay stale displayNames cached from older builds (e.g. lowercase
+    /// "claude" before this provider was given the proper "Claude Code" name).
+    private let displayNamesByID: [ProviderID: String]
     private let clock: any Clock
     private let cache: any CacheStore
     private let thresholds: ThresholdEngine
@@ -79,8 +83,28 @@ public final class AggregateStore {
         self.notifications = notifications
         self.notificationState = notificationState
 
+        var names: [ProviderID: String] = [:]
+        for p in registry { names[p.id] = p.displayName }
+        self.displayNamesByID = names
+
         // UI-07: seed from cache synchronously before any view reads occur.
-        self.providers = cache.loadAll()
+        var loaded = cache.loadAll()
+        // Overlay registry-authoritative displayNames so renamed providers (e.g.
+        // "claude" → "Claude Code") update on first launch after the rename
+        // without requiring users to wipe their cache.
+        for (id, authoritativeName) in names where loaded[id] != nil && loaded[id]?.displayName != authoritativeName {
+            if let existing = loaded[id] {
+                loaded[id] = ProviderState(
+                    id: existing.id,
+                    displayName: authoritativeName,
+                    placeholderMessage: existing.placeholderMessage,
+                    snapshot: existing.snapshot,
+                    status: existing.status,
+                    lastSuccess: existing.lastSuccess
+                )
+            }
+        }
+        self.providers = loaded
         rollupTotals()
     }
 
@@ -300,18 +324,35 @@ public final class AggregateStore {
 
     /// Applies a per-provider fetch result, updating the provider's `ProviderState`.
     private func apply(_ result: Result<UsageSnapshot, Error>, for id: ProviderID, now: Date) {
+        let authoritativeName = displayNamesByID[id] ?? id.rawValue
         switch result {
         case .success(let snap):
             if let existing = providers[id] {
                 providers[id] = existing.applying(snapshot: snap, at: now)
             } else {
-                providers[id] = ProviderState.initial(snapshot: snap, at: now)
+                let seed = ProviderState.initial(snapshot: snap, at: now)
+                providers[id] = ProviderState(
+                    id: seed.id,
+                    displayName: authoritativeName,
+                    placeholderMessage: seed.placeholderMessage,
+                    snapshot: seed.snapshot,
+                    status: seed.status,
+                    lastSuccess: seed.lastSuccess
+                )
             }
         case .failure(let error):
             if let existing = providers[id] {
                 providers[id] = existing.applyingError(error, at: now)
             } else {
-                providers[id] = ProviderState.initialError(error, at: now)
+                let seed = ProviderState.initialError(error, at: now)
+                providers[id] = ProviderState(
+                    id: id,
+                    displayName: authoritativeName,
+                    placeholderMessage: seed.placeholderMessage,
+                    snapshot: seed.snapshot,
+                    status: seed.status,
+                    lastSuccess: seed.lastSuccess
+                )
             }
         }
     }

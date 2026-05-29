@@ -31,7 +31,7 @@ public actor ClaudeJSONLProvider: UsageProvider {
     // MARK: - UsageProvider nonisolated constants
 
     public nonisolated let id: ProviderID = .claude
-    public nonisolated let displayName: String = "Claude"
+    public nonisolated let displayName: String = "Claude Code"
     public nonisolated let capabilities: ProviderCapabilities = ProviderCapabilities(
         hasQuota: true,
         hasCost: true,
