@@ -51,6 +51,13 @@
 		/* Plan 05-04 Task 1 — DetectionProbe + OnboardingCopy app sources */
 		AA050400000000000000001A /* DetectionProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050400000000000000001B /* DetectionProbe.swift */; };
 		AA050400000000000000002A /* OnboardingCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050400000000000000002B /* OnboardingCopy.swift */; };
+		/* Plan 05-05 Task 1 — WelcomeWindowController + WelcomeRootView + WelcomeProviderRow app sources */
+		AA050500050000000000001A /* WelcomeWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500050000000000001B /* WelcomeWindowController.swift */; };
+		AA050500050000000000002A /* WelcomeRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500050000000000002B /* WelcomeRootView.swift */; };
+		AA050500050000000000003A /* WelcomeProviderRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500050000000000003B /* WelcomeProviderRow.swift */; };
+		/* Plan 05-05 Task 2 — WelcomeWindowControllerTests + WelcomeRootViewTests test sources */
+		AA050500050000000000010A /* WelcomeWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500050000000000010B /* WelcomeWindowControllerTests.swift */; };
+		AA050500050000000000011A /* WelcomeRootViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500050000000000011B /* WelcomeRootViewTests.swift */; };
 		/* Plan 05-04 Task 1 — providers.json bundle resource (app target) */
 		AA050400000000000000003A /* providers.json in Resources */ = {isa = PBXBuildFile; fileRef = AA050400000000000000003B /* providers.json */; };
 		/* Plan 05-04 Task 2 — SettingsProvidersTab replacement app source */
@@ -378,6 +385,13 @@
 		/* Plan 05-04 Task 1 — DetectionProbe + OnboardingCopy file references */
 		AA050400000000000000001B /* DetectionProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionProbe.swift; sourceTree = "<group>"; };
 		AA050400000000000000002B /* OnboardingCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCopy.swift; sourceTree = "<group>"; };
+		/* Plan 05-05 Task 1 — WelcomeWindowController + WelcomeRootView + WelcomeProviderRow file references */
+		AA050500050000000000001B /* WelcomeWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeWindowController.swift; sourceTree = "<group>"; };
+		AA050500050000000000002B /* WelcomeRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeRootView.swift; sourceTree = "<group>"; };
+		AA050500050000000000003B /* WelcomeProviderRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeProviderRow.swift; sourceTree = "<group>"; };
+		/* Plan 05-05 Task 2 — WelcomeWindowControllerTests + WelcomeRootViewTests file references */
+		AA050500050000000000010B /* WelcomeWindowControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeWindowControllerTests.swift; sourceTree = "<group>"; };
+		AA050500050000000000011B /* WelcomeRootViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeRootViewTests.swift; sourceTree = "<group>"; };
 		/* Plan 05-04 Task 1 — providers.json bundle resource */
 		AA050400000000000000003B /* providers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "providers.json"; sourceTree = "<group>"; };
 		/* Plan 05-04 Task 2 — test file references */
@@ -1090,6 +1104,10 @@
 			children = (
 				AA050400000000000000001B /* DetectionProbe.swift */,
 				AA050400000000000000002B /* OnboardingCopy.swift */,
+				/* Plan 05-05 Task 1 — Welcome window UI */
+				AA050500050000000000001B /* WelcomeWindowController.swift */,
+				AA050500050000000000002B /* WelcomeRootView.swift */,
+				AA050500050000000000003B /* WelcomeProviderRow.swift */,
 			);
 			path = Welcome;
 			sourceTree = "<group>";
@@ -1182,6 +1200,9 @@
 			children = (
 				AA050400000000000000010B /* DetectionProbeTests.swift */,
 				AA050400000000000000011B /* OnboardingCopyTests.swift */,
+				/* Plan 05-05 Task 2 — Welcome window tests */
+				AA050500050000000000010B /* WelcomeWindowControllerTests.swift */,
+				AA050500050000000000011B /* WelcomeRootViewTests.swift */,
 			);
 			path = WelcomeTests;
 			sourceTree = "<group>";
@@ -1704,6 +1725,10 @@
 				/* Plan 05-04 Task 1 — DetectionProbe + OnboardingCopy */
 				AA050400000000000000001A /* DetectionProbe.swift in Sources */,
 				AA050400000000000000002A /* OnboardingCopy.swift in Sources */,
+				/* Plan 05-05 Task 1 — WelcomeWindowController + WelcomeRootView + WelcomeProviderRow */
+				AA050500050000000000001A /* WelcomeWindowController.swift in Sources */,
+				AA050500050000000000002A /* WelcomeRootView.swift in Sources */,
+				AA050500050000000000003A /* WelcomeProviderRow.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1844,6 +1869,9 @@
 				AA050400000000000000010A /* DetectionProbeTests.swift in Sources */,
 				AA050400000000000000011A /* OnboardingCopyTests.swift in Sources */,
 				AA050400000000000000012A /* SettingsProvidersTabTests.swift in Sources */,
+				/* Plan 05-05 Task 2 — WelcomeWindowControllerTests + WelcomeRootViewTests */
+				AA050500050000000000010A /* WelcomeWindowControllerTests.swift in Sources */,
+				AA050500050000000000011A /* WelcomeRootViewTests.swift in Sources */,
 				/* Plan 05-03 — SettingsGeneralTab + AggregateStore.updateWarningFraction tests */
 				AA050302000000000000010A /* SettingsGeneralTabTests.swift in Sources */,
 				AA050302000000000000011A /* AggregateStoreUpdateWarningFractionTests.swift in Sources */,
