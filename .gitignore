@@ -1,3 +1,33 @@
+# Planning workspace
 .planning/
 .claude/
 .omc/
+
+# macOS
+.DS_Store
+
+# Xcode user data + build products
+xcuserdata/
+*.xcuserstate
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+
+# Secrets / Apple credentials
+*.p12
+*.p8
+*.cer
+*.pem
+*.key
+*.keystore
+*.mobileprovision
+AuthKey_*.p8
+
+# Env / credentials
+.env
+.env.*
+*.credentials
+credentials.json
+
+# Local export options override
+ExportOptions-local.plist
