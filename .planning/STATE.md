@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-12T04:25:06.835Z"
+last_updated: "2026-05-12T04:36:00Z"
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 8
-  completed_plans: 5
-  percent: 63
+  completed_plans: 7
+  percent: 87
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-12 (after Plan 01.04 execution)
+**Last Updated:** 2026-05-12 (after Plan 01.06 execution)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -24,21 +24,21 @@ progress:
 
 **What This Is:** A macOS menu bar app that surfaces today's AI agent usage across Claude, OpenAI Codex, Gemini, OpenRouter, and local agents (Ollama, LM Studio, llama.cpp) — tokens used, USD spent, quota remaining per provider — with native notifications at threshold crossings.
 
-**Current Focus:** Phase 01 — skeleton-openrouter-vertical-slice (Plan 01.05 next)
+**Current Focus:** Phase 01 — skeleton-openrouter-vertical-slice (Plan 01.07 next)
 
 ## Current Position
 
 Phase: 01 (skeleton-openrouter-vertical-slice) — EXECUTING
-Plan: 5 of 8
+Plan: 7 of 8
 
 - **Milestone:** v1 (initial release)
 - **Phase:** 1 of 6 — Skeleton + OpenRouter Vertical Slice
-- **Plan:** 01.04 COMPLETE — ready for Plan 01.05
+- **Plan:** 01.06 COMPLETE — ready for Plan 01.07
 - **Status:** Executing Phase 01
-- **Progress:** [██████░░░░] 63%
+- **Progress:** [████████░░] 87%
 
 ```
-[=====================================                       ] 62% (5/8 plans)
+[=================================================           ] 87% (7/8 plans)
 ```
 
 ## Performance Metrics
@@ -46,11 +46,11 @@ Plan: 5 of 8
 | Metric | Value |
 |--------|-------|
 | Phases complete | 0 / 6 |
-| Plans complete | 4 / 8 |
+| Plans complete | 7 / 8 |
 | Requirements mapped | 76 / 76 (100%) |
-| Requirements validated | 13 / 76 (SHELL-01,02,03,04,06 + SEC-01,SEC-02,UI-04,POLL-08 + CFG-01,CFG-02,ROUTER-04,SEC-05) |
+| Requirements validated | 18 / 76 (SHELL-01,02,03,04,06 + SEC-01,SEC-02,UI-04,POLL-08 + CFG-01,CFG-02,ROUTER-04,SEC-05 + UI-01,UI-02,UI-06,UI-07,UI-10) |
 | Plans drafted | 8 |
-| Plans executed | 4 |
+| Plans executed | 7 |
 | Node repairs | 0 |
 | UI phases run | 0 |
 
@@ -86,6 +86,11 @@ Plan: 5 of 8
 26. `k.data.limit.map { }` functional nil-handling — nil limit yields nil Quota (D-14/ROUTER-03); no threshold alert fires for unlimited accounts.
 27. `FakeCacheStore` is the test double name per B9 namespace gate — `InMemoryCacheStore` must NOT exist anywhere in the source tree.
 28. `Decimal(Double)` used for monetary fields; IEEE 754 imprecision means test assertions for computed deltas must use `NSDecimalNumber.doubleValue + tolerance` comparison.
+29. `ClockKey: EnvironmentKey` declared exactly once in `UI/Environment/ClockEnvironmentKey.swift` (B5) — FooterView consumes, Plan 01.08 injects, neither redeclares.
+30. `QuotaBar.color(forFraction:)` is `internal static` — exposes pure color logic as test seam without snapshot framework (B4); body delegates to this function, never inlines the switch.
+31. `RelativeTimestampLabel.relativeString(from:to:)` uses days (not absolute date strings) for elapsed >24h in Phase 1 — compact label, avoids locale/timezone complexity; revisit Phase 2.
+32. `TimelineView(.periodic(from: .now, by: 1))` drives `RelativeTimestampLabel` to tick every 1s while popover is open (Phase Success Criterion #3).
+33. Source-grep `@Test` functions (W7/FooterViewTests) verify SwiftUI contract via `String(contentsOf:)` + `#filePath`-based repo-root walk — avoids snapshot framework dependency for structural contract tests.
 
 ### Open Questions (from research)
 
@@ -121,14 +126,14 @@ Plan: 5 of 8
 ### Last Session
 
 - **Date:** 2026-05-12
-- **Worked on:** Plan 01.04 — OpenRouter Provider (2 tasks, ~1420 seconds)
-- **Result:** UsageProvider protocol + 4 OpenRouter implementation files + 3 test suites created. 86 Swift Testing assertions pass (19 new + 67 regression). `xcodebuild test` exits 0. Baseline-delta D-01..D-05 covered, ROUTER-03/D-14 nil quota verified, SEC-01 single revealForRequest() call site invariant preserved.
-- **Commits:** 3674524 (Task 1 — Codable layer), 1ae4209 (Task 2 — Client + Provider + tests)
+- **Worked on:** Plan 01.06 — Popover UI (2 tasks, ~427 seconds)
+- **Result:** 8 new SwiftUI files (ClockEnvironmentKey + 3 components + TotalsHeaderView + 3 replaced Wave 0 views) + 3 test suites. 20 new Swift Testing assertions (8 QuotaBar B4 + 9 RelativeTimestampLabel W2 + 3 FooterView W7). Full suite 122 assertions pass. BUILD SUCCEEDED. B4 color thresholds verified, B5 ClockKey sole-declaration verified, UI-07 no loading flash guaranteed by AggregateStore cache seed.
+- **Commits:** ae7ec37 (Task 1 — components + tests), b341836 (Task 2 — popover scene views)
 
 ### Next Session
 
-- **Suggested action:** Execute Plan 01.05 — AggregateStore composition root (wire OpenRouterProvider into store.refresh, PollScheduler task loop).
-- **Pre-work:** None — OpenRouterProvider constructor signature is locked and documented in 01.04-SUMMARY.md.
+- **Suggested action:** Execute Plan 01.07 — Notifications (ThresholdEngine + NotificationManager real implementation).
+- **Pre-work:** None — AggregateStore + QuotaBar B4 thresholds are locked and documented in 01.06-SUMMARY.md.
 
 ### Notes
 
