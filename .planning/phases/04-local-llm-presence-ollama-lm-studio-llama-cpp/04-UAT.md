@@ -8,18 +8,18 @@
 
 | #  | Test                                                                                                              | Result    | Notes |
 |----|-------------------------------------------------------------------------------------------------------------------|-----------|-------|
-| 1  | Ollama row populates from /api/ps + /api/tags with 1–2s timeout (SC #1 — LOCAL-01 + LOCAL-04)                     | <pending> |       |
-| 2  | LM Studio row populates with port override via config.toml (SC #2 — LOCAL-02 + LOCAL-04)                          | <pending> |       |
-| 3  | llama.cpp row activates only with port configured; D-04 placeholder when unconfigured (SC #3 — LOCAL-03 + D-04)   | <pending> |       |
-| 4  | Connection-refused → muted "Not running" — never red — does not block other providers (SC #4 — LOCAL-04 + LOCAL-05)| <pending> |       |
-| 5  | No cumulative-token count ever displayed on any local row (SC #5 — LOCAL-06 anti-feature enforcement)             | <pending> |       |
+| 1  | Ollama row populates from /api/ps + /api/tags with 1–2s timeout (SC #1 — LOCAL-01 + LOCAL-04)                     | PASS      | Verified 2026-05-19 by reviewer. Ollama running with 3 models (gemma4:latest, qwen3.6:27b, embeddinggemma:latest). |
+| 2  | LM Studio row populates with port override via config.toml (SC #2 — LOCAL-02 + LOCAL-04)                          | PASS      | Verified 2026-05-19 by reviewer. |
+| 3  | llama.cpp row activates only with port configured; D-04 placeholder when unconfigured (SC #3 — LOCAL-03 + D-04)   | PASS      | Verified 2026-05-20. Hotfix landed mid-UAT: stale `placeholderMessage` survived in cache after port nil→8080 transition. Fixed in `ProviderState.applying`/`applyingError` + 3 regression tests. See Hotfixes table below. |
+| 4  | Connection-refused → muted "Not running" — never red — does not block other providers (SC #4 — LOCAL-04 + LOCAL-05)| PASS      | Verified 2026-05-20 serialized (memory constraint prevented loading 3 models simultaneously). Hotfix H-02 landed mid-UAT: actor's `.notRunning` classification was dead code; UsageSnapshot lacked status field → store forced `.ok` → UI showed state B instead of state A. Fixed via `raw["providerStatus"] = "notRunning"` sentinel + ProviderState.applying branch. |
+| 5  | No cumulative-token count ever displayed on any local row (SC #5 — LOCAL-06 anti-feature enforcement)             | PASS      | Verified 2026-05-20 via screenshot. All 3 locals showed "Not running" gray rows (post-H-02). Today total = 2,202,309 tokens reflected Claude only; no token/USD/balance figures anywhere on local rows; `Total excludes quota-only providers` footnote present. |
 | 6  | ProviderStatus.notRunning foundation + URLError classifier + StatusDot.gray (Plan 04-01 Wave 1)                   | ATTESTED  | `ProviderStatusNotRunningTests` + `ProviderIDLocalConstantsTests` + `ProviderErrorLocalhostClassifierTests` + `StatusDotNotRunningTests` — 23 cases. See 04-01-SUMMARY.md. |
 | 7  | Config layer — AppConfig + ConfigStore [ollama] / [lmstudio] / [llamacpp] parsing (Plan 04-02 Wave 1)             | ATTESTED  | `AppConfigLocalProvidersTests` (9 cases) + `ConfigStoreLocalSectionsTests` (8 cases). See 04-02-SUMMARY.md. |
 | 8  | Per-runtime probe actors — OllamaProvider + LMStudioProvider + LlamaCppProvider (Plans 04-04/05/06 Wave 2)        | ATTESTED  | `OllamaProviderTests` (18+) + `LMStudioProviderTests` (19+) + `LlamaCppProviderTests` (15+) + three Codable suites (12+11+11 cases). See 04-04/05/06-SUMMARY.md. |
 | 9  | UI row-state rendering — LocalRowSecondaryView five states + ProviderRowView branching (Plan 04-07 Wave 3)         | ATTESTED  | `LocalRowSecondaryViewTests` (16 cases) + `ProviderRowViewLocalRowTests` (7 cases). See 04-07-SUMMARY.md. |
 | 10 | Composition + LOCAL-06 enforcement + ThresholdEngine skip (Plan 04-08 Wave 3)                                     | ATTESTED  | `AppDependenciesLocalRegistrationTests` (7 cases) + `ThresholdEngineLocalNilQuotaTests` (5 cases) + `AggregateStoreLocalRollupTests` (4 cases). See 04-08-SUMMARY.md. |
 
-**Overall outcome:** <APPROVED / FAILED / DEFERRED — fill in after Tests 1-5>.
+**Overall outcome:** **APPROVED** — 2026-05-20. All 10 tests pass (5 manual + 5 attested). Two hotfixes landed mid-UAT: H-01 (stale placeholderMessage on cache reload) and H-02 (notRunning status dead-coded — actor → UI propagation gap). Both have regression tests. Phase 4 code-complete + reviewer-signed.
 
 ---
 
@@ -214,9 +214,10 @@ Tests 6-10 cover invariants that cannot be exhaustively manually verified (schem
 
 ## Hotfixes landed during the UAT session
 
-| Commit | Subject |
-|--------|---------|
-| —      | —       |
+| Commit  | Subject                                                                          |
+|---------|----------------------------------------------------------------------------------|
+| 7b3aabc | fix(04-review): clear stale placeholderMessage on successful snapshot (H-01) — caught during Test 3 reviewer walkthrough. ProviderState.applying / applyingError carried placeholderMessage forward; cache persisted hybrid (snapshot + placeholderMessage) state; LocalRowSecondaryView priority-order rendered stale hint over live model data. Invariant established: `placeholderMessage != nil ⇒ snapshot == nil ∧ lastSuccess == nil`. 3 new regression tests in ProviderStatePlaceholderMessageTests. |
+| 2dc27a5 | fix(04-review): propagate .notRunning from local actors to UI (H-02) — caught during Test 4. Cross-layer integration gap: Plans 04-04/05/06 actors classified URLError as `.notRunning`, set internal `self.lastStatus`, returned mutedNotRunningSnapshot. But `UsageSnapshot` has no status field → `AggregateStore.apply(.success)` → `ProviderState.applying` forced `.ok` → UI rendered state B "Idle — 0 models loaded" + green dot, indistinguishable from healthy probe. Actor `lastStatus` mutation was dead code. Attestation tests only checked actor internals, never end-to-end propagation. Fix: `raw["providerStatus"] = "notRunning"` sentinel + `ProviderState.applying` branches on sentinel (status `.notRunning`, lastSuccess preserved). 2 new regression tests + actor regression green. |
 
 *(If the reviewer encounters a regression during manual walkthrough, hotfix commits land here. Mirrors Phase 3 G-01..G-04 pattern and Phase 2 `378c531` / `c84c452` / `4a5ebee` table.)*
 
