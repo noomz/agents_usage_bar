@@ -110,7 +110,7 @@ private extension ClaudeModelPricing {
 
 // MARK: - Test suite
 
-@Suite("ClaudeJSONLProvider")
+@Suite("ClaudeJSONLProvider", .serialized)
 struct ClaudeJSONLProviderTests {
 
     // MARK: Test 1 — empty roots + no OAuth returns zero snapshot
@@ -137,9 +137,11 @@ struct ClaudeJSONLProviderTests {
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let fileURL = dir.appendingPathComponent("session-a.jsonl")
+        // JSONL spec: each record on its own line, file ends with \n
         let content = """
         {"type":"assistant","timestamp":"<TODAY-T>15:30:00.000+00:00","requestId":"req-A1","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":1000,"output_tokens":500,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
         {"type":"assistant","timestamp":"<TODAY-T>15:31:00.000+00:00","requestId":"req-A2","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":2000,"output_tokens":1000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+
         """
         try writeFixture(content, to: fileURL)
 
@@ -163,12 +165,14 @@ struct ClaudeJSONLProviderTests {
         let contentA = """
         {"type":"assistant","timestamp":"<TODAY-T>15:30:00.000+00:00","requestId":"req-A1","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":1000,"output_tokens":500,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
         {"type":"assistant","timestamp":"<TODAY-T>15:31:00.000+00:00","requestId":"req-A2","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":2000,"output_tokens":1000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+
         """
         try writeFixture(contentA, to: fileA)
 
         let fileB = dir.appendingPathComponent("session-b.jsonl")
         let contentB = """
         {"type":"assistant","timestamp":"<TODAY-T>16:00:00.000+00:00","requestId":"req-B1","message":{"model":"claude-opus-4-7","role":"assistant","usage":{"input_tokens":500,"output_tokens":2000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+
         """
         try writeFixture(contentB, to: fileB)
 
@@ -193,6 +197,7 @@ struct ClaudeJSONLProviderTests {
         let content = """
         {"type":"assistant","timestamp":"\(yesterdayStr)","requestId":"req-Y1","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":5000,"output_tokens":5000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
         {"type":"assistant","timestamp":"\(todayStr)","requestId":"req-T1","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":100,"output_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+
         """
         let fileURL = dir.appendingPathComponent("mixed.jsonl")
         try content.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -233,6 +238,7 @@ struct ClaudeJSONLProviderTests {
 
         let content = """
         {"type":"assistant","timestamp":"<TODAY-T>10:00:00.000+00:00","requestId":"req-1","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":1000,"output_tokens":500,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+
         """
         let fileURL = dir.appendingPathComponent("session.jsonl")
         try writeFixture(content, to: fileURL)
@@ -287,6 +293,7 @@ struct ClaudeJSONLProviderTests {
 
         let content = """
         {"type":"assistant","timestamp":"<TODAY-T>12:00:00.000+00:00","requestId":"req-1","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":500,"output_tokens":250,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+
         """
         let fileURL = dir.appendingPathComponent("local.jsonl")
         try writeFixture(content, to: fileURL)
@@ -321,6 +328,7 @@ struct ClaudeJSONLProviderTests {
 
         let content = """
         {"type":"assistant","timestamp":"<TODAY-T>09:00:00.000+00:00","requestId":"req-1","message":{"model":"claude-haiku-4-5","role":"assistant","usage":{"input_tokens":200,"output_tokens":100,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+
         """
         let fileURL = dir.appendingPathComponent("local.jsonl")
         try writeFixture(content, to: fileURL)
@@ -376,6 +384,7 @@ struct ClaudeJSONLProviderTests {
         let fileURL = dir.appendingPathComponent("unreadable.jsonl")
         let content = """
         {"type":"assistant","timestamp":"<TODAY-T>10:00:00.000+00:00","requestId":"req-1","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":100,"output_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+
         """
         try writeFixture(content, to: fileURL)
 
@@ -409,6 +418,7 @@ struct ClaudeJSONLProviderTests {
         let record1 = materializeFixture(
             """
             {"type":"assistant","timestamp":"<TODAY-T>10:00:00.000+00:00","requestId":"req-1","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":1000,"output_tokens":500,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+
             """
         )
         try record1.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -444,6 +454,7 @@ struct ClaudeJSONLProviderTests {
         let fileURL = dir.appendingPathComponent("session.jsonl")
         let content = """
         {"type":"assistant","timestamp":"<TODAY-T>11:00:00.000+00:00","requestId":"req-1","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":500,"output_tokens":250,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+
         """
         try writeFixture(content, to: fileURL)
 
@@ -452,7 +463,9 @@ struct ClaudeJSONLProviderTests {
 
         _ = try await provider.fetch(now: .now)
 
-        let offset = cache.transcriptOffset(forURL: fileURL.absoluteString)
+        // Scanner resolves symlinks before storing the key (e.g. /var → /private/var on macOS).
+        // Look up using the canonical path form to match the stored key.
+        let offset = cache.transcriptOffset(forURL: fileURL.resolvingSymlinksInPath().absoluteString)
         let stored = try #require(offset, "Expected non-nil TranscriptOffset for fixture file")
         #expect(stored.byteOffset > 0)
     }

@@ -71,7 +71,13 @@ public struct TranscriptDirectoryScanner: Sendable {
                     continue
                 }
 
-                results.append(url)
+                // Resolve symlinks so the URL key is canonical.
+                // On macOS, FileManager.enumerator returns URLs under /private/var/folders
+                // while URL construction via temporaryDirectory + appendingPathComponent
+                // returns /var/folders (which is a symlink). Normalizing here ensures
+                // cache keys match regardless of which path form was used to construct
+                // the root directory. Rule 1 fix: symlink mismatch causing nil offset lookup.
+                results.append(url.resolvingSymlinksInPath())
             }
         }
 
