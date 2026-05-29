@@ -11,7 +11,7 @@
 ## Phases
 
 - [x] **Phase 1: Skeleton + OpenRouter Vertical Slice** — Prove every architectural seam against the lowest-friction provider; menu bar app polls OpenRouter every 5m, shows tokens/USD/quota bar, fires a stub notification at 80%.
-- [ ] **Phase 2: Claude Provider + Threshold/Rollover + JSONL Streaming** — De-risk the headline provider; ship the streaming JSONL primitive Codex will reuse, local-midnight rollover, and the full notification FSM with snooze.
+- [x] **Phase 2: Claude Provider + Threshold/Rollover + JSONL Streaming** — De-risk the headline provider; ship the streaming JSONL primitive Codex will reuse, local-midnight rollover, and the full notification FSM with snooze. ✅ UAT approved 2026-05-15 (Tests 1-2 manual PASS; 3-10 unit-test attestation; Test 7 battery soak deferred to pre-distribution).
 - [ ] **Phase 3: Remote API Providers (Codex + Gemini)** — Drop in remaining hosted-AI providers using primitives from phases 1–2; cross-provider "today total" becomes meaningful.
 - [ ] **Phase 4: Local LLM Presence (Ollama + LM Studio + llama.cpp)** — Differentiator: tri-state running/idle rows for localhost services; "Not running" is muted, never red.
 - [ ] **Phase 5: First-Run UX + Settings Polish** — First-run provider detection screen, full Settings scene, refined stale indicator, theme handling, open-dashboard affordance.
@@ -54,7 +54,7 @@ Plans:
   3. At local midnight (tester verifies in `America/Los_Angeles` at 11:59pm), all "today" totals reset to zero — never UTC-bucketed and never an off-by-one across DST.
   4. Crossing 80% on any provider fires exactly one macOS notification (stable id `"<providerID>:<yyyy-MM-dd>:warn80"`); "Snooze for today" action suppresses further fires until midnight; multiple providers crossing within one poll coalesce into a single "N providers crossed 80%" notification.
   5. After 1 hour idle on battery, macOS Energy Impact reports the app as "Low"; sleep pauses polling and wake triggers a single immediate refresh with exponential backoff + jitter on 429/5xx and circuit-breaker after 5 consecutive failures.
-**Plans:** 7/7 plans executed — CODE-COMPLETE; UAT pending reviewer
+**Plans:** 7/7 plans executed — ✅ COMPLETE (UAT approved 2026-05-15)
 Plans:
 - [x] 02-01-PLAN.md — TranscriptReader + offset cache schema v1→v2 + directory scanner (CLAUDE-01..03) — see `02.01-SUMMARY.md`, commit `2bf5bf6`
 - [x] 02-02-PLAN.md — Bundled `claude-models.json` + ClaudeModelPricing cascade-lookup cost calculator (CLAUDE-05) — see `02.02-SUMMARY.md`, commit `2bf5bf6`
@@ -62,7 +62,7 @@ Plans:
 - [x] 02-04-PLAN.md — ClaudeJSONLProvider composing 02.01+02+03 + AppDependencies wiring (CLAUDE-01..05 composition) — see `02-04-SUMMARY.md`, commits e703320 + 3e3f9cf
 - [x] 02-05-PLAN.md — ThresholdEngine FSM v2 (Comparable bands) + UNNotificationCategory + snooze + AggregateStore wiring (NOTIF-01..05) — see `02-05-SUMMARY.md`, commit ea07831
 - [x] 02-06-PLAN.md — PowerObserver (sleep/wake) + RetryPolicy + CircuitBreaker (per-provider 5-strike + OAuth-usage 3-strike) (POLL-04..06, POLL-09) — see `02-06-SUMMARY.md`, commits 4121cfe + afc7825 + 0eed73a
-- [x] 02-07-PLAN.md — UI extensions (UI-03/05/08/09) + 02-UAT.md checkpoint — code-complete; UAT pending reviewer — see `02-07-SUMMARY.md`, commits 5f042c8 + 6be6396 + 4895ae8
+- [x] 02-07-PLAN.md — UI extensions (UI-03/05/08/09) + 02-UAT.md checkpoint — ✅ UAT approved 2026-05-15 (Tests 1-2 manual PASS; 3-10 unit-test attestation; Test 7 battery soak deferred to pre-distribution) — see `02-07-SUMMARY.md`, commits 5f042c8 + 6be6396 + 4895ae8 + UAT-session hotfixes 378c531 + c84c452 + 4a5ebee
 **UI hint:** yes
 **Phase exit:** BLOCKED on UAT — reviewer to run `.planning/phases/02-claude-provider-threshold-rollover-jsonl-streaming/02-UAT.md` then respond `approved` (Phase 2 complete) or file failed steps for `/gsd-plan-phase 02 --gaps`.
 
@@ -125,8 +125,8 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Skeleton + OpenRouter Vertical Slice | 5/8 | In Progress|  |
-| 2. Claude Provider + Threshold/Rollover + JSONL Streaming | 7/7 | Code-complete; UAT pending |  |
+| 1. Skeleton + OpenRouter Vertical Slice | 9/9 | ✅ Complete | 2026-05-13 |
+| 2. Claude Provider + Threshold/Rollover + JSONL Streaming | 7/7 | ✅ Complete | 2026-05-15 |
 | 3. Remote API Providers (Codex + Gemini) | 0/0 | Not started | - |
 | 4. Local LLM Presence (Ollama + LM Studio + llama.cpp) | 0/0 | Not started | - |
 | 5. First-Run UX + Settings Polish | 0/0 | Not started | - |

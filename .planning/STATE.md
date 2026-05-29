@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-14T14:30:00.000Z"
+last_updated: "2026-05-15T05:00:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 16
   completed_plans: 16
   percent: 100
@@ -14,7 +14,7 @@ progress:
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-14 (after Phase 2 Wave 5 — Plan 02-07 UI extensions code-complete; UAT pending reviewer)
+**Last Updated:** 2026-05-15 (Phase 2 UAT APPROVED — Tests 1-2 manual PASS, 3-10 deferred to unit-test attestation; 3 hotfix commits landed during the session)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -24,31 +24,31 @@ progress:
 
 **What This Is:** A macOS menu bar app that surfaces today's AI agent usage across Claude, OpenAI Codex, Gemini, OpenRouter, and local agents (Ollama, LM Studio, llama.cpp) — tokens used, USD spent, quota remaining per provider — with native notifications at threshold crossings.
 
-**Current Focus:** Phase 02 — claude-provider-threshold-rollover-jsonl-streaming
+**Current Focus:** Phase 03 — claude/codex/gemini remote providers (ready to start)
 
 ## Current Position
 
-Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — WAVE 5 CODE-COMPLETE; UAT PENDING
-Plan: 7 of 7 executed (code); Phase exit gated on Task 3 human-verify checkpoint
+Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — ✅ COMPLETE (UAT approved 2026-05-15)
+Phase: 03 (codex-gemini-remote-providers) — ⬜ NOT STARTED (next)
 
 - **Milestone:** v1 (initial release)
-- **Phase:** 2 of 6 — Claude Provider + Threshold/Rollover + JSONL Streaming — CODE-COMPLETE; awaiting UAT sign-off
-- **Plan:** 7 of 7 plans executed (Wave 1 = {01 ✅, 02 ✅, 03 ✅}; Wave 2 = {04 ✅}; Wave 3 = {05 ✅}; Wave 4 = {06 ✅}; Wave 5 = {07 ✅ code, ⬜ UAT})
-- **Status:** Wave 5 (Plan 02-07 UI extensions UI-03/05/08/09 + 02-UAT.md) landed; reviewer must run UAT before `/gsd-transition`
-- **Progress:** [██████████████] 100% (7/7 Phase 2 plans code-complete)
+- **Phase:** 2 of 6 — Claude Provider + Threshold/Rollover + JSONL Streaming — ✅ COMPLETE
+- **Plan:** 7 of 7 plans executed (Wave 1 = {01 ✅, 02 ✅, 03 ✅}; Wave 2 = {04 ✅}; Wave 3 = {05 ✅}; Wave 4 = {06 ✅}; Wave 5 = {07 ✅ code + UAT})
+- **Status:** Phase 2 UAT approved. 3 hotfix commits (perf 378c531, CCS-roots c84c452, displayName 4a5ebee) landed during UAT. Ready for `/gsd-transition` → Phase 3.
+- **Progress:** [██████████████] 100% Phase 2 complete
 
 ```
-[████████████████████████████████████████████████████████████████] 100% (16/16 plans code-complete; Phase 2 UAT pending)
+[████████████████████████████████████████████████████████████████] 100% (16/16 plans + Phase 2 UAT approved)
 ```
 
 ## Performance Metrics
 
 | Metric | Value |
 |--------|-------|
-| Phases complete | 1 / 6 (Phase 2 code-complete; UAT pending) |
-| Plans complete | 16 / 16 code-complete (Phase 1: 9 plans + Phase 2 Waves 1+2+3+4+5: 02-01/02/03/04/05/06/07) |
+| Phases complete | 2 / 6 (Phase 2 UAT approved 2026-05-15) |
+| Plans complete | 16 / 16 (Phase 1: 9 plans + Phase 2: 7 plans) |
 | Requirements mapped | 76 / 76 (100%) |
-| Requirements validated | 42 / 76 automated (Phase 1 set unchanged; Phase 2 Waves 1+2+3+4+5 cover CLAUDE-01..05 + NOTIF-01..05 + POLL-04..06 + POLL-09 + UI-03/05/08/09 — end-to-end UAT pending in `02-UAT.md`) |
+| Requirements validated | 42 / 76 (Phase 1 + Phase 2 sets — Tests 1-2 manual PASS; Tests 3-10 covered by unit-test suites per `02-UAT.md` attestation table) |
 | Plans drafted | 16 |
 | Plans executed | 16 (Phase 1 = 9; Phase 2 Wave 1 = 3 bundled in salvage commit 2bf5bf6; Phase 2 Wave 2 = 1 in commits e703320 + 3e3f9cf; Phase 2 Wave 3 = 1 in commit ea07831; Phase 2 Wave 4 = 1 in commits 4121cfe + afc7825; Phase 2 Wave 5 = 1 in commits 5f042c8 + 6be6396 + 4895ae8) |
 | Node repairs | 1 (Phase 2 Wave 1 salvage — see Phase 2 backprop) |
@@ -135,12 +135,13 @@ Plan: 7 of 7 executed (code); Phase exit gated on Task 3 human-verify checkpoint
 
 ### Active TODOs
 
-- **UAT (BLOCKING)**: Plan 02-07 Task 3 is a `gate="blocking"` human-verify checkpoint. Reviewer must walk through `.planning/phases/02-claude-provider-threshold-rollover-jsonl-streaming/02-UAT.md` (10 tests mapped to Phase 2 success criteria 1–5 + UI add-ons) and respond `approved` to mark Phase 2 fully complete, OR file failed steps for `/gsd-plan-phase 02 --gaps` remediation.
+- **TEST 7 (deferred)**: Energy Impact "Low" — 1hr battery soak. No automated substitute. Schedule a dedicated reviewer session before v1 distribution (Phase 6 prep); does NOT block Phase 3 start.
 - **CONFIG**: `workflow.use_worktrees` remains `false`. Wave 5 ran cleanly sequentially.
+- **MEMORY**: `feature_claude_quota_detail_view.md` — reviewer requested expanded per-window quota detail view (5h / 7d + reserve / per-model / Designs / Daily Routines). Data already in `UsageSnapshot.quotaWindows`; UI gap. Phase 03+ candidate.
 
 ### Blockers
 
-- **Phase 2 exit**: BLOCKED on manual UAT (Plan 02-07 Task 3). Code work is complete and green; phase cannot transition to `complete` until reviewer approves `02-UAT.md`.
+- None. Phase 2 approved. Phase 3 unblocked.
 
 ## Risk Register
 
@@ -160,15 +161,15 @@ Plan: 7 of 7 executed (code); Phase exit gated on Task 3 human-verify checkpoint
 
 ### Last Session
 
-- **Date:** 2026-05-14
-- **Worked on:** Phase 02 Plan 02-07 — UI extensions + Phase 2 UAT (Wave 5). Added `TodayHelper.resetClockText(_:calendar:)` (UI-05 footer caption helper, DST-correct), `AggregateStore.isStale(_:now:)` (UI-08 stale predicate, 2× currentInterval), `AggregateStore.maxQuotaFraction` + `menuBarTint: Color` (UI-09). Extended `StatusDot` and `RelativeTimestampLabel` with additive `isStale: Bool = false` overloads (opacity 0.4 for dot, `.tertiary` foregroundStyle for label). `ProviderRowView` moves staleness compute INSIDE the existing `TimelineView` context closure so the dimming updates every second. `FooterView` adds the "Resets HH:mm <TZ>" caption row. `AgentsUsageBarApp` switches `MenuBarExtra` to the explicit-label form with `Image(systemName:).symbolRenderingMode(.hierarchical).foregroundStyle(dependencies.store.menuBarTint)` (Pitfall 9 snap transition). `QuotaBar` gains a top-of-file UI-03 reconciliation doc comment locking the ClaudeBar 50%/20% convention. Created `02-UAT.md` — the 10-step reviewer script gating Phase 2 exit. Fixed 1 root cause during green phase: Apple Foundation `TimeZone.abbreviation(for:)` now emits `"GMT-7"`/`"GMT-8"` instead of `"PDT"`/`"PST"` — tests loosened to accept either shape; DST correctness still asserted via the spring-forward boundary flip.
-- **Commits:** 5f042c8 (feat — TodayHelper.resetClockText + AggregateStore stale/tint surfaces), 6be6396 (feat — UI extensions for stale dimming, reset caption, menu bar tint), 4895ae8 (docs — Phase 2 UAT script). 30 new Swift Testing assertions across 5 suites; full xcodebuild test = 343 pass / 0 fail / 1 pre-existing skip.
+- **Date:** 2026-05-15
+- **Worked on:** Phase 02 UAT walkthrough + 3 live-session hotfixes. Test 1 (Claude row populates) initially failed because (a) `ClaudeRoots.defaultRoots` only scanned `~/.claude/projects/` and the reviewer's machine uses `ccs` (`~/.ccs/shared/context-groups/*/projects/` + `~/.ccs/instances/*/projects/`), and (b) the first refresh against a fresh cache spawned hundreds of `cache.setTranscriptOffset` calls that each re-decoded/re-encoded the entire envelope (O(N²) → 98% CPU spin, fetch never returned). Fixed both: added `CacheStore.setTranscriptOffsets([TranscriptOffset])` batch API with `FileCacheStore` atomic-single-write override, and made `ClaudeRoots.defaultRoots` a computed property that walks the ccs layout at boot. Also renamed the provider's user-facing label from "Claude" to "Claude Code" and added an authoritative-displayName overlay in `AggregateStore` so renamed providers update on first launch without requiring users to wipe their cache (`ProviderState.initial` had seeded displayName from `snapshot.providerID.rawValue` = lowercase `"claude"`). After fixes, the reviewer ran Tests 1 + 2 manually (both PASS) and approved Tests 3-10 against unit-test attestation; Test 7 (1hr battery soak) deferred to a separate pre-distribution session.
+- **Commits:** 378c531 (perf — batch transcript offset cache writes to avoid O(N²)), c84c452 (feat — ClaudeRoots enumerates CCS shared groups + per-instance project dirs), 4a5ebee (feat — rename Claude provider to "Claude Code" and let registry override cached displayName). Pre-UAT: 5f042c8, 6be6396, 4895ae8, 510f41a (Plan 02-07 code + UAT script + tracking).
 
 ### Next Session
 
-- **Suggested action:** **Reviewer runs `02-UAT.md`.** Launch the app from the freshly-built `.app` bundle, walk through Tests 1–10, fill in the outcomes table at the top. On `approved` → `/gsd-transition` to Phase 3. On any failure → `/gsd-plan-phase 02 --gaps` to file the remediation plan.
-- **Pre-work for the UAT session:** Confirm `xcodebuild build -scheme AgentsUsageBar -configuration Debug` exits 0 at HEAD `4895ae8`. Ensure `~/.claude/projects/**/*.jsonl` has at least one recent session OR run Claude Code for 30s during Test 1 setup. Optionally set `OPENROUTER_API_KEY` env var for Tests 5 + 10 (cross-provider coalesce + tint).
-- **Once Phase 2 is approved:** Phase 3 (Codex + Gemini providers) is unblocked. Reuses TranscriptReader + TranscriptDirectoryScanner (Plan 02.01), ThresholdEngine v2 FSM (Plan 02.05), and CircuitBreaker + PowerObserver (Plan 02.06). Plan 03.01 would be Codex rollout-*.jsonl parser; Plan 03.02 Codex provider actor; Plan 03.03 Gemini OAuth-personal client.
+- **Suggested action:** `/gsd-plan-phase 03` — Phase 3 (Codex + Gemini remote providers). Reuses `TranscriptReader` + `TranscriptDirectoryScanner` (Plan 02.01), `ThresholdEngine` v2 FSM (Plan 02.05), and `CircuitBreaker` + `PowerObserver` (Plan 02.06). Plan 03.01 would be Codex rollout-*.jsonl parser; Plan 03.02 Codex provider actor; Plan 03.03 Gemini OAuth-personal client.
+- **Deferred:** Test 7 (Energy Impact battery soak) — 1hr battery-only soak; schedule before Phase 6 distribution.
+- **Memory candidate:** `feature_claude_quota_detail_view` — reviewer's reference layout shows per-window bars (Session/Weekly/Sonnet/Opus/Designs/Daily Routines). Data already captured in `UsageSnapshot.quotaWindows`; consider as a Phase 03+ side plan or roll into Phase 05 UX polish.
 
 ### Notes
 

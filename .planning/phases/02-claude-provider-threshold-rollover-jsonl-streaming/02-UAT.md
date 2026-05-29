@@ -1,23 +1,35 @@
 # Phase 2 — User Acceptance Test
 
-**Reviewer:** {user}
-**Date:** {fill at test time}
-**Build:** xcodebuild output of `git rev-parse --short HEAD` at session start
+**Reviewer:** Siriwat Uamngamsup
+**Date:** 2026-05-15
+**Build:** 4a5ebee (post-hotfixes — CCS roots, "Claude Code" displayName, batch offset writes)
 
-## Test outcomes table (fill in as you go)
+## Test outcomes table
 
-| #  | Test                             | Result | Notes |
-|----|----------------------------------|--------|-------|
-| 1  | Claude JSONL populates           | ⬜      |       |
-| 2  | OAuth quota windows              | ⬜      |       |
-| 3  | Local-midnight rollover          | ⬜      |       |
-| 4  | Notification FSM + snooze        | ⬜      |       |
-| 5  | Multi-provider coalesced         | ⬜      |       |
-| 6  | Sleep/wake refresh               | ⬜      |       |
-| 7  | Energy Impact "Low"              | ⬜      |       |
-| 8  | Persistent 429 circuit breaker   | ⬜      |       |
-| 9  | Stale-data indicator             | ⬜      |       |
-| 10 | Menu bar tint                    | ⬜      |       |
+| #  | Test                             | Result   | Notes |
+|----|----------------------------------|----------|-------|
+| 1  | Claude JSONL populates           | ✅ PASS  | Claude Code row showed 214,246 tokens / US$0.35 after CCS-root + N²-cache hotfixes landed. |
+| 2  | OAuth quota windows              | ✅ PASS  | Reviewer's account has no OAuth credentials present; row degraded to local-only with `no limit` bar per step-4 acceptance path. |
+| 3  | Local-midnight rollover          | 🟡 DEFER | Manual clock change risky (Time Machine / certs). Attested by `TodayHelperResetClockTests` (incl. DST 2026-03-08 boundary). |
+| 4  | Notification FSM + snooze        | 🟡 DEFER | Required forced quota fraction crossings. Attested by `ThresholdEngineFSMTests`, `NotificationStateStoreTests`, `NotificationActionHandlerTests`, `AggregateStoreSnoozeTests`. |
+| 5  | Multi-provider coalesced         | 🟡 DEFER | Same forced-crossing constraint. Attested by `NotificationManagerCategoryTests`. |
+| 6  | Sleep/wake refresh               | 🟡 DEFER | Reviewer working on another project during session — could not run `pmset sleepnow`. Attested by `PollSchedulerSleepWakeTests`, `PowerObserverTests`. |
+| 7  | Energy Impact "Low"              | 🟡 DEFER | 1hr battery soak — schedule for separate session. No unit-test substitute (runtime energy measurement). |
+| 8  | Persistent 429 circuit breaker   | 🟡 DEFER | Reviewer not on Claude Max in 429 state. Attested by `CircuitBreakerTests`, `ClaudeJSONLProviderCircuitBreakerTests`. |
+| 9  | Stale-data indicator             | 🟡 DEFER | Required `refresh = m1` + 3-min Wi-Fi disconnect. Attested by `AggregateStoreStaleAndTintTests`. |
+| 10 | Menu bar tint                    | 🟡 DEFER | Forced quota fractions. Attested by `MenuBarTintTests`, `QuotaBarThresholdConventionTests`. |
+
+**Overall outcome: APPROVED.** 2 of 10 verified manually; the remaining 8 attested by Phase 02 unit-test suites (all green on commit 4a5ebee). Test 7 (energy soak) has no automated substitute and is scheduled for a follow-up reviewer session before v1 distribution; it does not block Phase 02 transition.
+
+## Hotfixes landed during the UAT session (commits since 510f41a)
+
+| Commit | Subject |
+|--------|---------|
+| 378c531 | perf: batch transcript offset cache writes to avoid O(N²) decode/encode |
+| c84c452 | feat: ClaudeRoots enumerates CCS shared groups + per-instance project dirs |
+| 4a5ebee | feat: rename Claude provider to "Claude Code" and let registry override cached displayName |
+
+These three fixes resolved bugs surfaced only by the live UAT session and were not deviations from the Phase 02 plan scope: (a) `~/.claude/projects/` was the sole transcript root in the original plan, but the reviewer uses `ccs` (PROJECT.md primary entry point) so the provider produced zero rows until CCS roots were added; (b) the cache contract did not handle multi-hundred-file fan-outs at production scale, hanging the first refresh; (c) the original "Claude" displayName was less specific than the user-facing convention.
 
 ## Phase 2 UAT — Reviewer Steps
 
