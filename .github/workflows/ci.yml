@@ -28,10 +28,43 @@ jobs:
           fi
           echo "OK: No literal API key prefixes in source."
 
+  cfg-06-check:
+    name: CFG-06 — no shell RC file references
+    runs-on: macos-15
+    needs: [secret-scan]
+    steps:
+      - uses: actions/checkout@v4
+      - name: CFG-06 — no shell RC file references in source
+        run: |
+          set -euo pipefail
+          # CFG-06: shell RC file references MUST NOT appear in non-comment Swift source.
+          # Rationale: env vars read via ProcessInfo.environment only; shell RC files
+          # are a code-execution vector and explicitly forbidden (05-CONTEXT.md CFG-06 anti-feature).
+          # Self-reference guard: search path is AgentsUsageBar/ only — ci.yml lives in
+          # .github/workflows/ and is outside the search path (no --exclude needed).
+          # Comment-line filter: doc-comment lines (/// or //) that name the forbidden
+          # paths as prohibition documentation are intentional and must not trigger.
+          # grep -v '^[[:space:]]*//' removes lines whose first non-space content is //.
+          VIOLATIONS=$(grep -RIn \
+               --include='*.swift' \
+               --exclude-dir='.build' \
+               --exclude-dir='DerivedData' \
+               -e '\.zshrc' \
+               -e '\.bashrc' \
+               -e 'config\.fish' \
+               AgentsUsageBar/ \
+            | grep -v '^[^:]*:[0-9]*:[[:space:]]*//' || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "CFG-06 violation: shell RC file reference found in non-comment source:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "OK: No shell RC file references in non-comment source."
+
   test:
     name: Build and test
     runs-on: macos-15
-    needs: [secret-scan]
+    needs: [secret-scan, cfg-06-check]
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
