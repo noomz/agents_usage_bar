@@ -32,6 +32,11 @@ public final class Dependencies {
     /// Constructed before `ConfigStore.load(preferences:)` so the UserDefaults overlay is
     /// applied at launch (D-01/D-02).
     public let preferences: UserPreferencesStore
+    /// Plan 05-05 — Welcome window host. Retained strongly for app lifetime so the
+    /// NSWindow.willCloseNotification observer is not deallocated (Pitfall 4).
+    /// `showIfNeeded()` is called from AgentsUsageBarApp `.task` after the scheduler starts;
+    /// it is a no-op when `preferences.hasSeenWelcome == true` (D-10).
+    public let welcomeWindowController: WelcomeWindowController
 
     public init(
         store: AggregateStore,
@@ -40,7 +45,8 @@ public final class Dependencies {
         actionHandler: NotificationActionHandler,
         powerObserver: PowerObserver,
         windowActivationObserver: WindowActivationObserver,
-        preferences: UserPreferencesStore
+        preferences: UserPreferencesStore,
+        welcomeWindowController: WelcomeWindowController
     ) {
         self.store = store
         self.scheduler = scheduler
@@ -49,6 +55,7 @@ public final class Dependencies {
         self.powerObserver = powerObserver
         self.windowActivationObserver = windowActivationObserver
         self.preferences = preferences
+        self.welcomeWindowController = welcomeWindowController
     }
 }
 
@@ -393,6 +400,15 @@ public enum AppDependencies {
         //     retention the observer is deallocated and policy flips silently drop).
         let windowActivationObserver = WindowActivationObserver()
 
+        // 14. Plan 05-05 — WelcomeWindowController (CFG-03/CFG-04/D-09/D-10).
+        //     Constructed here; showIfNeeded() called from AgentsUsageBarApp .task after
+        //     the scheduler starts. Retained in Dependencies for app lifetime (Pitfall 4 —
+        //     NSWindow.willCloseNotification observer must stay live until app exits).
+        let welcomeWindowController = WelcomeWindowController(
+            preferences: preferences,
+            config: config
+        )
+
         return Dependencies(
             store: store,
             scheduler: scheduler,
@@ -400,7 +416,8 @@ public enum AppDependencies {
             actionHandler: actionHandler,
             powerObserver: powerObserver,
             windowActivationObserver: windowActivationObserver,
-            preferences: preferences
+            preferences: preferences,
+            welcomeWindowController: welcomeWindowController
         )
     }
 

@@ -50,6 +50,10 @@ struct AgentsUsageBarApp: App {
                     // Kick off the long-lived PollScheduler loop on first popover open.
                     // Cancelled automatically when the scene tears down (structured concurrency).
                     await dependencies.scheduler.start()
+                    // Plan 05-05 — Show Welcome window on first launch (D-10).
+                    // showIfNeeded() is a no-op when hasSeenWelcome == true (all subsequent launches).
+                    // Called AFTER scheduler.start() so the poll loop is live before detection probes run.
+                    await dependencies.welcomeWindowController.showIfNeeded()
                 }
         } label: {
             // Plan 02.07 (UI-09 + Pitfall 9): the menu bar icon tints to reflect the
