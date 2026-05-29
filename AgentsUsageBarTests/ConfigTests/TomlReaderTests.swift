@@ -101,7 +101,7 @@ struct TomlReaderTests {
         //   this_line_is_broken            ← INVALID (no =)
         //   threshold = 0.80               ← valid (top-level)
         //   [openrouter]
-        //   api_key = "sk-or-..."          ← valid (section)
+        //   api_key = "fake-or-..."         ← valid (section)
         //   bare_token_no_equals           ← INVALID (no =)
         //   models = ["arrays", ...]       ← INVALID (array syntax)
         //   enabled = true                 ← valid (section)
@@ -114,7 +114,7 @@ struct TomlReaderTests {
         // Valid section keys extracted
         let or = result["openrouter"]
         #expect(or != nil)
-        #expect(or?["api_key"] == .string("sk-or-FAKE_FIXTURE_KEY_XXXXXXXXXXXXXXXX"))
+        #expect(or?["api_key"] == .string("fake-or-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
         #expect(or?["enabled"] == .bool(true))
 
         // Invalid lines were NOT added
@@ -147,7 +147,7 @@ struct TomlReaderTests {
         // [openrouter] section — all 5 keys
         let or = result["openrouter"]
         #expect(or != nil)
-        #expect(or?["api_key"] == .string("sk-or-FAKE_FIXTURE_KEY_XXXXXXXXXXXXXXXX"))
+        #expect(or?["api_key"] == .string("fake-or-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
         #expect(or?["api_url"] == .string("https://openrouter.ai/api/v1"))
         #expect(or?["http_referer"] == .string("https://github.com/lazym0m3nt/agents_usage_bar"))
         #expect(or?["x_title"] == .string("Agents Usage Bar"))

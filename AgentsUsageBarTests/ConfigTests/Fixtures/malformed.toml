@@ -2,7 +2,7 @@ refresh_interval = "5m"
 this_line_is_broken
 threshold = 0.80
 [openrouter]
-api_key = "sk-or-FAKE_FIXTURE_KEY_XXXXXXXXXXXXXXXX"
+api_key = "fake-or-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 bare_token_no_equals
 models = ["arrays", "are", "not", "supported"]
 enabled = true
