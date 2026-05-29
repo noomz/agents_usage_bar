@@ -92,6 +92,9 @@
 		AA060600000000000000010A /* QuotaBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060600000000000000010B /* QuotaBarTests.swift */; };
 		AA060600000000000000011A /* RelativeTimestampLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060600000000000000011B /* RelativeTimestampLabelTests.swift */; };
 		AA060600000000000000012A /* FooterViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA060600000000000000012B /* FooterViewTests.swift */; };
+		/* Plan 01.09 — Hover-style gap closure build files */
+		AA090900000000000000001A /* HoverableBorderedButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA090900000000000000001B /* HoverableBorderedButtonStyle.swift */; };
+		AA090900000000000000010A /* HoverableBorderedButtonStyleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA090900000000000000010B /* HoverableBorderedButtonStyleTests.swift */; };
 		/* Plan 01.07 — Notifications production file (app target) */
 		AA070700000000000000001A /* UNUserNotificationCenterProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070700000000000000001B /* UNUserNotificationCenterProtocol.swift */; };
 		/* Plan 01.07 — NotificationsTests build files (test target) */
@@ -198,6 +201,9 @@
 		AA060600000000000000010B /* QuotaBarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaBarTests.swift; sourceTree = "<group>"; };
 		AA060600000000000000011B /* RelativeTimestampLabelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelativeTimestampLabelTests.swift; sourceTree = "<group>"; };
 		AA060600000000000000012B /* FooterViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FooterViewTests.swift; sourceTree = "<group>"; };
+		/* Plan 01.09 — Hover-style gap closure file references */
+		AA090900000000000000001B /* HoverableBorderedButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverableBorderedButtonStyle.swift; sourceTree = "<group>"; };
+		AA090900000000000000010B /* HoverableBorderedButtonStyleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverableBorderedButtonStyleTests.swift; sourceTree = "<group>"; };
 		/* Plan 01.07 — Notifications production file reference */
 		AA070700000000000000001B /* UNUserNotificationCenterProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UNUserNotificationCenterProtocol.swift; sourceTree = "<group>"; };
 		/* Plan 01.07 — NotificationsTests file references */
@@ -444,6 +450,7 @@
 				AA060600000000000000002B /* QuotaBar.swift */,
 				AA060600000000000000003B /* StatusDot.swift */,
 				AA060600000000000000004B /* RelativeTimestampLabel.swift */,
+				AA090900000000000000001B /* HoverableBorderedButtonStyle.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -464,6 +471,7 @@
 				AA060600000000000000010B /* QuotaBarTests.swift */,
 				AA060600000000000000011B /* RelativeTimestampLabelTests.swift */,
 				AA060600000000000000012B /* FooterViewTests.swift */,
+				AA090900000000000000010B /* HoverableBorderedButtonStyleTests.swift */,
 			);
 			path = UITests;
 			sourceTree = "<group>";
@@ -666,6 +674,8 @@
 				AA060600000000000000005A /* TotalsHeaderView.swift in Sources */,
 				/* Plan 01.07 — Notifications production */
 				AA070700000000000000001A /* UNUserNotificationCenterProtocol.swift in Sources */,
+				/* Plan 01.09 — Hover-style gap closure */
+				AA090900000000000000001A /* HoverableBorderedButtonStyle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -694,6 +704,8 @@
 				/* Plan 01.07 — NotificationsTests */
 				AA070700000000000000010A /* ThresholdEngineTests.swift in Sources */,
 				AA070700000000000000011A /* NotificationManagerTests.swift in Sources */,
+				/* Plan 01.09 — Hover-style gap closure tests */
+				AA090900000000000000010A /* HoverableBorderedButtonStyleTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -27,8 +27,7 @@ public struct FooterView: View {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
             .keyboardShortcut("r", modifiers: .command)
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+            .buttonStyle(HoverableBorderedButtonStyle())
             .tint(.accentColor)
 
             Spacer()
@@ -37,8 +36,7 @@ public struct FooterView: View {
                 NSApp.terminate(nil)
             }
             .keyboardShortcut("q", modifiers: .command)
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+            .buttonStyle(HoverableBorderedButtonStyle())
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
