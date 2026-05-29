@@ -102,6 +102,10 @@
 		AA070700000000000000011A /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070700000000000000011B /* NotificationManagerTests.swift */; };
 		/* Plan 03-01 Task 1 — Codex ProviderID constant test */
 		AA030100000000000000001A /* ProviderIDCodexTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000001B /* ProviderIDCodexTests.swift */; };
+		/* Plan 03-01 Task 2 — CodexRoots + CodexRolloutScanner (app target) + tests */
+		AA030100000000000000002A /* CodexRoots.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000002B /* CodexRoots.swift */; };
+		AA030100000000000000003A /* CodexRolloutScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000003B /* CodexRolloutScanner.swift */; };
+		AA030100000000000000010A /* CodexRolloutScannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000010B /* CodexRolloutScannerTests.swift */; };
 		/* Plan 02.01 — Claude transcript primitives (app target) */
 		AA020100000000000000001A /* TranscriptOffset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000001B /* TranscriptOffset.swift */; };
 		AA020100000000000000002A /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000002B /* TranscriptRecord.swift */; };
@@ -282,6 +286,10 @@
 		AA070700000000000000011B /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
 		/* Plan 03-01 Task 1 — Codex ProviderID constant test file reference */
 		AA030100000000000000001B /* ProviderIDCodexTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderIDCodexTests.swift; sourceTree = "<group>"; };
+		/* Plan 03-01 Task 2 — CodexRoots + CodexRolloutScanner file references */
+		AA030100000000000000002B /* CodexRoots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRoots.swift; sourceTree = "<group>"; };
+		AA030100000000000000003B /* CodexRolloutScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRolloutScanner.swift; sourceTree = "<group>"; };
+		AA030100000000000000010B /* CodexRolloutScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRolloutScannerTests.swift; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -477,8 +485,19 @@
 				AA040400000000000000001B /* UsageProvider.swift */,
 				AA040400000000000000031B /* OpenRouter */,
 				AA020100000000000000050B /* Claude */,
+				AA030100000000000000050B /* Codex */,
 			);
 			path = Providers;
+			sourceTree = "<group>";
+		};
+		/* Plan 03-01 — Codex provider subgroup */
+		AA030100000000000000050B /* Codex */ = {
+			isa = PBXGroup;
+			children = (
+				AA030100000000000000002B /* CodexRoots.swift */,
+				AA030100000000000000003B /* CodexRolloutScanner.swift */,
+			);
+			path = Codex;
 			sourceTree = "<group>";
 		};
 		/* Plan 02.01 — Claude provider subgroup */
@@ -703,8 +722,18 @@
 				AA060600000000000000032B /* UITests */,
 				AA070700000000000000030B /* NotificationsTests */,
 				AA020100000000000000060B /* ProvidersClaudeTests */,
+				AA030100000000000000060B /* ProvidersCodexTests */,
 			);
 			path = AgentsUsageBarTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 03-01 — ProvidersCodexTests group */
+		AA030100000000000000060B /* ProvidersCodexTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA030100000000000000010B /* CodexRolloutScannerTests.swift */,
+			);
+			path = ProvidersCodexTests;
 			sourceTree = "<group>";
 		};
 		/* Plan 02.01 — ProvidersClaudeTests group */
@@ -946,6 +975,9 @@
 				AA020600000000000000001A /* RetryPolicy.swift in Sources */,
 				AA020600000000000000002A /* CircuitBreaker.swift in Sources */,
 				AA020600000000000000003A /* PowerObserver.swift in Sources */,
+				/* Plan 03-01 — CodexRoots + CodexRolloutScanner */
+				AA030100000000000000002A /* CodexRoots.swift in Sources */,
+				AA030100000000000000003A /* CodexRolloutScanner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1009,6 +1041,8 @@
 				AA020700000000000000014A /* MenuBarTintTests.swift in Sources */,
 				/* Plan 03-01 Task 1 — Codex ProviderID constant test */
 				AA030100000000000000001A /* ProviderIDCodexTests.swift in Sources */,
+				/* Plan 03-01 Task 2 — CodexRolloutScanner tests */
+				AA030100000000000000010A /* CodexRolloutScannerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
