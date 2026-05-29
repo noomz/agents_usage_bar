@@ -11,7 +11,7 @@
 - [x] **SHELL-02**: App targets macOS 14+ (`@Observable`, stable `MenuBarExtra(.window)`)
 - [x] **SHELL-03**: Menu bar status item shows a custom SF-Symbol icon (18×18) and opens a SwiftUI popover panel
 - [x] **SHELL-04**: Popover panel uses fixed width (~360pt) with dynamic height and dismisses on click-outside, on external display, post-sleep, and with Stage Manager on
-- [ ] **SHELL-05**: Settings window opens via Cmd-comma; activation policy temporarily flips to `.regular` while open and back to `.accessory` on close
+- [x] **SHELL-05**: Settings window opens via Cmd-comma; activation policy temporarily flips to `.regular` while open and back to `.accessory` on close
 - [x] **SHELL-06**: Quit action available from popover (footer) and Cmd-click context menu
 
 ### Provider — Claude
@@ -94,7 +94,7 @@
 - [ ] **CFG-02**: App reads `~/.config/agents-usage-bar/config.toml` (optional) for per-provider toggles, threshold overrides, llama.cpp port, refresh interval
 - [ ] **CFG-03**: On first launch, app auto-detects which providers have usable credentials/configs and enables them by default
 - [ ] **CFG-04**: First-launch screen lists each provider's detected state with "How to enable" CTA for missing ones (no errors)
-- [ ] **CFG-05**: Settings scene exposes refresh interval, default threshold, per-provider enable/disable, theme, "open at login" toggle (default OFF)
+- [x] **CFG-05**: Settings scene exposes refresh interval, default threshold, per-provider enable/disable, theme, "open at login" toggle (default OFF)
 - [ ] **CFG-06**: Shell RC files (`~/.zshrc`, `~/.bashrc`, fish config) are NOT parsed (explicit anti-feature — code-execution vector)
 
 ### Security
@@ -171,7 +171,7 @@
 | SHELL-02 | Phase 1 | Complete |
 | SHELL-03 | Phase 1 | Complete |
 | SHELL-04 | Phase 1 | Complete |
-| SHELL-05 | Phase 5 | Pending |
+| SHELL-05 | Phase 5 | Complete |
 | SHELL-06 | Phase 1 | Complete |
 | CLAUDE-01 | Phase 2 | Complete |
 | CLAUDE-02 | Phase 2 | Complete |
@@ -227,7 +227,7 @@
 | CFG-02 | Phase 1 | Complete |
 | CFG-03 | Phase 5 | Pending |
 | CFG-04 | Phase 5 | Pending |
-| CFG-05 | Phase 5 | Pending |
+| CFG-05 | Phase 5 | Complete |
 | CFG-06 | Phase 5 | Pending |
 | SEC-01 | Phase 1 | Pending |
 | SEC-02 | Phase 1 | Pending |
