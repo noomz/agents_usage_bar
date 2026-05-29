@@ -25,6 +25,7 @@ struct AgentsUsageBarApp: App {
             PopoverRootView()
                 .environment(dependencies.store)
                 .environment(\.clockService, dependencies.clock)   // B5: only INJECT; key declared in Plan 01.06
+                .environment(\.preferences, dependencies.preferences)  // Plan 05-02: preferences overlay (D-01/D-02)
                 .task {
                     // Plan 02.05 — install snooze action handler BEFORE the poll loop starts
                     // so any notification fired by the first refresh has its action wired.
@@ -64,6 +65,7 @@ struct AgentsUsageBarApp: App {
             SettingsScene()
                 .environment(dependencies.store)
                 .environment(\.clockService, dependencies.clock)
+                .environment(\.preferences, dependencies.preferences)  // Plan 05-02: preferences overlay (D-01/D-02)
         }
         .commands {
             // Plan 05-01 — LSUIElement Cmd-, focus fix (D-05 / Pitfall 1). The default

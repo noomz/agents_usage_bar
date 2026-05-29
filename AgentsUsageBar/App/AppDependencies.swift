@@ -27,6 +27,11 @@ public final class Dependencies {
     /// live; without this reference the observer is deallocated and policy flips silently
     /// drop (Pitfall 4).
     public let windowActivationObserver: WindowActivationObserver
+    /// Plan 05-02 — Observable user preferences store backed by UserDefaults.
+    /// Injected via `.environment(\.preferences, dependencies.preferences)` in both scenes.
+    /// Constructed before `ConfigStore.load(preferences:)` so the UserDefaults overlay is
+    /// applied at launch (D-01/D-02).
+    public let preferences: UserPreferencesStore
 
     public init(
         store: AggregateStore,
@@ -34,7 +39,8 @@ public final class Dependencies {
         clock: any Clock,
         actionHandler: NotificationActionHandler,
         powerObserver: PowerObserver,
-        windowActivationObserver: WindowActivationObserver
+        windowActivationObserver: WindowActivationObserver,
+        preferences: UserPreferencesStore
     ) {
         self.store = store
         self.scheduler = scheduler
@@ -42,6 +48,7 @@ public final class Dependencies {
         self.actionHandler = actionHandler
         self.powerObserver = powerObserver
         self.windowActivationObserver = windowActivationObserver
+        self.preferences = preferences
     }
 }
 
@@ -90,8 +97,13 @@ public enum AppDependencies {
             cache = NoopCacheStore()
         }
 
+        // Plan 05-02 — User preferences store (D-01/D-02 UserDefaults overlay).
+        // Constructed BEFORE ConfigStore.load(preferences:) so the overlay is applied at launch.
+        let preferences = UserPreferencesStore()
+
         // 4. Config (B6: instance-method API — NOT static ConfigStore.load(env:))
-        let config = ConfigStore(env: ProcessInfoEnvReader()).load()
+        //    Extended with preferences overlay per D-02 (userDefaults > env > toml > defaults).
+        let config = ConfigStore(env: ProcessInfoEnvReader()).load(preferences: preferences)
 
         // 5. Provider registry — OpenRouter only in Phase 1
         var registry: [any UsageProvider] = []
@@ -387,7 +399,8 @@ public enum AppDependencies {
             clock: clock,
             actionHandler: actionHandler,
             powerObserver: powerObserver,
-            windowActivationObserver: windowActivationObserver
+            windowActivationObserver: windowActivationObserver,
+            preferences: preferences
         )
     }
 }

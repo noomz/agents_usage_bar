@@ -257,6 +257,54 @@ public final class ConfigStore: @unchecked Sendable {
         )
     }
 
+    /// Loads configuration applying `userDefaults > env > toml > defaults` precedence for knobs.
+    ///
+    /// Credentials (apiKey, bearer, OAuth paths) always follow `env > toml` only (D-03).
+    /// Only user-mutable knobs are overlaid from `preferences`:
+    /// - `refreshInterval` — polling cadence
+    /// - `threshold` — warning-band fraction
+    /// - per-provider `enabled` — when explicitly set in UserDefaults (non-empty map)
+    ///
+    /// NOTE: `theme` and `openAtLogin` are UI-only preferences — they do NOT appear in
+    /// `AppConfig` and are consumed directly from `UserPreferencesStore` by the UI layer.
+    ///
+    /// - Parameter preferences: The `UserPreferencesStore` to overlay. When `nil`,
+    ///   returns the same result as `load()` (back-compat).
+    @MainActor
+    public func load(preferences: UserPreferencesStore? = nil) -> AppConfig {
+        var config = load()   // existing env > toml > defaults chain
+
+        guard let prefs = preferences else { return config }
+
+        // D-02: UserDefaults wins for user-mutable knobs.
+        // Always apply — on a fresh install both sides default to the same value, so
+        // a no-op override is harmless.
+        config = AppConfig(
+            refreshInterval: prefs.refreshInterval,
+            threshold: prefs.threshold,
+            openrouter: config.openrouter.withEnabled(
+                prefs.providerEnabled[.openrouter] ?? config.openrouter.enabled
+            ),
+            codex: config.codex.withEnabled(
+                prefs.providerEnabled[.codex] ?? config.codex.enabled
+            ),
+            gemini: config.gemini.withEnabled(
+                prefs.providerEnabled[.gemini] ?? config.gemini.enabled
+            ),
+            ollama: config.ollama.withEnabled(
+                prefs.providerEnabled[.ollama] ?? config.ollama.enabled
+            ),
+            lmstudio: config.lmstudio.withEnabled(
+                prefs.providerEnabled[.lmstudio] ?? config.lmstudio.enabled
+            ),
+            llamacpp: config.llamacpp.withEnabled(
+                prefs.providerEnabled[.llamacpp] ?? config.llamacpp.enabled
+            )
+        )
+        // NOTE: apiKey, bearer, OAuth credentials are NOT touched here (D-03, CFG-01).
+        return config
+    }
+
     /// Convenience accessor for the resolved OpenRouter bearer secret.
     ///
     /// Returns `nil` when neither env nor TOML supplies a key.

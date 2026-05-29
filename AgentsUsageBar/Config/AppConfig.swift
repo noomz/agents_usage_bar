@@ -110,6 +110,14 @@ public struct OpenRouterConfig: Sendable, Equatable {
     }
 }
 
+extension OpenRouterConfig {
+    /// Returns a copy of this config with the `enabled` flag replaced.
+    /// Plan 05-02: used by `ConfigStore.load(preferences:)` to apply UserDefaults overlay (D-02).
+    func withEnabled(_ enabled: Bool) -> OpenRouterConfig {
+        OpenRouterConfig(apiKey: apiKey, apiURL: apiURL, httpReferer: httpReferer, xTitle: xTitle, enabled: enabled)
+    }
+}
+
 // MARK: - CodexConfig (Plan 03-08)
 
 /// Per-provider configuration for OpenAI Codex (CODEX-01..04).
@@ -151,6 +159,14 @@ public struct CodexConfig: Sendable, Equatable {
     }
 }
 
+extension CodexConfig {
+    /// Returns a copy of this config with the `enabled` flag replaced.
+    /// Plan 05-02: used by `ConfigStore.load(preferences:)` to apply UserDefaults overlay (D-02).
+    func withEnabled(_ enabled: Bool) -> CodexConfig {
+        CodexConfig(enabled: enabled, bearerOverride: bearerOverride, sessionWindowDays: sessionWindowDays)
+    }
+}
+
 // MARK: - GeminiConfig (Plan 03-08)
 
 /// Per-provider configuration for Google Gemini OAuth-personal (GEMINI-02..04).
@@ -180,6 +196,14 @@ public struct GeminiConfig: Sendable, Equatable {
     ) {
         self.enabled = enabled
         self.projectIDOverride = projectIDOverride
+    }
+}
+
+extension GeminiConfig {
+    /// Returns a copy of this config with the `enabled` flag replaced.
+    /// Plan 05-02: used by `ConfigStore.load(preferences:)` to apply UserDefaults overlay (D-02).
+    func withEnabled(_ enabled: Bool) -> GeminiConfig {
+        GeminiConfig(enabled: enabled, projectIDOverride: projectIDOverride)
     }
 }
 
@@ -246,5 +270,31 @@ public struct LlamaCppConfig: Sendable, Equatable {
     public init(enabled: Bool, port: Int?) {
         self.enabled = enabled
         self.port = port
+    }
+}
+
+// MARK: - Plan 05-02 withEnabled() helpers
+
+extension OllamaConfig {
+    /// Returns a copy of this config with the `enabled` flag replaced.
+    /// Plan 05-02: used by `ConfigStore.load(preferences:)` to apply UserDefaults overlay (D-02).
+    func withEnabled(_ enabled: Bool) -> OllamaConfig {
+        OllamaConfig(enabled: enabled)
+    }
+}
+
+extension LMStudioConfig {
+    /// Returns a copy of this config with the `enabled` flag replaced.
+    /// Plan 05-02: used by `ConfigStore.load(preferences:)` to apply UserDefaults overlay (D-02).
+    func withEnabled(_ enabled: Bool) -> LMStudioConfig {
+        LMStudioConfig(enabled: enabled, port: port)
+    }
+}
+
+extension LlamaCppConfig {
+    /// Returns a copy of this config with the `enabled` flag replaced.
+    /// Plan 05-02: used by `ConfigStore.load(preferences:)` to apply UserDefaults overlay (D-02).
+    func withEnabled(_ enabled: Bool) -> LlamaCppConfig {
+        LlamaCppConfig(enabled: enabled, port: port)
     }
 }
