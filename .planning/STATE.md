@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-15T16:30:00.000Z"
+last_updated: "2026-05-15T16:55:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 25
-  completed_plans: 17
-  percent: 36
+  completed_plans: 18
+  percent: 38
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-15 (Phase 3 Plan 01 executed — Codex rollout discovery layer landed: ProviderID.codex + CodexRoots + CodexRolloutScanner + CodexRolloutEvent + CodexRolloutParser; 23 new tests across 3 suites; clean Debug build)
+**Last Updated:** 2026-05-15 (Phase 3 Plan 03 executed — Codex OAuth fallback primitives landed: CodexCredentialLoader + CodexOAuthError + CodexUsageResponse (wham/usage shape, distinct from rollout) + CodexOAuthClient actor; 23 new tests across 3 suites (CodexCredentialLoader×8 + CodexUsageResponse×6 + CodexOAuthClient×9); clean Debug build)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -29,17 +29,17 @@ progress:
 ## Current Position
 
 Phase: 03 (remote-api-providers-codex-gemini) — EXECUTING
-Plan: 2 of 9 (next)
-Phase: 03 — Plan 01 ✅ COMPLETE (Codex rollout discovery layer)
+Plan: 3 of 9 (Plan 03 ✅) — next executable is Plan 02 (Codex pricing, BLOCKING human-verify) or Plan 04 (Codex provider actor composition)
+Phase: 03 — Plans 01 + 03 ✅ COMPLETE (Codex rollout discovery + Codex OAuth fallback)
 
 - **Milestone:** v1 (initial release)
 - **Phase:** 3 of 6 — Remote API Providers (Codex + Gemini) — EXECUTING
-- **Plan:** 1 of 9 plans executed (Plan 01 ✅ — `03-01-SUMMARY.md`, commits e2bcd5e + 6a18026 + a31b99a)
+- **Plan:** 2 of 9 plans executed (Plan 01 ✅ — `03-01-SUMMARY.md`, commits e2bcd5e + 6a18026 + a31b99a; Plan 03 ✅ — `03-03-SUMMARY.md`, commits d16b180 + a5f62df)
 - **Status:** Executing Phase 03
-- **Progress:** [█▒▒▒▒▒▒▒▒▒▒▒▒▒] 11% Phase 3 (1/9 plans)
+- **Progress:** [██▒▒▒▒▒▒▒▒▒▒▒▒] 22% Phase 3 (2/9 plans)
 
 ```
-[████████████████████████████████████████████████████████████░░░░] 94% (17/18 plans complete to date; Phase 3 in progress with 1/9 done)
+[█████████████████████████████████████████████████████████████░░░] 95% (18/19 plans complete to date; Phase 3 in progress with 2/9 done)
 ```
 
 ## Performance Metrics
@@ -47,11 +47,11 @@ Phase: 03 — Plan 01 ✅ COMPLETE (Codex rollout discovery layer)
 | Metric | Value |
 |--------|-------|
 | Phases complete | 2 / 6 (Phase 2 UAT approved 2026-05-15) |
-| Plans complete | 17 / 25 (Phase 1: 9 + Phase 2: 7 + Phase 3 Plan 01: 1) |
+| Plans complete | 18 / 25 (Phase 1: 9 + Phase 2: 7 + Phase 3 Plans 01 + 03: 2) |
 | Requirements mapped | 76 / 76 (100%) |
 | Requirements validated | 42 / 76 (Phase 1 + Phase 2 sets — Tests 1-2 manual PASS; Tests 3-10 covered by unit-test suites per `02-UAT.md` attestation table) |
 | Plans drafted | 25 (Phase 3 plans 01–09 drafted 2026-05-15) |
-| Plans executed | 17 (Phase 1 = 9; Phase 2 = 7 across Waves 1–5; Phase 3 Plan 01 = 1 in commits e2bcd5e + 6a18026 + a31b99a) |
+| Plans executed | 18 (Phase 1 = 9; Phase 2 = 7 across Waves 1–5; Phase 3 Plan 01 = 1 in e2bcd5e + 6a18026 + a31b99a; Phase 3 Plan 03 = 1 in d16b180 + a5f62df) |
 | Node repairs | 1 (Phase 2 Wave 1 salvage — see Phase 2 backprop) |
 | UI phases run | 0 |
 | UAT gaps closed | 1 (Test 2 cosmetic hover state) |
@@ -60,6 +60,7 @@ Phase: 03 — Plan 01 ✅ COMPLETE (Codex rollout discovery layer)
 | Phase 02 P06 duration | ~12 min, 2 tasks, 10 files modified, 29 new tests |
 | Phase 02 P07 duration | ~25 min, 3 tasks (2 code + 1 docs), 11 files modified, 30 new tests |
 | Phase 03 P01 duration | ~35 min, 3 tasks, 11 files created/modified, 23 new tests |
+| Phase 03 P03 duration | ~25 min, 2 tasks, 12 files created/modified, 23 new tests |
 
 ## Accumulated Context
 
@@ -130,6 +131,10 @@ Phase: 03 — Plan 01 ✅ COMPLETE (Codex rollout discovery layer)
 63. `CodexRolloutScanner` computes yesterday via `Calendar.current.date(byAdding:.day, value:-1, to: startOfDay(for: now))` — NEVER via string substraction or DateFormatter. DST (2026-03-08 PT) and leap-day (2028-02-29) boundaries are asserted by tests with pinned PT and UTC calendars. Directory components built via `DateComponents` + `String(format:"%02d", ...)`; `ISO8601DateFormatter` is forbidden in the scanner (UI-04 / Pitfall 4 invariant).
 64. `CodexRolloutEvent` is lenient-by-default — `JSONDecoder.decode(...)` silently ignores unknown JSON keys when the target struct does not declare them. **No `AnyCodable` / `extraFields` plumbing required** (Phase 2 `TranscriptRecord` precedent; CLAUDE-03 / Pitfall 7). RESEARCH.md's hypothetical extraFields scaffold is deliberately NOT adopted; new test `unknown_future_field_does_not_break_decoding` locks in forward-compat.
 65. `CodexRolloutParser.lastTokenCount(in:)` folds across `[URL]` comparing parsed ISO8601 `event.timestamp` values — NOT file mtimes. A long-running session pinned to yesterday's date dir but still emitting events today is correctly handled (Pitfall 11). The predicate requires `type == "event_msg"` AND `payload.type == "token_count"` AND `payload.info != nil`; the parser uses Phase 2 STATE #43's dual `ISO8601DateFormatter` (fractional + non-fractional) pattern. Malformed/truncated JSON lines silently skipped via `try?` (Pitfall 5).
+66. `CodexCredentialLoader` has NO Keychain path (Codex CLI never writes there) and NO `needsRefresh`/`saveCredentials` (Codex CLI manages its own bearer rotation; we degrade-to-local on 401 instead). The struct stores only `authPath: URL` — `FileManager` was removed from the type after the initial draft tripped Swift 6 strict-concurrency on `Sendable` conformance (`FileManager` is non-Sendable). File reads use `Data(contentsOf:)` directly. Bearer-resolution priority follows RESEARCH correction #4: top-level `OPENAI_API_KEY` (non-null, non-empty) → `.apiKey` source with `accountId = nil`; else `tokens.access_token` (non-empty) → `.subscription` source with `accountId` from `tokens.account_id` (may be nil for personal accounts). Empty-string `OPENAI_API_KEY` treated as absent (Phase 1 STATE #22 precedent).
+67. `CodexUsageResponse` is INTENTIONALLY a distinct Codable struct from `CodexRolloutEvent.RateLimits` (RESEARCH correction #5). Schema diverges: **singular `rate_limit`** (NOT plural), **`primary_window`/`secondary_window`** (NOT bare `primary`), **`reset_at`** (no `s`), **`limit_window_seconds`** (NOT `window_minutes`). Every field is optional with `decodeIfPresent` semantics; explicit snake_case `CodingKeys` on every type (NOT `keyDecodingStrategy = .convertFromSnakeCase`, mirrors Phase 2 `TranscriptRecord` + `CodexRolloutEvent`). A regression test `rolloutShapeKeys_doNotMisresolveIntoWhamUsageStruct` locks in the schema split — feeding a rollout-shaped payload leaves the wham/usage `rateLimit` field nil.
+68. `CodexOAuthClient` is an `actor` with NO refresh path. `HTTPError` is mapped: **401/403 → `CodexOAuthError.unauthorized(status:)`** (terminal until user re-auths via Codex CLI; provider renders muted "No data yet" per D-03 — NOT a red error row); **429 / any other non-2xx → `CodexOAuthError.usageEndpointFailed(status:)`** (feeds AggregateStore-level CircuitBreaker per POLL-05/STATE #56). `DecodingError` and other Swift errors propagate unchanged (matches `ClaudeOAuthClient` precedent). `account_id` is forwarded as the cleartext `ChatGPT-Account-Id` HTTP header — it identifies a workspace, NOT a credential, so it is never wrapped in `Secret`. The `clock` init parameter is retained for parity with `ClaudeOAuthClient` even though Codex has no refresh path.
+69. `CodexOAuthClient` mirrors Phase 2 `ClaudeOAuthClientTests` by using a `FakeHTTPClient` at the `HTTPClient` protocol seam rather than a literal `URLProtocol` stub. This satisfies the intent of STATE #19 (deterministic stubbed HTTP, assertable request shape, scriptable failure modes) without the URLProtocol/NSLock boilerplate. The `.serialized` Swift Testing trait is preserved on `CodexOAuthClientTests`. A test-side source-grep (`clientSource_doesNotCallRevealForRequest`) locks in the SEC-01 invariant that the OAuth client never calls the credential-reveal accessor — only `URLSessionHTTPClient.performGet` is permitted that site (Phase 1 STATE #15).
 
 ### Open Questions (from research)
 
@@ -167,12 +172,12 @@ Phase: 03 — Plan 01 ✅ COMPLETE (Codex rollout discovery layer)
 ### Last Session
 
 - **Date:** 2026-05-15
-- **Worked on:** Phase 03 Plan 01 — Codex rollout discovery layer. Three tasks executed sequentially: (1) added `ProviderID.codex` constant with lock-in test; (2) created `CodexRoots` (default `~/.codex/sessions` with override seam) + `CodexRolloutScanner` (today+yesterday `YYYY/MM/DD` walker) with 12 Swift Testing cases covering DST 2026-03-08 PT, leap-day 2028-02-29 UTC, missing-yesterday-without-throw, symlink canonicalisation, `.jsonl` filter, and hidden-file skip; (3) created `CodexRolloutEvent` lenient Codable (no AnyCodable per Phase 2 precedent) + `CodexRolloutParser.lastTokenCount(in:)` fold-across-files namespace enum with 9 tests covering 2026 full-field decode, 2025 legacy `resets_in_seconds`, malformed-line skip, unknown-future-field tolerance, order-independence, and `info == nil` rejection. Two test fixtures derived from RESEARCH.md schemas. All 23 tests pass; Debug build succeeds. xcodeproj wired with new Codex source subgroup + Models subgroup + ProvidersCodexTests group + Fixtures subgroup.
-- **Commits:** e2bcd5e (Task 1 — ProviderID.codex + ProviderIDCodexTests), 6a18026 (Task 2 — CodexRoots + CodexRolloutScanner + 12 tests), a31b99a (Task 3 — CodexRolloutEvent + CodexRolloutParser + 9 tests + 2 fixtures).
+- **Worked on:** Phase 03 Plan 03 — Codex OAuth fallback primitives. Two tasks executed sequentially: (1) `CodexCredentialLoader` struct reading `~/.codex/auth.json` with API-key precedence + subscription fallback (RESEARCH correction #4), `Bearer` value type wrapping the access token in `Secret`, optional `accountId` forwarded as cleartext (workspace identifier, NOT a credential), `Source` enum (`.apiKey`/`.subscription`), `CodexOAuthError` typed enum (`noCredentials`/`unauthorized`/`usageEndpointFailed`/`fileFormat`); 8 Swift Testing cases covering missing file, both fixture variants, empty tokens, malformed JSON, empty-string `OPENAI_API_KEY` falling through to `tokens.access_token`, optional `accountId`. (2) `CodexUsageResponse` lenient Codable for wham/usage shape (RESEARCH correction #5: singular `rate_limit`, `primary_window`/`secondary_window`, `reset_at`, `limit_window_seconds` — intentionally distinct from rollout schema), `Window.resetDate()` epoch→Date helper, `CodexOAuthClient` actor calling `GET https://chatgpt.com/backend-api/wham/usage` with bearer + optional `ChatGPT-Account-Id` header; HTTPError mapped to typed errors (401/403→unauthorized, 429/5xx→usageEndpointFailed, DecodingError unchanged); 6 CodexUsageResponseTests (full fixture, resetDate, partial, empty, unknown fields, rollout-shape regression) + 9 CodexOAuthClientTests (happy with bearer/accountId, no-accountId, 401/403/429/500, noCredentials, malformed JSON, SEC-01 source-grep). All 23 tests pass; Debug build succeeds. xcodeproj wired: 4 new app sources + 3 new test sources + 4 new fixtures (no Resources build phase — fixtures loaded via `#filePath`). Two Rule-1 deviations recorded: (a) removed `FileManager` stored property from CodexCredentialLoader to satisfy Swift 6 strict-concurrency Sendable; (b) rewrote SEC-01 / schema-contrast doc comments to avoid literal `revealForRequest`/`rate_limits`/`resets_at` strings that tripped the literal grep acceptance gates without semantic change.
+- **Commits:** d16b180 (Task 1 — CodexCredentialLoader + CodexOAuthError + 8 tests + 3 fixtures), a5f62df (Task 2 — CodexUsageResponse + CodexOAuthClient + 15 tests + 1 fixture).
 
 ### Next Session
 
-- **Suggested action:** `/gsd-execute-phase 03 --plan 02` — Phase 3 Plan 02 (Codex pricing). Bundle `Resources/Pricing/codex-models.json` + `CodexModelPricing.swift` cascade-lookup mirroring Phase 2's `ClaudeModelPricing`. Plan 02 contains a BLOCKING `checkpoint:human-verify` against openai.com/api/pricing/ before lockdown (CODEX-04).
+- **Suggested action:** `/gsd-execute-phase 03 --plan 02` — Phase 3 Plan 02 (Codex pricing). Bundle `Resources/Pricing/codex-models.json` + `CodexModelPricing.swift` cascade-lookup mirroring Phase 2's `ClaudeModelPricing`. Plan 02 contains a BLOCKING `checkpoint:human-verify` against openai.com/api/pricing/ before lockdown (CODEX-04). Plan 04 (`CodexJSONLProvider` composition) is the next composition step; it can start once Plan 02 finishes (pricing) — Plan 03's primitives are ready to be wired in.
 - **Deferred:** Test 7 (Energy Impact battery soak) — 1hr battery-only soak; schedule before Phase 6 distribution.
 - **Memory candidate:** `feature_claude_quota_detail_view` — Phase 05+ candidate; data already in `UsageSnapshot.quotaWindows`.
 
