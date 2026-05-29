@@ -139,6 +139,72 @@ public enum AppDependencies {
         )
         registry.append(claudeProvider)
 
+        // 6.1. Codex provider (Plan 03-08) — register when config.codex.enabled
+        //      AND (~/.codex/sessions exists OR ~/.codex/auth.json exists).
+        //      Otherwise the placeholder is seeded later (step 10).
+        let codexRegistered: Bool
+        if config.codex.enabled {
+            let codexCredsLoader = CodexCredentialLoader()
+            let codexCreds = codexCredsLoader.loadCredentials()
+            let codexSessionsExists = FileManager.default.fileExists(
+                atPath: NSHomeDirectory() + "/.codex/sessions"
+            )
+            if codexCreds != nil || codexSessionsExists {
+                let codexPricing: CodexModelPricing?
+                do {
+                    codexPricing = try CodexModelPricing.loadBundled()
+                } catch {
+                    os.Logger(subsystem: "app.agents-usage-bar", category: "composition")
+                        .error("Codex pricing load failed: \(error.localizedDescription, privacy: .public)")
+                    codexPricing = nil  // graceful — cost renders nil
+                }
+                let codexOAuth: (any CodexOAuthClientProtocol)?
+                if codexCreds != nil {
+                    codexOAuth = CodexOAuthClient(
+                        http: http,
+                        credentialLoader: codexCredsLoader,
+                        clock: clock
+                    )
+                } else {
+                    codexOAuth = nil
+                }
+                let codexProvider = CodexJSONLProvider(
+                    scannerFactory: { now in CodexRolloutScanner(now: now) },
+                    reader: TranscriptReader(),
+                    pricing: codexPricing,
+                    oauth: codexOAuth,
+                    cache: cache,
+                    clock: clock
+                )
+                registry.append(codexProvider)
+                codexRegistered = true
+            } else {
+                codexRegistered = false
+            }
+        } else {
+            codexRegistered = false
+        }
+
+        // 6.2. Gemini provider (Plan 03-08) — register when config.gemini.enabled
+        //      AND GeminiSettingsGate.isOAuthPersonal() (the user opted into
+        //      oauth-personal in ~/.gemini/settings.json) AND credentials present.
+        let geminiRegistered: Bool
+        if config.gemini.enabled,
+           GeminiSettingsGate.isOAuthPersonal(),
+           GeminiCredentialLoader().loadCredentials() != nil
+        {
+            let geminiOAuth = GeminiOAuthClient(http: http, clock: clock)
+            let geminiProvider = GeminiOAuthProvider(
+                http: http,
+                oauth: geminiOAuth,
+                clock: clock
+            )
+            registry.append(geminiProvider)
+            geminiRegistered = true
+        } else {
+            geminiRegistered = false
+        }
+
         // 7. Threshold engine (warning-at-80% gate per D-11)
         let thresholds = ThresholdEngine(warningFraction: config.threshold)
 
@@ -183,6 +249,28 @@ public enum AppDependencies {
             store.seedPlaceholder(
                 providerID: ProviderID.claude,
                 displayName: "Claude",
+                status: .unauthenticated
+            )
+        }
+
+        // Plan 03-08 Codex placeholder: when not registered (config disabled
+        // OR no rollouts AND no auth.json), seed a row so the popover always
+        // shows Codex in the provider list.
+        if !codexRegistered {
+            store.seedPlaceholder(
+                providerID: ProviderID.codex,
+                displayName: "Codex",
+                status: .unauthenticated
+            )
+        }
+
+        // Plan 03-08 Gemini placeholder: when not registered (config disabled
+        // OR settings gate closed OR no oauth_creds.json), seed a row so the
+        // popover always shows Gemini in the provider list.
+        if !geminiRegistered {
+            store.seedPlaceholder(
+                providerID: ProviderID.gemini,
+                displayName: "Gemini",
                 status: .unauthenticated
             )
         }

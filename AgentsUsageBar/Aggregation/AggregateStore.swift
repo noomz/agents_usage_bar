@@ -38,6 +38,14 @@ public final class AggregateStore {
     /// Used to overlay stale displayNames cached from older builds (e.g. lowercase
     /// "claude" before this provider was given the proper "Claude Code" name).
     private let displayNamesByID: [ProviderID: String]
+    /// Plan 03-08 D-07: per-provider `capabilities.hasTokens` snapshot built
+    /// from the registry at init. `rollupTotals()` excludes providers whose
+    /// entry is `false` (Gemini in v1 — quota-only, no token counts), so the
+    /// cross-provider "Today total" never fabricates token figures from a
+    /// provider that doesn't report them. Used by Plan 03-07's TotalsHeaderView
+    /// to render the "Total excludes quota-only providers" footnote when
+    /// `hasAnyQuotaOnlyProvider` is true.
+    private let hasTokensByID: [ProviderID: Bool]
     private let clock: any Clock
     private let cache: any CacheStore
     private let thresholds: ThresholdEngine
@@ -84,8 +92,16 @@ public final class AggregateStore {
         self.notificationState = notificationState
 
         var names: [ProviderID: String] = [:]
-        for p in registry { names[p.id] = p.displayName }
+        // Plan 03-08 D-07: capture hasTokens alongside displayName in a single
+        // pass over the registry. Both maps are keyed by ProviderID and used
+        // by orthogonal subsystems (UI overlay + rollupTotals exclusion).
+        var hasTokens: [ProviderID: Bool] = [:]
+        for p in registry {
+            names[p.id] = p.displayName
+            hasTokens[p.id] = p.capabilities.hasTokens
+        }
         self.displayNamesByID = names
+        self.hasTokensByID = hasTokens
 
         // UI-07: seed from cache synchronously before any view reads occur.
         var loaded = cache.loadAll()
@@ -357,12 +373,23 @@ public final class AggregateStore {
         }
     }
 
-    /// Sums `costTodayUSD` and `tokensToday` across all provider snapshots.
-    /// `nil` tokens treated as 0 (OpenRouter does not report token counts in Phase 1).
+    /// Sums `costTodayUSD` and `tokensToday` across all provider snapshots,
+    /// excluding providers whose `ProviderCapabilities.hasTokens == false`
+    /// (Plan 03-08 D-07 — quota-only providers like Gemini contribute 0
+    /// tokens AND 0 USD to the cross-provider total). `nil` tokens within a
+    /// snapshot are treated as 0 (OpenRouter does not report token counts).
+    ///
+    /// The exclusion uses the init-time `hasTokensByID` snapshot rather than
+    /// re-reading `UsageProvider.capabilities` (which would require an actor
+    /// hop). Providers not present in `hasTokensByID` (cache-restored
+    /// placeholders without a registered actor) are included by default —
+    /// they'd contribute 0 anyway since their snapshot.tokensToday is nil.
     private func rollupTotals() {
         var totalTokens = 0
         var totalCost: Decimal = 0
-        for state in providers.values {
+        for (id, state) in providers {
+            // D-07: skip quota-only providers entirely (no tokens, no cost).
+            if hasTokensByID[id] == false { continue }
             guard let snap = state.snapshot else { continue }
             totalTokens += snap.tokensToday ?? 0
             if let cost = snap.costTodayUSD {
@@ -370,6 +397,15 @@ public final class AggregateStore {
             }
         }
         totals = DailyTotals(tokens: totalTokens, costUSD: totalCost)
+    }
+
+    /// Plan 03-08 / Plan 03-07: `true` when at least one registered provider
+    /// reports `capabilities.hasTokens == false` (i.e. it contributes nothing
+    /// to the cross-provider "Today total" per D-07). Plan 03-07's
+    /// `TotalsHeaderView` reads this to decide whether to render the
+    /// "Total excludes quota-only providers" footnote.
+    public var hasAnyQuotaOnlyProvider: Bool {
+        hasTokensByID.values.contains(false)
     }
 
     /// Calls the FSM-aware `ThresholdEngine.decisions(for:now:snoozedUntilDay:lastBands:)`
