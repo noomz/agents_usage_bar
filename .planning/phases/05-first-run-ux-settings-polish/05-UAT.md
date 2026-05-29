@@ -199,8 +199,9 @@ See `05-05-SUMMARY.md`.
 
 | Commit | Subject |
 |--------|---------|
+| `ffb7cd8` | H-01: add Settings entry point to menu-bar popover footer (SHELL-05). Native Settings window was unreachable from the menu bar after first run — footer had only Refresh + Quit; the showSettingsWindow:/showPreferencesWindow: selector dispatch via NSApp.sendAction(to: nil) failed silently on this LSUIElement app. Added a gear "Settings" button to FooterView using the SwiftUI @Environment(\.openSettings) action. Verified manually: popover footer button opens the Settings window with all three tabs rendering. |
 
-*(Fill in if any regressions are found and fixed during the walkthrough. Mirrors Phase 4 H-01/H-02 pattern.)*
+*Mirrors Phase 4 H-01/H-02 pattern.*
 
 ---
 
