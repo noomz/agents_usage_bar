@@ -100,6 +100,11 @@
 		/* Plan 01.07 — NotificationsTests build files (test target) */
 		AA070700000000000000010A /* ThresholdEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070700000000000000010B /* ThresholdEngineTests.swift */; };
 		AA070700000000000000011A /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070700000000000000011B /* NotificationManagerTests.swift */; };
+		/* Plan 02.01 — Claude transcript primitives (app target) */
+		AA020100000000000000001A /* TranscriptOffset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000001B /* TranscriptOffset.swift */; };
+		AA020100000000000000002A /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000002B /* TranscriptRecord.swift */; };
+		/* Plan 02.01 — Claude transcript tests (test target) */
+		AA020100000000000000010A /* TranscriptRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000010B /* TranscriptRecordTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -209,6 +214,10 @@
 		/* Plan 01.07 — NotificationsTests file references */
 		AA070700000000000000010B /* ThresholdEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdEngineTests.swift; sourceTree = "<group>"; };
 		AA070700000000000000011B /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
+		/* Plan 02.01 — Claude transcript file references */
+		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
+		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
+		AA020100000000000000010B /* TranscriptRecordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecordTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -281,6 +290,7 @@
 				AA020200000000000000009B /* RefreshInterval.swift */,
 				AA02020000000000000000AB /* Secret.swift */,
 				AA02020000000000000000BB /* TodayHelper.swift */,
+				AA020100000000000000001B /* TranscriptOffset.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -325,8 +335,18 @@
 			children = (
 				AA040400000000000000001B /* UsageProvider.swift */,
 				AA040400000000000000031B /* OpenRouter */,
+				AA020100000000000000050B /* Claude */,
 			);
 			path = Providers;
+			sourceTree = "<group>";
+		};
+		/* Plan 02.01 — Claude provider subgroup */
+		AA020100000000000000050B /* Claude */ = {
+			isa = PBXGroup;
+			children = (
+				AA020100000000000000002B /* TranscriptRecord.swift */,
+			);
+			path = Claude;
 			sourceTree = "<group>";
 		};
 		/* Plan 01.04 — OpenRouter subgroup */
@@ -507,8 +527,18 @@
 				AA050500000000000000031B /* AggregationTests */,
 				AA060600000000000000032B /* UITests */,
 				AA070700000000000000030B /* NotificationsTests */,
+				AA020100000000000000060B /* ProvidersClaudeTests */,
 			);
 			path = AgentsUsageBarTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 02.01 — ProvidersClaudeTests group */
+		AA020100000000000000060B /* ProvidersClaudeTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA020100000000000000010B /* TranscriptRecordTests.swift */,
+			);
+			path = ProvidersClaudeTests;
 			sourceTree = "<group>";
 		};
 		AA00000100000000000000D8 /* MainGroup */ = {
@@ -676,6 +706,9 @@
 				AA070700000000000000001A /* UNUserNotificationCenterProtocol.swift in Sources */,
 				/* Plan 01.09 — Hover-style gap closure */
 				AA090900000000000000001A /* HoverableBorderedButtonStyle.swift in Sources */,
+				/* Plan 02.01 — Claude transcript primitives */
+				AA020100000000000000001A /* TranscriptOffset.swift in Sources */,
+				AA020100000000000000002A /* TranscriptRecord.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -706,6 +739,8 @@
 				AA070700000000000000011A /* NotificationManagerTests.swift in Sources */,
 				/* Plan 01.09 — Hover-style gap closure tests */
 				AA090900000000000000010A /* HoverableBorderedButtonStyleTests.swift in Sources */,
+				/* Plan 02.01 — Claude transcript tests */
+				AA020100000000000000010A /* TranscriptRecordTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

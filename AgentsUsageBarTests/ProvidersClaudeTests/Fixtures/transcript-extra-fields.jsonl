@@ -1,0 +1,1 @@
+{"type":"assistant","timestamp":"2026-05-13T15:30:00.000+00:00","requestId":"req-200","futureField":42,"anotherUnknown":{"nested":true,"deeply":[1,2,3]},"message":{"model":"claude-haiku-4-5","role":"assistant","unknownNested":"x","usage":{"input_tokens":10,"output_tokens":20,"cache_creation_input_tokens":0,"cache_read_input_tokens":5,"unknownUsageField":99}}}

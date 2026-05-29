@@ -1,0 +1,3 @@
+{"type":"assistant","timestamp":"2026-05-13T15:30:00.000+00:00","requestId":"req-300","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":1,"output_tokens":2,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+{this is not valid JSON at all
+{"type":"assistant","timestamp":"2026-05-13T15:31:00.000+00:00","requestId":"req-301","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":3,"output_tokens":4,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}

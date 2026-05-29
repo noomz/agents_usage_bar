@@ -1,0 +1,1 @@
+{"type":"assistant","timestamp":"2026-05-13T15:30:00+00:00","requestId":"req-400","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":7,"output_tokens":8,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
