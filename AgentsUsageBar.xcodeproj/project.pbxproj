@@ -136,11 +136,15 @@
 		AA030500000000000000005A /* GeminiTokenRefreshResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000005B /* GeminiTokenRefreshResponse.swift */; };
 		AA030500000000000000006A /* GeminiOAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000006B /* GeminiOAuthClient.swift */; };
 		AA030500000000000000012A /* GeminiOAuthClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000012B /* GeminiOAuthClientTests.swift */; };
-		/* Plan 03-06 Task 1 — Gemini quota + tier response model files + tests (Task 2 entries added in next commit) */
+		/* Plan 03-06 Task 1 — Gemini quota + tier response model files + tests */
 		AA030600000000000000001A /* GeminiQuotaResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000001B /* GeminiQuotaResponse.swift */; };
 		AA030600000000000000002A /* GeminiLoadCodeAssistResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000002B /* GeminiLoadCodeAssistResponse.swift */; };
 		AA030600000000000000010A /* GeminiQuotaResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000010B /* GeminiQuotaResponseTests.swift */; };
 		AA030600000000000000011A /* GeminiLoadCodeAssistResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000011B /* GeminiLoadCodeAssistResponseTests.swift */; };
+		/* Plan 03-06 Task 2 — GeminiOAuthProvider actor + tests */
+		AA030600000000000000003A /* GeminiOAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000003B /* GeminiOAuthProvider.swift */; };
+		AA030600000000000000012A /* GeminiOAuthProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000012B /* GeminiOAuthProviderTests.swift */; };
+		AA030600000000000000013A /* GeminiOAuthProviderDegradedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000013B /* GeminiOAuthProviderDegradedTests.swift */; };
 		/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test (test target) */
 		AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */; };
 		/* Plan 03-04 Task 2 — CodexJSONLProvider (app target) + provider/fallback tests */
@@ -375,11 +379,15 @@
 		AA030500000000000000006B /* GeminiOAuthClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiOAuthClient.swift; sourceTree = "<group>"; };
 		AA030500000000000000012B /* GeminiOAuthClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiOAuthClientTests.swift; sourceTree = "<group>"; };
 		AA030500000000000000023B /* gemini-token-refresh-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-token-refresh-fixture.json"; sourceTree = "<group>"; };
-		/* Plan 03-06 Task 1 — Gemini quota+tier model files + tests + fixtures (Task 2 entries added in next commit) */
+		/* Plan 03-06 Task 1 — Gemini quota+tier model files + tests + fixtures */
 		AA030600000000000000001B /* GeminiQuotaResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiQuotaResponse.swift; sourceTree = "<group>"; };
 		AA030600000000000000002B /* GeminiLoadCodeAssistResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiLoadCodeAssistResponse.swift; sourceTree = "<group>"; };
 		AA030600000000000000010B /* GeminiQuotaResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiQuotaResponseTests.swift; sourceTree = "<group>"; };
 		AA030600000000000000011B /* GeminiLoadCodeAssistResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiLoadCodeAssistResponseTests.swift; sourceTree = "<group>"; };
+		/* Plan 03-06 Task 2 — GeminiOAuthProvider actor + tests */
+		AA030600000000000000003B /* GeminiOAuthProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiOAuthProvider.swift; sourceTree = "<group>"; };
+		AA030600000000000000012B /* GeminiOAuthProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiOAuthProviderTests.swift; sourceTree = "<group>"; };
+		AA030600000000000000013B /* GeminiOAuthProviderDegradedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiOAuthProviderDegradedTests.swift; sourceTree = "<group>"; };
 		AA030600000000000000020B /* gemini-quota-response-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-quota-response-fixture.json"; sourceTree = "<group>"; };
 		AA030600000000000000021B /* gemini-quota-response-multibucket-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-quota-response-multibucket-fixture.json"; sourceTree = "<group>"; };
 		AA030600000000000000022B /* gemini-loadcodeassist-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-loadcodeassist-fixture.json"; sourceTree = "<group>"; };
@@ -595,6 +603,8 @@
 				AA030500000000000000001B /* GeminiSettingsGate.swift */,
 				AA030500000000000000003B /* GeminiCredentialLoader.swift */,
 				AA030500000000000000006B /* GeminiOAuthClient.swift */,
+				/* Plan 03-06 — GeminiOAuthProvider actor */
+				AA030600000000000000003B /* GeminiOAuthProvider.swift */,
 				AA030500000000000000051B /* Models */,
 			);
 			path = Gemini;
@@ -881,9 +891,12 @@
 				AA030500000000000000010B /* GeminiSettingsGateTests.swift */,
 				AA030500000000000000011B /* GeminiCredentialLoaderTests.swift */,
 				AA030500000000000000012B /* GeminiOAuthClientTests.swift */,
-				/* Plan 03-06 Task 1 — Gemini quota + tier model tests (Task 2 added in next commit) */
+				/* Plan 03-06 Task 1 — Gemini quota + tier model tests */
 				AA030600000000000000010B /* GeminiQuotaResponseTests.swift */,
 				AA030600000000000000011B /* GeminiLoadCodeAssistResponseTests.swift */,
+				/* Plan 03-06 Task 2 — GeminiOAuthProvider tests */
+				AA030600000000000000012B /* GeminiOAuthProviderTests.swift */,
+				AA030600000000000000013B /* GeminiOAuthProviderDegradedTests.swift */,
 				AA030500000000000000061B /* Fixtures */,
 			);
 			path = ProvidersGeminiTests;
@@ -1208,9 +1221,11 @@
 				AA030500000000000000004A /* GeminiOAuthError.swift in Sources */,
 				AA030500000000000000005A /* GeminiTokenRefreshResponse.swift in Sources */,
 				AA030500000000000000006A /* GeminiOAuthClient.swift in Sources */,
-				/* Plan 03-06 Task 1 — Gemini quota + tier response models (provider actor added in next commit) */
+				/* Plan 03-06 Task 1 — Gemini quota + tier response models */
 				AA030600000000000000001A /* GeminiQuotaResponse.swift in Sources */,
 				AA030600000000000000002A /* GeminiLoadCodeAssistResponse.swift in Sources */,
+				/* Plan 03-06 Task 2 — GeminiOAuthProvider actor */
+				AA030600000000000000003A /* GeminiOAuthProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1296,9 +1311,12 @@
 				/* Plan 03-04 Task 2 — CodexJSONLProvider tests */
 				AA030400000000000000011A /* CodexJSONLProviderTests.swift in Sources */,
 				AA030400000000000000012A /* CodexJSONLProviderFallbackTests.swift in Sources */,
-				/* Plan 03-06 Task 1 — Gemini quota + tier response Codable tests (provider tests added in next commit) */
+				/* Plan 03-06 Task 1 — Gemini quota + tier response Codable tests */
 				AA030600000000000000010A /* GeminiQuotaResponseTests.swift in Sources */,
 				AA030600000000000000011A /* GeminiLoadCodeAssistResponseTests.swift in Sources */,
+				/* Plan 03-06 Task 2 — GeminiOAuthProvider tests */
+				AA030600000000000000012A /* GeminiOAuthProviderTests.swift in Sources */,
+				AA030600000000000000013A /* GeminiOAuthProviderDegradedTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

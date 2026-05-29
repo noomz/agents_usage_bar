@@ -71,6 +71,19 @@ final class FakeCodexHTTPClient: HTTPClient, @unchecked Sendable {
         return try decode(type)
     }
 
+    func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
+        _ url: URL,
+        body: Body,
+        bearer: Secret,
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T {
+        // Plan 03-06 protocol widening — Codex tests don't exercise the
+        // bearer-authenticated postJSON path; stub conformance only.
+        calls.append(Call(url: url, method: "POST", bearer: bearer, extraHeaders: extraHeaders))
+        return try decode(type)
+    }
+
     func postFormURLEncoded<T: Decodable & Sendable>(
         _ url: URL,
         formFields: [(String, String)],

@@ -126,15 +126,68 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
         extraHeaders: [String: String] = [:],
         as type: T.Type
     ) async throws -> T {
+        try await performPostJSON(
+            url: url,
+            body: body,
+            bearer: nil,
+            extraHeaders: extraHeaders,
+            useSnakeCaseConversion: true,
+            as: type
+        )
+    }
+
+    /// Bearer-authenticated JSON POST — Plan 03-06 entry point for the
+    /// Gemini `v1internal` calls.
+    ///
+    /// Plan 03-06 invariant: the body uses **plain JSON encoding** (no
+    /// `convertToSnakeCase` strategy). The Gemini `v1internal:loadCodeAssist`
+    /// endpoint requires camelCase keys (`ideType`, `pluginType`) in the
+    /// request body. The `.convertToSnakeCase` strategy would rewrite
+    /// those to `ide_type` / `plugin_type` (which the API rejects).
+    /// Plain encoding preserves the explicit CodingKey strings.
+    public func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
+        _ url: URL,
+        body: Body,
+        bearer: Secret,
+        extraHeaders: [String: String] = [:],
+        as type: T.Type
+    ) async throws -> T {
+        try await performPostJSON(
+            url: url,
+            body: body,
+            bearer: bearer,
+            extraHeaders: extraHeaders,
+            useSnakeCaseConversion: false,
+            as: type
+        )
+    }
+
+    private func performPostJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
+        url: URL,
+        body: Body,
+        bearer: Secret?,
+        extraHeaders: [String: String],
+        useSnakeCaseConversion: Bool,
+        as type: T.Type
+    ) async throws -> T {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // SEC-01: the reveal-accessor is permitted ONLY inside URL
+        // request construction in this file. Adding the bearer here on
+        // the JSON-POST path preserves the single-call-site invariant.
+        if let bearer {
+            req.setValue("Bearer \(bearer.revealForRequest())", forHTTPHeaderField: "Authorization")
+        }
         for (key, value) in extraHeaders {
             req.setValue(value, forHTTPHeaderField: key)
         }
 
         let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
+        if useSnakeCaseConversion {
+            encoder.keyEncodingStrategy = .convertToSnakeCase
+        }
         req.httpBody = try encoder.encode(body)
 
         let (data, response) = try await session.data(for: req)
@@ -148,8 +201,15 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
             throw HTTPError(status: status, message: nil)
         }
 
+        // Gemini quota/tier responses declare explicit snake_case
+        // CodingKeys (matches Codex / Plan 03-05 precedent). Plain
+        // JSONDecoder reads them correctly; a convertFromSnakeCase
+        // strategy would clobber the explicit mappings — same trap as
+        // Plan 03-05's URLSessionHTTPClient.postFormURLEncoded fix.
         let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        if useSnakeCaseConversion {
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+        }
         return try decoder.decode(T.self, from: data)
     }
 

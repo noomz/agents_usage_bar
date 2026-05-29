@@ -51,6 +51,20 @@ final class FakeGeminiHTTPClient: HTTPClient, @unchecked Sendable {
         throw HTTPError(status: 501, message: "FakeGeminiHTTPClient: postJSON not scripted")
     }
 
+    func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
+        _ url: URL,
+        body: Body,
+        bearer: Secret,
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T {
+        // Plan 03-06 widens HTTPClient with bearer-postJSON. Not exercised
+        // by the OAuth-client tests (those use the form-urlencoded refresh
+        // path); stub keeps the type compiling.
+        calls.append(.init(url: url, method: "POST", bearer: bearer, extraHeaders: extraHeaders, formBody: nil))
+        throw HTTPError(status: 501, message: "FakeGeminiHTTPClient: postJSON(bearer:) not scripted")
+    }
+
     func postFormURLEncoded<T: Decodable & Sendable>(
         _ url: URL,
         formFields: [(String, String)],

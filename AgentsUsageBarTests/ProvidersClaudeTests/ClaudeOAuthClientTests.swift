@@ -54,6 +54,23 @@ final class FakeHTTPClient: HTTPClient, @unchecked Sendable {
         return try decode(type, from: &postResponses)
     }
 
+    func postJSON<Body: Encodable & Sendable, T: Decodable & Sendable>(
+        _ url: URL,
+        body: Body,
+        bearer: Secret,
+        extraHeaders: [String: String],
+        as type: T.Type
+    ) async throws -> T {
+        // Plan 03-06 widens HTTPClient with a bearer-authenticated
+        // postJSON overload. Not exercised by ClaudeOAuthClientTests;
+        // stub conformance keeps the fake compilable.
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        capturedPostBodyData = try encoder.encode(body)
+        calls.append(Call(url: url, method: "POST", bearer: bearer, extraHeaders: extraHeaders))
+        return try decode(type, from: &postResponses)
+    }
+
     func postFormURLEncoded<T: Decodable & Sendable>(
         _ url: URL,
         formFields: [(String, String)],
