@@ -19,9 +19,13 @@
 		AA000001000000000000009A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000009B /* Assets.xcassets */; };
 		AA00000100000000000000AA /* AgentsUsageBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000100000000000000AB /* AgentsUsageBarTests.swift */; };
 		AA00000100000000000000BA /* AgentsUsageBar.app in Frameworks */ = {isa = PBXBuildFile; fileRef = AA00000100000000000000BB /* AgentsUsageBar.app */; };
-		/* Plan 06-02 — Sparkle SPM dependency (link + embed & sign) */
+		/* Plan 06-02 — Sparkle SPM dependency (linked + auto-embedded by Xcode's SPM build system).
+		   Xcode 16 automatically embeds-and-signs framework products listed in `packageProductDependencies`
+		   on a macOS app target — no manual PBXCopyFilesBuildPhase needed. Sparkle.framework
+		   (with Versions/B/Autoupdate + Updater.app + XPCServices/{Installer,Downloader}.xpc)
+		   is dropped into AgentsUsageBar.app/Contents/Frameworks/ automatically, signed adhoc in
+		   Debug and re-signed Developer ID via ExportOptions.plist (D-03) at release time. */
 		AA060200000000000000003A /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = AA060200000000000000002A /* Sparkle */; };
-		AA060200000000000000004A /* Sparkle in Embed Frameworks */ = {isa = PBXBuildFile; productRef = AA060200000000000000002A /* Sparkle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		/* Plan 01.02 — Domain sources */
 		AA020200000000000000001A /* UsageSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000001B /* UsageSnapshot.swift */; };
 		AA020200000000000000002A /* DailyTotals.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000002B /* DailyTotals.swift */; };
@@ -660,20 +664,6 @@
 		AA020700000000000000013B /* FooterResetCaptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FooterResetCaptionTests.swift; sourceTree = "<group>"; };
 		AA020700000000000000014B /* MenuBarTintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarTintTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		AA060200000000000000005A /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				AA060200000000000000004A /* Sparkle in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		AA00000100000000000000F1 /* Frameworks */ = {
@@ -1497,7 +1487,6 @@
 				AA00000100000000000000F3 /* Sources */,
 				AA00000100000000000000F1 /* Frameworks */,
 				AA00000100000000000000F4 /* Resources */,
-				AA060200000000000000005A /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -2039,6 +2028,7 @@
 				CODE_SIGN_ENTITLEMENTS = AgentsUsageBar/Resources/Entitlements.plist;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -2055,6 +2045,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
@@ -2065,6 +2056,7 @@
 				CODE_SIGN_ENTITLEMENTS = AgentsUsageBar/Resources/Entitlements.plist;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -2081,6 +2073,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};

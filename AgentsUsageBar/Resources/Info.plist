@@ -9,9 +9,9 @@
 	<key>CFBundleDisplayName</key>
 	<string>Agents Usage Bar</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleExecutable</key>
@@ -27,5 +27,15 @@
 	</dict>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright (c) 2026 lazym0m3nt@gmail.com. All rights reserved.</string>
+	<!-- Plan 06-02 (REL-06 / D-07) — Sparkle auto-update keys.
+	     SUFeedURL: HTTPS URL to the EdDSA-signed appcast on GitHub Pages.
+	         OWNER placeholder is filled in plan 06-05 (release-setup doc / first release) once the GitHub Pages owner handle is known.
+	     SUPublicEDKey: base64 EdDSA public key from `./bin/generate_keys` output.
+	         Empty placeholder until plan 06-05 runs generate_keys and pastes the public-key string here.
+	         Sparkle refuses any update whose `sparkle:edSignature` does not verify against this key (T-06-03 mitigation). -->
+	<key>SUFeedURL</key>
+	<string>https://OWNER.github.io/agents_usage_bar/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string></string>
 </dict>
 </plist>

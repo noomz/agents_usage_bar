@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import UserNotifications
+import Sparkle
 
 @main
 struct AgentsUsageBarApp: App {
@@ -8,6 +9,13 @@ struct AgentsUsageBarApp: App {
     /// `@State` is correct: `Dependencies` is a reference type whose `store` is `@Observable`,
     /// so SwiftUI tracks mutations without `@StateObject`/`ObservableObject`.
     @State private var dependencies: Dependencies = AppDependencies.makeProduction()
+
+    /// Plan 06-02 (REL-06) — Sparkle auto-update controller. Started immediately at launch
+    /// so the updater polls `SUFeedURL` (Info.plist) on its standard schedule and verifies any
+    /// downloaded DMG against `SUPublicEDKey`. Stored as a `private let` so the controller
+    /// (and its underlying SPUUpdater) lives for the entire app lifetime — Sparkle requires
+    /// the controller to outlive the launch transient.
+    private let updaterController: SPUStandardUpdaterController
 
     init() {
         // Defensive belt-and-braces alongside Info.plist LSUIElement=YES (SHELL-01 / Pitfall 2).
@@ -18,6 +26,16 @@ struct AgentsUsageBarApp: App {
         // `snooze.today` action BEFORE the first UNUserNotificationCenter.add() call.
         // Categories registered after the first add() are not applied to that request.
         UNNotificationManager.registerCategories(on: UNUserNotificationCenter.current())
+
+        // Plan 06-02 (REL-06) — instantiate Sparkle's standard updater controller with the
+        // updater started immediately. `userDriverDelegate = nil` accepts Sparkle's default
+        // user-facing UI (the standard "A new version is available" sheet); a custom UI is
+        // out of scope for this plan. `updaterDelegate = nil` accepts default policy.
+        updaterController = SPUStandardUpdaterController(
+            startingUpdater: true,
+            updaterDelegate: nil,
+            userDriverDelegate: nil
+        )
     }
 
     var body: some Scene {

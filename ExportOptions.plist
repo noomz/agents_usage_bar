@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Plan 06-02 (D-03 / D-05 / REL-01) — Developer ID export options for
+	  `xcodebuild -exportArchive`. The CI release workflow (plan 06-04) consumes this
+	  to re-sign the archived .app and its nested Sparkle helpers (Installer.xpc,
+	  Downloader.xpc, Autoupdate, Updater.app) with Developer ID Application + Hardened
+	  Runtime before DMG packaging and notarization.
+
+	  NOTE on `hardenedRuntime`: RESEARCH Pattern 3 contains a typo (`hardendedRuntime`);
+	  the correct Apple key is `hardenedRuntime` and is used here. Apple validates this
+	  key by exact spelling — the typo silently disables Hardened Runtime in the export.
+
+	  NOTE on `teamID`: $(DEVELOPMENT_TEAM) is a build-setting variable resolved at
+	  export time. Open Question 4 in 06-RESEARCH: the user fills the 10-character
+	  Apple Developer Team ID either by setting DEVELOPMENT_TEAM as a Release-config
+	  build setting in pbxproj (preferred) or by exporting it as a CI env var that
+	  `xcodebuild -exportArchive` inherits. The release-setup doc (plan 06-05)
+	  documents both paths.
+	-->
+	<key>method</key>
+	<string>developer-id</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>teamID</key>
+	<string>$(DEVELOPMENT_TEAM)</string>
+	<key>hardenedRuntime</key>
+	<true/>
+	<key>stripSwiftSymbols</key>
+	<true/>
+</dict>
+</plist>
