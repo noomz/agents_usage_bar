@@ -136,6 +136,8 @@
 		AA030500000000000000005A /* GeminiTokenRefreshResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000005B /* GeminiTokenRefreshResponse.swift */; };
 		AA030500000000000000006A /* GeminiOAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000006B /* GeminiOAuthClient.swift */; };
 		AA030500000000000000012A /* GeminiOAuthClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000012B /* GeminiOAuthClientTests.swift */; };
+		/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test (test target) */
+		AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */; };
 		/* Plan 02.01 — Claude transcript primitives (app target) */
 		AA020100000000000000001A /* TranscriptOffset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000001B /* TranscriptOffset.swift */; };
 		AA020100000000000000002A /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000002B /* TranscriptRecord.swift */; };
@@ -254,6 +256,7 @@
 		AA020200000000000000015B /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		/* Plan 01.02 — Test file references */
 		AA020200000000000000020B /* SecretTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretTests.swift; sourceTree = "<group>"; };
+		AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageSnapshotTooltipLabelTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000021B /* TodayHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHelperTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000022B /* QuotaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000023B /* ThresholdStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdStateTests.swift; sourceTree = "<group>"; };
@@ -530,6 +533,8 @@
 				AA020700000000000000010B /* TodayHelperResetClockTests.swift */,
 				/* Plan 03-01 — Codex ProviderID constant */
 				AA030100000000000000001B /* ProviderIDCodexTests.swift */,
+				/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel extension */
+				AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */,
 			);
 			path = DomainTests;
 			sourceTree = "<group>";
@@ -1242,6 +1247,8 @@
 				AA030500000000000000011A /* GeminiCredentialLoaderTests.swift in Sources */,
 				/* Plan 03-05 Task 3 — GeminiOAuthClient tests */
 				AA030500000000000000012A /* GeminiOAuthClientTests.swift in Sources */,
+				/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test */
+				AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

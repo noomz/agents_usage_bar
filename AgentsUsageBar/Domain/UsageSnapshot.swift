@@ -44,6 +44,20 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
     /// pay-per-token accounts return an empty or absent `quota_windows` array.
     public let quotaWindows: [QuotaWindow]?
 
+    /// Optional tooltip surfaced via SwiftUI `.help()` on `ProviderRowView` (D-15).
+    ///
+    /// Carries Codex `plan_type` (e.g. `"plus"`, `"pro"`, `"team"`, `"enterprise"`)
+    /// and the Gemini tier label so the provider-name label can disclose
+    /// account-tier context on cursor hover without claiming a dedicated UI
+    /// row. `nil` for providers that don't surface a tier (OpenRouter, Claude
+    /// today, all Phase 1/2 call sites by default).
+    ///
+    /// Decoding compatibility: the field is `Decodable` via synthesised
+    /// `init(from:)` and is `Optional`, so existing on-disk cache envelopes
+    /// written before this field existed continue to decode without error
+    /// (the synthesised decoder reads absent optional keys as `nil`).
+    public let tooltipLabel: String?
+
     public init(
         providerID: ProviderID,
         asOf: Date,
@@ -52,7 +66,8 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         balanceUSD: Decimal?,
         quota: Quota?,
         raw: [String: String],
-        quotaWindows: [QuotaWindow]? = nil
+        quotaWindows: [QuotaWindow]? = nil,
+        tooltipLabel: String? = nil
     ) {
         self.providerID = providerID
         self.asOf = asOf
@@ -62,5 +77,6 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         self.quota = quota
         self.raw = raw
         self.quotaWindows = quotaWindows
+        self.tooltipLabel = tooltipLabel
     }
 }
