@@ -119,6 +119,9 @@
 		AA030200000000000000004A /* CodexOAuthClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000004B /* CodexOAuthClient.swift */; };
 		AA030200000000000000011A /* CodexUsageResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000011B /* CodexUsageResponseTests.swift */; };
 		AA030200000000000000012A /* CodexOAuthClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030200000000000000012B /* CodexOAuthClientTests.swift */; };
+		/* Plan 03-05 Task 1 — GeminiSettingsGate (app target) + tests */
+		AA030500000000000000001A /* GeminiSettingsGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000001B /* GeminiSettingsGate.swift */; };
+		AA030500000000000000010A /* GeminiSettingsGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030500000000000000010B /* GeminiSettingsGateTests.swift */; };
 		/* Plan 02.01 — Claude transcript primitives (app target) */
 		AA020100000000000000001A /* TranscriptOffset.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000001B /* TranscriptOffset.swift */; };
 		AA020100000000000000002A /* TranscriptRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000002B /* TranscriptRecord.swift */; };
@@ -322,6 +325,11 @@
 		AA030200000000000000011B /* CodexUsageResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageResponseTests.swift; sourceTree = "<group>"; };
 		AA030200000000000000012B /* CodexOAuthClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexOAuthClientTests.swift; sourceTree = "<group>"; };
 		AA030200000000000000023B /* codex-wham-usage-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "codex-wham-usage-fixture.json"; sourceTree = "<group>"; };
+		/* Plan 03-05 Task 1 — GeminiSettingsGate file references */
+		AA030500000000000000001B /* GeminiSettingsGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiSettingsGate.swift; sourceTree = "<group>"; };
+		AA030500000000000000010B /* GeminiSettingsGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiSettingsGateTests.swift; sourceTree = "<group>"; };
+		AA030500000000000000020B /* gemini-settings-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-settings-fixture.json"; sourceTree = "<group>"; };
+		AA030500000000000000021B /* gemini-settings-other-auth.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-settings-other-auth.json"; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -518,8 +526,18 @@
 				AA040400000000000000031B /* OpenRouter */,
 				AA020100000000000000050B /* Claude */,
 				AA030100000000000000050B /* Codex */,
+				AA030500000000000000050B /* Gemini */,
 			);
 			path = Providers;
+			sourceTree = "<group>";
+		};
+		/* Plan 03-05 — Gemini provider subgroup */
+		AA030500000000000000050B /* Gemini */ = {
+			isa = PBXGroup;
+			children = (
+				AA030500000000000000001B /* GeminiSettingsGate.swift */,
+			);
+			path = Gemini;
 			sourceTree = "<group>";
 		};
 		/* Plan 03-01 — Codex provider subgroup */
@@ -772,8 +790,29 @@
 				AA070700000000000000030B /* NotificationsTests */,
 				AA020100000000000000060B /* ProvidersClaudeTests */,
 				AA030100000000000000060B /* ProvidersCodexTests */,
+				AA030500000000000000060B /* ProvidersGeminiTests */,
 			);
 			path = AgentsUsageBarTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 03-05 — ProvidersGeminiTests group */
+		AA030500000000000000060B /* ProvidersGeminiTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA030500000000000000010B /* GeminiSettingsGateTests.swift */,
+				AA030500000000000000061B /* Fixtures */,
+			);
+			path = ProvidersGeminiTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 03-05 — ProvidersGeminiTests Fixtures subgroup (loaded via #filePath, not bundle) */
+		AA030500000000000000061B /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				AA030500000000000000020B /* gemini-settings-fixture.json */,
+				AA030500000000000000021B /* gemini-settings-other-auth.json */,
+			);
+			path = Fixtures;
 			sourceTree = "<group>";
 		};
 		/* Plan 03-01 — ProvidersCodexTests group */
@@ -1057,6 +1096,8 @@
 				/* Plan 03-03 — CodexUsageResponse + CodexOAuthClient */
 				AA030200000000000000003A /* CodexUsageResponse.swift in Sources */,
 				AA030200000000000000004A /* CodexOAuthClient.swift in Sources */,
+				/* Plan 03-05 — Gemini settings gate */
+				AA030500000000000000001A /* GeminiSettingsGate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1129,6 +1170,8 @@
 				/* Plan 03-03 Task 2 — CodexUsageResponse + CodexOAuthClient tests */
 				AA030200000000000000011A /* CodexUsageResponseTests.swift in Sources */,
 				AA030200000000000000012A /* CodexOAuthClientTests.swift in Sources */,
+				/* Plan 03-05 Task 1 — GeminiSettingsGate tests */
+				AA030500000000000000010A /* GeminiSettingsGateTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
