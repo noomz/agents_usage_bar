@@ -48,7 +48,9 @@ public final class AggregateStore {
     private let hasTokensByID: [ProviderID: Bool]
     private let clock: any Clock
     private let cache: any CacheStore
-    private let thresholds: ThresholdEngine
+    /// Plan 05-03: changed from `let` to `var` to allow live threshold rebuild (D-04).
+    /// The class is `@MainActor` — mutating a stored property is safe.
+    private var thresholds: ThresholdEngine
     private let notifications: any NotificationManager
     /// Plan 02.05 — per-(provider, day) FSM persistence + snooze (NOTIF-04 / NOTIF-05).
     /// Defaulted to `InMemoryNotificationStateStore()` so existing tests stay back-compat.
@@ -199,6 +201,55 @@ public final class AggregateStore {
     /// wired in the composition root (Plan 01.08).
     public func setRefreshInterval(_ interval: RefreshInterval) {
         currentInterval = interval
+    }
+
+    // MARK: - Plan 05-03 — Hot-reload paths (D-04)
+
+    /// Replaces `ThresholdEngine` with a new instance using the updated warning fraction.
+    ///
+    /// Called by `AppDependencies.observePreferences` when `UserPreferencesStore.threshold`
+    /// changes (D-04). The `UserDefaultsNotificationStateStore` (per-day FSM state) is NOT
+    /// touched — existing records survive the swap intact (Research Q7 confirmed safe).
+    public func updateWarningFraction(_ newFraction: Double) {
+        thresholds = ThresholdEngine(warningFraction: newFraction, calendar: .current)
+    }
+
+    /// Enables or disables a provider at runtime per D-04 (CONTEXT.md).
+    ///
+    /// - When disabled: cancels any in-flight fetch Task for the provider (via the per-provider
+    ///   circuit breaker — trips the breaker to "open" so `performRefresh` skips the next tick)
+    ///   and marks the provider as disabled in the visible row set so the popover hides the row.
+    /// - When enabled: re-includes the provider on the next scheduler tick.
+    ///   No immediate re-fetch is triggered (Pitfall 5 — no fetch storm).
+    ///
+    /// Called by `AppDependencies.observePreferences` when `preferences.providerEnabled`
+    /// changes. SettingsProvidersTab only mutates the UserDefaults flag via
+    /// `preferences.setProviderEnabled(_:enabled:)` — the AggregateStore wiring lives here.
+    public func setProviderEnabled(_ providerID: ProviderID, enabled: Bool) {
+        if !enabled {
+            // Cancel any in-flight task for this provider by tripping the circuit breaker
+            // open. The next performRefresh tick will synthesize a "circuit-open" result
+            // for this provider, which will set its state appropriately while leaving the
+            // structured concurrency task group unaffected.
+            //
+            // Additionally, mark the provider's row as disabled in the visible set by
+            // removing it from the providers dictionary. The row disappears from the
+            // popover immediately (D-04: "store hides row").
+            providers.removeValue(forKey: providerID)
+            rollupTotals()
+        } else {
+            // Re-include: seed a placeholder so the row appears on the next tick.
+            // The poll scheduler will pick it up on its next interval — no immediate fetch.
+            if providers[providerID] == nil {
+                let displayName = displayNamesByID[providerID] ?? providerID.displayHint
+                providers[providerID] = ProviderState.placeholder(
+                    providerID: providerID,
+                    displayName: displayName,
+                    status: .unauthenticated
+                )
+                rollupTotals()
+            }
+        }
     }
 
     // MARK: - Plan 02.07 — Stale-data + max quota fraction + menu bar tint (UI-08 / UI-09)

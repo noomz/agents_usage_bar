@@ -26,6 +26,8 @@ struct AgentsUsageBarApp: App {
                 .environment(dependencies.store)
                 .environment(\.clockService, dependencies.clock)   // B5: only INJECT; key declared in Plan 01.06
                 .environment(\.preferences, dependencies.preferences)  // Plan 05-02: preferences overlay (D-01/D-02)
+                // Plan 05-03 D-04: apply theme live at root so all windows flip in unison.
+                .preferredColorScheme(dependencies.preferences.theme.colorScheme)
                 .task {
                     // Plan 02.05 — install snooze action handler BEFORE the poll loop starts
                     // so any notification fired by the first refresh has its action wired.
@@ -38,6 +40,13 @@ struct AgentsUsageBarApp: App {
                     // strong reference so NSWindow didBecomeKey/willClose notifications
                     // are live before Settings (Cmd-,) can be opened (D-06 / SHELL-05).
                     _ = dependencies.windowActivationObserver
+                    // Plan 05-03 — Start the hot-reload observer alongside the poll loop.
+                    // Both tasks run concurrently; both cancelled when the scene tears down.
+                    async let _ = AppDependencies.observePreferences(
+                        dependencies.preferences,
+                        scheduler: dependencies.scheduler,
+                        store: dependencies.store
+                    )
                     // Kick off the long-lived PollScheduler loop on first popover open.
                     // Cancelled automatically when the scene tears down (structured concurrency).
                     await dependencies.scheduler.start()
@@ -66,6 +75,8 @@ struct AgentsUsageBarApp: App {
                 .environment(dependencies.store)
                 .environment(\.clockService, dependencies.clock)
                 .environment(\.preferences, dependencies.preferences)  // Plan 05-02: preferences overlay (D-01/D-02)
+                // Plan 05-03 D-04: theme applies to Settings window too.
+                .preferredColorScheme(dependencies.preferences.theme.colorScheme)
         }
         .commands {
             // Plan 05-01 — LSUIElement Cmd-, focus fix (D-05 / Pitfall 1). The default

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import os
 
 // MARK: - Key namespace
@@ -21,6 +22,16 @@ public enum AUBDefaultsKey {
 /// User-selected appearance. Stored as String rawValue in UserDefaults.
 public enum AppTheme: String, Sendable, Equatable, CaseIterable {
     case light, dark, auto
+
+    /// Maps to SwiftUI `ColorScheme?` for `.preferredColorScheme(_:)`.
+    /// `nil` means "follow system" (.auto).
+    public var colorScheme: ColorScheme? {
+        switch self {
+        case .light: return .light
+        case .dark:  return .dark
+        case .auto:  return nil
+        }
+    }
 }
 
 // MARK: - UserPreferencesStore

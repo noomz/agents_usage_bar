@@ -403,4 +403,76 @@ public enum AppDependencies {
             preferences: preferences
         )
     }
+
+    // MARK: - Plan 05-03 — Hot-reload observer (D-04)
+
+    /// Observes `UserPreferencesStore` property changes and propagates them to the running
+    /// subsystems (D-04). Runs for the app's lifetime inside a `.task` structured-concurrency
+    /// scope; cancelled automatically when the scene tears down.
+    ///
+    /// Hot-reload paths wired:
+    /// - `refreshInterval` → `scheduler.updateInterval(_:)`
+    /// - `threshold`       → `store.updateWarningFraction(_:)`
+    /// - `providerEnabled` → `store.setProviderEnabled(_:enabled:)` for changed providers
+    ///
+    /// Theme and open-at-login are wired at the SwiftUI layer (`.preferredColorScheme`) and
+    /// in `SettingsGeneralTab.toggleOpenAtLogin` respectively — they do not need actor calls.
+    ///
+    /// Uses `withObservationTracking(_:onChange:)` — the correct `@Observable` observation API
+    /// for non-SwiftUI contexts (macOS 14+, Observation framework). The `onChange` closure fires
+    /// once when any tracked property changes; the outer `while` loop immediately re-subscribes.
+    @MainActor
+    public static func observePreferences(
+        _ preferences: UserPreferencesStore,
+        scheduler: PollScheduler,
+        store: AggregateStore
+    ) async {
+        var lastInterval = preferences.refreshInterval
+        var lastThreshold = preferences.threshold
+        var lastProviderEnabled = preferences.providerEnabled
+
+        while !Task.isCancelled {
+            // withObservationTracking fires onChange once when any accessed property changes.
+            // We use a continuation to bridge the callback-based onChange into async/await.
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                withObservationTracking {
+                    // Access the properties we want to observe:
+                    _ = preferences.refreshInterval
+                    _ = preferences.threshold
+                    _ = preferences.providerEnabled
+                } onChange: {
+                    // onChange fires on the thread that made the change.
+                    // Resume the continuation to wake the loop.
+                    continuation.resume()
+                }
+            }
+
+            if Task.isCancelled { break }
+
+            // Re-read and react to changes:
+            let newInterval = preferences.refreshInterval
+            let newThreshold = preferences.threshold
+            let newProviderEnabled = preferences.providerEnabled
+
+            if newInterval != lastInterval {
+                lastInterval = newInterval
+                await scheduler.updateInterval(newInterval)
+            }
+            if newThreshold != lastThreshold {
+                lastThreshold = newThreshold
+                store.updateWarningFraction(newThreshold)
+            }
+            if newProviderEnabled != lastProviderEnabled {
+                // Find changed providers and propagate to AggregateStore
+                for id in ProviderID.allKnown {
+                    let wasEnabled = lastProviderEnabled[id] ?? true  // absent = enabled (default)
+                    let isEnabled  = newProviderEnabled[id] ?? true
+                    if wasEnabled != isEnabled {
+                        store.setProviderEnabled(id, enabled: isEnabled)
+                    }
+                }
+                lastProviderEnabled = newProviderEnabled
+            }
+        }
+    }
 }
