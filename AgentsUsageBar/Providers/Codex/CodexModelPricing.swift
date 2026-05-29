@@ -160,8 +160,10 @@ public struct CodexModelPricing: Decodable, Sendable {
     /// would be billed separately, or excluded from `output_tokens`) is a
     /// one-line change rather than an API break for every caller.
     ///
-    /// Uses `Decimal` at the final step per STATE #28 — avoids IEEE 754 drift on
-    /// small monetary values that accumulate across thousands of rollout events.
+    /// All multiplication and division stays in `Decimal` arithmetic — the only
+    /// `Double`→`Decimal` cliff is the per-rate conversion that happens once each.
+    /// This avoids the cross-column `Double` accumulation that would otherwise
+    /// round differently than the test fixtures assert (CR-01 invariant).
     ///
     /// - Parameters:
     ///   - inputTokens: Raw `input_tokens` from `event.payload.info.total_token_usage`.
@@ -184,9 +186,18 @@ public struct CodexModelPricing: Decodable, Sendable {
         let (rate, _) = self.rate(for: modelID)
         let nonCachedInput = max(0, inputTokens - cachedInputTokens)
 
-        let micro = Double(nonCachedInput)         * rate.inputPerMToken
-                  + Double(cachedInputTokens)      * rate.cachedInputPerMToken
-                  + Double(outputTokens)           * rate.outputPerMToken
-        return Decimal(micro / 1_000_000.0)
+        // Per-rate Decimal conversion happens once each, then all multiplication
+        // and addition stays in Decimal arithmetic. Avoids accumulating Double
+        // rounding error across the three rate columns before the final cast
+        // (CR-01 fix). The rate→Decimal cliff is acknowledged Phase-1 STATE #28
+        // tolerance territory; the accumulation cliff is not.
+        let perMillion = Decimal(1_000_000)
+        let inputContribution =
+            (Decimal(nonCachedInput) * Decimal(rate.inputPerMToken)) / perMillion
+        let cachedContribution =
+            (Decimal(cachedInputTokens) * Decimal(rate.cachedInputPerMToken)) / perMillion
+        let outputContribution =
+            (Decimal(outputTokens) * Decimal(rate.outputPerMToken)) / perMillion
+        return inputContribution + cachedContribution + outputContribution
     }
 }

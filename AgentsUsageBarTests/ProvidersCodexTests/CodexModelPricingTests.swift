@@ -147,4 +147,45 @@ struct CodexModelPricingTests {
             _ = try CodexModelPricing.load(from: badURL)
         }
     }
+
+    // MARK: 10. CR-01 — cross-column arithmetic stays in Decimal
+    // Locks the contract that each rate column is multiplied + divided in
+    // Decimal independently. Summing the three contributions as Decimal must
+    // equal the cost(...) result exactly; any Double-accumulation regression
+    // would diverge at the integer-rate / huge-token boundary chosen below.
+    @Test("cost(...) matches component-wise Decimal sum (CR-01 regression)")
+    func cost_matchesComponentwiseDecimalSum_noDoubleAccumulation() throws {
+        // Rates chosen so Double arithmetic would round each column differently
+        // and the cross-column sum would drift from the per-column Decimal sum.
+        let rate = CodexModelPricing.Rate(
+            inputPerMToken: 1.2345678,
+            outputPerMToken: 9.8765432,
+            cachedInputPerMToken: 0.0123456
+        )
+        let pricing = CodexModelPricing(
+            schemaVersion: 1,
+            lastUpdated: "2026-05-18",
+            default: rate,
+            models: [:]
+        )
+
+        // High token counts amplify any cross-column Double drift.
+        let nonCached = 7_654_321
+        let cached = 2_345_678
+        let output = 3_210_987
+        let actual = pricing.cost(
+            inputTokens: nonCached + cached,
+            cachedInputTokens: cached,
+            outputTokens: output,
+            reasoningOutputTokens: 0,
+            modelID: nil
+        )
+
+        let perMillion = Decimal(1_000_000)
+        let expected =
+            (Decimal(nonCached) * Decimal(rate.inputPerMToken)) / perMillion
+            + (Decimal(cached) * Decimal(rate.cachedInputPerMToken)) / perMillion
+            + (Decimal(output) * Decimal(rate.outputPerMToken)) / perMillion
+        #expect(actual == expected)
+    }
 }
