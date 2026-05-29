@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-15T05:00:00.000Z"
+last_updated: "2026-05-15T16:30:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_plans: 25
+  completed_plans: 17
+  percent: 36
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-15 (Phase 2 UAT APPROVED — Tests 1-2 manual PASS, 3-10 deferred to unit-test attestation; 3 hotfix commits landed during the session)
+**Last Updated:** 2026-05-15 (Phase 3 Plan 01 executed — Codex rollout discovery layer landed: ProviderID.codex + CodexRoots + CodexRolloutScanner + CodexRolloutEvent + CodexRolloutParser; 23 new tests across 3 suites; clean Debug build)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -24,21 +24,22 @@ progress:
 
 **What This Is:** A macOS menu bar app that surfaces today's AI agent usage across Claude, OpenAI Codex, Gemini, OpenRouter, and local agents (Ollama, LM Studio, llama.cpp) — tokens used, USD spent, quota remaining per provider — with native notifications at threshold crossings.
 
-**Current Focus:** Phase 03 — claude/codex/gemini remote providers (ready to start)
+**Current Focus:** Phase 03 — remote-api-providers-codex-gemini
 
 ## Current Position
 
-Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — ✅ COMPLETE (UAT approved 2026-05-15)
-Phase: 03 (codex-gemini-remote-providers) — ⬜ NOT STARTED (next)
+Phase: 03 (remote-api-providers-codex-gemini) — EXECUTING
+Plan: 2 of 9 (next)
+Phase: 03 — Plan 01 ✅ COMPLETE (Codex rollout discovery layer)
 
 - **Milestone:** v1 (initial release)
-- **Phase:** 2 of 6 — Claude Provider + Threshold/Rollover + JSONL Streaming — ✅ COMPLETE
-- **Plan:** 7 of 7 plans executed (Wave 1 = {01 ✅, 02 ✅, 03 ✅}; Wave 2 = {04 ✅}; Wave 3 = {05 ✅}; Wave 4 = {06 ✅}; Wave 5 = {07 ✅ code + UAT})
-- **Status:** Phase 2 UAT approved. 3 hotfix commits (perf 378c531, CCS-roots c84c452, displayName 4a5ebee) landed during UAT. Ready for `/gsd-transition` → Phase 3.
-- **Progress:** [██████████████] 100% Phase 2 complete
+- **Phase:** 3 of 6 — Remote API Providers (Codex + Gemini) — EXECUTING
+- **Plan:** 1 of 9 plans executed (Plan 01 ✅ — `03-01-SUMMARY.md`, commits e2bcd5e + 6a18026 + a31b99a)
+- **Status:** Executing Phase 03
+- **Progress:** [█▒▒▒▒▒▒▒▒▒▒▒▒▒] 11% Phase 3 (1/9 plans)
 
 ```
-[████████████████████████████████████████████████████████████████] 100% (16/16 plans + Phase 2 UAT approved)
+[████████████████████████████████████████████████████████████░░░░] 94% (17/18 plans complete to date; Phase 3 in progress with 1/9 done)
 ```
 
 ## Performance Metrics
@@ -46,11 +47,11 @@ Phase: 03 (codex-gemini-remote-providers) — ⬜ NOT STARTED (next)
 | Metric | Value |
 |--------|-------|
 | Phases complete | 2 / 6 (Phase 2 UAT approved 2026-05-15) |
-| Plans complete | 16 / 16 (Phase 1: 9 plans + Phase 2: 7 plans) |
+| Plans complete | 17 / 25 (Phase 1: 9 + Phase 2: 7 + Phase 3 Plan 01: 1) |
 | Requirements mapped | 76 / 76 (100%) |
 | Requirements validated | 42 / 76 (Phase 1 + Phase 2 sets — Tests 1-2 manual PASS; Tests 3-10 covered by unit-test suites per `02-UAT.md` attestation table) |
-| Plans drafted | 16 |
-| Plans executed | 16 (Phase 1 = 9; Phase 2 Wave 1 = 3 bundled in salvage commit 2bf5bf6; Phase 2 Wave 2 = 1 in commits e703320 + 3e3f9cf; Phase 2 Wave 3 = 1 in commit ea07831; Phase 2 Wave 4 = 1 in commits 4121cfe + afc7825; Phase 2 Wave 5 = 1 in commits 5f042c8 + 6be6396 + 4895ae8) |
+| Plans drafted | 25 (Phase 3 plans 01–09 drafted 2026-05-15) |
+| Plans executed | 17 (Phase 1 = 9; Phase 2 = 7 across Waves 1–5; Phase 3 Plan 01 = 1 in commits e2bcd5e + 6a18026 + a31b99a) |
 | Node repairs | 1 (Phase 2 Wave 1 salvage — see Phase 2 backprop) |
 | UI phases run | 0 |
 | UAT gaps closed | 1 (Test 2 cosmetic hover state) |
@@ -58,6 +59,7 @@ Phase: 03 (codex-gemini-remote-providers) — ⬜ NOT STARTED (next)
 | Phase 02 P05 duration | ~60 min, 2 tasks, 13 files modified, 42 new tests |
 | Phase 02 P06 duration | ~12 min, 2 tasks, 10 files modified, 29 new tests |
 | Phase 02 P07 duration | ~25 min, 3 tasks (2 code + 1 docs), 11 files modified, 30 new tests |
+| Phase 03 P01 duration | ~35 min, 3 tasks, 11 files created/modified, 23 new tests |
 
 ## Accumulated Context
 
@@ -125,6 +127,9 @@ Phase: 03 (codex-gemini-remote-providers) — ⬜ NOT STARTED (next)
 60. `AggregateStore.maxQuotaFraction` returns the cross-provider max of each provider's `max(quota.fraction, quotaWindows.utilization.max)`. Empty providers map → 0 (default healthy). `AggregateStore.menuBarTint` is SwiftUI `Color` and lives on the store (not in the App layer) — `import SwiftUI` was added to `AggregateStore.swift`; the architectural decision is recorded in inline doc as "acceptable: AggregateStore is already an @Observable view-model concern".
 61. Plan 02.07's `ProviderRowView` moves the staleness computation INSIDE the existing `TimelineView(.periodic(by: 1))` context closure so the dimming updates each second as time crosses the 2× threshold (UI-08). Cost is constant-time per row — accepted per T-02.07-02 disposition.
 62. Plan 02.07 ships the `MenuBarExtra` in the explicit-label form (not the `(title:systemImage:)` shorthand) so `Image(systemName:).symbolRenderingMode(.hierarchical).foregroundStyle(dependencies.store.menuBarTint)` can dynamically retint as `@Observable` re-renders. Snap transitions (no animation) acceptable per Pitfall 9 / RESEARCH §H.3.
+63. `CodexRolloutScanner` computes yesterday via `Calendar.current.date(byAdding:.day, value:-1, to: startOfDay(for: now))` — NEVER via string substraction or DateFormatter. DST (2026-03-08 PT) and leap-day (2028-02-29) boundaries are asserted by tests with pinned PT and UTC calendars. Directory components built via `DateComponents` + `String(format:"%02d", ...)`; `ISO8601DateFormatter` is forbidden in the scanner (UI-04 / Pitfall 4 invariant).
+64. `CodexRolloutEvent` is lenient-by-default — `JSONDecoder.decode(...)` silently ignores unknown JSON keys when the target struct does not declare them. **No `AnyCodable` / `extraFields` plumbing required** (Phase 2 `TranscriptRecord` precedent; CLAUDE-03 / Pitfall 7). RESEARCH.md's hypothetical extraFields scaffold is deliberately NOT adopted; new test `unknown_future_field_does_not_break_decoding` locks in forward-compat.
+65. `CodexRolloutParser.lastTokenCount(in:)` folds across `[URL]` comparing parsed ISO8601 `event.timestamp` values — NOT file mtimes. A long-running session pinned to yesterday's date dir but still emitting events today is correctly handled (Pitfall 11). The predicate requires `type == "event_msg"` AND `payload.type == "token_count"` AND `payload.info != nil`; the parser uses Phase 2 STATE #43's dual `ISO8601DateFormatter` (fractional + non-fractional) pattern. Malformed/truncated JSON lines silently skipped via `try?` (Pitfall 5).
 
 ### Open Questions (from research)
 
@@ -162,14 +167,14 @@ Phase: 03 (codex-gemini-remote-providers) — ⬜ NOT STARTED (next)
 ### Last Session
 
 - **Date:** 2026-05-15
-- **Worked on:** Phase 02 UAT walkthrough + 3 live-session hotfixes. Test 1 (Claude row populates) initially failed because (a) `ClaudeRoots.defaultRoots` only scanned `~/.claude/projects/` and the reviewer's machine uses `ccs` (`~/.ccs/shared/context-groups/*/projects/` + `~/.ccs/instances/*/projects/`), and (b) the first refresh against a fresh cache spawned hundreds of `cache.setTranscriptOffset` calls that each re-decoded/re-encoded the entire envelope (O(N²) → 98% CPU spin, fetch never returned). Fixed both: added `CacheStore.setTranscriptOffsets([TranscriptOffset])` batch API with `FileCacheStore` atomic-single-write override, and made `ClaudeRoots.defaultRoots` a computed property that walks the ccs layout at boot. Also renamed the provider's user-facing label from "Claude" to "Claude Code" and added an authoritative-displayName overlay in `AggregateStore` so renamed providers update on first launch without requiring users to wipe their cache (`ProviderState.initial` had seeded displayName from `snapshot.providerID.rawValue` = lowercase `"claude"`). After fixes, the reviewer ran Tests 1 + 2 manually (both PASS) and approved Tests 3-10 against unit-test attestation; Test 7 (1hr battery soak) deferred to a separate pre-distribution session.
-- **Commits:** 378c531 (perf — batch transcript offset cache writes to avoid O(N²)), c84c452 (feat — ClaudeRoots enumerates CCS shared groups + per-instance project dirs), 4a5ebee (feat — rename Claude provider to "Claude Code" and let registry override cached displayName). Pre-UAT: 5f042c8, 6be6396, 4895ae8, 510f41a (Plan 02-07 code + UAT script + tracking).
+- **Worked on:** Phase 03 Plan 01 — Codex rollout discovery layer. Three tasks executed sequentially: (1) added `ProviderID.codex` constant with lock-in test; (2) created `CodexRoots` (default `~/.codex/sessions` with override seam) + `CodexRolloutScanner` (today+yesterday `YYYY/MM/DD` walker) with 12 Swift Testing cases covering DST 2026-03-08 PT, leap-day 2028-02-29 UTC, missing-yesterday-without-throw, symlink canonicalisation, `.jsonl` filter, and hidden-file skip; (3) created `CodexRolloutEvent` lenient Codable (no AnyCodable per Phase 2 precedent) + `CodexRolloutParser.lastTokenCount(in:)` fold-across-files namespace enum with 9 tests covering 2026 full-field decode, 2025 legacy `resets_in_seconds`, malformed-line skip, unknown-future-field tolerance, order-independence, and `info == nil` rejection. Two test fixtures derived from RESEARCH.md schemas. All 23 tests pass; Debug build succeeds. xcodeproj wired with new Codex source subgroup + Models subgroup + ProvidersCodexTests group + Fixtures subgroup.
+- **Commits:** e2bcd5e (Task 1 — ProviderID.codex + ProviderIDCodexTests), 6a18026 (Task 2 — CodexRoots + CodexRolloutScanner + 12 tests), a31b99a (Task 3 — CodexRolloutEvent + CodexRolloutParser + 9 tests + 2 fixtures).
 
 ### Next Session
 
-- **Suggested action:** `/gsd-plan-phase 03` — Phase 3 (Codex + Gemini remote providers). Reuses `TranscriptReader` + `TranscriptDirectoryScanner` (Plan 02.01), `ThresholdEngine` v2 FSM (Plan 02.05), and `CircuitBreaker` + `PowerObserver` (Plan 02.06). Plan 03.01 would be Codex rollout-*.jsonl parser; Plan 03.02 Codex provider actor; Plan 03.03 Gemini OAuth-personal client.
+- **Suggested action:** `/gsd-execute-phase 03 --plan 02` — Phase 3 Plan 02 (Codex pricing). Bundle `Resources/Pricing/codex-models.json` + `CodexModelPricing.swift` cascade-lookup mirroring Phase 2's `ClaudeModelPricing`. Plan 02 contains a BLOCKING `checkpoint:human-verify` against openai.com/api/pricing/ before lockdown (CODEX-04).
 - **Deferred:** Test 7 (Energy Impact battery soak) — 1hr battery-only soak; schedule before Phase 6 distribution.
-- **Memory candidate:** `feature_claude_quota_detail_view` — reviewer's reference layout shows per-window bars (Session/Weekly/Sonnet/Opus/Designs/Daily Routines). Data already captured in `UsageSnapshot.quotaWindows`; consider as a Phase 03+ side plan or roll into Phase 05 UX polish.
+- **Memory candidate:** `feature_claude_quota_detail_view` — Phase 05+ candidate; data already in `UsageSnapshot.quotaWindows`.
 
 ### Notes
 

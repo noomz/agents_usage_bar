@@ -77,8 +77,19 @@ Plans:
   3. When `~/.gemini/oauth_creds.json` is present with `selectedAuthType:"oauth-personal"`, the Gemini row shows per-model `remainingFraction` + ISO `resetTime`, refreshes the bearer automatically when expired, and surfaces tier label in row tooltip.
   4. If Gemini's `v1internal:retrieveUserQuota` endpoint returns 4xx/5xx, the Gemini row reads "Gemini usage temporarily unavailable" — other provider rows continue refreshing unaffected.
   5. Every provider row has a one-click "Open dashboard" button that launches the provider's web console in the default browser.
-**Plans:** TBD
+**Plans:** 1/9 executed
+Plans:
+- [x] 03-01-PLAN.md — CodexRolloutScanner (today+yesterday YYYY/MM/DD walk + symlink canonicalisation) + CodexRolloutEvent lenient Codable + CodexRolloutParser fold-to-last-token-count (CODEX-01 partial, CODEX-03 partial) — see `03-01-SUMMARY.md`, commits e2bcd5e + 6a18026 + a31b99a ✓ 2026-05-15
+- [ ] 03-02-PLAN.md — `Resources/Pricing/codex-models.json` bundle + CodexModelPricing cascade-lookup + BLOCKING checkpoint:human-verify against openai.com/api/pricing/ (CODEX-04)
+- [ ] 03-03-PLAN.md — CodexCredentialLoader (~/.codex/auth.json: tokens.access_token + optional ChatGPT-Account-Id) + CodexOAuthClient (GET /backend-api/wham/usage) + CodexUsageResponse Codable (CODEX-02)
+- [ ] 03-04-PLAN.md — CodexJSONLProvider actor composing 03-01/02/03 + UsageSnapshot.tooltipLabel extension (CODEX-01..04 composition + D-05 max(primary, secondary) + D-15 plan_type tooltip)
+- [ ] 03-05-PLAN.md — GeminiSettingsGate (nested security.auth.selectedType — RESEARCH correction #2) + GeminiCredentialLoader (oauth_creds.json with expiry_date epoch-ms — correction #3) + GeminiOAuthClient (eager-pre-check + lazy-401, in-memory token D-10, refresh_token never rotated Pitfall 10) (GEMINI-01)
+- [ ] 03-06-PLAN.md — GeminiOAuthProvider actor — concurrent quota+tier async let + per-model lowest-remainingFraction fold + tier display map (free→Free / legacy→Legacy / standard→Paid) + D-11 degraded UX (GEMINI-02, GEMINI-03, GEMINI-04)
+- [ ] 03-07-PLAN.md — ProviderDashboardURL lookup (4 hard-coded URLs per D-14) + ProviderRowView trailing arrow.up.right.square button + .help() tooltip wiring + TotalsHeaderView "excludes quota-only providers" footnote (UI-11)
+- [ ] 03-08-PLAN.md — AppConfig + ConfigStore [codex] / [gemini] TOML sections + AppDependencies.makeProduction() Codex/Gemini registration + AggregateStore D-07 rollupTotals exclusion + ThresholdEngine D-11 suppression
+- [ ] 03-09-PLAN.md — 03-UAT.md walkthrough (5 manual + 5 attestation tests mirroring Phase 2 02-UAT format) + BLOCKING reviewer checkpoint
 **UI hint:** yes
+**Phase exit:** BLOCKED on UAT — reviewer runs `.planning/phases/03-remote-api-providers-codex-gemini/03-UAT.md` then replies `approved` / `failed: <test>` / `deferred: <test>`.
 
 ### Phase 4: Local LLM Presence (Ollama + LM Studio + llama.cpp)
 **Goal:** Localhost AI runtimes appear as tri-state presence rows (`notRunning | running | error`) showing model name only — no token tracking, no port scanning, no red error for "not installed".
@@ -127,7 +138,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Skeleton + OpenRouter Vertical Slice | 9/9 | ✅ Complete | 2026-05-13 |
 | 2. Claude Provider + Threshold/Rollover + JSONL Streaming | 7/7 | ✅ Complete | 2026-05-15 |
-| 3. Remote API Providers (Codex + Gemini) | 0/0 | Not started | - |
+| 3. Remote API Providers (Codex + Gemini) | 1/9 | Executing (Plan 01 ✅ 2026-05-15) | - |
 | 4. Local LLM Presence (Ollama + LM Studio + llama.cpp) | 0/0 | Not started | - |
 | 5. First-Run UX + Settings Polish | 0/0 | Not started | - |
 | 6. Distribution (Sign + Notarize + DMG + Sparkle + OSS hygiene) | 0/0 | Not started | - |
@@ -152,4 +163,4 @@ Plans:
 | **Total** | **76** | All 76 v1 requirements covered exactly once — see REQUIREMENTS.md Traceability table for the authoritative per-requirement mapping. |
 
 ---
-*Roadmap created: 2026-05-11. Ready for `/gsd-plan-phase 1`.*
+*Roadmap created: 2026-05-11. Phase 3 planned: 2026-05-15. Ready for `/gsd-execute-phase 03`.*
