@@ -18,6 +18,32 @@
 		AA000001000000000000009A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000009B /* Assets.xcassets */; };
 		AA00000100000000000000AA /* AgentsUsageBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000100000000000000AB /* AgentsUsageBarTests.swift */; };
 		AA00000100000000000000BA /* AgentsUsageBar.app in Frameworks */ = {isa = PBXBuildFile; fileRef = AA00000100000000000000BB /* AgentsUsageBar.app */; };
+		/* Plan 01.02 — Domain sources */
+		AA020200000000000000001A /* UsageSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000001B /* UsageSnapshot.swift */; };
+		AA020200000000000000002A /* DailyTotals.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000002B /* DailyTotals.swift */; };
+		AA020200000000000000003A /* Quota.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000003B /* Quota.swift */; };
+		AA020200000000000000004A /* ProviderStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000004B /* ProviderStatus.swift */; };
+		AA020200000000000000005A /* ProviderError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000005B /* ProviderError.swift */; };
+		AA020200000000000000006A /* ProviderCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000006B /* ProviderCapabilities.swift */; };
+		AA020200000000000000007A /* ThresholdState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000007B /* ThresholdState.swift */; };
+		AA020200000000000000008A /* NotificationDecision.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000008B /* NotificationDecision.swift */; };
+		AA020200000000000000009A /* RefreshInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000009B /* RefreshInterval.swift */; };
+		AA02020000000000000000AA /* Secret.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA02020000000000000000AB /* Secret.swift */; };
+		AA02020000000000000000BA /* TodayHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA02020000000000000000BB /* TodayHelper.swift */; };
+		/* Plan 01.02 — Infrastructure sources */
+		AA020200000000000000010A /* HTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000010B /* HTTPClient.swift */; };
+		AA020200000000000000011A /* URLSessionHTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000011B /* URLSessionHTTPClient.swift */; };
+		AA020200000000000000012A /* Clock.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000012B /* Clock.swift */; };
+		AA020200000000000000013A /* CacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000013B /* CacheStore.swift */; };
+		AA020200000000000000014A /* FileCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000014B /* FileCacheStore.swift */; };
+		AA020200000000000000015A /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000015B /* AppLogger.swift */; };
+		/* Plan 01.02 — Test sources */
+		AA020200000000000000020A /* SecretTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000020B /* SecretTests.swift */; };
+		AA020200000000000000021A /* TodayHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000021B /* TodayHelperTests.swift */; };
+		AA020200000000000000022A /* QuotaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000022B /* QuotaTests.swift */; };
+		AA020200000000000000023A /* ThresholdStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000023B /* ThresholdStateTests.swift */; };
+		AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000024B /* FileCacheStoreTests.swift */; };
+		AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000025B /* URLSessionHTTPClientTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +71,32 @@
 		AA0000010000000000000092 /* Entitlements.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Entitlements.plist; sourceTree = "<group>"; };
 		AA00000100000000000000AB /* AgentsUsageBarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsUsageBarTests.swift; sourceTree = "<group>"; };
 		AA00000100000000000000DB /* AgentsUsageBarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgentsUsageBarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		/* Plan 01.02 — Domain file references */
+		AA020200000000000000001B /* UsageSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageSnapshot.swift; sourceTree = "<group>"; };
+		AA020200000000000000002B /* DailyTotals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyTotals.swift; sourceTree = "<group>"; };
+		AA020200000000000000003B /* Quota.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Quota.swift; sourceTree = "<group>"; };
+		AA020200000000000000004B /* ProviderStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderStatus.swift; sourceTree = "<group>"; };
+		AA020200000000000000005B /* ProviderError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderError.swift; sourceTree = "<group>"; };
+		AA020200000000000000006B /* ProviderCapabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderCapabilities.swift; sourceTree = "<group>"; };
+		AA020200000000000000007B /* ThresholdState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdState.swift; sourceTree = "<group>"; };
+		AA020200000000000000008B /* NotificationDecision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationDecision.swift; sourceTree = "<group>"; };
+		AA020200000000000000009B /* RefreshInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshInterval.swift; sourceTree = "<group>"; };
+		AA02020000000000000000AB /* Secret.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secret.swift; sourceTree = "<group>"; };
+		AA02020000000000000000BB /* TodayHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHelper.swift; sourceTree = "<group>"; };
+		/* Plan 01.02 — Infrastructure file references */
+		AA020200000000000000010B /* HTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPClient.swift; sourceTree = "<group>"; };
+		AA020200000000000000011B /* URLSessionHTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionHTTPClient.swift; sourceTree = "<group>"; };
+		AA020200000000000000012B /* Clock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clock.swift; sourceTree = "<group>"; };
+		AA020200000000000000013B /* CacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheStore.swift; sourceTree = "<group>"; };
+		AA020200000000000000014B /* FileCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStore.swift; sourceTree = "<group>"; };
+		AA020200000000000000015B /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		/* Plan 01.02 — Test file references */
+		AA020200000000000000020B /* SecretTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretTests.swift; sourceTree = "<group>"; };
+		AA020200000000000000021B /* TodayHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHelperTests.swift; sourceTree = "<group>"; };
+		AA020200000000000000022B /* QuotaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaTests.swift; sourceTree = "<group>"; };
+		AA020200000000000000023B /* ThresholdStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdStateTests.swift; sourceTree = "<group>"; };
+		AA020200000000000000024B /* FileCacheStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStoreTests.swift; sourceTree = "<group>"; };
+		AA020200000000000000025B /* URLSessionHTTPClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionHTTPClientTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,6 +135,7 @@
 				AA00000100000000000000D4 /* Aggregation */,
 				AA00000100000000000000D5 /* UI */,
 				AA00000100000000000000D6 /* Resources */,
+				AA020200000000000000030B /* Infrastructure */,
 			);
 			path = AgentsUsageBar;
 			sourceTree = "<group>";
@@ -101,8 +154,52 @@
 			children = (
 				AA000001000000000000004B /* ProviderID.swift */,
 				AA000001000000000000005B /* ProviderState.swift */,
+				AA020200000000000000001B /* UsageSnapshot.swift */,
+				AA020200000000000000002B /* DailyTotals.swift */,
+				AA020200000000000000003B /* Quota.swift */,
+				AA020200000000000000004B /* ProviderStatus.swift */,
+				AA020200000000000000005B /* ProviderError.swift */,
+				AA020200000000000000006B /* ProviderCapabilities.swift */,
+				AA020200000000000000007B /* ThresholdState.swift */,
+				AA020200000000000000008B /* NotificationDecision.swift */,
+				AA020200000000000000009B /* RefreshInterval.swift */,
+				AA02020000000000000000AB /* Secret.swift */,
+				AA02020000000000000000BB /* TodayHelper.swift */,
 			);
 			path = Domain;
+			sourceTree = "<group>";
+		};
+		AA020200000000000000030B /* Infrastructure */ = {
+			isa = PBXGroup;
+			children = (
+				AA020200000000000000010B /* HTTPClient.swift */,
+				AA020200000000000000011B /* URLSessionHTTPClient.swift */,
+				AA020200000000000000012B /* Clock.swift */,
+				AA020200000000000000013B /* CacheStore.swift */,
+				AA020200000000000000014B /* FileCacheStore.swift */,
+				AA020200000000000000015B /* AppLogger.swift */,
+			);
+			path = Infrastructure;
+			sourceTree = "<group>";
+		};
+		AA020200000000000000031B /* DomainTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA020200000000000000020B /* SecretTests.swift */,
+				AA020200000000000000021B /* TodayHelperTests.swift */,
+				AA020200000000000000022B /* QuotaTests.swift */,
+				AA020200000000000000023B /* ThresholdStateTests.swift */,
+			);
+			path = DomainTests;
+			sourceTree = "<group>";
+		};
+		AA020200000000000000032B /* InfrastructureTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA020200000000000000024B /* FileCacheStoreTests.swift */,
+				AA020200000000000000025B /* URLSessionHTTPClientTests.swift */,
+			);
+			path = InfrastructureTests;
 			sourceTree = "<group>";
 		};
 		AA00000100000000000000D4 /* Aggregation */ = {
@@ -137,6 +234,8 @@
 			isa = PBXGroup;
 			children = (
 				AA00000100000000000000AB /* AgentsUsageBarTests.swift */,
+				AA020200000000000000031B /* DomainTests */,
+				AA020200000000000000032B /* InfrastructureTests */,
 			);
 			path = AgentsUsageBarTests;
 			sourceTree = "<group>";
@@ -249,6 +348,23 @@
 				AA000001000000000000006A /* PopoverRootView.swift in Sources */,
 				AA000001000000000000007A /* ProviderRowView.swift in Sources */,
 				AA000001000000000000008A /* FooterView.swift in Sources */,
+				AA020200000000000000001A /* UsageSnapshot.swift in Sources */,
+				AA020200000000000000002A /* DailyTotals.swift in Sources */,
+				AA020200000000000000003A /* Quota.swift in Sources */,
+				AA020200000000000000004A /* ProviderStatus.swift in Sources */,
+				AA020200000000000000005A /* ProviderError.swift in Sources */,
+				AA020200000000000000006A /* ProviderCapabilities.swift in Sources */,
+				AA020200000000000000007A /* ThresholdState.swift in Sources */,
+				AA020200000000000000008A /* NotificationDecision.swift in Sources */,
+				AA020200000000000000009A /* RefreshInterval.swift in Sources */,
+				AA02020000000000000000AA /* Secret.swift in Sources */,
+				AA02020000000000000000BA /* TodayHelper.swift in Sources */,
+				AA020200000000000000010A /* HTTPClient.swift in Sources */,
+				AA020200000000000000011A /* URLSessionHTTPClient.swift in Sources */,
+				AA020200000000000000012A /* Clock.swift in Sources */,
+				AA020200000000000000013A /* CacheStore.swift in Sources */,
+				AA020200000000000000014A /* FileCacheStore.swift in Sources */,
+				AA020200000000000000015A /* AppLogger.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -257,6 +373,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA00000100000000000000AA /* AgentsUsageBarTests.swift in Sources */,
+				AA020200000000000000020A /* SecretTests.swift in Sources */,
+				AA020200000000000000021A /* TodayHelperTests.swift in Sources */,
+				AA020200000000000000022A /* QuotaTests.swift in Sources */,
+				AA020200000000000000023A /* ThresholdStateTests.swift in Sources */,
+				AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */,
+				AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
