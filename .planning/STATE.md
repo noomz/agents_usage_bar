@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
+status: planning
 last_updated: "2026-05-13T00:00:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 9
+  total_plans: 16
   completed_plans: 9
-  percent: 100
+  percent: 56
 ---
 
 # Project State: Agents Usage Bar
 
-**Last Updated:** 2026-05-13 (after Plan 01.09 gap-closure execution — Phase 1 UAT Test 2 gap closed)
+**Last Updated:** 2026-05-13 (after Phase 2 planning — 7 plans drafted across 5 waves)
 **Mode:** yolo
 **Granularity:** coarse
 
@@ -24,18 +24,18 @@ progress:
 
 **What This Is:** A macOS menu bar app that surfaces today's AI agent usage across Claude, OpenAI Codex, Gemini, OpenRouter, and local agents (Ollama, LM Studio, llama.cpp) — tokens used, USD spent, quota remaining per provider — with native notifications at threshold crossings.
 
-**Current Focus:** Phase 02 — (next phase to be planned)
+**Current Focus:** Phase 02 — Claude Provider + Threshold/Rollover + JSONL Streaming (7 plans planned, ready to execute)
 
 ## Current Position
 
-Phase: 01 (skeleton-openrouter-vertical-slice) — COMPLETE (incl. gap closure)
-Plan: 9 of 9 COMPLETE
+Phase: 02 (claude-provider-threshold-rollover-jsonl-streaming) — PLANNING COMPLETE
+Plan: 0 of 7 executed (planning ready)
 
 - **Milestone:** v1 (initial release)
-- **Phase:** 1 of 6 — Skeleton + OpenRouter Vertical Slice — COMPLETE
-- **Plan:** 01.09 COMPLETE — UAT Test 2 cosmetic hover-state gap closed
-- **Status:** Phase 01 complete (8 main + 1 gap-closure); awaiting Phase 02 planning
-- **Progress:** [██████████] 100% (Phase 1)
+- **Phase:** 2 of 6 — Claude Provider + Threshold/Rollover + JSONL Streaming — PLANS DRAFTED
+- **Plan:** 0 of 7 plans executed (Wave 1 = {01, 02, 03}; Wave 2 = {04}; Wave 3 = {05}; Wave 4 = {06}; Wave 5 = {07})
+- **Status:** Phase 02 planning complete; awaiting `/gsd-execute-phase 02`
+- **Progress:** [░░░░░░░░░░] 0% (Phase 2 execution)
 
 ```
 [============================================================] 100% (9/9 plans complete)
@@ -133,15 +133,15 @@ Plan: 9 of 9 COMPLETE
 
 ### Last Session
 
-- **Date:** 2026-05-12
-- **Worked on:** Plan 01.06 — Popover UI (2 tasks, ~427 seconds)
+- **Date:** 2026-05-13
+- **Worked on:** Phase 02 planning — 7 plans drafted (5 waves) for Claude provider + threshold FSM + JSONL streaming + power/retry/breaker + UI extensions + UAT script.
 - **Result:** 8 new SwiftUI files (ClockEnvironmentKey + 3 components + TotalsHeaderView + 3 replaced Wave 0 views) + 3 test suites. 20 new Swift Testing assertions (8 QuotaBar B4 + 9 RelativeTimestampLabel W2 + 3 FooterView W7). Full suite 122 assertions pass. BUILD SUCCEEDED. B4 color thresholds verified, B5 ClockKey sole-declaration verified, UI-07 no loading flash guaranteed by AggregateStore cache seed.
 - **Commits:** ae7ec37 (Task 1 — components + tests), b341836 (Task 2 — popover scene views)
 
 ### Next Session
 
-- **Suggested action:** Execute Plan 01.07 — Notifications (ThresholdEngine + NotificationManager real implementation).
-- **Pre-work:** None — AggregateStore + QuotaBar B4 thresholds are locked and documented in 01.06-SUMMARY.md.
+- **Suggested action:** Execute Phase 02 — `/gsd-execute-phase 02`. Wave 1 (plans 01/02/03) runs in parallel.
+- **Pre-work:** None — all Phase 2 plans reference Phase 1 SUMMARYs + 02-RESEARCH.md as authoritative sources.
 
 ### Notes
 

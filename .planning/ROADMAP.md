@@ -54,7 +54,15 @@ Plans:
   3. At local midnight (tester verifies in `America/Los_Angeles` at 11:59pm), all "today" totals reset to zero — never UTC-bucketed and never an off-by-one across DST.
   4. Crossing 80% on any provider fires exactly one macOS notification (stable id `"<providerID>:<yyyy-MM-dd>:warn80"`); "Snooze for today" action suppresses further fires until midnight; multiple providers crossing within one poll coalesce into a single "N providers crossed 80%" notification.
   5. After 1 hour idle on battery, macOS Energy Impact reports the app as "Low"; sleep pauses polling and wake triggers a single immediate refresh with exponential backoff + jitter on 429/5xx and circuit-breaker after 5 consecutive failures.
-**Plans:** TBD
+**Plans:** 7 plans planned (5 waves) — ready for `/gsd-execute-phase 02`
+Plans:
+- [ ] 02-01-PLAN.md — TranscriptReader + offset cache schema v1→v2 + directory scanner (CLAUDE-01..03)
+- [ ] 02-02-PLAN.md — Bundled `claude-models.json` + ClaudeModelPricing cascade-lookup cost calculator (CLAUDE-05)
+- [ ] 02-03-PLAN.md — Anthropic OAuth client + ClaudeCredentialLoader + KeychainReader + QuotaWindow (CLAUDE-04)
+- [ ] 02-04-PLAN.md — ClaudeJSONLProvider composing 02.01+02+03 + AppDependencies wiring (CLAUDE-01..05 composition)
+- [ ] 02-05-PLAN.md — ThresholdEngine FSM v2 (Comparable bands) + UNNotificationCategory + snooze + AggregateStore wiring (NOTIF-01..05)
+- [ ] 02-06-PLAN.md — PowerObserver (sleep/wake) + RetryPolicy + CircuitBreaker (per-provider 5-strike + OAuth-usage 3-strike) (POLL-04..06, POLL-09)
+- [ ] 02-07-PLAN.md — UI extensions (UI-03/05/08/09) + 02-UAT.md checkpoint (UI-03, UI-05, UI-08, UI-09)
 **UI hint:** yes
 
 ### Phase 3: Remote API Providers (Codex + Gemini)
@@ -117,7 +125,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Skeleton + OpenRouter Vertical Slice | 5/8 | In Progress|  |
-| 2. Claude Provider + Threshold/Rollover + JSONL Streaming | 0/0 | Not started | - |
+| 2. Claude Provider + Threshold/Rollover + JSONL Streaming | 0/7 | Plans ready | - |
 | 3. Remote API Providers (Codex + Gemini) | 0/0 | Not started | - |
 | 4. Local LLM Presence (Ollama + LM Studio + llama.cpp) | 0/0 | Not started | - |
 | 5. First-Run UX + Settings Polish | 0/0 | Not started | - |
