@@ -57,6 +57,21 @@
 		AA030300000000000000021A /* malformed.toml in Resources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000021B /* malformed.toml */; };
 		AA030300000000000000022A /* empty.toml in Resources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000022B /* empty.toml */; };
 		AA030300000000000000023A /* comments-only.toml in Resources */ = {isa = PBXBuildFile; fileRef = AA030300000000000000023B /* comments-only.toml */; };
+		/* Plan 01.04 — Provider protocol + OpenRouter implementation sources */
+		AA040400000000000000001A /* UsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000001B /* UsageProvider.swift */; };
+		AA040400000000000000002A /* OpenRouterEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000002B /* OpenRouterEndpoint.swift */; };
+		AA040400000000000000003A /* OpenRouterResponses.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000003B /* OpenRouterResponses.swift */; };
+		AA040400000000000000004A /* OpenRouterClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000004B /* OpenRouterClient.swift */; };
+		AA040400000000000000005A /* OpenRouterProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000005B /* OpenRouterProvider.swift */; };
+		/* Plan 01.04 — Test sources */
+		AA040400000000000000010A /* ResponseDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000010B /* ResponseDecodingTests.swift */; };
+		AA040400000000000000011A /* OpenRouterProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000011B /* OpenRouterProviderTests.swift */; };
+		AA040400000000000000012A /* BaselineDeltaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000012B /* BaselineDeltaTests.swift */; };
+		/* Plan 01.04 — JSON fixture resources */
+		AA040400000000000000020A /* credits.success.json in Resources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000020B /* credits.success.json */; };
+		AA040400000000000000021A /* credits.unauthorized.json in Resources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000021B /* credits.unauthorized.json */; };
+		AA040400000000000000022A /* key.with_limit.json in Resources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000022B /* key.with_limit.json */; };
+		AA040400000000000000023A /* key.no_limit.json in Resources */ = {isa = PBXBuildFile; fileRef = AA040400000000000000023B /* key.no_limit.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -123,6 +138,21 @@
 		AA030300000000000000021B /* malformed.toml */ = {isa = PBXFileReference; lastKnownFileType = text; path = "malformed.toml"; sourceTree = "<group>"; };
 		AA030300000000000000022B /* empty.toml */ = {isa = PBXFileReference; lastKnownFileType = text; path = "empty.toml"; sourceTree = "<group>"; };
 		AA030300000000000000023B /* comments-only.toml */ = {isa = PBXFileReference; lastKnownFileType = text; path = "comments-only.toml"; sourceTree = "<group>"; };
+		/* Plan 01.04 — Provider protocol + OpenRouter implementation file references */
+		AA040400000000000000001B /* UsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageProvider.swift; sourceTree = "<group>"; };
+		AA040400000000000000002B /* OpenRouterEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterEndpoint.swift; sourceTree = "<group>"; };
+		AA040400000000000000003B /* OpenRouterResponses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterResponses.swift; sourceTree = "<group>"; };
+		AA040400000000000000004B /* OpenRouterClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterClient.swift; sourceTree = "<group>"; };
+		AA040400000000000000005B /* OpenRouterProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterProvider.swift; sourceTree = "<group>"; };
+		/* Plan 01.04 — Test file references */
+		AA040400000000000000010B /* ResponseDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponseDecodingTests.swift; sourceTree = "<group>"; };
+		AA040400000000000000011B /* OpenRouterProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterProviderTests.swift; sourceTree = "<group>"; };
+		AA040400000000000000012B /* BaselineDeltaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaselineDeltaTests.swift; sourceTree = "<group>"; };
+		/* Plan 01.04 — JSON fixture file references */
+		AA040400000000000000020B /* credits.success.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "credits.success.json"; sourceTree = "<group>"; };
+		AA040400000000000000021B /* credits.unauthorized.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "credits.unauthorized.json"; sourceTree = "<group>"; };
+		AA040400000000000000022B /* key.with_limit.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "key.with_limit.json"; sourceTree = "<group>"; };
+		AA040400000000000000023B /* key.no_limit.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "key.no_limit.json"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -163,6 +193,7 @@
 				AA00000100000000000000D6 /* Resources */,
 				AA020200000000000000030B /* Infrastructure */,
 				AA030300000000000000030B /* Config */,
+				AA040400000000000000030B /* Providers */,
 			);
 			path = AgentsUsageBar;
 			sourceTree = "<group>";
@@ -227,6 +258,52 @@
 				AA020200000000000000025B /* URLSessionHTTPClientTests.swift */,
 			);
 			path = InfrastructureTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 01.04 — Providers source group */
+		AA040400000000000000030B /* Providers */ = {
+			isa = PBXGroup;
+			children = (
+				AA040400000000000000001B /* UsageProvider.swift */,
+				AA040400000000000000031B /* OpenRouter */,
+			);
+			path = Providers;
+			sourceTree = "<group>";
+		};
+		/* Plan 01.04 — OpenRouter subgroup */
+		AA040400000000000000031B /* OpenRouter */ = {
+			isa = PBXGroup;
+			children = (
+				AA040400000000000000002B /* OpenRouterEndpoint.swift */,
+				AA040400000000000000003B /* OpenRouterResponses.swift */,
+				AA040400000000000000004B /* OpenRouterClient.swift */,
+				AA040400000000000000005B /* OpenRouterProvider.swift */,
+			);
+			path = OpenRouter;
+			sourceTree = "<group>";
+		};
+		/* Plan 01.04 — ProvidersOpenRouterTests group */
+		AA040400000000000000032B /* ProvidersOpenRouterTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA040400000000000000010B /* ResponseDecodingTests.swift */,
+				AA040400000000000000011B /* OpenRouterProviderTests.swift */,
+				AA040400000000000000012B /* BaselineDeltaTests.swift */,
+				AA040400000000000000033B /* Fixtures */,
+			);
+			path = ProvidersOpenRouterTests;
+			sourceTree = "<group>";
+		};
+		/* Plan 01.04 — JSON Fixtures subgroup */
+		AA040400000000000000033B /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				AA040400000000000000020B /* credits.success.json */,
+				AA040400000000000000021B /* credits.unauthorized.json */,
+				AA040400000000000000022B /* key.with_limit.json */,
+				AA040400000000000000023B /* key.no_limit.json */,
+			);
+			path = Fixtures;
 			sourceTree = "<group>";
 		};
 		/* Plan 01.03 — Config source group */
@@ -299,6 +376,7 @@
 				AA020200000000000000031B /* DomainTests */,
 				AA020200000000000000032B /* InfrastructureTests */,
 				AA030300000000000000031B /* ConfigTests */,
+				AA040400000000000000032B /* ProvidersOpenRouterTests */,
 			);
 			path = AgentsUsageBarTests;
 			sourceTree = "<group>";
@@ -405,6 +483,10 @@
 				AA030300000000000000021A /* malformed.toml in Resources */,
 				AA030300000000000000022A /* empty.toml in Resources */,
 				AA030300000000000000023A /* comments-only.toml in Resources */,
+				AA040400000000000000020A /* credits.success.json in Resources */,
+				AA040400000000000000021A /* credits.unauthorized.json in Resources */,
+				AA040400000000000000022A /* key.with_limit.json in Resources */,
+				AA040400000000000000023A /* key.no_limit.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -444,6 +526,11 @@
 				AA030300000000000000002A /* EnvReader.swift in Sources */,
 				AA030300000000000000003A /* TomlReader.swift in Sources */,
 				AA030300000000000000004A /* ConfigStore.swift in Sources */,
+				AA040400000000000000001A /* UsageProvider.swift in Sources */,
+				AA040400000000000000002A /* OpenRouterEndpoint.swift in Sources */,
+				AA040400000000000000003A /* OpenRouterResponses.swift in Sources */,
+				AA040400000000000000004A /* OpenRouterClient.swift in Sources */,
+				AA040400000000000000005A /* OpenRouterProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -460,6 +547,9 @@
 				AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */,
 				AA030300000000000000010A /* TomlReaderTests.swift in Sources */,
 				AA030300000000000000011A /* ConfigStoreTests.swift in Sources */,
+				AA040400000000000000010A /* ResponseDecodingTests.swift in Sources */,
+				AA040400000000000000011A /* OpenRouterProviderTests.swift in Sources */,
+				AA040400000000000000012A /* BaselineDeltaTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
