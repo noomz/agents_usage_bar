@@ -152,6 +152,10 @@
 		AA030800000000000000012A /* AggregateStoreGeminiDegradedSuppressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030800000000000000012B /* AggregateStoreGeminiDegradedSuppressionTests.swift */; };
 		/* Plan 03-08 Task 3 — AppDependencies registration tests */
 		AA030800000000000000013A /* AppDependenciesCodexGeminiRegistrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030800000000000000013B /* AppDependenciesCodexGeminiRegistrationTests.swift */; };
+		/* Plan 04-07 — LocalRowSecondaryView (app target) + local-row test files (test target) */
+		AA040700000000000000001A /* LocalRowSecondaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040700000000000000001B /* LocalRowSecondaryView.swift */; };
+		AA040700000000000000010A /* LocalRowSecondaryViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040700000000000000010B /* LocalRowSecondaryViewTests.swift */; };
+		AA040700000000000000011A /* ProviderRowViewLocalRowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040700000000000000011B /* ProviderRowViewLocalRowTests.swift */; };
 		/* Plan 03-07 Task 1 — ProviderDashboardURL (app target) + tests */
 		AA030700000000000000001A /* ProviderDashboardURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030700000000000000001B /* ProviderDashboardURL.swift */; };
 		AA030700000000000000010A /* ProviderDashboardURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030700000000000000010B /* ProviderDashboardURLTests.swift */; };
@@ -492,6 +496,10 @@
 		AA040600000000000000011B /* LlamaCppResponsesCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaCppResponsesCodableTests.swift; sourceTree = "<group>"; };
 		AA040600000000000000012B /* ProviderStatePlaceholderMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderStatePlaceholderMessageTests.swift; sourceTree = "<group>"; };
 		AA040600000000000000013B /* AggregateStoreSeedPlaceholderMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreSeedPlaceholderMessageTests.swift; sourceTree = "<group>"; };
+		/* Plan 04-07 — LocalRowSecondaryView (app target) + local-row test file references */
+		AA040700000000000000001B /* LocalRowSecondaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRowSecondaryView.swift; sourceTree = "<group>"; };
+		AA040700000000000000010B /* LocalRowSecondaryViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRowSecondaryViewTests.swift; sourceTree = "<group>"; };
+		AA040700000000000000011B /* ProviderRowViewLocalRowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderRowViewLocalRowTests.swift; sourceTree = "<group>"; };
 		/* Plan 04-06 — fixture file references (loaded via #filePath, not bundle) */
 		AA040600000000000000020B /* llamacpp-health-ok.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "llamacpp-health-ok.json"; sourceTree = "<group>"; };
 		AA040600000000000000021B /* llamacpp-health-loading.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "llamacpp-health-loading.json"; sourceTree = "<group>"; };
@@ -994,6 +1002,8 @@
 				AA060600000000000000003B /* StatusDot.swift */,
 				AA060600000000000000004B /* RelativeTimestampLabel.swift */,
 				AA090900000000000000001B /* HoverableBorderedButtonStyle.swift */,
+				/* Plan 04-07 — LocalRowSecondaryView helper */
+				AA040700000000000000001B /* LocalRowSecondaryView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1028,6 +1038,9 @@
 				AA030700000000000000014B /* TotalsHeaderViewFootnoteTests.swift */,
 				/* Plan 04-01 -- StatusDot.notRunning rendering tests */
 				AA040100000000000000013B /* StatusDotNotRunningTests.swift */,
+				/* Plan 04-07 — local-row secondary view tests */
+				AA040700000000000000010B /* LocalRowSecondaryViewTests.swift */,
+				AA040700000000000000011B /* ProviderRowViewLocalRowTests.swift */,
 			);
 			path = UITests;
 			sourceTree = "<group>";
@@ -1521,6 +1534,8 @@
 				AA040600000000000000002A /* LlamaCppHealthResponse.swift in Sources */,
 				AA040600000000000000003A /* LlamaCppV1ModelsResponse.swift in Sources */,
 				AA040600000000000000004A /* LlamaCppSlotsResponse.swift in Sources */,
+				/* Plan 04-07 — LocalRowSecondaryView UI helper */
+				AA040700000000000000001A /* LocalRowSecondaryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1645,6 +1660,9 @@
 				AA040600000000000000011A /* LlamaCppResponsesCodableTests.swift in Sources */,
 				AA040600000000000000012A /* ProviderStatePlaceholderMessageTests.swift in Sources */,
 				AA040600000000000000013A /* AggregateStoreSeedPlaceholderMessageTests.swift in Sources */,
+				/* Plan 04-07 — LocalRowSecondaryView + ProviderRowView local-row tests */
+				AA040700000000000000010A /* LocalRowSecondaryViewTests.swift in Sources */,
+				AA040700000000000000011A /* ProviderRowViewLocalRowTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

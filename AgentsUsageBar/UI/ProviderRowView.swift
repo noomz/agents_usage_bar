@@ -41,6 +41,11 @@ public struct ProviderRowView: View {
     /// case to preserve row layout symmetry.
     private var dashboardURL: URL? { ProviderDashboardURL.lookup(state.id) }
 
+    /// Plan 04-07 — true when the row's provider is a local LLM runtime
+    /// (Ollama / LM Studio / llama.cpp). Keyed off `ProviderID.localIDs`
+    /// (Plan 04-01 static Set) so no capability registry is needed in the view.
+    private var isLocal: Bool { ProviderID.localIDs.contains(state.id) }
+
     /// Plan 03-07 / D-11 — detects Gemini's `"usage-temporarily-unavailable"`
     /// degraded snapshot via the canonical `ThresholdEngine.degradedTag`
     /// constant (single-sourced literal per Plan 03-08 STATE #84).
@@ -68,28 +73,36 @@ public struct ProviderRowView: View {
                         .font(.subheadline.weight(.semibold))
                         .help(state.snapshot?.tooltipLabel ?? "")
 
-                    // Token count · USD cost · balance
-                    HStack(spacing: 4) {
-                        Text(tokenText(state.snapshot))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text("·")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(usdText(state.snapshot))
-                            .font(.caption2)
-                            .monospacedDigit()
-                        if let bal = balanceText(state.snapshot), !bal.isEmpty {
+                    // Plan 04-07 — local rows (Ollama / LM Studio / llama.cpp) render
+                    // a model-presence secondary line instead of the tokens · USD ·
+                    // balance HStack (LOCAL-06 anti-feature: no token tracking for locals).
+                    if isLocal {
+                        LocalRowSecondaryView(state: state)
+                            .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                    } else {
+                        // Token count · USD cost · balance
+                        HStack(spacing: 4) {
+                            Text(tokenText(state.snapshot))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                             Text("·")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
-                            Text(bal)
+                            Text(usdText(state.snapshot))
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
                                 .monospacedDigit()
+                            if let bal = balanceText(state.snapshot), !bal.isEmpty {
+                                Text("·")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                Text(bal)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
                         }
+                        .opacity(isStale || isDegraded ? 0.6 : 1.0)
                     }
-                    .opacity(isStale || isDegraded ? 0.6 : 1.0)
 
                     // Quota bar — opacity composes UI-08 stale dimming and the
                     // Plan 03-07 / D-11 degraded dimming.
@@ -253,6 +266,45 @@ private func previewStore() -> AggregateStore {
         displayName: "OpenRouter",
         snapshot: nil,
         status: .error(ProviderError(kind: .auth, message: "HTTP 401")),
+        lastSuccess: nil
+    )
+    return ProviderRowView(state: state)
+        .environment(previewStore())
+        .frame(width: 360)
+}
+
+#Preview("ProviderRowView — Ollama running single model") {
+    let snapshot = UsageSnapshot(
+        providerID: .ollama,
+        asOf: .now,
+        tokensToday: nil,
+        costTodayUSD: nil,
+        balanceUSD: nil,
+        quota: nil,
+        raw: [
+            "modelName": "llama3:8b",
+            "modelCount": "1",
+            "vramBytes": "5137025024"
+        ]
+    )
+    let state = ProviderState(
+        id: .ollama,
+        displayName: "Ollama",
+        snapshot: snapshot,
+        status: .ok(lastSuccess: .now.addingTimeInterval(-30)),
+        lastSuccess: .now.addingTimeInterval(-30)
+    )
+    return ProviderRowView(state: state)
+        .environment(previewStore())
+        .frame(width: 360)
+}
+
+#Preview("ProviderRowView — Ollama not running") {
+    let state = ProviderState(
+        id: .ollama,
+        displayName: "Ollama",
+        snapshot: nil,
+        status: .notRunning,
         lastSuccess: nil
     )
     return ProviderRowView(state: state)
