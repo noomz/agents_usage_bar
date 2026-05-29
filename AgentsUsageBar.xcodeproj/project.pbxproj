@@ -170,6 +170,8 @@
 		/* Plan 04-02 — AppConfig local provider structs + ConfigStore local sections tests */
 		AA040200000000000000010A /* AppConfigLocalProvidersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040200000000000000010B /* AppConfigLocalProvidersTests.swift */; };
 		AA040200000000000000011A /* ConfigStoreLocalSectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040200000000000000011B /* ConfigStoreLocalSectionsTests.swift */; };
+		/* Plan 04-03 — URLSessionHTTPClient timeoutSeconds tier test */
+		AA040300000000000000010A /* URLSessionHTTPClientTimeoutTierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040300000000000000010B /* URLSessionHTTPClientTimeoutTierTests.swift */; };
 		/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel domain extension test (test target) */
 		AA030400000000000000010A /* UsageSnapshotTooltipLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */; };
 		/* Plan 03-04 Task 2 — CodexJSONLProvider (app target) + provider/fallback tests */
@@ -439,6 +441,8 @@
 		/* Plan 04-02 — test file references */
 		AA040200000000000000010B /* AppConfigLocalProvidersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigLocalProvidersTests.swift; sourceTree = "<group>"; };
 		AA040200000000000000011B /* ConfigStoreLocalSectionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStoreLocalSectionsTests.swift; sourceTree = "<group>"; };
+		/* Plan 04-03 — URLSessionHTTPClientTimeoutTierTests file reference */
+		AA040300000000000000010B /* URLSessionHTTPClientTimeoutTierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionHTTPClientTimeoutTierTests.swift; sourceTree = "<group>"; };
 		/* Plan 02.01 — Claude transcript file references */
 		AA020100000000000000001B /* TranscriptOffset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOffset.swift; sourceTree = "<group>"; };
 		AA020100000000000000002B /* TranscriptRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecord.swift; sourceTree = "<group>"; };
@@ -624,6 +628,7 @@
 			children = (
 				AA020200000000000000024B /* FileCacheStoreTests.swift */,
 				AA020200000000000000025B /* URLSessionHTTPClientTests.swift */,
+				AA040300000000000000010B /* URLSessionHTTPClientTimeoutTierTests.swift */,
 				AA020100000000000000020B /* FileCacheStoreSchemaV2Tests.swift */,
 				/* Plan 02.06 — RetryPolicy + CircuitBreaker tests */
 				AA020600000000000000010B /* RetryPolicyTests.swift */,
@@ -1312,6 +1317,7 @@
 				AA020200000000000000023A /* ThresholdStateTests.swift in Sources */,
 				AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */,
 				AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */,
+				AA040300000000000000010A /* URLSessionHTTPClientTimeoutTierTests.swift in Sources */,
 				AA030300000000000000010A /* TomlReaderTests.swift in Sources */,
 				AA030300000000000000011A /* ConfigStoreTests.swift in Sources */,
 				AA040400000000000000010A /* ResponseDecodingTests.swift in Sources */,

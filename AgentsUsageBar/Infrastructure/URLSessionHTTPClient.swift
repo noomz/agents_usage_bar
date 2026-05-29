@@ -7,11 +7,23 @@ import os.log
 /// once in `init()` and is immutable thereafter (`@unchecked Sendable` is safe).
 ///
 /// Configuration (per CLAUDE.md "Concurrency & Polling Pattern"):
-/// - `timeoutIntervalForRequest = 8`      — per-request timeout
-/// - `timeoutIntervalForResource = 30`    — overall resource timeout
+/// - `timeoutIntervalForRequest = 8`      — per-request timeout (default; see `timeoutSeconds`)
+/// - `timeoutIntervalForResource = max(timeoutSeconds * 4, 30)` — overall resource timeout
 /// - `waitsForConnectivity = false`       — fail-fast when offline
 /// - `httpMaximumConnectionsPerHost = 6`  — matches HTTP/1.1 concurrency ceiling
 /// - `requestCachePolicy = .reloadIgnoringLocalCacheData` — always fresh from server
+///
+/// **Plan 04-03 (POLL-08 localhost tier):** `timeoutSeconds` defaults to `8` for back-compat
+/// with every Phase 1/2/3 call site. The composition root (Plan 04-08) constructs a second
+/// instance with `timeoutSeconds: 2` for the Ollama / LM Studio / llama.cpp localhost-probe
+/// tier. Both instances share the same Sendable + @unchecked invariants; each owns its own
+/// URLSession.
+///
+/// Example:
+/// ```swift
+/// let remoteHTTP = URLSessionHTTPClient(timeoutSeconds: 8)   // remote tier
+/// let localHTTP  = URLSessionHTTPClient(timeoutSeconds: 2)   // localhost tier
+/// ```
 ///
 /// SEC-02 / Pitfall 11: Log lines contain ONLY `url.path` and HTTP status — never
 /// `url.absoluteString`, `url.query`, request headers, or response body.
@@ -22,11 +34,17 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
 
     // MARK: - Production initializer
 
-    /// Creates the URLSession singleton with the locked POLL-08 configuration.
-    public init() {
+    /// Creates the URLSession with the locked POLL-08 configuration.
+    ///
+    /// - Parameter timeoutSeconds: Per-request timeout in seconds. Defaults to `8` (remote-API tier).
+    ///   Pass `2` for the localhost probe tier (Ollama / LM Studio / llama.cpp) per POLL-08 split.
+    ///   Resource timeout is `max(timeoutSeconds * 4, 30)` — the 30-second floor preserves the
+    ///   Phase 1 resource ceiling for the default 8s case (32s) and bounds cold-socket overhead for
+    ///   the 2s localhost case (30s).
+    public init(timeoutSeconds: TimeInterval = 8) {
         let cfg = URLSessionConfiguration.default
-        cfg.timeoutIntervalForRequest = 8
-        cfg.timeoutIntervalForResource = 30
+        cfg.timeoutIntervalForRequest = timeoutSeconds
+        cfg.timeoutIntervalForResource = max(timeoutSeconds * 4, 30)
         cfg.waitsForConnectivity = false
         cfg.httpMaximumConnectionsPerHost = 6
         cfg.requestCachePolicy = .reloadIgnoringLocalCacheData
