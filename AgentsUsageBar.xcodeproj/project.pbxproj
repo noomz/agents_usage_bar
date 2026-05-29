@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		AA000001000000000000001A /* AgentsUsageBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000001B /* AgentsUsageBarApp.swift */; };
 		AA000001000000000000002A /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000002B /* AppDependencies.swift */; };
+		AA080800000000000000001A /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA080800000000000000001B /* AppEnvironment.swift */; };
 		AA000001000000000000003A /* AggregateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000003B /* AggregateStore.swift */; };
 		AA000001000000000000004A /* ProviderID.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000004B /* ProviderID.swift */; };
 		AA000001000000000000005A /* ProviderState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000005B /* ProviderState.swift */; };
@@ -112,6 +113,7 @@
 		AA00000100000000000000BB /* AgentsUsageBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgentsUsageBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA000001000000000000001B /* AgentsUsageBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsUsageBarApp.swift; sourceTree = "<group>"; };
 		AA000001000000000000002B /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		AA080800000000000000001B /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		AA000001000000000000003B /* AggregateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStore.swift; sourceTree = "<group>"; };
 		AA000001000000000000004B /* ProviderID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderID.swift; sourceTree = "<group>"; };
 		AA000001000000000000005B /* ProviderState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderState.swift; sourceTree = "<group>"; };
@@ -252,6 +254,7 @@
 			children = (
 				AA000001000000000000001B /* AgentsUsageBarApp.swift */,
 				AA000001000000000000002B /* AppDependencies.swift */,
+				AA080800000000000000001B /* AppEnvironment.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -618,6 +621,7 @@
 			files = (
 				AA000001000000000000001A /* AgentsUsageBarApp.swift in Sources */,
 				AA000001000000000000002A /* AppDependencies.swift in Sources */,
+				AA080800000000000000001A /* AppEnvironment.swift in Sources */,
 				AA000001000000000000003A /* AggregateStore.swift in Sources */,
 				AA000001000000000000004A /* ProviderID.swift in Sources */,
 				AA000001000000000000005A /* ProviderState.swift in Sources */,

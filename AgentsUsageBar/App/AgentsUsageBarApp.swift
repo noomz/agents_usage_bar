@@ -3,15 +3,14 @@ import AppKit
 
 @main
 struct AgentsUsageBarApp: App {
-    /// Composition root — holds the store and all collaborators for the lifetime of the app.
-    /// `@State` is correct here: `AppDependencies.Container` is a value type whose `store`
-    /// property is an `@Observable` reference type, so SwiftUI tracks it properly.
-    @State private var dependencies = AppDependencies.makeProduction()
+    /// Composition root — holds the store, scheduler, and clock for the app lifetime.
+    /// `@State` is correct: `Dependencies` is a reference type whose `store` is `@Observable`,
+    /// so SwiftUI tracks mutations without `@StateObject`/`ObservableObject`.
+    @State private var dependencies: Dependencies = AppDependencies.makeProduction()
 
     init() {
-        // Belt-and-braces alongside LSUIElement=YES (Pitfall 2 mitigation):
-        // ensures the app never enters the foreground activation policy even if
-        // Info.plist is overridden or the app is launched programmatically.
+        // Defensive belt-and-braces alongside Info.plist LSUIElement=YES (SHELL-01 / Pitfall 2).
+        // Ensures no Dock icon and no Cmd-Tab entry regardless of how the app is launched.
         NSApplication.shared.setActivationPolicy(.accessory)
     }
 
@@ -19,7 +18,13 @@ struct AgentsUsageBarApp: App {
         MenuBarExtra("Agents Usage Bar", systemImage: "chart.bar.doc.horizontal") {
             PopoverRootView()
                 .environment(dependencies.store)
+                .environment(\.clockService, dependencies.clock)   // B5: only INJECT; key declared in Plan 01.06
+                .task {
+                    // Kick off the long-lived PollScheduler loop on first popover open.
+                    // Cancelled automatically when the scene tears down (structured concurrency).
+                    await dependencies.scheduler.start()
+                }
         }
-        .menuBarExtraStyle(.window)
+        .menuBarExtraStyle(.window)   // SHELL-04 — rich SwiftUI popover (not .menu)
     }
 }
