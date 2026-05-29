@@ -14,6 +14,10 @@ import AppKit
 public struct FooterView: View {
     @Environment(AggregateStore.self) private var store
     @Environment(\.clockService) private var clock
+    // SHELL-05: Apple-supported action to open the SwiftUI `Settings` scene. Works on
+    // LSUIElement apps where the legacy `showSettingsWindow:` selector dispatch fails
+    // silently (the responder chain has no key window to receive the action).
+    @Environment(\.openSettings) private var openSettings
 
     public init() {}
 
@@ -41,6 +45,19 @@ public struct FooterView: View {
                 .keyboardShortcut("r", modifiers: .command)
                 .buttonStyle(HoverableBorderedButtonStyle())
                 .tint(.accentColor)
+
+                Button {
+                    // Open the native Settings window from the menu-bar popover (SHELL-05).
+                    // LSUIElement apps have no app menu, so the popover is the only
+                    // discoverable entry point. Activate first so the window gets key
+                    // focus, then use the SwiftUI openSettings action.
+                    NSApp.activate(ignoringOtherApps: true)
+                    openSettings()
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .keyboardShortcut(",", modifiers: .command)
+                .buttonStyle(HoverableBorderedButtonStyle())
 
                 Spacer()
 
