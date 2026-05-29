@@ -1056,6 +1056,8 @@
 				/* Plan 04-08 — AppDependencies local registration + AggregateStore local rollup tests */
 				AA040800000000000000010B /* AppDependenciesLocalRegistrationTests.swift */,
 				AA040800000000000000012B /* AggregateStoreLocalRollupTests.swift */,
+				/* Plan 05-03 — AggregateStore.updateWarningFraction tests */
+				AA050302000000000000011B /* AggregateStoreUpdateWarningFractionTests.swift */,
 			);
 			path = AggregationTests;
 			sourceTree = "<group>";
@@ -1164,6 +1166,8 @@
 				AA050100000000000000010B /* WindowActivationObserverTests.swift */,
 				/* Plan 05-04 Task 2 — SettingsProvidersTabTests */
 				AA050400000000000000012B /* SettingsProvidersTabTests.swift */,
+				/* Plan 05-03 Task 2 — SettingsGeneralTabTests */
+				AA050302000000000000010B /* SettingsGeneralTabTests.swift */,
 			);
 			path = SettingsTests;
 			sourceTree = "<group>";
@@ -1836,6 +1840,9 @@
 				AA050400000000000000010A /* DetectionProbeTests.swift in Sources */,
 				AA050400000000000000011A /* OnboardingCopyTests.swift in Sources */,
 				AA050400000000000000012A /* SettingsProvidersTabTests.swift in Sources */,
+				/* Plan 05-03 — SettingsGeneralTab + AggregateStore.updateWarningFraction tests */
+				AA050302000000000000010A /* SettingsGeneralTabTests.swift in Sources */,
+				AA050302000000000000011A /* AggregateStoreUpdateWarningFractionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
