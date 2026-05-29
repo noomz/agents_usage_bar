@@ -1,5 +1,24 @@
 import Foundation
 
+/// Four-state FSM enum used by `ThresholdEngine` (Plan 01.07) to model quota severity.
+///
+/// Phase 1 emits decisions ONLY for `.warning` (D-11). The `.critical` and `.exceeded`
+/// cases are modeled so Phase 2 can fill in emission without a structural rewrite.
+///
+/// - Note: `ThresholdBand` serves the same semantic role as `ThresholdState` but is the
+///   type returned by `ThresholdEngine.currentBand(for:)`. Both live here to avoid a
+///   separate file, since they share the same breakpoint semantics.
+public enum ThresholdBand: Sendable, Equatable, CaseIterable {
+    /// Quota fraction < 80%.
+    case normal
+    /// Quota fraction >= 80% and < 95%.
+    case warning
+    /// Quota fraction >= 95% and < 100%.
+    case critical
+    /// Quota fraction >= 100%.
+    case exceeded
+}
+
 /// FSM enum modeling quota utilization severity.
 ///
 /// D-11: Phase 1 emits only `.warning` (80%). The `.critical` (95%) and `.exceeded` (100%)

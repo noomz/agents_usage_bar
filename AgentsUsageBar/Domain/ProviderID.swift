@@ -13,4 +13,21 @@ extension ProviderID {
     /// OpenRouter — https://openrouter.ai
     /// Plans 01.04 and 01.05 use this constant as the key for HTTP fetching and cache storage.
     public static let openrouter = ProviderID(rawValue: "openrouter")
+
+    /// Human-readable display hint for this provider.
+    ///
+    /// Used by `ThresholdEngine` to populate `NotificationDecision.displayName` (B3),
+    /// which `UNNotificationManager` joins into the coalesced notification body.
+    public var displayHint: String {
+        switch rawValue {
+        case "openrouter": return "OpenRouter"
+        case "claude":     return "Claude"
+        case "codex":      return "Codex"
+        case "gemini":     return "Gemini"
+        case "ollama":     return "Ollama"
+        case "lmstudio":   return "LM Studio"
+        case "llamacpp":   return "llama.cpp"
+        default:           return rawValue.capitalized
+        }
+    }
 }

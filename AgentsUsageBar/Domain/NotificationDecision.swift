@@ -26,10 +26,27 @@ public struct NotificationDecision: Sendable, Equatable {
     /// The provider this decision originated from (used for per-provider action routing).
     public let providerID: ProviderID
 
-    public init(id: String, title: String, body: String, providerID: ProviderID) {
+    /// Human-readable provider display name for coalesced notification bodies (B3).
+    /// Example: `"OpenRouter"`, `"Claude"`, `"Codex"`.
+    public let displayName: String
+
+    /// The threshold band that triggered this decision.
+    /// Always `.warning` in Phase 1 (D-11).
+    public let band: ThresholdBand
+
+    public init(
+        id: String,
+        title: String,
+        body: String,
+        providerID: ProviderID,
+        displayName: String,
+        band: ThresholdBand
+    ) {
         self.id = id
         self.title = title
         self.body = body
         self.providerID = providerID
+        self.displayName = displayName
+        self.band = band
     }
 }
