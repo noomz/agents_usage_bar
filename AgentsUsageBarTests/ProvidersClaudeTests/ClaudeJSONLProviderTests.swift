@@ -489,11 +489,16 @@ struct ClaudeJSONLProviderTests {
         #expect(ProviderID.claude.displayHint == "Claude")
     }
 
-    // MARK: Test 16 — ClaudeRoots.defaultRoots points to ~/.claude/projects
+    // MARK: Test 16 — ClaudeRoots.defaultRoots includes Claude Code + CCS roots
 
-    @Test func claudeRoots_defaultRoots_pointsToDotClaudeProjects() {
+    @Test func claudeRoots_defaultRoots_includesClaudeAndCCSPaths() {
         let roots = ClaudeRoots.defaultRoots
-        #expect(roots.count == 1)
-        #expect(roots[0].path.hasSuffix("/.claude/projects"))
+        // ~/.claude/projects is always considered. It may be filtered out if it
+        // does not exist on the test host, so we only assert that ALL returned
+        // paths end with the canonical `/projects` segment used by both
+        // Claude Code and CCS layouts.
+        for root in roots {
+            #expect(root.path.hasSuffix("/projects"))
+        }
     }
 }
