@@ -1,18 +1,18 @@
 {
   "buckets": [
     {
-      "remaining_fraction": 0.85,
-      "reset_time": "2026-05-16T00:00:00Z",
-      "model_id": "gemini-2.5-pro",
-      "token_type": "INPUT_TOKEN",
-      "remaining_amount": "850000"
+      "remainingFraction": 0.85,
+      "resetTime": "2026-05-16T00:00:00Z",
+      "modelId": "gemini-2.5-pro",
+      "tokenType": "INPUT_TOKEN",
+      "remainingAmount": "850000"
     },
     {
-      "remaining_fraction": 0.60,
-      "reset_time": "2026-05-16T00:00:00Z",
-      "model_id": "gemini-2.5-pro",
-      "token_type": "OUTPUT_TOKEN",
-      "remaining_amount": "60000"
+      "remainingFraction": 0.60,
+      "resetTime": "2026-05-16T00:00:00Z",
+      "modelId": "gemini-2.5-pro",
+      "tokenType": "OUTPUT_TOKEN",
+      "remainingAmount": "60000"
     }
   ]
 }

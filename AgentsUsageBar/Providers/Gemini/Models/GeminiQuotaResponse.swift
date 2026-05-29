@@ -32,12 +32,20 @@ public struct GeminiQuotaResponse: Decodable, Sendable, Equatable {
         public let tokenType: String?
         public let remainingAmount: String?
 
+        // G-03 (UAT 2026-05-18): the live `v1internal:retrieveUserQuota`
+        // endpoint returns CAMEL-CASE keys (`remainingFraction`, `modelId`,
+        // `resetTime`, `tokenType`, `remainingAmount`) — NOT snake_case as
+        // the original RESEARCH §"Gemini Quota" notes implied. The bearer
+        // postJSON path uses a plain JSONDecoder (no .convertFromSnakeCase
+        // strategy — see URLSessionHTTPClient.performPostJSON:209), so the
+        // CodingKey rawValues MUST match the wire camelCase form. Each case
+        // uses its default rawValue (= the case name) to express that.
         private enum CodingKeys: String, CodingKey {
-            case remainingFraction = "remaining_fraction"
-            case resetTime = "reset_time"
-            case modelId = "model_id"
-            case tokenType = "token_type"
-            case remainingAmount = "remaining_amount"
+            case remainingFraction
+            case resetTime
+            case modelId
+            case tokenType
+            case remainingAmount
         }
 
         public init(from decoder: Decoder) throws {
