@@ -79,11 +79,17 @@ public struct ProviderState: Sendable, Equatable, Codable {
     // MARK: - Mutating helpers (value-type update pattern)
 
     /// Returns a copy updated with a successful fetch result.
+    ///
+    /// Plan 04 hotfix: `placeholderMessage` is cleared on first successful snapshot.
+    /// Invariant: `placeholderMessage != nil` only while the provider is in pure-placeholder
+    /// state (no snapshot, no `lastSuccess`). Once a live probe lands, the discoverability
+    /// hint is no longer relevant — and stale `placeholderMessage` would otherwise outrank
+    /// real model data in `LocalRowSecondaryView`'s priority-order layout.
     public func applying(snapshot: UsageSnapshot, at now: Date) -> ProviderState {
         ProviderState(
             id: id,
             displayName: displayName,
-            placeholderMessage: placeholderMessage,
+            placeholderMessage: nil,
             snapshot: snapshot,
             status: .ok(lastSuccess: now),
             lastSuccess: now
@@ -99,10 +105,15 @@ public struct ProviderState: Sendable, Equatable, Codable {
         } else {
             newStatus = .error(providerError)
         }
+        // Plan 04 hotfix: clear placeholderMessage once any successful snapshot has ever
+        // landed (lastSuccess != nil). If we are still pre-first-success (lastSuccess == nil),
+        // preserve the placeholder hint so the unconfigured-llama.cpp discoverability row
+        // does not vanish on transient errors.
+        let nextPlaceholder: String? = (lastSuccess == nil) ? placeholderMessage : nil
         return ProviderState(
             id: id,
             displayName: displayName,
-            placeholderMessage: placeholderMessage,
+            placeholderMessage: nextPlaceholder,
             snapshot: snapshot,        // keep prior snapshot (stale display)
             status: newStatus,
             lastSuccess: lastSuccess   // retain prior success timestamp

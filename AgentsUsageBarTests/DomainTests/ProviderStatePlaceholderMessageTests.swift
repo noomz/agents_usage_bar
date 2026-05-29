@@ -76,4 +76,68 @@ struct ProviderStatePlaceholderMessageTests {
         #expect(state.snapshot == nil)
         #expect(state.lastSuccess == nil)
     }
+
+    // MARK: - Plan 04 hotfix — placeholderMessage clears on first successful snapshot
+
+    @Test func applyingSnapshot_clearsStalePlaceholderMessage() {
+        // Reviewer scenario: app first launched with [llamacpp] port absent →
+        // seedPlaceholder("Set [llamacpp] port in config.toml to enable") writes the cache.
+        // User edits config.toml to add port = 8080 → relaunches → first probe succeeds.
+        // The stale placeholderMessage MUST clear so LocalRowSecondaryView shows live model
+        // data instead of the now-outdated discoverability hint.
+        let initial = ProviderState.placeholder(
+            providerID: .llamacpp,
+            displayName: "llama.cpp",
+            placeholderMessage: "Set [llamacpp] port in config.toml to enable",
+            status: .notRunning
+        )
+        let snapshot = UsageSnapshot(
+            providerID: .llamacpp,
+            asOf: Date(timeIntervalSince1970: 1_700_000_000),
+            tokensToday: nil,
+            costTodayUSD: nil,
+            balanceUSD: nil,
+            quota: nil,
+            raw: ["source": "llamacpp", "modelCount": "1"]
+        )
+        let next = initial.applying(snapshot: snapshot, at: Date(timeIntervalSince1970: 1_700_000_001))
+        #expect(next.placeholderMessage == nil)
+        #expect(next.snapshot != nil)
+    }
+
+    @Test func applyingError_clearsPlaceholderMessageOncePastFirstSuccess() {
+        // After at least one success, transient errors must not resurrect the placeholder hint.
+        let withSuccess = ProviderState(
+            id: .llamacpp,
+            displayName: "llama.cpp",
+            placeholderMessage: nil,
+            snapshot: UsageSnapshot(
+                providerID: .llamacpp,
+                asOf: Date(timeIntervalSince1970: 1_700_000_000),
+                tokensToday: nil,
+                costTodayUSD: nil,
+                balanceUSD: nil,
+                quota: nil,
+                raw: [:]
+            ),
+            status: .ok(lastSuccess: Date(timeIntervalSince1970: 1_700_000_000)),
+            lastSuccess: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        struct StubError: Error {}
+        let next = withSuccess.applyingError(StubError(), at: Date(timeIntervalSince1970: 1_700_000_500))
+        #expect(next.placeholderMessage == nil)
+    }
+
+    @Test func applyingError_preservesPlaceholderBeforeFirstSuccess() {
+        // Pure placeholder (no prior success) — transient probe error MUST keep the hint.
+        let pure = ProviderState.placeholder(
+            providerID: .llamacpp,
+            displayName: "llama.cpp",
+            placeholderMessage: "Set [llamacpp] port in config.toml to enable",
+            status: .notRunning
+        )
+        struct StubError: Error {}
+        let next = pure.applyingError(StubError(), at: Date(timeIntervalSince1970: 1_700_000_500))
+        #expect(next.placeholderMessage == "Set [llamacpp] port in config.toml to enable")
+    }
 }
