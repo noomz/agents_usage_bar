@@ -1,13 +1,25 @@
 # Phase 6 Plan 06-04 (REL-01..REL-06) — tag-triggered release pipeline.
 #
-# Triggered on `v*` tag push. Produces a signed, notarized, stapled, EdDSA-
-# signed DMG attached to a GitHub Release with the appcast updated on the
-# `gh-pages` branch.
+# Triggered on `v*` tag push. Produces an EdDSA-signed DMG attached to a
+# GitHub Release with the appcast updated on the `gh-pages` branch.
+#
+# DUAL-LANE (Apple-optional):
+#   A "gate" step detects whether the Apple Developer ID secret is present.
+#     - SIGNED lane  (DEVELOPER_ID_CERT_P12 set): import cert → Developer ID
+#       export → notarize → staple. Gatekeeper-clean install.
+#     - UNSIGNED lane (no Apple secrets): build + ad-hoc sign so Sparkle's
+#       XPC helpers launch. Users do System Settings → Privacy & Security →
+#       "Open Anyway" once. Auto-update still works via Sparkle EdDSA.
+#   Both lanes converge on the shared DMG → Sparkle-sign → appcast → release
+#   tail. Enrolling later and adding the Apple secrets auto-upgrades the
+#   build to the signed lane with NO workflow edits.
+#
+# The ONLY secret required for the unsigned lane is SPARKLE_ED_PRIVATE_KEY.
 #
 # Per Phase 6 CONTEXT D-02 this workflow is written at full fidelity and
 # consumes named secrets. Live unattended execution is verified in plan
-# 06-05 once the user provisions Apple/Sparkle credentials and initializes
-# the `gh-pages` branch + enables GitHub Pages.
+# 06-05 once the user provisions Sparkle (+ optionally Apple) credentials and
+# initializes the `gh-pages` branch + enables GitHub Pages.
 #
 # Anti-patterns (intentionally absent — see 06-RESEARCH.md "Anti-Patterns"):
 #   - codesign recursive-deep-sign flag (Pitfall 2 — Xcode export handles nested signing)
@@ -38,7 +50,7 @@ on:
 
 jobs:
   release:
-    name: Build, sign, notarize, staple, DMG, appcast, release
+    name: Build, (sign/notarize if enrolled), DMG, appcast, release
     runs-on: macos-15
     permissions:
       contents: write   # gh release create + git push to gh-pages
@@ -56,9 +68,29 @@ jobs:
         with:
           xcode-version: '16.4'
 
+      # Lane gate — presence of the Developer ID cert secret decides whether
+      # this run takes the SIGNED (Apple-notarized) or UNSIGNED (ad-hoc)
+      # lane. Routed through env: per the workflow-injection policy above.
+      # Output `signed` is consumed by every Apple-specific step's `if:`.
+      - name: Detect signing lane
+        id: gate
+        env:
+          DEVELOPER_ID_CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
+        run: |
+          set -euo pipefail
+          if [ -n "${DEVELOPER_ID_CERT_P12}" ]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "Lane: SIGNED (Developer ID cert present)"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "Lane: UNSIGNED (no Apple secrets — ad-hoc sign + Sparkle EdDSA only)"
+          fi
+
       # Pitfall 7 — pin v7 (not the stale @v3 in CLAUDE.md). Inputs unchanged
       # from v3 → v7; v7 ships Node24 + security fixes.
+      # SIGNED lane only.
       - name: Import Developer ID Application cert
+        if: steps.gate.outputs.signed == 'true'
         uses: apple-actions/import-codesign-certs@v7
         with:
           p12-file-base64: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
@@ -88,7 +120,9 @@ jobs:
           agvtool new-marketing-version "$VERSION"
           agvtool new-version -all "$GITHUB_RUN_NUMBER"
 
-      - name: Archive
+      # ---- SIGNED lane: archive + Developer ID export -------------------
+      - name: Archive (signed)
+        if: steps.gate.outputs.signed == 'true'
         run: |
           set -euo pipefail
           xcodebuild archive \
@@ -105,6 +139,7 @@ jobs:
       # DEVELOPMENT_TEAM is passed as a build-setting env var that
       # ExportOptions.plist resolves via $(DEVELOPMENT_TEAM).
       - name: Export app (Developer ID)
+        if: steps.gate.outputs.signed == 'true'
         env:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: |
@@ -114,6 +149,45 @@ jobs:
             -exportPath build/export \
             -exportOptionsPlist ExportOptions.plist \
             DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM}"
+
+      # ---- UNSIGNED lane: build + ad-hoc sign ---------------------------
+      # No Developer ID available. Build Release without Apple signing, then
+      # ad-hoc sign ("-") the bundle so the app and its nested Sparkle XPC
+      # helpers carry a valid (if un-notarized) signature and will launch on
+      # the end user's machine. Gatekeeper still quarantines the download —
+      # users do "Open Anyway" once — but Sparkle EdDSA (tail steps) drives
+      # auto-update regardless of Apple notarization.
+      #
+      # Ad-hoc sign order: nested code first, then the outer app, so the
+      # outer signature seals over already-signed helpers (the same reason
+      # Pitfall 2 bans a single recursive-deep pass over a real identity).
+      - name: Build + ad-hoc sign (unsigned lane)
+        if: steps.gate.outputs.signed == 'false'
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project AgentsUsageBar.xcodeproj \
+            -scheme AgentsUsageBar \
+            -configuration Release \
+            -derivedDataPath build/dd \
+            -destination 'generic/platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO
+
+          APP="build/dd/Build/Products/Release/AgentsUsageBar.app"
+          test -d "$APP"
+
+          # Sign nested helpers (deepest first), then the app bundle itself.
+          # `find ... -depth` yields children before parents.
+          while IFS= read -r item; do
+            codesign --force --options runtime --timestamp=none --sign - "$item"
+          done < <(find "$APP/Contents" \
+                     \( -name '*.xpc' -o -name '*.app' -o -name '*.framework' \) \
+                     -depth)
+          codesign --force --options runtime --timestamp=none --sign - "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+          mkdir -p build/export
+          cp -R "$APP" build/export/AgentsUsageBar.app
 
       # D-05 — pin create-dmg/create-dmg v1.2.3 (shell). NOT sindresorhus
       # (Node). Pinned tarball + sudo install for reproducibility.
@@ -146,6 +220,7 @@ jobs:
       # Pitfall 5 — `.p8` written to /tmp must be deleted before job end;
       # `trap` ensures cleanup even on early failure.
       - name: Notarize DMG
+        if: steps.gate.outputs.signed == 'true'
         env:
           ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
@@ -164,6 +239,7 @@ jobs:
           rm -f /tmp/asc_key.p8
 
       - name: Staple notarization ticket to DMG
+        if: steps.gate.outputs.signed == 'true'
         run: |
           set -euo pipefail
           xcrun stapler staple "build/AgentsUsageBar-${VERSION}.dmg"
@@ -238,9 +314,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REF_NAME: ${{ github.ref_name }}
+          SIGNED: ${{ steps.gate.outputs.signed }}
         run: |
           set -euo pipefail
+
+          NOTES_ARGS=(--generate-notes)
+          # Unsigned (un-notarized) builds: Gatekeeper blocks first launch.
+          # Supply the one-time "Open Anyway" instructions so downloaders
+          # aren't stranded. printf (not a heredoc) keeps the markdown free of
+          # YAML's block indentation, which would otherwise break the blockquote.
+          if [ "${SIGNED}" != "true" ]; then
+            printf '%s\n' \
+              '> ⚠️ **This build is not notarized by Apple.** On first launch macOS will say' \
+              '> it "cannot be opened". To run it: open **System Settings → Privacy &' \
+              '> Security**, scroll to the bottom, and click **Open Anyway**. You only do' \
+              '> this once; Sparkle auto-updates afterward.' \
+              > /tmp/install-note.md
+            NOTES_ARGS=(--notes-file /tmp/install-note.md)
+          fi
+
           gh release create "${REF_NAME}" \
             --title "v${VERSION}" \
-            --generate-notes \
+            "${NOTES_ARGS[@]}" \
             "build/AgentsUsageBar-${VERSION}.dmg"

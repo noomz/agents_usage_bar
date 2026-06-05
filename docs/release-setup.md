@@ -4,6 +4,24 @@ This runbook lists everything a maintainer must set up **once** before the unatt
 
 Subsequent releases are then fully automated — push a `v0.2.0` tag, the workflow consumes the GitHub repository secrets named below and produces a notarized, stapled DMG attached to a GitHub Release plus an updated EdDSA-signed `appcast.xml` on the `gh-pages` branch.
 
+## Two lanes: Apple-signed vs. free/unsigned
+
+The release workflow auto-detects which lane to run based on whether the `DEVELOPER_ID_CERT_P12` secret is set:
+
+| | **Free / unsigned lane** | **Signed lane** |
+| --- | --- | --- |
+| Apple Developer Program ($99/yr) | not required | required |
+| Required setup steps | **Step 3 + Step 5 only** | Steps 1–5 |
+| Secrets needed | `SPARKLE_ED_PRIVATE_KEY` only | all seven |
+| First-launch UX | macOS Gatekeeper blocks once → user clicks **Open Anyway** in System Settings → Privacy & Security | clean, no warning |
+| Sparkle auto-update | ✅ works (EdDSA, Apple-independent) | ✅ works |
+
+**You can ship today with only the free lane.** Do **Step 3** (Sparkle keys) and confirm **Step 5** (Pages), skip Steps 1, 2, and 4. The workflow ad-hoc-signs the app so Sparkle's helper XPCs launch; the download is un-notarized so Gatekeeper prompts the user once.
+
+When you later enroll in the Apple Developer Program, do Steps 1, 2, 4, add the secrets, and the **same workflow auto-upgrades** to the signed/notarized lane on the next tag — no workflow edits.
+
+> Steps 1, 2, and 4 below are marked **(signed lane only)**. Skip them for a free release.
+
 > **Sources:** all commands and secret names are verified against the Phase 6 research at [`.planning/phases/06-distribution-sign-notarize-dmg-sparkle-oss-hygiene/06-RESEARCH.md`](../.planning/phases/06-distribution-sign-notarize-dmg-sparkle-oss-hygiene/06-RESEARCH.md). When in doubt, that file is canonical.
 
 ## Prerequisites
@@ -18,15 +36,17 @@ Subsequent releases are then fully automated — push a `v0.2.0` tag, the workfl
 
 The release workflow reads exactly these GitHub repository secrets. Names are case-sensitive and must match verbatim.
 
-| Secret name                       | Content                                              | Source step |
-| --------------------------------- | ---------------------------------------------------- | ----------- |
-| `DEVELOPER_ID_CERT_P12`           | Base64-encoded `.p12` (Developer ID Application cert + private key) | Step 1 |
-| `DEVELOPER_ID_CERT_PASSWORD`      | The password you set when exporting the `.p12`       | Step 1 |
-| `ASC_API_KEY_P8`                  | Raw text content of the `AuthKey_<KeyID>.p8` file    | Step 2 |
-| `ASC_API_KEY_ID`                  | 10-character Key ID from App Store Connect           | Step 2 |
-| `ASC_API_ISSUER_ID`               | UUID Issuer ID from App Store Connect (above the keys table) | Step 2 |
-| `SPARKLE_ED_PRIVATE_KEY`          | Ed25519 (EdDSA) private key text emitted by `generate_keys -x` | Step 3 |
-| `DEVELOPMENT_TEAM`                | 10-character Apple Developer team ID (Tab characters: alphanumeric) | Step 4 |
+| Secret name                       | Content                                              | Source step | Lane |
+| --------------------------------- | ---------------------------------------------------- | ----------- | ---- |
+| `DEVELOPER_ID_CERT_P12`           | Base64-encoded `.p12` (Developer ID Application cert + private key) | Step 1 | signed only |
+| `DEVELOPER_ID_CERT_PASSWORD`      | The password you set when exporting the `.p12`       | Step 1 | signed only |
+| `ASC_API_KEY_P8`                  | Raw text content of the `AuthKey_<KeyID>.p8` file    | Step 2 | signed only |
+| `ASC_API_KEY_ID`                  | 10-character Key ID from App Store Connect           | Step 2 | signed only |
+| `ASC_API_ISSUER_ID`               | UUID Issuer ID from App Store Connect (above the keys table) | Step 2 | signed only |
+| `SPARKLE_ED_PRIVATE_KEY`          | Ed25519 (EdDSA) private key text emitted by `generate_keys -x` | Step 3 | **both** |
+| `DEVELOPMENT_TEAM`                | 10-character Apple Developer team ID (Tab characters: alphanumeric) | Step 4 | signed only |
+
+The free/unsigned lane needs only `SPARKLE_ED_PRIVATE_KEY`. The `DEVELOPER_ID_CERT_P12` secret is the lane switch: present → signed lane, absent → unsigned lane.
 
 `SPARKLE_ED_PRIVATE_KEY` is the private half; the **public** half is pinned in [`Info.plist`](../AgentsUsageBar/Resources/Info.plist) as `SUPublicEDKey` (see Step 3).
 
@@ -38,7 +58,9 @@ You **also** need to enable **GitHub Pages** so the `appcast.xml` Sparkle reads 
 
 ---
 
-## Step 1 — Developer ID Application certificate (`DEVELOPER_ID_CERT_P12` + `DEVELOPER_ID_CERT_PASSWORD`)
+## Step 1 — Developer ID Application certificate (`DEVELOPER_ID_CERT_P12` + `DEVELOPER_ID_CERT_PASSWORD`) — *(signed lane only)*
+
+> **Skip this step for a free/unsigned release.** It requires the paid Apple Developer Program.
 
 ### 1a. Create the certificate (if you don't already have it)
 
@@ -96,7 +118,9 @@ unset EXPORT_PW
 
 ---
 
-## Step 2 — App Store Connect API key (`ASC_API_KEY_P8` + `ASC_API_KEY_ID` + `ASC_API_ISSUER_ID`)
+## Step 2 — App Store Connect API key (`ASC_API_KEY_P8` + `ASC_API_KEY_ID` + `ASC_API_ISSUER_ID`) — *(signed lane only)*
+
+> **Skip this step for a free/unsigned release.** Notarization requires the paid Apple Developer Program.
 
 `notarytool` accepts either an app-specific password or an ASC API key. **Use the API key in CI** — app-specific passwords are tied to a single human's Apple ID, rotate per device, and violate least-privilege.
 
@@ -201,7 +225,9 @@ rm -rf /tmp/sparkle /tmp/sparkle-spm.zip
 
 ---
 
-## Step 4 — Developer Team ID (`DEVELOPMENT_TEAM`)
+## Step 4 — Developer Team ID (`DEVELOPMENT_TEAM`) — *(signed lane only)*
+
+> **Skip this step for a free/unsigned release.** The unsigned lane ad-hoc-signs and never reads `ExportOptions.plist`.
 
 `ExportOptions.plist` consumes this so Xcode's automatic signing knows which team's Developer ID cert to use.
 
@@ -241,7 +267,9 @@ Verify the published URL — it will be `https://<owner>.github.io/<repo>/`. The
 
 ## Verification
 
-Once all seven secrets are loaded and Pages is enabled:
+**Free/unsigned lane:** you only need `SPARKLE_ED_PRIVATE_KEY` set and Pages enabled. `gh secret list` should show that one name; the workflow takes the unsigned lane automatically because `DEVELOPER_ID_CERT_P12` is absent.
+
+**Signed lane:** once all seven secrets are loaded and Pages is enabled:
 
 ```bash
 # List the configured secret names (values are write-only by design).
