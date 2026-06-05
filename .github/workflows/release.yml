@@ -190,14 +190,19 @@ jobs:
           cp -R "$APP" build/export/AgentsUsageBar.app
 
       # D-05 — pin create-dmg/create-dmg v1.2.3 (shell). NOT sindresorhus
-      # (Node). Pinned tarball + sudo install for reproducibility.
+      # (Node). Pinned tarball + `make install` for reproducibility.
+      #
+      # `make install` (not a bare `install` of the script) is required: the
+      # create-dmg launcher resolves its `support/` directory at
+      # $PREFIX/share/create-dmg/support. Copying only the script leaves that
+      # absent and the tool aborts with "Cannot find support/ directory".
       - name: Install create-dmg v1.2.3
         run: |
           set -euo pipefail
           curl -fsSL \
             https://github.com/create-dmg/create-dmg/archive/refs/tags/v1.2.3.tar.gz \
             | tar xz -C /tmp
-          sudo install /tmp/create-dmg-1.2.3/create-dmg /usr/local/bin/create-dmg
+          sudo make -C /tmp/create-dmg-1.2.3 install
           create-dmg --version || true
 
       - name: Create DMG
