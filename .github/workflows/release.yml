@@ -281,39 +281,35 @@ jobs:
           unset SPARKLE_ED_PRIVATE_KEY
           echo "sign_update produced signature line (redacted)"
 
-          # Stash the signed DMG outside the worktree before checking out
-          # gh-pages — gh-pages doesn't carry build/ so a worktree switch
-          # would discard the artifact.
-          mkdir -p /tmp/release-artifacts
-          cp "build/AgentsUsageBar-${VERSION}.dmg" /tmp/release-artifacts/
-
-          # Switch to gh-pages to append the new <item>.
-          git fetch origin gh-pages
-          git checkout gh-pages
-
+          # Append the appcast <item> in a DEDICATED gh-pages worktree.
+          # A plain `git checkout gh-pages` fails two ways: (1) the version-bump
+          # step left the main worktree dirty (agvtool edits pbxproj/Info.plist),
+          # so checkout refuses; (2) gh-pages is an orphan branch with no
+          # scripts/ dir, so append_appcast_item.py wouldn't exist there.
+          # A separate worktree keeps the main checkout (DMG in build/ + the
+          # script) untouched while giving gh-pages its own directory.
           DMG_URL="https://github.com/${GH_REPOSITORY}/releases/download/${REF_NAME}/AgentsUsageBar-${VERSION}.dmg"
 
+          git fetch origin gh-pages
+          git worktree add /tmp/ghpages gh-pages
+
+          # Script is run from the main worktree (where scripts/ lives);
+          # it writes into the gh-pages worktree's appcast.xml.
           python3 scripts/append_appcast_item.py \
             --version "$VERSION" \
             --build-number "$GITHUB_RUN_NUMBER" \
             --dmg-url "$DMG_URL" \
             --sig-line "$SIG_LINE" \
-            appcast.xml
+            /tmp/ghpages/appcast.xml
 
-          git config user.email "ci@github.com"
-          git config user.name "GitHub Actions"
-          git add appcast.xml
-          git commit -m "appcast: add $VERSION"
-          git push origin gh-pages
+          git -C /tmp/ghpages config user.email "ci@github.com"
+          git -C /tmp/ghpages config user.name "GitHub Actions"
+          git -C /tmp/ghpages add appcast.xml
+          git -C /tmp/ghpages commit -m "appcast: add $VERSION"
+          git -C /tmp/ghpages push origin gh-pages
 
-          # Return to the release commit so `gh release create` sees the tag.
-          git checkout -
-
-          # Restore the signed DMG to build/ for the release-create step.
-          mkdir -p build
-          cp "/tmp/release-artifacts/AgentsUsageBar-${VERSION}.dmg" \
-             "build/AgentsUsageBar-${VERSION}.dmg"
-          rm -rf /tmp/release-artifacts
+          git worktree remove /tmp/ghpages
+          # Main worktree never moved — the signed DMG is still in build/.
 
       - name: Create GitHub Release and attach DMG
         env:
