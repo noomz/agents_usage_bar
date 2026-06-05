@@ -18,6 +18,10 @@ import os.log
 ///   v1 → v2 migration: a v1 file on disk is automatically upgraded on first load;
 ///   existing `providers` and `baselines` are preserved (HIGH-risk migration mitigated
 ///   — see RESEARCH schemaVersion bump risk: HIGH).
+/// - 3: + dailyUsage: [ProviderID: DailyUsageRecord] — per-provider day accumulator
+///   for delta-sourced JSONL providers. v1/v2 → v3 migration seeds an empty map;
+///   the accumulator self-heals on the next poll, so no historical data is lost
+///   beyond the current partial day (acceptable — today-only aggregation).
 ///
 /// Thread safety: A concurrent `DispatchQueue` with `.barrier` for writes and plain
 /// `.sync` for reads serialises all file access. `@unchecked Sendable` is safe because
@@ -33,26 +37,38 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
         let providers: [ProviderID: ProviderState]
         let baselines: [ProviderID: BaselineRecord]
         let transcripts: [String: TranscriptOffset]
+        let dailyUsage: [ProviderID: DailyUsageRecord]
 
         init(
-            schemaVersion: Int = 2,
+            schemaVersion: Int = 3,
             providers: [ProviderID: ProviderState],
             baselines: [ProviderID: BaselineRecord],
-            transcripts: [String: TranscriptOffset] = [:]
+            transcripts: [String: TranscriptOffset] = [:],
+            dailyUsage: [ProviderID: DailyUsageRecord] = [:]
         ) {
             self.schemaVersion = schemaVersion
             self.providers = providers
             self.baselines = baselines
             self.transcripts = transcripts
+            self.dailyUsage = dailyUsage
         }
     }
 
-    /// Codable mirror of the schemaVersion 1 envelope — used solely in the v1→v2 migration path.
+    /// Codable mirror of the schemaVersion 1 envelope — used solely in the v1→v3 migration path.
     /// Fields match exactly what Phase 1 wrote to disk.
     private struct CacheEnvelopeV1: Codable, Sendable {
         let schemaVersion: Int
         let providers: [ProviderID: ProviderState]
         let baselines: [ProviderID: BaselineRecord]
+    }
+
+    /// Codable mirror of the schemaVersion 2 envelope — used solely in the v2→v3 migration path.
+    /// Fields match exactly what Plan 02.01 wrote to disk (no `dailyUsage`).
+    private struct CacheEnvelopeV2: Codable, Sendable {
+        let schemaVersion: Int
+        let providers: [ProviderID: ProviderState]
+        let baselines: [ProviderID: BaselineRecord]
+        let transcripts: [String: TranscriptOffset]
     }
 
     // MARK: - Properties
@@ -101,10 +117,11 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
         queue.sync(flags: .barrier) {
             let existing = _loadEnvelope()
             let envelope = CacheEnvelope(
-                schemaVersion: 2,
+                schemaVersion: 3,
                 providers: providers,
                 baselines: existing?.baselines ?? [:],
-                transcripts: existing?.transcripts ?? [:]
+                transcripts: existing?.transcripts ?? [:],
+                dailyUsage: existing?.dailyUsage ?? [:]
             )
             _writeEnvelope(envelope)
         }
@@ -153,10 +170,11 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
             var updatedBaselines = envelope.baselines
             updatedBaselines[id] = newRecord
             let updated = CacheEnvelope(
-                schemaVersion: 2,
+                schemaVersion: 3,
                 providers: envelope.providers,
                 baselines: updatedBaselines,
-                transcripts: envelope.transcripts
+                transcripts: envelope.transcripts,
+                dailyUsage: envelope.dailyUsage
             )
             _writeEnvelope(updated)
         }
@@ -174,10 +192,11 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
             var ts = envelope.transcripts
             ts[offset.url] = offset
             let updated = CacheEnvelope(
-                schemaVersion: 2,
+                schemaVersion: 3,
                 providers: envelope.providers,
                 baselines: envelope.baselines,
-                transcripts: ts
+                transcripts: ts,
+                dailyUsage: envelope.dailyUsage
             )
             _writeEnvelope(updated)
         }
@@ -196,10 +215,11 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
                 ts[offset.url] = offset
             }
             let updated = CacheEnvelope(
-                schemaVersion: 2,
+                schemaVersion: 3,
                 providers: envelope.providers,
                 baselines: envelope.baselines,
-                transcripts: ts
+                transcripts: ts,
+                dailyUsage: envelope.dailyUsage
             )
             _writeEnvelope(updated)
         }
@@ -209,31 +229,85 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
         queue.sync { _loadEnvelope()?.transcripts ?? [:] }
     }
 
+    // MARK: - Daily usage accumulator (delta → cumulative)
+
+    public func accumulateDailyUsage(
+        for id: ProviderID,
+        now: Date,
+        deltaTokens: Int,
+        deltaCostUSD: Decimal
+    ) -> (tokens: Int, costUSD: Decimal) {
+        queue.sync(flags: .barrier) {
+            let envelope = _loadEnvelope() ?? CacheEnvelope(providers: [:], baselines: [:], transcripts: [:])
+            let today = TodayHelper.formatYYYYMMDD(now)
+            let existing = envelope.dailyUsage[id]
+
+            // Rollover: cold start or new calendar day → reset to this poll's delta.
+            // Same day → add the delta to the running total.
+            let newTokens: Int
+            let newCost: Decimal
+            if existing == nil || existing!.date != today {
+                newTokens = deltaTokens
+                newCost = deltaCostUSD
+            } else {
+                newTokens = existing!.tokens + deltaTokens
+                newCost = existing!.costUSD + deltaCostUSD
+            }
+
+            let record = DailyUsageRecord(date: today, tokens: newTokens, costUSD: newCost)
+            var updated = envelope.dailyUsage
+            updated[id] = record
+            _writeEnvelope(CacheEnvelope(
+                schemaVersion: 3,
+                providers: envelope.providers,
+                baselines: envelope.baselines,
+                transcripts: envelope.transcripts,
+                dailyUsage: updated
+            ))
+            return (newTokens, newCost)
+        }
+    }
+
     // MARK: - Private helpers (call only from within `queue`)
 
     private func _loadEnvelope() -> CacheEnvelope? {
         guard let data = try? Data(contentsOf: url) else { return nil }
 
-        // Try schemaVersion 2 first (fast path — the normal case after first write).
-        if let v2 = try? JSONDecoder().decode(CacheEnvelope.self, from: data),
-           v2.schemaVersion == 2 {
-            return v2
+        // Try schemaVersion 3 first (fast path — the normal case after first write).
+        if let v3 = try? JSONDecoder().decode(CacheEnvelope.self, from: data),
+           v3.schemaVersion == 3 {
+            return v3
         }
 
-        // v1 → v2 migration: decode v1 shape, synthesise v2 with empty transcripts.
-        // This path runs exactly once per installation — subsequent writes are v2.
-        if let v1 = try? JSONDecoder().decode(CacheEnvelopeV1.self, from: data),
-           v1.schemaVersion == 1 {
-            logger.notice("cache schemaVersion 1 → 2 migrated (transcripts: empty)")
+        // v2 → v3 migration: decode v2 shape, synthesise v3 with empty dailyUsage.
+        // The accumulator self-heals on the next poll (today's partial total restarts).
+        if let v2 = try? JSONDecoder().decode(CacheEnvelopeV2.self, from: data),
+           v2.schemaVersion == 2 {
+            logger.notice("cache schemaVersion 2 → 3 migrated (dailyUsage: empty)")
             return CacheEnvelope(
-                schemaVersion: 2,
-                providers: v1.providers,
-                baselines: v1.baselines,
-                transcripts: [:]
+                schemaVersion: 3,
+                providers: v2.providers,
+                baselines: v2.baselines,
+                transcripts: v2.transcripts,
+                dailyUsage: [:]
             )
         }
 
-        // schemaVersion 0, >2, or unknown — cold-start without crashing (D-09).
+        // v1 → v3 migration: decode v1 shape, synthesise v3 with empty transcripts + dailyUsage.
+        // This path runs exactly once per installation — subsequent writes are v3.
+        if let v1 = try? JSONDecoder().decode(CacheEnvelopeV1.self, from: data),
+           v1.schemaVersion == 1 {
+            logger.notice("cache schemaVersion 1 → 3 migrated (transcripts + dailyUsage: empty)")
+            return CacheEnvelope(
+                schemaVersion: 3,
+                providers: v1.providers,
+                baselines: v1.baselines,
+                transcripts: [:],
+                dailyUsage: [:]
+            )
+        }
+
+        // schemaVersion 0, >3, or unknown — cold-start without crashing (D-09).
         logger.warning("cache decode failed; cold-start")
         return nil
     }

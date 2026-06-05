@@ -30,6 +30,30 @@ public struct BaselineRecord: Sendable, Codable, Equatable {
     }
 }
 
+/// A provider's running token + cost total for one calendar day.
+///
+/// JSONL providers (Claude) read byte-offset **deltas** per poll — each fetch sees
+/// only the transcript bytes written since the previous poll. To show a true "Today
+/// total" the per-poll deltas must be summed across the day and reset at local
+/// midnight. This record is that accumulator, mirroring `BaselineRecord`'s
+/// date-keyed rollover (D-02) but for the delta→cumulative direction.
+public struct DailyUsageRecord: Sendable, Codable, Equatable {
+    /// The calendar date this total covers, as `"YYYY-MM-DD"` in local time.
+    public let date: String
+
+    /// Running token total accumulated across today's polls.
+    public let tokens: Int
+
+    /// Running USD cost accumulated across today's polls.
+    public let costUSD: Decimal
+
+    public init(date: String, tokens: Int, costUSD: Decimal) {
+        self.date = date
+        self.tokens = tokens
+        self.costUSD = costUSD
+    }
+}
+
 /// Protocol seam for persisted provider state and baseline data.
 ///
 /// `FileCacheStore` is the production implementation.
@@ -80,6 +104,25 @@ public protocol CacheStore: Sendable {
     /// Returns a snapshot of all persisted transcript offsets.
     /// Mutating the returned dict has no side effect (Swift value-type copy).
     func allTranscriptOffsets() -> [String: TranscriptOffset]
+
+    // MARK: - Daily usage accumulator (delta → cumulative)
+
+    /// Adds this poll's delta to `id`'s running daily total and returns the new total.
+    ///
+    /// Rollover: if no record exists for `id` or the stored record's date differs from
+    /// `now`'s local calendar day, the total **resets** to the delta (the new day starts
+    /// fresh). Otherwise the delta is added to the stored total. The updated record is
+    /// persisted so the total survives polls AND app relaunches (offsets persist too, so
+    /// a relaunch reads only the un-counted delta — no double counting).
+    ///
+    /// JSONL providers call this with each poll's freshly-read delta so the "Today" UI
+    /// shows the day sum rather than just the most recent poll's window.
+    func accumulateDailyUsage(
+        for id: ProviderID,
+        now: Date,
+        deltaTokens: Int,
+        deltaCostUSD: Decimal
+    ) -> (tokens: Int, costUSD: Decimal)
 }
 
 extension CacheStore {
@@ -89,5 +132,18 @@ extension CacheStore {
         for offset in offsets {
             setTranscriptOffset(offset)
         }
+    }
+
+    /// Default = no-accumulation passthrough: returns the delta unchanged.
+    /// In-memory test doubles inherit this and therefore preserve the raw per-poll
+    /// delta semantics their tests assert. Only the persistent production store
+    /// (`FileCacheStore`) overrides this to accumulate across the day.
+    public func accumulateDailyUsage(
+        for id: ProviderID,
+        now: Date,
+        deltaTokens: Int,
+        deltaCostUSD: Decimal
+    ) -> (tokens: Int, costUSD: Decimal) {
+        (deltaTokens, deltaCostUSD)
     }
 }

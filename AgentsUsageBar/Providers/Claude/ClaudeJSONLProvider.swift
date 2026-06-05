@@ -223,6 +223,22 @@ public actor ClaudeJSONLProvider: UsageProvider {
             //    with hundreds of transcript files.
             cache.setTranscriptOffsets(Array(newOffsets.values))
 
+            // 5b. Accumulate this poll's delta into the persistent daily total.
+            //     readDelta only returns transcript bytes written since the last poll,
+            //     so `todayTokens`/`todayCost` here are a DELTA, not the day total.
+            //     The cache sums deltas across polls (resetting at local-midnight
+            //     rollover) so the "Today" UI shows the full day, not just the most
+            //     recent poll window. Offsets are persisted FIRST (above), so a crash
+            //     between the two writes drops a delta (slight under-count) rather than
+            //     re-counting it. Non-persistent test caches pass the delta through
+            //     unchanged (see CacheStore.accumulateDailyUsage default).
+            let (todayTokensTotal, todayCostTotal) = cache.accumulateDailyUsage(
+                for: id,
+                now: now,
+                deltaTokens: todayTokens,
+                deltaCostUSD: todayCost
+            )
+
             // 6. Build quotaWindows + primary quota from OAuth result.
             let oauthResult = await oauthResultBox
             let quotaWindows: [QuotaWindow]?
@@ -280,8 +296,8 @@ public actor ClaudeJSONLProvider: UsageProvider {
             let snap = UsageSnapshot(
                 providerID: id,
                 asOf: now,
-                tokensToday: todayTokens,
-                costTodayUSD: todayCost,
+                tokensToday: todayTokensTotal,
+                costTodayUSD: todayCostTotal,
                 balanceUSD: nil,        // Anthropic doesn't expose a balance figure.
                 quota: primaryQuota,
                 raw: [:],

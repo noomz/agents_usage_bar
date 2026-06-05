@@ -124,4 +124,68 @@ struct FileCacheStoreTests {
         let record = store.baseline(for: .openrouter, on: now)
         #expect(record?.value == 30.0) // reset to current
     }
+
+    // MARK: Daily usage accumulator (delta → cumulative)
+
+    @Test("accumulateDailyUsage sums same-day poll deltas")
+    func accumulateDailyUsageSumsSameDayDeltas() throws {
+        let store = try makeTempStore()
+        let now = Date()
+
+        // Poll 1: first read of the day (e.g. whole-day delta on cold cache).
+        let p1 = store.accumulateDailyUsage(for: .claude, now: now, deltaTokens: 100, deltaCostUSD: Decimal(string: "0.01")!)
+        #expect(p1.tokens == 100)
+        #expect(p1.costUSD == Decimal(string: "0.01")!)
+
+        // Poll 2: only the new delta since poll 1 — must ADD, not replace.
+        let p2 = store.accumulateDailyUsage(for: .claude, now: now, deltaTokens: 50, deltaCostUSD: Decimal(string: "0.02")!)
+        #expect(p2.tokens == 150)
+        #expect(p2.costUSD == Decimal(string: "0.03")!)
+
+        // Poll 3: an idle interval (zero delta) keeps the running total — does NOT reset to 0.
+        let p3 = store.accumulateDailyUsage(for: .claude, now: now, deltaTokens: 0, deltaCostUSD: 0)
+        #expect(p3.tokens == 150)
+        #expect(p3.costUSD == Decimal(string: "0.03")!)
+    }
+
+    @Test("accumulateDailyUsage resets at local-midnight rollover")
+    func accumulateDailyUsageResetsOnNewDay() throws {
+        let store = try makeTempStore()
+        let day1 = Date(timeIntervalSince1970: 1_747_000_000)
+        let day2 = Date(timeIntervalSince1970: 1_747_000_000 + 86_400) // next calendar day
+
+        _ = store.accumulateDailyUsage(for: .claude, now: day1, deltaTokens: 900, deltaCostUSD: Decimal(string: "0.50")!)
+        let next = store.accumulateDailyUsage(for: .claude, now: day1, deltaTokens: 100, deltaCostUSD: Decimal(string: "0.10")!)
+        #expect(next.tokens == 1000) // same day accumulates
+
+        // New day → reset to that day's first delta, not day1's 1000.
+        let rolled = store.accumulateDailyUsage(for: .claude, now: day2, deltaTokens: 42, deltaCostUSD: Decimal(string: "0.05")!)
+        #expect(rolled.tokens == 42)
+        #expect(rolled.costUSD == Decimal(string: "0.05")!)
+    }
+
+    @Test("accumulateDailyUsage persists the running total across store instances")
+    func accumulateDailyUsagePersistsAcrossRelaunch() throws {
+        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let now = Date()
+
+        let store1 = try FileCacheStore(testingRootURL: tempDir)
+        _ = store1.accumulateDailyUsage(for: .claude, now: now, deltaTokens: 200, deltaCostUSD: Decimal(string: "0.20")!)
+
+        // Simulate app relaunch: a fresh store over the same on-disk file.
+        let store2 = try FileCacheStore(testingRootURL: tempDir)
+        let resumed = store2.accumulateDailyUsage(for: .claude, now: now, deltaTokens: 55, deltaCostUSD: Decimal(string: "0.05")!)
+        #expect(resumed.tokens == 255) // continues from the persisted 200
+        #expect(resumed.costUSD == Decimal(string: "0.25")!)
+    }
+
+    @Test("accumulateDailyUsage isolates providers")
+    func accumulateDailyUsageIsolatesProviders() throws {
+        let store = try makeTempStore()
+        let now = Date()
+        _ = store.accumulateDailyUsage(for: .claude, now: now, deltaTokens: 100, deltaCostUSD: Decimal(string: "0.01")!)
+        let codex = store.accumulateDailyUsage(for: ProviderID(rawValue: "codex"), now: now, deltaTokens: 7, deltaCostUSD: Decimal(string: "0.02")!)
+        #expect(codex.tokens == 7) // independent of claude's 100
+    }
 }

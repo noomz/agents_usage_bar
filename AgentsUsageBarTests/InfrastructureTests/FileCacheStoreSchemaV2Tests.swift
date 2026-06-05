@@ -86,14 +86,16 @@ struct FileCacheStoreSchemaV2Tests {
         // allTranscriptOffsets() should return empty (migrated v1 had none).
         #expect(store.allTranscriptOffsets() == [:])
 
-        // After any write, the file should be schemaVersion 2.
+        // After any write, the file should be the current schemaVersion (3 since
+        // the dailyUsage accumulator was added; a v1 disk artifact migrates straight
+        // through to v3 on the next write).
         // Trigger a write by setting a transcript offset.
         store.setTranscriptOffset(makeOffset(url: "file:///tmp/a.jsonl", byteOffset: 0))
 
         let rawData = try Data(contentsOf: store.cacheURLForTesting)
         let json = try #require(try? JSONSerialization.jsonObject(with: rawData) as? [String: Any])
         let version = try #require(json["schemaVersion"] as? Int)
-        #expect(version == 2)
+        #expect(version == 3)
 
         // Baselines must still be present after the write.
         // Swift encodes [ProviderID: BaselineRecord] as a JSON array of alternating
