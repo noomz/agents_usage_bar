@@ -1,23 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  Phase 6 Plan 06-04 (REL-06) — initial empty-channel Sparkle 2.x appcast.
-
-  Seeds the `gh-pages` branch before the first release so the SUFeedURL
-  resolves to valid XML even with zero published items. Sparkle handles a
-  channel with no <item> elements gracefully (RESEARCH Open Question 2).
-
-  After each release, scripts/append_appcast_item.py PREPENDS a new
-  <item> with the EdDSA signature + length produced by `sign_update`.
-
-  OWNER placeholder is replaced by the GitHub Pages owner handle when the
-  user initializes the gh-pages branch in plan 06-05 (consistent with the
-  06-02 SUFeedURL placeholder in AgentsUsageBar/Resources/Info.plist).
--->
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>Agents Usage Bar</title>
         <link>https://github.com/noomz/agents_usage_bar</link>
         <description>Agents Usage Bar update feed</description>
         <language>en</language>
-    </channel>
+    <item><title>Version 0.1.3</title><pubDate>Fri, 05 Jun 2026 09:00:31 GMT</pubDate><sparkle:version>4</sparkle:version><sparkle:shortVersionString>0.1.3</sparkle:shortVersionString><sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion><sparkle:releaseNotesLink>https://github.com/noomz/agents_usage_bar/releases/tag/v0.1.3</sparkle:releaseNotesLink><enclosure url="https://github.com/noomz/agents_usage_bar/releases/download/v0.1.3/AgentsUsageBar-0.1.3.dmg" sparkle:edSignature="py/cHQxloaiG7nrmLadyD6OeWqOn1cfVHwDRv5W2T3h6658lCW9rZh9e8KpCoGMt0n4s1JeALhVTWWRAmlbXBg==" length="3055633" type="application/octet-stream" /></item></channel>
 </rss>
