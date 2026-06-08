@@ -7,6 +7,7 @@ import Foundation
 /// repo-root walking to locate the source file, then asserts that the required
 /// substrings are present. Direct SwiftUI body inspection is hostile, so the
 /// contract is encoded as source-grep checks.
+@MainActor
 @Suite("FooterView reset-clock caption contract tests (UI-05)")
 struct FooterResetCaptionTests {
 

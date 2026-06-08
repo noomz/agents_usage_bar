@@ -10,6 +10,7 @@ import Foundation
 ///   (c) @Environment(\.clockService) is consumed (B5: FooterView CONSUMES, does NOT redeclare ClockKey)
 ///
 /// Path resolution uses #filePath-based walking to locate FooterView.swift at the repo root.
+@MainActor
 @Suite("FooterView source-grep contract tests (W7)")
 struct FooterViewTests {
 

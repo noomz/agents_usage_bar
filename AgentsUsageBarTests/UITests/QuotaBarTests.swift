@@ -12,6 +12,7 @@ import SwiftUI
 ///   fraction < 0.20  → Color.red
 ///   0.20 ≤ fraction < 0.50 → Color.yellow
 ///   fraction ≥ 0.50  → Color.green
+@MainActor
 @Suite("QuotaBar color boundary tests")
 struct QuotaBarTests {
 

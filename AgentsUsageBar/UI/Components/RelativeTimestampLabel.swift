@@ -56,7 +56,7 @@ public struct RelativeTimestampLabel: View {
     ///   - 60–3599s → "Xm"
     ///   - 3600–86399s → "Xh"
     ///   - ≥ 86400s → "Xd" (Phase 1; no absolute date string — see struct doc comment)
-    internal static func relativeString(from start: Date, to end: Date) -> String {
+    internal nonisolated static func relativeString(from start: Date, to end: Date) -> String {
         let seconds = Int(end.timeIntervalSince(start))
         if seconds < 60 { return "\(seconds)s" }
         if seconds < 3600 { return "\(seconds / 60)m" }

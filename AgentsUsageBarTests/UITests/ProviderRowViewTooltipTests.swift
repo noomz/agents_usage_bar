@@ -7,6 +7,7 @@ import Testing
 /// provider-name label is annotated with `.help(state.snapshot?.tooltipLabel ?? "")`
 /// and that the helper resolves correctly for both present and absent
 /// tooltipLabel cases.
+@MainActor
 @Suite("Plan 03-07 Task 2 — ProviderRowView .help() tooltip")
 struct ProviderRowViewTooltipTests {
 

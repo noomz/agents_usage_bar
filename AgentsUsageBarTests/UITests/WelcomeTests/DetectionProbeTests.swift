@@ -8,6 +8,7 @@ import Foundation
 // Uses URLProtocol stubs for HTTP probes and temporary directories for FS probes.
 //
 // Serialized because StubURLProtocol uses shared static state.
+@MainActor
 @Suite("DetectionProbeTests", .serialized)
 struct DetectionProbeTests {
 

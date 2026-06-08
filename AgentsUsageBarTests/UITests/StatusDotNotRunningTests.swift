@@ -9,6 +9,7 @@ import SwiftUI
 /// Because `dotColor` is `private`, the tests use source-grep via `#filePath`
 /// to anchor the structural contracts, mirroring the Phase 1/3 W-7 precedent
 /// (`FooterViewTests`, `ProviderRowViewDegradedTests`).
+@MainActor
 @Suite("StatusDotNotRunningTests")
 struct StatusDotNotRunningTests {
 
