@@ -1,0 +1,25 @@
+{
+  "configurations" : [
+    {
+      "id" : "A0000001-0000-0000-0000-0000000000C1",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testExecutionOrdering" : "alphabetical"
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:AgentsUsageBar.xcodeproj",
+        "identifier" : "AA00000100000000000000F5",
+        "name" : "AgentsUsageBarTests"
+      }
+    }
+  ],
+  "version" : 1
+}

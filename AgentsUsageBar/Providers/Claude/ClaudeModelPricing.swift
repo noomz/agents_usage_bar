@@ -77,10 +77,22 @@ public struct ClaudeModelPricing: Decodable, Sendable {
     /// Callers (Plan 02.04) catch this and degrade to a "pricing unavailable" placeholder
     /// rather than crashing — satisfying T-02.02-03.
     public static func loadBundled() throws -> ClaudeModelPricing {
-        guard let url = Bundle.main.url(forResource: "claude-models", withExtension: "json") else {
+        guard let url = resolveBundledURL() else {
             throw ClaudeModelPricingError.bundleResourceMissing
         }
         return try load(from: url)
+    }
+
+    /// Resolves the bundled `claude-models.json` URL via the cache-free `resourceURL` path.
+    ///
+    /// Mirrors `OnboardingCopy.resolveBundledURL()` (Issue #4): Foundation's `url(forResource:…)`
+    /// resource cache can interact badly with `subdirectory:` lookups elsewhere in the process,
+    /// surfacing spurious `.bundleResourceMissing` errors only inside the full test suite.
+    /// Resolving against `resourceURL` + an explicit path is deterministic and order-independent.
+    private static func resolveBundledURL() -> URL? {
+        guard let resources = Bundle.main.resourceURL else { return nil }
+        let url = resources.appendingPathComponent("claude-models.json")
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     /// Loads pricing from an arbitrary URL. Used by tests (fixture path) and previews.

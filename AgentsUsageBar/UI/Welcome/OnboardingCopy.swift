@@ -58,11 +58,7 @@ public struct OnboardingCopy: Decodable, Sendable {
     /// - Throws: `OnboardingCopyError.bundleResourceMissing` if the file is absent,
     ///   or `OnboardingCopyError.decodeFailed(_:)` if JSON decoding fails.
     public static func loadBundled() throws -> OnboardingCopy {
-        guard let url = Bundle.main.url(
-            forResource: "providers",
-            withExtension: "json",
-            subdirectory: "Onboarding"
-        ) else {
+        guard let url = resolveBundledURL() else {
             throw OnboardingCopyError.bundleResourceMissing
         }
         do {
@@ -73,5 +69,20 @@ public struct OnboardingCopy: Decodable, Sendable {
         } catch {
             throw OnboardingCopyError.decodeFailed(error)
         }
+    }
+
+    /// Resolves the bundled `providers.json` URL deterministically.
+    ///
+    /// The file is bundled flat at the Resources root (`Resources/providers.json`), NOT under
+    /// an `Onboarding/` subdirectory. The previous code asked for `subdirectory: "Onboarding"`,
+    /// which only matched because Foundation's resource cache leniently falls back to the root
+    /// in some cache states — and returned nil (`.bundleResourceMissing`) in others, e.g. once
+    /// another loader's flat lookup had populated the cache earlier in the test suite. That is
+    /// why the load failed only in the full suite and never when its suite ran alone (Issue #4).
+    /// Resolving against `resourceURL` + the real filename is cache-free and order-independent.
+    private static func resolveBundledURL() -> URL? {
+        guard let resources = Bundle.main.resourceURL else { return nil }
+        let url = resources.appendingPathComponent("providers.json")
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 }
