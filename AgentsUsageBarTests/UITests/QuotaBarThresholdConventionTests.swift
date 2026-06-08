@@ -13,6 +13,7 @@ import SwiftUI
 /// fraction semantics) trips a test whose name visibly references "UI-03".
 /// The pure color function is verified directly via the existing `internal static`
 /// test seam (B4), with no snapshot framework dependency.
+@MainActor
 @Suite("UI-03 ClaudeBar convention lock (Plan 02.07)")
 struct QuotaBarThresholdConventionTests {
 

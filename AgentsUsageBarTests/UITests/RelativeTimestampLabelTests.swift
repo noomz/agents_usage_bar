@@ -9,6 +9,7 @@ import Foundation
 /// Phase 1 strategy: use short elapsed-time strings (Xs, Xm, Xh, Xd).
 /// Very long elapsed periods (>24h) return days — not absolute date strings.
 /// This trade-off is documented in RelativeTimestampLabel.swift.
+@MainActor
 @Suite("RelativeTimestampLabel boundary tests")
 struct RelativeTimestampLabelTests {
 

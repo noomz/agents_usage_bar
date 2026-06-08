@@ -8,6 +8,12 @@ import Testing
 /// no SwiftUI runtime instantiation required. Covers all six D-02/D-03 row
 /// states (A, B, B', C, D, E) + the D-04 placeholderMessage path, plus LOCAL-06
 /// and `ProviderID.localIDs` regression assertions.
+// `@MainActor` because every test instantiates `LocalRowSecondaryView` (a
+// SwiftUI `View`, hence `@MainActor` under Swift 6) and reads its
+// `secondaryText`. Unlike `QuotaBar`'s pure static `color(forFraction:)` seam,
+// there is no nonisolated path here — the View's `init(state:)` is itself
+// MainActor-isolated — so the test suite must run on the main actor.
+@MainActor
 @Suite("Plan 04-07 — LocalRowSecondaryView secondaryText states")
 struct LocalRowSecondaryViewTests {
 

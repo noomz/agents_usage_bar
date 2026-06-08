@@ -75,7 +75,13 @@ public struct QuotaBar: View {
     ///   - clamped < 0.20  → Color.red
     ///   - clamped < 0.50  → Color.yellow
     ///   - clamped ≥ 0.50  → Color.green
-    internal static func color(forFraction fraction: Double?) -> Color {
+    ///
+    /// `nonisolated` because the function is pure (Double? in, Color out, no
+    /// actor state): without it, `QuotaBar`'s `View` conformance — `@MainActor`
+    /// under Swift 6 — would make this static method MainActor-isolated, and the
+    /// nonisolated `@Test` functions in QuotaBarTests / QuotaBarThresholdConvention
+    /// could not call it synchronously. The `@MainActor` `body` calls it fine.
+    internal nonisolated static func color(forFraction fraction: Double?) -> Color {
         guard let f = fraction else { return .gray }
         let clamped = min(max(f, 0), 1)
         if clamped < 0.20 { return .red }

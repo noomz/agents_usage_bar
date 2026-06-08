@@ -9,6 +9,7 @@ import Foundation
 // acting as a regression gate for D-14 (DisclosureGroup), D-15 (NSPasteboard),
 // D-16 (ProviderID.allKnown), and CFG-06 (no shell RC references).
 
+@MainActor
 @Suite("SettingsProvidersTabTests")
 struct SettingsProvidersTabTests {
 
