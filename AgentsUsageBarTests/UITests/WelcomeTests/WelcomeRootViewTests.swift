@@ -7,6 +7,7 @@ import Foundation
 /// These tests verify that the WelcomeRootView source file contains the required
 /// structural elements: ProviderID.allKnown iteration, DetectionProbe.probeAll call,
 /// provider seeding, footer buttons, and CFG-06 compliance.
+@MainActor
 struct WelcomeRootViewTests {
 
     private func loadSource() throws -> String {

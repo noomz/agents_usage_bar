@@ -14,6 +14,7 @@ import Testing
 ///     NOT reachable from inside it (LOCAL-06 anti-feature)
 ///   - Phase 3 invariants (dashboard button SF symbol, D-11 degraded subtitle)
 ///     are preserved unchanged
+@MainActor
 @Suite("Plan 04-07 — ProviderRowView local-row branching")
 struct ProviderRowViewLocalRowTests {
 

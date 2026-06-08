@@ -14,6 +14,7 @@ import Testing
 /// single-source invariant) — the view references the same constant via
 /// `GeminiOAuthProvider.degradedNote` OR `ThresholdEngine.degradedTag`. Both
 /// resolve to `"usage-temporarily-unavailable"`.
+@MainActor
 @Suite("Plan 03-07 Task 2 — ProviderRowView degraded styling (D-11)")
 struct ProviderRowViewDegradedTests {
 

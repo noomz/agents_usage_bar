@@ -10,6 +10,7 @@ import Foundation
 ///   (d) FooterView wires the new style on both buttons and no longer uses `.buttonStyle(.bordered)`.
 ///
 /// Path resolution mirrors `FooterViewTests`: `#filePath`-based repo-root walk.
+@MainActor
 @Suite("HoverableBorderedButtonStyle source contract tests (01.09 gap closure)")
 struct HoverableBorderedButtonStyleTests {
 

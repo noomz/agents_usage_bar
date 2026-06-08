@@ -9,6 +9,7 @@ import Foundation
 /// `maxQuotaFraction` computed properties publicly so the App tier can read them.
 ///
 /// Mirrors the Phase 1 W7 source-grep pattern (#filePath-relative repo-root walk).
+@MainActor
 @Suite("MenuBarTint UI-09 contract tests (Plan 02.07)")
 struct MenuBarTintTests {
 

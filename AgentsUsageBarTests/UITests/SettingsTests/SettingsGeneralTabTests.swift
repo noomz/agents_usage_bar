@@ -7,6 +7,7 @@ import Foundation
 /// security invariants — without requiring a running SwiftUI host or snapshot framework.
 ///
 /// Pattern mirrors `FooterViewTests` (W7 source-grep contract tests).
+@MainActor
 @Suite("SettingsGeneralTab source-grep contract tests (Plan 05-03)")
 struct SettingsGeneralTabTests {
 

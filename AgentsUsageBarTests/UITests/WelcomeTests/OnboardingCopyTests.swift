@@ -6,6 +6,7 @@ import Foundation
 //
 // Tests for OnboardingCopy.loadBundled() — providers.json bundle loader.
 
+@MainActor
 @Suite("OnboardingCopyTests")
 struct OnboardingCopyTests {
 

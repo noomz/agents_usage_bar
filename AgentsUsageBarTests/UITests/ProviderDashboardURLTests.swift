@@ -8,6 +8,7 @@ import Testing
 /// trailing "Open dashboard" button consumes. Locking each URL into a test
 /// guarantees that any inadvertent edit to the lookup table is caught at the
 /// PR boundary.
+@MainActor
 @Suite("Plan 03-07 Task 1 — ProviderDashboardURL.lookup")
 struct ProviderDashboardURLTests {
 
