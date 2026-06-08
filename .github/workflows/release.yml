@@ -270,6 +270,8 @@ jobs:
           SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
           GH_REPOSITORY: ${{ github.repository }}
           REF_NAME: ${{ github.ref_name }}
+          SIGNED: ${{ steps.gate.outputs.signed }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -280,6 +282,34 @@ jobs:
                 --ed-key-file -)
           unset SPARKLE_ED_PRIVATE_KEY
           echo "sign_update produced signature line (redacted)"
+
+          # Build the release-notes markdown ONCE here, then reuse the same
+          # /tmp/notes.md for both the appcast <description> (below) and the
+          # GitHub Release body (next step). Single source = the dialog and
+          # the Release page can never drift.
+          #   - signed lane: GitHub's auto-changelog (generate-notes API);
+          #     the tag already exists (this workflow is tag-triggered), so
+          #     the release object need not exist yet.
+          #   - unsigned lane: the one-time "Open Anyway" Gatekeeper note,
+          #     matching the prior behavior of the Release step.
+          if [ "${SIGNED}" = "true" ]; then
+            gh api "repos/${GH_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="${REF_NAME}" -q .body > /tmp/notes.md
+          else
+            printf '%s\n' \
+              '> ⚠️ **This build is not notarized by Apple.** On first launch macOS will say' \
+              '> it "cannot be opened". To run it: open **System Settings → Privacy &' \
+              '> Security**, scroll to the bottom, and click **Open Anyway**. You only do' \
+              '> this once; Sparkle auto-updates afterward.' \
+              > /tmp/notes.md
+          fi
+
+          # Render markdown → HTML with GitHub's own /markdown endpoint so the
+          # appcast helper stays stdlib-only (no `pip install markdown`). The
+          # helper wraps this fragment in a styled, dark-mode-aware document.
+          gh api -X POST /markdown \
+            -f mode=gfm -f context="${GH_REPOSITORY}" -f text=@/tmp/notes.md \
+            > /tmp/notes.html || : > /tmp/notes.html
 
           # Append the appcast <item> in a DEDICATED gh-pages worktree.
           # A plain `git checkout gh-pages` fails two ways: (1) the version-bump
@@ -300,6 +330,7 @@ jobs:
             --build-number "$GITHUB_RUN_NUMBER" \
             --dmg-url "$DMG_URL" \
             --sig-line "$SIG_LINE" \
+            --notes-html-file /tmp/notes.html \
             /tmp/ghpages/appcast.xml
 
           git -C /tmp/ghpages config user.email "ci@github.com"
@@ -319,19 +350,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          NOTES_ARGS=(--generate-notes)
-          # Unsigned (un-notarized) builds: Gatekeeper blocks first launch.
-          # Supply the one-time "Open Anyway" instructions so downloaders
-          # aren't stranded. printf (not a heredoc) keeps the markdown free of
-          # YAML's block indentation, which would otherwise break the blockquote.
-          if [ "${SIGNED}" != "true" ]; then
-            printf '%s\n' \
-              '> ⚠️ **This build is not notarized by Apple.** On first launch macOS will say' \
-              '> it "cannot be opened". To run it: open **System Settings → Privacy &' \
-              '> Security**, scroll to the bottom, and click **Open Anyway**. You only do' \
-              '> this once; Sparkle auto-updates afterward.' \
-              > /tmp/install-note.md
-            NOTES_ARGS=(--notes-file /tmp/install-note.md)
+          # Reuse the exact markdown the appcast step already built at
+          # /tmp/notes.md (signed → auto-changelog, unsigned → Gatekeeper
+          # "Open Anyway" note). Single source means the Release page and the
+          # Sparkle update dialog show identical notes. Fall back to
+          # --generate-notes only if the file is somehow missing.
+          if [ -s /tmp/notes.md ]; then
+            NOTES_ARGS=(--notes-file /tmp/notes.md)
+          else
+            NOTES_ARGS=(--generate-notes)
           fi
 
           gh release create "${REF_NAME}" \
