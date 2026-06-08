@@ -83,9 +83,15 @@ jobs:
         run: xcodebuild -version
       - name: Run tests
         run: |
+          # -testPlan AgentsUsageBar selects the shared test plan, which disables Swift
+          # Testing's in-process parallelism (parallelizable=false). The suite has @MainActor
+          # stores (PollScheduler/PowerObserver) whose refresh hops starve under 16-way parallel
+          # MainActor contention, causing timing flakes; serial execution removes that
+          # contention. (Issue #4 — the `Build and test` job's pre-existing flakes.)
           xcodebuild test \
             -project AgentsUsageBar.xcodeproj \
             -scheme AgentsUsageBar \
+            -testPlan AgentsUsageBar \
             -destination 'platform=macOS' \
             -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO

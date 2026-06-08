@@ -66,6 +66,19 @@ private func makeStore(provider: CountingProvider) -> AggregateStore {
 @Suite("PollSchedulerTests")
 struct PollSchedulerTests {
 
+    /// Polls `provider.count()` until it reaches `target` or the deadline elapses.
+    /// Replaces fixed sleeps that flake under CPU contention on slower/parallel CI runners. (Issue #4)
+    @discardableResult
+    private func waitForCount(_ provider: CountingProvider, atLeast target: Int, timeout: Duration = .seconds(5)) async throws -> Int {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            let c = await provider.count()
+            if c >= target { return c }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        return await provider.count()
+    }
+
     // MARK: start with .m5 begins the loop
 
     @Test("start with non-manual interval triggers an immediate refresh")
@@ -75,10 +88,8 @@ struct PollSchedulerTests {
         let scheduler = PollScheduler(store: store, clock: SystemClock(), interval: .m5)
 
         await scheduler.start()
-        // Give the initial refresh time to run
-        try await Task.sleep(for: .milliseconds(100))
-
-        let count = await provider.count()
+        // Wait (with a deadline) for the initial refresh to run — avoids a fixed-sleep flake.
+        let count = try await waitForCount(provider, atLeast: 1)
         #expect(count >= 1)
     }
 
@@ -145,20 +156,18 @@ struct PollSchedulerTests {
 
         // First start — immediate refresh fires
         await scheduler.start()
-        try await Task.sleep(for: .milliseconds(200))
-        let countAfterStart = await provider.count()
+        let countAfterStart = try await waitForCount(provider, atLeast: 1)
         #expect(countAfterStart >= 1)
 
         // updateInterval — triggers another immediate refresh; VirtualClock ensures the
         // 5s POLL-03 skip does not block it (each clock.now() call advances by 10s)
         await scheduler.updateInterval(.m1)
-        try await Task.sleep(for: .milliseconds(200))
+        // At minimum 2 refreshes: one from start, one after updateInterval.
+        let count = try await waitForCount(provider, atLeast: 2)
 
         let interval = await scheduler.currentInterval()
         #expect(interval == .m1)
 
-        let count = await provider.count()
-        // At minimum 2 refreshes: one from start, one after updateInterval
         #expect(count >= 2)
     }
 
