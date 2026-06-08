@@ -10,9 +10,20 @@ jobs:
       - name: Reject literal API keys in source
         run: |
           set -euo pipefail
-          # SEC-04: reject literal API key prefixes in Swift source, plists, and YAML.
+          # SEC-04: reject literal API keys in Swift source, plists, and YAML.
           # The workflow file itself is excluded via --exclude to avoid self-reference.
-          PATTERNS='sk-proj-|sk-admin-|sk-or-|AIzaSy|sk-[A-Za-z0-9]{20,}'
+          #
+          # Patterns are LENGTH-GATED on each provider's real key suffix so the
+          # scanner catches genuine leaked keys but NOT the bare prefixes and
+          # short fixtures that legitimately appear in tests and doc comments
+          # (e.g. `sk-or-v1-test`, or the prefix list in OnboardingCopy). A bare
+          # `sk-or-` or `AIzaSy` substring is not a secret; only a prefix
+          # followed by a full-length random suffix is.
+          #   sk-or-v1- + 64 hex (OpenRouter)  -> require >=40 of the suffix
+          #   AIzaSy    + 33 chars (Google)     -> require >=30
+          #   sk-proj-/sk-admin- + long (OpenAI)-> require >=20
+          #   generic sk-<48 alnum> (OpenAI)    -> require >=32 contiguous alnum
+          PATTERNS='sk-or-v1-[A-Za-z0-9]{40,}|AIzaSy[A-Za-z0-9_-]{30,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-admin-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}'
           # GeminiOAuthClient.swift no longer carries gemini-cli client_id /
           # client_secret literals — those are injected via environment
           # variables resolved by AppDependencies (see docs/gemini-setup.md).
