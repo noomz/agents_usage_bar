@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="0.55" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#4338CA"/>
+    </linearGradient>
+    <linearGradient id="topshine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="0.4" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="head" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E6ECFF"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D7E1FF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#10173A" flood-opacity="0.32"/>
+    </filter>
+  </defs>
+
+  <!-- macOS squircle plate -->
+  <g filter="url(#shadow)">
+    <rect x="100" y="92" width="824" height="824" rx="188" fill="url(#bg)"/>
+  </g>
+  <rect x="100" y="92" width="824" height="824" rx="188" fill="url(#topshine)"/>
+
+  <!-- Antennae -->
+  <g stroke="#FFFFFF" stroke-width="14" stroke-linecap="round">
+    <line x1="426" y1="300" x2="426" y2="244"/>
+    <line x1="598" y1="300" x2="598" y2="244"/>
+  </g>
+  <circle cx="426" cy="232" r="22" fill="#67E8F9"/>
+  <circle cx="598" cy="232" r="22" fill="#67E8F9"/>
+
+  <!-- Robot head -->
+  <rect x="312" y="298" width="400" height="286" rx="78" fill="url(#head)"/>
+  <!-- ear blocks -->
+  <rect x="286" y="372" width="34" height="120" rx="16" fill="#C7D2FE"/>
+  <rect x="704" y="372" width="34" height="120" rx="16" fill="#C7D2FE"/>
+
+  <!-- Eyes -->
+  <circle cx="420" cy="418" r="46" fill="#4F46E5"/>
+  <circle cx="604" cy="418" r="46" fill="#4F46E5"/>
+  <circle cx="434" cy="404" r="15" fill="#A5B4FC"/>
+  <circle cx="618" cy="404" r="15" fill="#A5B4FC"/>
+
+  <!-- Smile -->
+  <path d="M442 500 Q512 552 582 500" stroke="#6366F1" stroke-width="22" stroke-linecap="round" fill="none"/>
+
+  <!-- Bar chart below -->
+  <g fill="url(#bar)">
+    <rect x="330" y="742" width="50" height="74"  rx="14"/>
+    <rect x="402" y="704" width="50" height="112" rx="14"/>
+    <rect x="474" y="660" width="50" height="156" rx="14"/>
+    <rect x="546" y="616" width="50" height="200" rx="14"/>
+    <rect x="618" y="600" width="50" height="216" rx="14"/>
+  </g>
+  <!-- coin accent on tallest bar -->
+  <circle cx="643" cy="566" r="40" fill="#FCD34D"/>
+  <text x="643" y="582" font-family="Helvetica, Arial, sans-serif" font-size="50" font-weight="700" fill="#92651A" text-anchor="middle">$</text>
+</svg>
