@@ -307,8 +307,14 @@ jobs:
           # Render markdown → HTML with GitHub's own /markdown endpoint so the
           # appcast helper stays stdlib-only (no `pip install markdown`). The
           # helper wraps this fragment in a styled, dark-mode-aware document.
+          #
+          # NOTE: `gh api -f text=@/tmp/notes.md` does NOT read the file — `-f`
+          # (--raw-field) sends the value verbatim, so the rendered notes ended up
+          # as the literal string "@/tmp/notes.md" (v0.1.4 regression). Read the file
+          # into a variable and pass its contents as a plain raw field instead.
+          NOTES_MD="$(cat /tmp/notes.md)"
           gh api -X POST /markdown \
-            -f mode=gfm -f context="${GH_REPOSITORY}" -f text=@/tmp/notes.md \
+            -f mode=gfm -f context="${GH_REPOSITORY}" -f text="${NOTES_MD}" \
             > /tmp/notes.html || : > /tmp/notes.html
 
           # Append the appcast <item> in a DEDICATED gh-pages worktree.
