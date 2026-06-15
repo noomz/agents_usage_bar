@@ -31,3 +31,6 @@ credentials.json
 
 # Local export options override
 ExportOptions-local.plist
+
+# Coverage / profiling artifacts
+*.profraw
