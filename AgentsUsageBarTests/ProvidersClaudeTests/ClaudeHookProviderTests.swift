@@ -225,6 +225,34 @@ struct ClaudeHookProviderTests {
         #expect(snap.tooltipLabel == "default $1.00 40% · personal $0.25 70%")
     }
 
+    /// The same session captured under several account dirs (runtime env flapping in
+    /// shared-settings ccs setups) must count its cumulative cost ONCE — newest copy wins,
+    /// and it also decides the session's account attribution.
+    @Test func duplicateSessionAcrossAccounts_newestCopyWins() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        // Older copy under legacy flat "default" says $9.00…
+        try writeSession("dup", json: costJSON(sessionId: "dup", usd: 9.0),
+                         mtime: now.addingTimeInterval(-600), in: dir)
+        // …newer copy under personal/ says $2.00 (fresher cumulative figure).
+        let personalDir = dir.appendingPathComponent("personal", isDirectory: true)
+        try FileManager.default.createDirectory(at: personalDir, withIntermediateDirectories: true)
+        try writeSession("dup", json: costJSON(sessionId: "dup", usd: 2.0),
+                         mtime: now, in: personalDir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        // Counted once, from the newest copy, attributed to "personal" — and with a
+        // single surviving account there is no multi-account breakdown.
+        #expect(snap.costTodayUSD == Decimal(string: "2"))
+        #expect(snap.raw["cost.personal"] == "2")
+        #expect(snap.raw["cost.default"] == nil)
+        #expect(snap.tooltipLabel == nil)
+    }
+
     /// Single-account feeds keep the plain "5h"/"7d" names and nil tooltip — a9d9353
     /// regression guard.
     @Test func singleAccount_keepsPlainWindowNamesAndNilTooltip() async throws {

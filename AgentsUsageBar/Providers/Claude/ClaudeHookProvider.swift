@@ -117,12 +117,26 @@ public actor ClaudeHookProvider: UsageProvider {
             // Enumerate the feed, account-aware:
             //   <feedDir>/<session>.json          → account "default" (legacy flat layout, a9d9353)
             //   <feedDir>/<account>/<session>.json → account = subdirectory name (ccs instances)
-            let entries: [(account: String, url: URL, mtime: Date)]
+            let allEntries: [(account: String, url: URL, mtime: Date)]
             do {
-                entries = try Self.enumerate(feedDir: feedDir, fileManager: fm)
+                allEntries = try Self.enumerate(feedDir: feedDir, fileManager: fm)
             } catch {
                 // Missing feed dir (or unreadable) → no data.
                 throw ClaudeHookError.noFeedData
+            }
+
+            // Cross-account session dedupe, newest copy wins. The tee derives the account
+            // from $CLAUDE_CONFIG_DIR at runtime, and observed ccs setups can fire the
+            // statusline for ONE session under different env values across invocations —
+            // leaving the same <session_id>.json in several account dirs. Counting each
+            // copy would multiply that session's cumulative cost. The newest mtime is the
+            // latest payload Claude Code pushed, so it carries the freshest cost AND the
+            // session's current account attribution; older copies are ignored here and
+            // age out via the 48h cleanup.
+            let entries: [(account: String, url: URL, mtime: Date)] = Dictionary(
+                grouping: allEntries, by: { $0.url.lastPathComponent }
+            ).values.compactMap { copies in
+                copies.max { $0.mtime < $1.mtime }
             }
 
             if entries.isEmpty {
@@ -135,7 +149,7 @@ public actor ClaudeHookProvider: UsageProvider {
             let newestMTime = entries.map(\.mtime).max()!
             if now.timeIntervalSince(newestMTime) > Self.stalenessHorizon {
                 // Still perform cleanup so a long-idle feed doesn't grow unbounded.
-                cleanup(entries: entries, now: now, fileManager: fm)
+                cleanup(entries: allEntries, now: now, fileManager: fm)
                 let snap = UsageSnapshot(
                     providerID: id,
                     asOf: now,
@@ -261,8 +275,9 @@ public actor ClaudeHookProvider: UsageProvider {
 
             let tooltipLabel = breakdownParts.isEmpty ? nil : breakdownParts.joined(separator: " · ")
 
-            // Cleanup files older than 48h to bound directory growth.
-            cleanup(entries: entries, now: now, fileManager: fm)
+            // Cleanup files older than 48h to bound directory growth — sweep ALL copies
+            // (including duplicates superseded by the newest-wins dedupe above).
+            cleanup(entries: allEntries, now: now, fileManager: fm)
 
             let snap = UsageSnapshot(
                 providerID: id,
