@@ -76,6 +76,11 @@ public actor ClaudeSwitchableProvider: UsageProvider {
 
     /// Delegates the fetch to the source-selected provider, then mirrors that delegate's
     /// status into the facade so `status()` reflects the mode that actually ran.
+    ///
+    /// Hook mode is HYBRID for tokens: the statusline pushes real cost + rate limits but
+    /// no cumulative token totals, so the row would render "—" tokens forever. We run the
+    /// JSONL delegate concurrently and graft ONLY its `tokensToday` onto the hook snapshot
+    /// (cost/quota stay hook-real; a JSONL failure degrades tokens to nil, never the fetch).
     public func fetch(now: Date) async throws -> UsageSnapshot {
         let useHook = source() == .hook
         let delegate: any UsageProvider = useHook ? hookProvider : jsonl
@@ -85,7 +90,27 @@ public actor ClaudeSwitchableProvider: UsageProvider {
             await hookProvider.pruneFeed(now: now)
         }
         do {
-            let snapshot = try await delegate.fetch(now: now)
+            let snapshot: UsageSnapshot
+            if useHook {
+                async let tokensBox: Int?? = { [jsonl] in
+                    (try? await jsonl.fetch(now: now))?.tokensToday
+                }()
+                let hookSnap = try await hookProvider.fetch(now: now)
+                let tokens = (await tokensBox) ?? nil
+                snapshot = UsageSnapshot(
+                    providerID: hookSnap.providerID,
+                    asOf: hookSnap.asOf,
+                    tokensToday: tokens,
+                    costTodayUSD: hookSnap.costTodayUSD,
+                    balanceUSD: hookSnap.balanceUSD,
+                    quota: hookSnap.quota,
+                    raw: hookSnap.raw,
+                    quotaWindows: hookSnap.quotaWindows,
+                    tooltipLabel: hookSnap.tooltipLabel
+                )
+            } else {
+                snapshot = try await delegate.fetch(now: now)
+            }
             lastStatus = await delegate.status()
             return snapshot
         } catch {

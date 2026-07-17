@@ -299,6 +299,34 @@ struct ClaudeHookInstallerTests {
         #expect(targets[1].settingsPath.path == home.path + "/.ccs/instances/personal/settings.json")
     }
 
+    /// ccs symlinks every instance's settings.json to ~/.ccs/shared/settings.json —
+    /// targets resolving to the same file fold into ONE row (the runtime-routed tee
+    /// attributes accounts via $CLAUDE_CONFIG_DIR, so one install covers all of them).
+    @Test func discoverTargets_symlinkedSharedSettings_dedupes() throws {
+        let fm = FileManager.default
+        let home = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("hook-home-\(UUID().uuidString)", isDirectory: true)
+        defer { try? fm.removeItem(at: home) }
+
+        let shared = home.appendingPathComponent(".ccs/shared/settings.json")
+        try fm.createDirectory(at: shared.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: shared)
+        for slug in ["personal", "work"] {
+            let dir = home.appendingPathComponent(".ccs/instances/\(slug)")
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            try fm.createSymbolicLink(
+                at: dir.appendingPathComponent("settings.json"),
+                withDestinationURL: shared
+            )
+        }
+
+        let targets = ClaudeHookInstaller.discoverTargets(fileManager: fm, home: home.path)
+
+        // default (own file) + one folded row for the two symlinked instances.
+        #expect(targets.map(\.slug) == ["default", "personal"])
+        #expect(targets[1].displayName == "personal, work")
+    }
+
     @Test func discoverTargets_noInstancesDir_defaultOnly() {
         let home = NSTemporaryDirectory() + "hook-home-\(UUID().uuidString)"
         let targets = ClaudeHookInstaller.discoverTargets(home: home)
@@ -323,12 +351,18 @@ struct ClaudeHookInstallerTests {
         try env.installer.install()          // default slug
         try instanceInstaller.install()      // "personal" slug
 
-        // Two distinct scripts; each writes to its own sessions/<slug> subdir.
+        // Two distinct script files; BOTH route the account at runtime from
+        // $CLAUDE_CONFIG_DIR into <sessions root>/<account> (shared-settings layouts
+        // make install-time path embedding unable to tell accounts apart).
         let defaultScript = try env.readScript()
-        #expect(defaultScript.contains("/sessions/default"))
         let personalScriptURL = env.feedDir.appendingPathComponent("aub-statusline-personal.sh")
         let personalScript = try String(contentsOf: personalScriptURL, encoding: .utf8)
-        #expect(personalScript.contains("/sessions/personal"))
+        for script in [defaultScript, personalScript] {
+            #expect(script.contains("FEED_ROOT=\"\(env.feedDir.appendingPathComponent("sessions").path)\""))
+            #expect(script.contains("CLAUDE_CONFIG_DIR"))
+            #expect(script.contains("acct=\"${acct:-default}\""))
+            #expect(script.contains("FEED_DIR=\"$FEED_ROOT/$acct\""))
+        }
 
         // Both settings wired; statuses independent.
         #expect(env.installer.status() == .installed)

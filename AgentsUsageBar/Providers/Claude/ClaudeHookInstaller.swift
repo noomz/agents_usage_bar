@@ -90,7 +90,30 @@ public struct ClaudeHookInstaller: Sendable {
                 ))
             }
         }
-        return targets
+
+        // Dedupe targets whose settings.json resolves to the SAME file (ccs symlinks
+        // every instance's settings.json to ~/.ccs/shared/settings.json). One install
+        // covers all of them — the tee routes accounts at runtime via $CLAUDE_CONFIG_DIR —
+        // so showing them as separate installable rows would just wire the same file
+        // N times and confuse the status badges. The survivor keeps the first slug
+        // (default wins when it shares) and lists the folded accounts in displayName.
+        var deduped: [HookTarget] = []
+        var indexByResolvedPath: [String: Int] = [:]
+        for target in targets {
+            let resolved = target.settingsPath.resolvingSymlinksInPath().path
+            if let index = indexByResolvedPath[resolved] {
+                let kept = deduped[index]
+                deduped[index] = HookTarget(
+                    slug: kept.slug,
+                    settingsPath: kept.settingsPath,
+                    displayName: kept.displayName + ", " + target.displayName
+                )
+            } else {
+                indexByResolvedPath[resolved] = deduped.count
+                deduped.append(target)
+            }
+        }
+        return deduped
     }
 
     // MARK: - Constants
@@ -126,12 +149,6 @@ public struct ClaudeHookInstaller: Sendable {
     /// Root of all account feeds: `<feedDir>/sessions`.
     private var sessionsDir: URL {
         feedDir.appendingPathComponent("sessions", isDirectory: true)
-    }
-
-    /// This target's feed: `<feedDir>/sessions/<slug>`. The tee script writes here so
-    /// `ClaudeHookProvider` can attribute payloads to the account.
-    private var accountSessionsDir: URL {
-        sessionsDir.appendingPathComponent(slug, isDirectory: true)
     }
 
     private var originalStatuslineURL: URL {
@@ -257,8 +274,11 @@ public struct ClaudeHookInstaller: Sendable {
 
         // 4. Write the tee script (original command embedded verbatim on its own line).
         let originalCommand = originalStatusLine?["command"] as? String
+        // Pass the sessions ROOT — the script routes to <root>/<account> at runtime
+        // (accounts sharing one settings.json via symlink are told apart by
+        // $CLAUDE_CONFIG_DIR, not by which script file they run).
         let script = Self.scriptContents(
-            sessionsPath: accountSessionsDir.path,
+            sessionsPath: sessionsDir.path,
             originalCommand: originalCommand
         )
         try Data(script.utf8).write(to: scriptURL, options: .atomic)
@@ -391,6 +411,14 @@ public struct ClaudeHookInstaller: Sendable {
 
     /// Builds the POSIX-sh tee script.
     ///
+    /// Account attribution is RUNTIME-routed: ccs instances launch Claude Code with
+    /// `CLAUDE_CONFIG_DIR=~/.ccs/instances/<slug>`, and — crucially — instances may
+    /// share ONE `settings.json` via symlinks (`~/.ccs/shared/settings.json`), which
+    /// makes install-time path embedding unable to tell accounts apart. The script
+    /// therefore derives the account from `$CLAUDE_CONFIG_DIR` on every invocation
+    /// (`basename`, `"default"` when unset) and writes to `<sessionsRoot>/<account>/`.
+    /// One installed script transparently attributes every account that shares it.
+    ///
     /// The original command (when present) is appended on its own line, verbatim, as the
     /// right-hand side of a pipe: `printf '%s' "$input" | <original>`. Because it is placed
     /// literally — not inside a shell-quoted variable — an original command containing
@@ -402,7 +430,11 @@ public struct ClaudeHookInstaller: Sendable {
             "# Agents Usage Bar — statusline tee. Captures Claude Code statusline JSON,",
             "# then chains to the original statusline. Managed by Agents Usage Bar —",
             "# do not edit by hand; reinstall from the app instead.",
-            "FEED_DIR=\"\(sessionsPath)\"",
+            "FEED_ROOT=\"\(sessionsPath)\"",
+            "# Account = ccs instance dir name from CLAUDE_CONFIG_DIR; \"default\" for ~/.claude.",
+            "acct=\"${CLAUDE_CONFIG_DIR:+$(basename \"$CLAUDE_CONFIG_DIR\")}\"",
+            "acct=\"${acct:-default}\"",
+            "FEED_DIR=\"$FEED_ROOT/$acct\"",
             "input=$(cat)",
             "sid=$(printf '%s' \"$input\" | sed -n 's/.*\"session_id\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p' | head -1)",
             "if [ -n \"$sid\" ]; then",

@@ -33,8 +33,9 @@ struct ClaudeSwitchableProviderTests {
     }
 
     /// A JSONL provider over an empty roots directory — returns a valid snapshot with a
-    /// non-nil (zero) `tokensToday` and no quota. This is distinguishable from the hook
-    /// provider, whose `tokensToday` is always nil.
+    /// non-nil (zero) `tokensToday` and no quota. Delegation is fingerprinted by COST:
+    /// the hook feed carries a known cost the JSONL path can never produce. (Tokens no
+    /// longer distinguish the modes — hook mode grafts the JSONL `tokensToday` on.)
     private func makeJSONLProvider(rootsEmptyDir: URL) -> ClaudeJSONLProvider {
         let pricing = ClaudeModelPricing(
             schemaVersion: 1,
@@ -74,9 +75,10 @@ struct ClaudeSwitchableProviderTests {
         )
 
         let snap = try await facade.fetch(now: now)
-        // Hook fingerprint: cost from feed, tokens always nil.
+        // Hook fingerprint: cost from the feed. Tokens are HYBRID — grafted from the
+        // JSONL delegate (0 over an empty root), so the row never renders "—" tokens.
         #expect(snap.costTodayUSD == Decimal(string: "3.5"))
-        #expect(snap.tokensToday == nil)
+        #expect(snap.tokensToday == 0)
         #expect(snap.providerID == .claude)
     }
 
@@ -130,9 +132,10 @@ struct ClaudeSwitchableProviderTests {
         #expect(first.tokensToday == 0)
 
         // Flip to hook; same facade instance now delegates to the hook provider.
+        // (Tokens stay 0 — hybrid graft from the JSONL delegate — so cost is the flag.)
         box.value = .hook
         let second = try await facade.fetch(now: now)
-        #expect(second.tokensToday == nil)
+        #expect(second.tokensToday == 0)
         #expect(second.costTodayUSD == Decimal(string: "7.25"))
     }
 
