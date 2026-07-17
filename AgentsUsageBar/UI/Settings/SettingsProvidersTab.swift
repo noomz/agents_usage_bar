@@ -299,20 +299,24 @@ private struct OnboardingHelpPanel: View {
 
 // MARK: - ClaudeSourceSection
 
-/// Claude-only sub-panel (design §8) rendered beneath the Claude provider row.
+/// Claude-only sub-panel (design §8, per-account per DESIGN-hook-multi-account §7)
+/// rendered beneath the Claude provider row.
 ///
 /// - Segmented `Picker` selecting `ClaudeUsageSource` (session reads vs hook), written
 ///   straight to `UserPreferencesStore.setClaudeSource(_:)` — the switchable facade reads
 ///   the same UserDefaults key on its next poll.
-/// - Hook install status + Install / Uninstall button driving `ClaudeHookInstaller`. The
-///   installer's filesystem work runs on a detached background Task; the status is
-///   refreshed afterward (and on appear).
-/// - A caption explaining what hook mode does and its Pro/Max requirement.
+/// - Per-target install list: one row per `ClaudeHookInstaller.HookTarget` (the default
+///   `~/.claude` account plus every `~/.ccs/instances/<slug>`), each with its own status
+///   badge + Install / Uninstall button. Installer filesystem work runs on a detached
+///   background Task; statuses are refreshed afterward (and on appear).
+/// - A caption explaining what hook mode does, its Pro/Max requirement, and how ccs
+///   instances are detected.
 private struct ClaudeSourceSection: View {
     @Environment(\.preferences) private var preferences
 
-    @State private var hookStatus: ClaudeHookInstaller.Status = .notInstalled
-    @State private var isWorking: Bool = false
+    @State private var targets: [ClaudeHookInstaller.HookTarget] = []
+    @State private var statuses: [String: ClaudeHookInstaller.Status] = [:]
+    @State private var workingSlugs: Set<String> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -327,28 +331,32 @@ private struct ClaudeSourceSection: View {
             .pickerStyle(.segmented)
             .accessibilityLabel("Claude usage source")
 
-            // Hook install status + action, shown only when the user opted into hook mode.
+            // Per-target install rows, shown only when the user opted into hook mode.
             if preferences.claudeSource == .hook {
-                HStack(spacing: 8) {
-                    hookStatusLabel
-                    Spacer()
-                    hookActionButton
+                ForEach(targets) { target in
+                    HStack(spacing: 8) {
+                        Text(target.displayName)
+                            .font(.caption)
+                        statusLabel(for: target)
+                        Spacer()
+                        actionButton(for: target)
+                    }
                 }
             }
 
-            Text("Hook mode reads real usage and rate limits that Claude Code pushes to its status line. Requires Claude Code Pro/Max for rate-limit data.")
+            Text("Hook mode reads real usage and rate limits that Claude Code pushes to its status line (Pro/Max required for rate-limit data). ccs instances are detected from ~/.ccs/instances — install the hook into each account you want tracked.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 16)
         .padding(.top, 2)
         .padding(.bottom, 10)
-        .onAppear { refreshStatus() }
+        .onAppear { refreshTargets() }
     }
 
     @ViewBuilder
-    private var hookStatusLabel: some View {
-        switch hookStatus {
+    private func statusLabel(for target: ClaudeHookInstaller.HookTarget) -> some View {
+        switch statuses[target.slug] ?? .notInstalled {
         case .installed:
             Label("Installed", systemImage: "checkmark.circle.fill")
                 .font(.caption)
@@ -358,20 +366,21 @@ private struct ClaudeSourceSection: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         case .foreignStatusline:
-            Label("Existing statusline will be chained", systemImage: "arrow.triangle.branch")
+            Label("Statusline will be chained", systemImage: "arrow.triangle.branch")
                 .font(.caption)
                 .foregroundStyle(.orange)
         }
     }
 
     @ViewBuilder
-    private var hookActionButton: some View {
-        if hookStatus == .installed {
-            Button("Uninstall") { performUninstall() }
+    private func actionButton(for target: ClaudeHookInstaller.HookTarget) -> some View {
+        let isWorking = workingSlugs.contains(target.slug)
+        if (statuses[target.slug] ?? .notInstalled) == .installed {
+            Button("Uninstall") { perform(target: target, install: false) }
                 .font(.caption)
                 .disabled(isWorking)
         } else {
-            Button("Install") { performInstall() }
+            Button("Install") { perform(target: target, install: true) }
                 .font(.caption)
                 .disabled(isWorking)
         }
@@ -379,39 +388,39 @@ private struct ClaudeSourceSection: View {
 
     // MARK: - Actions
 
-    /// Reads the current installer status off the main thread and publishes it.
-    private func refreshStatus() {
+    /// Discovers targets and reads every installer status off the main thread.
+    private func refreshTargets() {
         Task {
-            let status = await Task.detached(priority: .userInitiated) {
-                ClaudeHookInstaller().status()
+            let (found, states) = await Task.detached(
+                priority: .userInitiated
+            ) { () -> ([ClaudeHookInstaller.HookTarget], [String: ClaudeHookInstaller.Status]) in
+                let found = ClaudeHookInstaller.discoverTargets()
+                var states: [String: ClaudeHookInstaller.Status] = [:]
+                for target in found {
+                    states[target.slug] = ClaudeHookInstaller(target: target).status()
+                }
+                return (found, states)
             }.value
-            hookStatus = status
+            targets = found
+            statuses = states
         }
     }
 
-    private func performInstall() {
-        isWorking = true
+    /// Installs or uninstalls one target, then refreshes that target's status.
+    private func perform(target: ClaudeHookInstaller.HookTarget, install: Bool) {
+        workingSlugs.insert(target.slug)
         Task {
             let status = await Task.detached(priority: .userInitiated) { () -> ClaudeHookInstaller.Status in
-                let installer = ClaudeHookInstaller()
-                try? installer.install()
+                let installer = ClaudeHookInstaller(target: target)
+                if install {
+                    try? installer.install()
+                } else {
+                    try? installer.uninstall()
+                }
                 return installer.status()
             }.value
-            hookStatus = status
-            isWorking = false
-        }
-    }
-
-    private func performUninstall() {
-        isWorking = true
-        Task {
-            let status = await Task.detached(priority: .userInitiated) { () -> ClaudeHookInstaller.Status in
-                let installer = ClaudeHookInstaller()
-                try? installer.uninstall()
-                return installer.status()
-            }.value
-            hookStatus = status
-            isWorking = false
+            statuses[target.slug] = status
+            workingSlugs.remove(target.slug)
         }
     }
 }

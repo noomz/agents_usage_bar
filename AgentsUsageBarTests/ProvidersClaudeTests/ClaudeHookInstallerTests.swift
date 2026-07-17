@@ -277,4 +277,68 @@ struct ClaudeHookInstallerTests {
         #expect(backups.contains(4_000))
         #expect(backups.last! > 4_000)
     }
+
+    // MARK: Per-account targets (DESIGN-hook-multi-account)
+
+    @Test func discoverTargets_defaultPlusInstances_sorted() throws {
+        let fm = FileManager.default
+        let home = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("hook-home-\(UUID().uuidString)", isDirectory: true)
+        defer { try? fm.removeItem(at: home) }
+        // Two instances: "work" has a settings.json, "personal" does not (still a target —
+        // install() creates missing files). A stray file must not become a target.
+        try fm.createDirectory(at: home.appendingPathComponent(".ccs/instances/work"), withIntermediateDirectories: true)
+        try fm.createDirectory(at: home.appendingPathComponent(".ccs/instances/personal"), withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: home.appendingPathComponent(".ccs/instances/work/settings.json"))
+        try Data().write(to: home.appendingPathComponent(".ccs/instances/strayfile"))
+
+        let targets = ClaudeHookInstaller.discoverTargets(fileManager: fm, home: home.path)
+
+        #expect(targets.map(\.slug) == ["default", "personal", "work"])
+        #expect(targets[0].settingsPath.path == home.path + "/.claude/settings.json")
+        #expect(targets[1].settingsPath.path == home.path + "/.ccs/instances/personal/settings.json")
+    }
+
+    @Test func discoverTargets_noInstancesDir_defaultOnly() {
+        let home = NSTemporaryDirectory() + "hook-home-\(UUID().uuidString)"
+        let targets = ClaudeHookInstaller.discoverTargets(home: home)
+        #expect(targets.map(\.slug) == ["default"])
+    }
+
+    @Test func slugAwareInstall_sideBySide_independentTargets() throws {
+        let env = try HookTestEnv()
+        defer { env.cleanup() }
+
+        // Instance settings.json lives in its own dir, shares the feed dir.
+        let instanceSettings = env.root.appendingPathComponent(
+            ".ccs/instances/personal/settings.json", isDirectory: false)
+        let instanceInstaller = ClaudeHookInstaller(
+            fileManager: .default,
+            settingsPath: instanceSettings,
+            feedDir: env.feedDir,
+            slug: "personal"
+        )
+
+        try env.writeSettings(["model": "opusplan"])
+        try env.installer.install()          // default slug
+        try instanceInstaller.install()      // "personal" slug
+
+        // Two distinct scripts; each writes to its own sessions/<slug> subdir.
+        let defaultScript = try env.readScript()
+        #expect(defaultScript.contains("/sessions/default"))
+        let personalScriptURL = env.feedDir.appendingPathComponent("aub-statusline-personal.sh")
+        let personalScript = try String(contentsOf: personalScriptURL, encoding: .utf8)
+        #expect(personalScript.contains("/sessions/personal"))
+
+        // Both settings wired; statuses independent.
+        #expect(env.installer.status() == .installed)
+        #expect(instanceInstaller.status() == .installed)
+
+        // Uninstalling the instance leaves the default untouched.
+        try instanceInstaller.uninstall()
+        #expect(instanceInstaller.status() == .notInstalled)
+        #expect(env.installer.status() == .installed)
+        #expect(FileManager.default.fileExists(atPath: env.scriptURL.path))
+        #expect(!FileManager.default.fileExists(atPath: personalScriptURL.path))
+    }
 }

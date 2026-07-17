@@ -104,6 +104,19 @@ public struct ProviderRowView: View {
                         .opacity(isStale || isDegraded ? 0.6 : 1.0)
                     }
 
+                    // Multi-account breakdown (Claude hook mode with ≥2 ccs accounts):
+                    // one compact caption line, e.g. "default $1.23 41% · personal $0.45 12%".
+                    // Derived from raw["cost.<account>"] / raw["quota.<account>"] written by
+                    // ClaudeHookProvider; absent for every other provider and for
+                    // single-account feeds, so the row layout is unchanged there.
+                    if state.id == .claude, let breakdown = accountBreakdownText(state.snapshot) {
+                        Text(breakdown)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                    }
+
                     // Quota bar — opacity composes UI-08 stale dimming and the
                     // Plan 03-07 / D-11 degraded dimming.
                     QuotaBar(quota: state.snapshot?.quota)
@@ -175,6 +188,31 @@ public struct ProviderRowView: View {
         guard let s = snapshot else { return "—" }
         guard let cost = s.costTodayUSD else { return "—" }
         return cost.formatted(.currency(code: "USD"))
+    }
+
+    /// Multi-account breakdown line from `raw["cost.<account>"]` / `raw["quota.<account>"]`
+    /// (ClaudeHookProvider). Returns nil unless ≥2 accounts are present. Account order:
+    /// "default" first, then alphabetical — mirrors the provider's window ordering.
+    private func accountBreakdownText(_ snapshot: UsageSnapshot?) -> String? {
+        guard let raw = snapshot?.raw else { return nil }
+        var accounts: Set<String> = []
+        for key in raw.keys {
+            if key.hasPrefix("cost.") { accounts.insert(String(key.dropFirst("cost.".count))) }
+            if key.hasPrefix("quota.") { accounts.insert(String(key.dropFirst("quota.".count))) }
+        }
+        guard accounts.count >= 2 else { return nil }
+        let ordered = accounts.sorted { ($0 == "default" ? 0 : 1, $0) < ($1 == "default" ? 0 : 1, $1) }
+        let parts = ordered.map { account in
+            var part = account
+            if let cost = raw["cost.\(account)"], let value = Decimal(string: cost) {
+                part += " " + value.formatted(.currency(code: "USD"))
+            }
+            if let quota = raw["quota.\(account)"] {
+                part += " \(quota)"
+            }
+            return part
+        }
+        return parts.joined(separator: " · ")
     }
 
     /// Account balance text, or nil when not available.

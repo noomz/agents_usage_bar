@@ -42,10 +42,62 @@ public struct ClaudeHookInstaller: Sendable {
         case foreignStatusline
     }
 
+    // MARK: - HookTarget
+
+    /// One installable statusline slot: the default `~/.claude` account or a ccs instance.
+    ///
+    /// ccs instances (`~/.ccs/instances/<slug>/`) run Claude Code with
+    /// `CLAUDE_CONFIG_DIR=~/.ccs/instances/<slug>`, so each has its OWN `settings.json`
+    /// (and possibly its own statusline to chain). Installing per target is what makes
+    /// per-account usage/rate-limit capture possible.
+    public struct HookTarget: Sendable, Equatable, Identifiable {
+        /// Account key: `"default"` for `~/.claude`, else the ccs instance dir name.
+        public let slug: String
+        /// The target's `settings.json` (may not exist yet — `install()` creates it).
+        public let settingsPath: URL
+        /// Human-readable label for Settings UI.
+        public let displayName: String
+
+        public var id: String { slug }
+    }
+
+    /// Enumerates all installable targets: the default account first, then every
+    /// `~/.ccs/instances/<slug>/` directory (alphabetical). Instances need not have a
+    /// `settings.json` yet — `install()` creates missing files.
+    ///
+    /// - Parameter home: Injectable home path for tests. Production omits it.
+    public static func discoverTargets(
+        fileManager fm: FileManager = .default,
+        home: String = NSHomeDirectory()
+    ) -> [HookTarget] {
+        var targets: [HookTarget] = [
+            HookTarget(
+                slug: "default",
+                settingsPath: URL(fileURLWithPath: home + "/.claude/settings.json", isDirectory: false),
+                displayName: "Claude (default)"
+            )
+        ]
+        let instancesRoot = home + "/.ccs/instances"
+        if let names = try? fm.contentsOfDirectory(atPath: instancesRoot) {
+            for name in names.sorted() where !name.hasPrefix(".") {
+                var isDir: ObjCBool = false
+                let dir = instancesRoot + "/" + name
+                guard fm.fileExists(atPath: dir, isDirectory: &isDir), isDir.boolValue else { continue }
+                targets.append(HookTarget(
+                    slug: name,
+                    settingsPath: URL(fileURLWithPath: dir + "/settings.json", isDirectory: false),
+                    displayName: name
+                ))
+            }
+        }
+        return targets
+    }
+
     // MARK: - Constants
 
-    /// Substring that uniquely identifies our tee script inside a `statusLine.command`.
-    private static let scriptFileName = "aub-statusline.sh"
+    /// Prefix that uniquely identifies our tee scripts inside a `statusLine.command`
+    /// (matches both `aub-statusline.sh` and `aub-statusline-<slug>.sh`).
+    private static let scriptFileNamePrefix = "aub-statusline"
 
     // MARK: - Stored properties
 
@@ -55,20 +107,38 @@ public struct ClaudeHookInstaller: Sendable {
     nonisolated(unsafe) private let fileManager: FileManager
     private let settingsPath: URL
     private let feedDir: URL
+    /// Account key this installer instance targets. `"default"` = `~/.claude`.
+    private let slug: String
     private let logger = AppLogger.logger(category: "claude")
 
-    // MARK: - Derived paths
+    // MARK: - Derived paths (slug-aware)
 
-    private var scriptURL: URL {
-        feedDir.appendingPathComponent(Self.scriptFileName, isDirectory: false)
+    /// `aub-statusline.sh` for the default account (backward compatible with a9d9353
+    /// installs), `aub-statusline-<slug>.sh` for ccs instances.
+    private var scriptFileName: String {
+        slug == "default" ? "aub-statusline.sh" : "aub-statusline-\(slug).sh"
     }
 
+    private var scriptURL: URL {
+        feedDir.appendingPathComponent(scriptFileName, isDirectory: false)
+    }
+
+    /// Root of all account feeds: `<feedDir>/sessions`.
     private var sessionsDir: URL {
         feedDir.appendingPathComponent("sessions", isDirectory: true)
     }
 
+    /// This target's feed: `<feedDir>/sessions/<slug>`. The tee script writes here so
+    /// `ClaudeHookProvider` can attribute payloads to the account.
+    private var accountSessionsDir: URL {
+        sessionsDir.appendingPathComponent(slug, isDirectory: true)
+    }
+
     private var originalStatuslineURL: URL {
-        feedDir.appendingPathComponent("original-statusline.json", isDirectory: false)
+        let name = slug == "default"
+            ? "original-statusline.json"
+            : "original-statusline-\(slug).json"
+        return feedDir.appendingPathComponent(name, isDirectory: false)
     }
 
     // MARK: - Init
@@ -85,11 +155,23 @@ public struct ClaudeHookInstaller: Sendable {
     public init(
         fileManager: FileManager = .default,
         settingsPath: URL = ClaudeHookInstaller.defaultSettingsPath(),
-        feedDir: URL = ClaudeHookInstaller.defaultFeedDir()
+        feedDir: URL = ClaudeHookInstaller.defaultFeedDir(),
+        slug: String = "default"
     ) {
         self.fileManager = fileManager
         self.settingsPath = settingsPath
         self.feedDir = feedDir
+        self.slug = slug
+    }
+
+    /// Convenience: installer for a discovered target against the production feed dir.
+    public init(target: HookTarget, fileManager: FileManager = .default) {
+        self.init(
+            fileManager: fileManager,
+            settingsPath: target.settingsPath,
+            feedDir: ClaudeHookInstaller.defaultFeedDir(),
+            slug: target.slug
+        )
     }
 
     // MARK: - Default production paths
@@ -119,7 +201,7 @@ public struct ClaudeHookInstaller: Sendable {
         guard let statusLine = settings["statusLine"] else { return .notInstalled }
         if let dict = statusLine as? [String: Any],
            let command = dict["command"] as? String,
-           command.contains(Self.scriptFileName) {
+           command.contains(Self.scriptFileNamePrefix) {
             return .installed
         }
         return .foreignStatusline
@@ -176,7 +258,7 @@ public struct ClaudeHookInstaller: Sendable {
         // 4. Write the tee script (original command embedded verbatim on its own line).
         let originalCommand = originalStatusLine?["command"] as? String
         let script = Self.scriptContents(
-            sessionsPath: sessionsDir.path,
+            sessionsPath: accountSessionsDir.path,
             originalCommand: originalCommand
         )
         try Data(script.utf8).write(to: scriptURL, options: .atomic)
@@ -304,7 +386,7 @@ public struct ClaudeHookInstaller: Sendable {
     // MARK: - Script template
 
     private static func commandIsOurs(_ command: String?) -> Bool {
-        command?.contains(scriptFileName) ?? false
+        command?.contains(scriptFileNamePrefix) ?? false
     }
 
     /// Builds the POSIX-sh tee script.

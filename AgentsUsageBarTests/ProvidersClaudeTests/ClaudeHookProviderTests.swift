@@ -164,6 +164,105 @@ struct ClaudeHookProviderTests {
         #expect(await provider.status() == .ok(lastSuccess: now))
     }
 
+    // MARK: - Multi-account (DESIGN-hook-multi-account)
+
+    /// Legacy flat file ("default") + sessions/personal/ subdir → merged cost, per-account
+    /// raw keys, account-prefixed window names, primary quota = max across accounts,
+    /// tooltip breakdown line.
+    @Test func multiAccount_mergesCostAndSplitsQuotaPerAccount() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let resets = now.addingTimeInterval(3600).timeIntervalSince1970
+
+        // Legacy flat file → account "default": $1.00 today, 40%/10% windows.
+        try writeSession("d1", json: """
+        {
+          "session_id": "d1",
+          "cost": { "total_cost_usd": 1.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 40, "resets_at": \(resets) },
+            "seven_day": { "used_percentage": 10, "resets_at": \(resets) }
+          }
+        }
+        """, mtime: now, in: dir)
+
+        // Instance subdir → account "personal": $0.25 today, 70% seven-day window.
+        let personalDir = dir.appendingPathComponent("personal", isDirectory: true)
+        try FileManager.default.createDirectory(at: personalDir, withIntermediateDirectories: true)
+        try writeSession("p1", json: """
+        {
+          "session_id": "p1",
+          "cost": { "total_cost_usd": 0.25 },
+          "rate_limits": {
+            "seven_day": { "used_percentage": 70, "resets_at": \(resets) }
+          }
+        }
+        """, mtime: now, in: personalDir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        // Merged cost across accounts.
+        #expect(snap.costTodayUSD == Decimal(string: "1.25"))
+
+        // Account-prefixed window names, default first.
+        let names = try #require(snap.quotaWindows).map(\.name)
+        #expect(names == ["default 5h", "default 7d", "personal 7d"])
+
+        // Primary quota = max across ALL accounts (personal's 70% wins).
+        let quota = try #require(snap.quota)
+        #expect(quota.used == 0.7)
+
+        // Per-account raw keys for the popover breakdown.
+        #expect(snap.raw["cost.default"] == "1")
+        #expect(snap.raw["cost.personal"] == "0.25")
+        #expect(snap.raw["quota.default"] == "40%")
+        #expect(snap.raw["quota.personal"] == "70%")
+
+        // Tooltip breakdown, default first.
+        #expect(snap.tooltipLabel == "default $1.00 40% · personal $0.25 70%")
+    }
+
+    /// Single-account feeds keep the plain "5h"/"7d" names and nil tooltip — a9d9353
+    /// regression guard.
+    @Test func singleAccount_keepsPlainWindowNamesAndNilTooltip() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let resets = now.addingTimeInterval(3600).timeIntervalSince1970
+        try writeSession("s", json: quotaJSON(sessionId: "s", fivePct: 23.5, sevenPct: 41.2, resetsAt: resets),
+                         mtime: now, in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        #expect(try #require(snap.quotaWindows).map(\.name) == ["5h", "7d"])
+        #expect(snap.tooltipLabel == nil)
+    }
+
+    /// Cleanup + pruneFeed reach account subdirectories.
+    @Test func pruneFeedCoversAccountSubdirs() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let personalDir = dir.appendingPathComponent("personal", isDirectory: true)
+        try FileManager.default.createDirectory(at: personalDir, withIntermediateDirectories: true)
+        let old = try writeSession("old", json: costJSON(sessionId: "old", usd: 1.0),
+                                   mtime: now.addingTimeInterval(-49 * 3600), in: personalDir)
+        let fresh = try writeSession("fresh", json: costJSON(sessionId: "fresh", usd: 1.0),
+                                     mtime: now, in: personalDir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        await provider.pruneFeed(now: now)
+
+        #expect(!FileManager.default.fileExists(atPath: old.path))
+        #expect(FileManager.default.fileExists(atPath: fresh.path))
+    }
+
     @Test func pruneFeedRemovesOldFilesWithoutFetching() async throws {
         let dir = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: dir) }
