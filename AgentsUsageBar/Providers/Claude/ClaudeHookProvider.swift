@@ -214,6 +214,7 @@ public actor ClaudeHookProvider: UsageProvider {
             var maxUtilizationPct: Double?
             var raw: [String: String] = [:]
             var breakdownParts: [String] = []
+            var accountsOut: [UsageSnapshot.AccountUsage] = []
 
             for account in orderedAccounts {
                 guard let agg = accounts[account] else { continue }
@@ -223,20 +224,25 @@ public actor ClaudeHookProvider: UsageProvider {
                 }
 
                 var accountMaxPct: Double?
+                var accountWindows: [QuotaWindow] = []
                 if let limits = agg.newestQuotaLimits {
                     let prefix = isMultiAccount ? "\(account) " : ""
                     if let fh = limits.fiveHour {
+                        let utilization = fh.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
-                            name: prefix + "5h",
-                            utilization: fh.usedPercentage.map { $0 / 100.0 },
-                            resetsAt: fh.resetsAtDate
+                            name: prefix + "5h", utilization: utilization, resetsAt: fh.resetsAtDate
+                        ))
+                        accountWindows.append(QuotaWindow(
+                            name: "5h", utilization: utilization, resetsAt: fh.resetsAtDate
                         ))
                     }
                     if let sd = limits.sevenDay {
+                        let utilization = sd.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
-                            name: prefix + "7d",
-                            utilization: sd.usedPercentage.map { $0 / 100.0 },
-                            resetsAt: sd.resetsAtDate
+                            name: prefix + "7d", utilization: utilization, resetsAt: sd.resetsAtDate
+                        ))
+                        accountWindows.append(QuotaWindow(
+                            name: "7d", utilization: utilization, resetsAt: sd.resetsAtDate
                         ))
                     }
                     accountMaxPct = [limits.fiveHour?.usedPercentage, limits.sevenDay?.usedPercentage]
@@ -246,7 +252,7 @@ public actor ClaudeHookProvider: UsageProvider {
                     }
                 }
 
-                // raw keys feed the popover breakdown line (ProviderRowView) + debugging.
+                // raw keys kept for debugging / cache inspection.
                 if agg.sawTodayCost {
                     raw["cost.\(account)"] = "\(agg.costToday)"
                 }
@@ -259,6 +265,18 @@ public actor ClaudeHookProvider: UsageProvider {
                     if let pct = accountMaxPct { part += " \(Int(pct.rounded()))%" }
                     breakdownParts.append(part)
                 }
+
+                // Per-account slice for the row's indented children (UsageSnapshot.accounts).
+                let accountQuota: Quota? = accountMaxPct.map { pct in
+                    let frac = pct / 100.0
+                    return Quota(used: frac, limit: 1.0, remaining: max(0, 1.0 - frac))
+                }
+                accountsOut.append(UsageSnapshot.AccountUsage(
+                    name: account,
+                    costTodayUSD: agg.sawTodayCost ? agg.costToday : nil,
+                    quota: accountQuota,
+                    quotaWindows: accountWindows.isEmpty ? nil : accountWindows
+                ))
             }
 
             let quotaWindows = windows.isEmpty ? nil : windows
@@ -288,7 +306,8 @@ public actor ClaudeHookProvider: UsageProvider {
                 quota: primaryQuota,
                 raw: raw,
                 quotaWindows: quotaWindows,
-                tooltipLabel: tooltipLabel
+                tooltipLabel: tooltipLabel,
+                accounts: accountsOut.isEmpty ? nil : accountsOut
             )
 
             lastStatus = .ok(lastSuccess: now)

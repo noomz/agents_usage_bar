@@ -104,24 +104,26 @@ public struct ProviderRowView: View {
                         .opacity(isStale || isDegraded ? 0.6 : 1.0)
                     }
 
-                    // Multi-account breakdown (Claude hook mode with ≥2 ccs accounts):
-                    // one compact caption line, e.g. "default $1.23 41% · personal $0.45 12%".
-                    // Derived from raw["cost.<account>"] / raw["quota.<account>"] written by
-                    // ClaudeHookProvider; absent for every other provider and for
-                    // single-account feeds, so the row layout is unchanged there.
-                    if state.id == .claude, let breakdown = accountBreakdownText(state.snapshot) {
-                        Text(breakdown)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                            .opacity(isStale || isDegraded ? 0.6 : 1.0)
-                    }
-
                     // Quota bar — opacity composes UI-08 stale dimming and the
                     // Plan 03-07 / D-11 degraded dimming.
                     QuotaBar(quota: state.snapshot?.quota)
                         .frame(maxWidth: .infinity)
                         .opacity(isStale || isDegraded ? 0.6 : 1.0)
+
+                    // Per-account child rows (Claude hook mode aggregating ≥2 ccs
+                    // accounts): one indented sub-row per account with its own cost,
+                    // quota bar, and reset countdown. snapshot.accounts is nil for every
+                    // other provider and for single-account feeds, so nothing changes there.
+                    if let accountRows = state.snapshot?.accounts, accountRows.count >= 2 {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(accountRows) { account in
+                                AccountChildRow(account: account, now: ctx.date)
+                            }
+                        }
+                        .padding(.leading, 14)
+                        .padding(.top, 2)
+                        .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                    }
 
                     // Reset countdown + relative timestamp.
                     //
@@ -190,31 +192,6 @@ public struct ProviderRowView: View {
         return cost.formatted(.currency(code: "USD"))
     }
 
-    /// Multi-account breakdown line from `raw["cost.<account>"]` / `raw["quota.<account>"]`
-    /// (ClaudeHookProvider). Returns nil unless ≥2 accounts are present. Account order:
-    /// "default" first, then alphabetical — mirrors the provider's window ordering.
-    private func accountBreakdownText(_ snapshot: UsageSnapshot?) -> String? {
-        guard let raw = snapshot?.raw else { return nil }
-        var accounts: Set<String> = []
-        for key in raw.keys {
-            if key.hasPrefix("cost.") { accounts.insert(String(key.dropFirst("cost.".count))) }
-            if key.hasPrefix("quota.") { accounts.insert(String(key.dropFirst("quota.".count))) }
-        }
-        guard accounts.count >= 2 else { return nil }
-        let ordered = accounts.sorted { ($0 == "default" ? 0 : 1, $0) < ($1 == "default" ? 0 : 1, $1) }
-        let parts = ordered.map { account in
-            var part = account
-            if let cost = raw["cost.\(account)"], let value = Decimal(string: cost) {
-                part += " " + value.formatted(.currency(code: "USD"))
-            }
-            if let quota = raw["quota.\(account)"] {
-                part += " \(quota)"
-            }
-            return part
-        }
-        return parts.joined(separator: " · ")
-    }
-
     /// Account balance text, or nil when not available.
     private func balanceText(_ snapshot: UsageSnapshot?) -> String? {
         guard let s = snapshot, let bal = s.balanceUSD else { return nil }
@@ -246,6 +223,57 @@ public struct ProviderRowView: View {
         if totalMinutes >= 1 {
             return "Resets \(totalMinutes)m"
         }
+        return "Resets <1m"
+    }
+}
+
+// MARK: - AccountChildRow
+
+/// One indented per-account sub-row under an aggregated provider row (Claude hook mode):
+/// account name · today cost, its own color-coded quota bar, and a per-account reset
+/// countdown. Pure value render from `UsageSnapshot.AccountUsage`.
+struct AccountChildRow: View {
+    let account: UsageSnapshot.AccountUsage
+    let now: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Text(account.name)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                if let cost = account.costTodayUSD {
+                    Text("·")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(cost.formatted(.currency(code: "USD")))
+                        .font(.caption2)
+                        .monospacedDigit()
+                }
+                Spacer()
+                if let resets = resetsText() {
+                    Text(resets)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .monospacedDigit()
+                }
+            }
+            QuotaBar(quota: account.quota)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// Soonest reset across this account's windows; nil hides the label (no windows).
+    /// Mirrors ProviderRowView.resetsText formatting.
+    private func resetsText() -> String? {
+        guard let soonest = account.quotaWindows?.compactMap(\.resetsAt).min() else { return nil }
+        let interval = soonest.timeIntervalSince(now)
+        if interval <= 0 { return "Resets now" }
+        let totalMinutes = Int(interval / 60)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours >= 1 { return "Resets \(hours)h \(minutes)m" }
+        if totalMinutes >= 1 { return "Resets \(totalMinutes)m" }
         return "Resets <1m"
     }
 }

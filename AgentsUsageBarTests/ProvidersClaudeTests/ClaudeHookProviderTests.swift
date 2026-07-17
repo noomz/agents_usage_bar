@@ -223,6 +223,16 @@ struct ClaudeHookProviderTests {
 
         // Tooltip breakdown, default first.
         #expect(snap.tooltipLabel == "default $1.00 40% · personal $0.25 70%")
+
+        // Per-account slices for the row's indented children.
+        let accountRows = try #require(snap.accounts)
+        #expect(accountRows.map(\.name) == ["default", "personal"])
+        #expect(accountRows[0].costTodayUSD == Decimal(string: "1"))
+        #expect(accountRows[0].quota?.used == 0.4)
+        #expect(accountRows[0].quotaWindows?.map(\.name) == ["5h", "7d"])
+        #expect(accountRows[1].costTodayUSD == Decimal(string: "0.25"))
+        #expect(accountRows[1].quota?.used == 0.7)
+        #expect(accountRows[1].quotaWindows?.map(\.name) == ["7d"])
     }
 
     /// The same session captured under several account dirs (runtime env flapping in
@@ -269,6 +279,9 @@ struct ClaudeHookProviderTests {
 
         #expect(try #require(snap.quotaWindows).map(\.name) == ["5h", "7d"])
         #expect(snap.tooltipLabel == nil)
+        // accounts is still populated (one slice) — the UI hides children below 2.
+        #expect(snap.accounts?.count == 1)
+        #expect(snap.accounts?.first?.name == "default")
     }
 
     /// Cleanup + pruneFeed reach account subdirectories.

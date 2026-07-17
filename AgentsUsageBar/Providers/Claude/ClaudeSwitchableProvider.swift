@@ -106,7 +106,8 @@ public actor ClaudeSwitchableProvider: UsageProvider {
                     quota: hookSnap.quota,
                     raw: hookSnap.raw,
                     quotaWindows: hookSnap.quotaWindows,
-                    tooltipLabel: hookSnap.tooltipLabel
+                    tooltipLabel: hookSnap.tooltipLabel,
+                    accounts: hookSnap.accounts
                 )
             } else {
                 snapshot = try await delegate.fetch(now: now)

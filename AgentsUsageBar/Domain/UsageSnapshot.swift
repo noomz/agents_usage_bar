@@ -44,6 +44,37 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
     /// pay-per-token accounts return an empty or absent `quota_windows` array.
     public let quotaWindows: [QuotaWindow]?
 
+    /// Per-account usage split for providers that aggregate several accounts into one
+    /// row (Claude hook mode across ccs instances). `nil` for every other provider and
+    /// for single-account feeds; `ProviderRowView` renders one indented child row per
+    /// element when ≥2 are present.
+    ///
+    /// Decoding compatibility: `Optional` + synthesised `init(from:)`, so cache envelopes
+    /// written before this field existed decode with `accounts == nil` (same pattern as
+    /// `tooltipLabel`).
+    public let accounts: [AccountUsage]?
+
+    /// One account's slice of an aggregated provider row.
+    public struct AccountUsage: Sendable, Equatable, Codable, Identifiable {
+        /// Account key — "default" for `~/.claude`, else the ccs instance slug.
+        public let name: String
+        /// Today's cost reported by this account's sessions. `nil` = no data today.
+        public let costTodayUSD: Decimal?
+        /// Max utilization across this account's quota windows (drives the child bar).
+        public let quota: Quota?
+        /// This account's own quota windows (plain "5h"/"7d" names, with `resetsAt`).
+        public let quotaWindows: [QuotaWindow]?
+
+        public var id: String { name }
+
+        public init(name: String, costTodayUSD: Decimal?, quota: Quota?, quotaWindows: [QuotaWindow]?) {
+            self.name = name
+            self.costTodayUSD = costTodayUSD
+            self.quota = quota
+            self.quotaWindows = quotaWindows
+        }
+    }
+
     /// Optional tooltip surfaced via SwiftUI `.help()` on `ProviderRowView` (D-15).
     ///
     /// Carries Codex `plan_type` (e.g. `"plus"`, `"pro"`, `"team"`, `"enterprise"`)
@@ -67,7 +98,8 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         quota: Quota?,
         raw: [String: String],
         quotaWindows: [QuotaWindow]? = nil,
-        tooltipLabel: String? = nil
+        tooltipLabel: String? = nil,
+        accounts: [AccountUsage]? = nil
     ) {
         self.providerID = providerID
         self.asOf = asOf
@@ -78,5 +110,6 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         self.raw = raw
         self.quotaWindows = quotaWindows
         self.tooltipLabel = tooltipLabel
+        self.accounts = accounts
     }
 }
