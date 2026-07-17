@@ -90,6 +90,37 @@ struct UserPreferencesStoreTests {
         #expect(store.providerEnabled[.openrouter] == false)
     }
 
+    // MARK: - Test 6b: claudeSource round-trip
+
+    @Test("roundTrip_claudeSource")
+    func roundTrip_claudeSource() async throws {
+        let defaults = makeDefaults()
+        let store = UserPreferencesStore(defaults: defaults)
+        store.setClaudeSource(.hook)
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(store.claudeSource == .hook)
+    }
+
+    // MARK: - Test 6c: claudeSource default is .sessionReads
+
+    @Test("claudeSource_defaultsToSessionReads")
+    func claudeSource_defaultsToSessionReads() {
+        let defaults = makeDefaults()
+        #expect(defaults.object(forKey: AUBDefaultsKey.claudeSource) == nil)
+        let store = UserPreferencesStore(defaults: defaults)
+        #expect(store.claudeSource == .sessionReads)
+    }
+
+    // MARK: - Test 6d: unknown claudeSource rawValue falls back to default
+
+    @Test("claudeSource_unknownRawValue_fallsBackToSessionReads")
+    func claudeSource_unknownRawValue_fallsBackToSessionReads() {
+        let defaults = makeDefaults()
+        defaults.set("garbage", forKey: AUBDefaultsKey.claudeSource)
+        let store = UserPreferencesStore(defaults: defaults)
+        #expect(store.claudeSource == .sessionReads)
+    }
+
     // MARK: - Test 7: fresh store defaults match expected
 
     @Test("freshStore_defaultsMatchExpected")
@@ -101,6 +132,7 @@ struct UserPreferencesStoreTests {
         #expect(store.theme == .auto)
         #expect(store.openAtLogin == false)
         #expect(store.hasSeenWelcome == false)
+        #expect(store.claudeSource == .sessionReads)
         #expect(store.providerEnabled.isEmpty == true)
     }
 

@@ -11,6 +11,7 @@ public enum AUBDefaultsKey {
     public static let theme           = "aub.theme"             // String (AppTheme.rawValue)
     public static let openAtLogin     = "aub.openAtLogin"       // Bool
     public static let hasSeenWelcome  = "aub.hasSeenWelcome"    // Bool
+    public static let claudeSource    = "aub.provider.claude.source"  // String (ClaudeUsageSource.rawValue)
     /// Per-provider enabled flag: "aub.provider.<providerID.rawValue>.enabled"
     public static func providerEnabled(_ id: ProviderID) -> String {
         "aub.provider.\(id.rawValue).enabled"
@@ -63,6 +64,10 @@ public final class UserPreferencesStore {
 
     /// Whether the first-run welcome window has been shown. Default `false`.
     public private(set) var hasSeenWelcome: Bool = false
+
+    /// Which mechanism the Claude row uses for today's usage. Default `.sessionReads`
+    /// (existing JSONL + OAuth behavior preserved when the key is absent).
+    public private(set) var claudeSource: ClaudeUsageSource = .sessionReads
 
     /// Per-provider enabled flags. Absent key = not yet explicitly set (treat as enabled for
     /// providers that exist in the registry; detection seeding sets these on first launch).
@@ -121,6 +126,10 @@ public final class UserPreferencesStore {
         defaults.set(v, forKey: AUBDefaultsKey.hasSeenWelcome)
     }
 
+    public func setClaudeSource(_ v: ClaudeUsageSource) {
+        defaults.set(v.rawValue, forKey: AUBDefaultsKey.claudeSource)
+    }
+
     public func setProviderEnabled(_ id: ProviderID, enabled: Bool) {
         defaults.set(enabled, forKey: AUBDefaultsKey.providerEnabled(id))
     }
@@ -142,6 +151,10 @@ public final class UserPreferencesStore {
 
         openAtLogin    = defaults.bool(forKey: AUBDefaultsKey.openAtLogin)   // false when absent
         hasSeenWelcome = defaults.bool(forKey: AUBDefaultsKey.hasSeenWelcome)
+
+        claudeSource = ClaudeUsageSource(
+            rawValue: defaults.string(forKey: AUBDefaultsKey.claudeSource) ?? ""
+        ) ?? .sessionReads
 
         var map: [ProviderID: Bool] = [:]
         for id in ProviderID.allKnown {

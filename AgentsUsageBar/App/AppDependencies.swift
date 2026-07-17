@@ -166,7 +166,17 @@ public enum AppDependencies {
             cache: cache,
             clock: clock
         )
-        registry.append(claudeProvider)
+
+        // Wrap the JSONL provider and a hook (statusline-tee) provider in the switchable
+        // facade. The facade owns the `.claude` identity and delegates each fetch to the
+        // mode selected by `aub.provider.claude.source` (default `.sessionReads` — existing
+        // behavior). Only the facade is registered; the concrete providers are collaborators.
+        let claudeHookProvider = ClaudeHookProvider()
+        let claudeSwitchable = ClaudeSwitchableProvider(
+            jsonl: claudeProvider,
+            hookProvider: claudeHookProvider
+        )
+        registry.append(claudeSwitchable)
 
         // 6.1. Codex provider (Plan 03-08) — register when config.codex.enabled
         //      AND (~/.codex/sessions exists OR ~/.codex/auth.json exists).
