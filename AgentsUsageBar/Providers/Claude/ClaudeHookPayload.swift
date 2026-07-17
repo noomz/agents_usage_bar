@@ -10,6 +10,8 @@ import Foundation
 ///
 /// Verified fields (code.claude.com/docs/en/statusline, 2026-07-17):
 /// - `session_id` (String) — resets on `/clear` (new session_id, cost restarts at 0).
+/// - `transcript_path` (String) — the session's transcript JSONL location; encodes the
+///   owning account (`~/.ccs/instances/<slug>/…` vs `~/.claude/…`).
 /// - `model.id`, `model.display_name`.
 /// - `cost.total_cost_usd` (Double) — cumulative, client-computed cost for THIS session.
 /// - `rate_limits.five_hour|seven_day.used_percentage` (0–100 Double) — Pro/Max only,
@@ -25,6 +27,14 @@ public struct ClaudeHookPayload: Decodable, Sendable, Equatable {
 
     /// The Claude Code session this payload describes. `nil` if the field is absent.
     public let sessionId: String?
+
+    /// Path to the session's transcript JSONL. This is the RELIABLE account signal:
+    /// ccs instances store transcripts under `~/.ccs/instances/<slug>/projects/...`,
+    /// whereas the tee script's `$CLAUDE_CONFIG_DIR`-based directory routing has been
+    /// observed to flap across invocations for one session (a work-env fire can capture
+    /// a personal session's payload). `ClaudeHookProvider` prefers this over the
+    /// directory the file landed in.
+    public let transcriptPath: String?
 
     /// The active model for this session.
     public let model: Model?

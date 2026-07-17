@@ -27,7 +27,13 @@ public struct QuotaBar: View {
     public var body: some View {
         if let quota {
             let fraction = min(max(quota.fraction, 0), 1)
-            let color = Self.color(forFraction: fraction)
+            // `Quota.fraction` is the CONSUMED fraction (used/limit) — every provider
+            // fills `used` with utilization. `color(forFraction:)`'s thresholds are
+            // defined over the REMAINING fraction (UI-03: red = <20% remaining), so
+            // invert before selecting the color. Passing the consumed fraction directly
+            // rendered fresh windows red and nearly-exhausted ones green (live bug,
+            // 2026-07-17: a 0%-used account showed a red bar).
+            let color = Self.color(forFraction: 1.0 - fraction)
             VStack(alignment: .leading, spacing: 2) {
                 GeometryReader { proxy in
                     ZStack(alignment: .leading) {

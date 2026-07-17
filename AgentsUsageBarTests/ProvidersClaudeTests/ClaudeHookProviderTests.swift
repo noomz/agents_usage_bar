@@ -263,6 +263,47 @@ struct ClaudeHookProviderTests {
         #expect(snap.tooltipLabel == nil)
     }
 
+    /// transcript_path beats the feed directory for account attribution: the runtime
+    /// $CLAUDE_CONFIG_DIR routing flaps in shared-settings ccs setups, so a personal
+    /// session can be captured under work/. The payload's transcript_path is the truth.
+    @Test func transcriptPathOverridesDirectoryAttribution() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        // Captured under work/ — but the payload belongs to the personal instance.
+        let workDir = dir.appendingPathComponent("work", isDirectory: true)
+        try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
+        try writeSession("s1", json: """
+        {
+          "session_id": "s1",
+          "transcript_path": "/Users/x/.ccs/instances/personal/projects/p/s1.jsonl",
+          "cost": { "total_cost_usd": 4.0 }
+        }
+        """, mtime: now, in: workDir)
+        // A default-account session, flat legacy layout, no transcript_path → dir fallback.
+        try writeSession("s2", json: costJSON(sessionId: "s2", usd: 1.0), mtime: now, in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        #expect(snap.raw["cost.personal"] == "4")
+        #expect(snap.raw["cost.work"] == nil)
+        #expect(snap.raw["cost.default"] == "1")
+        #expect(snap.accounts?.map(\.name) == ["default", "personal"])
+    }
+
+    /// Path→account mapping used for attribution.
+    @Test func accountFromTranscriptPath() {
+        #expect(ClaudeHookProvider.account(
+            fromTranscriptPath: "/Users/x/.ccs/instances/work/projects/p/s.jsonl") == "work")
+        #expect(ClaudeHookProvider.account(
+            fromTranscriptPath: "/Users/x/.claude/projects/p/s.jsonl") == "default")
+        #expect(ClaudeHookProvider.account(
+            fromTranscriptPath: "/Users/x/.ccs/shared/context-groups/g/projects/p/s.jsonl") == nil)
+        #expect(ClaudeHookProvider.account(fromTranscriptPath: nil) == nil)
+    }
+
     /// Single-account feeds keep the plain "5h"/"7d" names and nil tooltip — a9d9353
     /// regression guard.
     @Test func singleAccount_keepsPlainWindowNamesAndNilTooltip() async throws {

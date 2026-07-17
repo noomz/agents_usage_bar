@@ -37,6 +37,14 @@ struct ClaudeHookPayloadTests {
         #expect(p.rateLimits?.sevenDay?.usedPercentage == 7.0)
     }
 
+    @Test func transcriptPathDecodes() throws {
+        let json = """
+        { "session_id": "s", "transcript_path": "/Users/x/.ccs/instances/personal/projects/p/s.jsonl" }
+        """
+        let p = try decode(json)
+        #expect(p.transcriptPath == "/Users/x/.ccs/instances/personal/projects/p/s.jsonl")
+    }
+
     @Test func epochResetsAtConvertsToDate() throws {
         let p = try decode(Self.fullJSON)
 

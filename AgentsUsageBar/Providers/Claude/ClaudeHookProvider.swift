@@ -178,7 +178,15 @@ public actor ClaudeHookProvider: UsageProvider {
                       let payload = try? ClaudeHookPayload.decode(data)
                 else { continue }
 
-                var agg = accounts[entry.account] ?? AccountAgg()
+                // Attribution: the payload's transcript_path encodes the OWNING account
+                // and beats the directory the tee happened to write into — the runtime
+                // $CLAUDE_CONFIG_DIR routing flaps in shared-settings ccs setups (observed
+                // live: personal sessions captured under work/). Directory is the fallback
+                // for payloads without a transcript_path.
+                let account = Self.account(fromTranscriptPath: payload.transcriptPath)
+                    ?? entry.account
+
+                var agg = accounts[account] ?? AccountAgg()
 
                 if entry.mtime >= today, let usd = payload.cost?.totalCostUsd {
                     agg.costToday += Self.decimal(fromUSD: usd)
@@ -194,7 +202,7 @@ public actor ClaudeHookProvider: UsageProvider {
                     }
                 }
 
-                accounts[entry.account] = agg
+                accounts[account] = agg
             }
 
             // Stable account order: "default" first, then alphabetical (drives window
@@ -391,6 +399,21 @@ public actor ClaudeHookProvider: UsageProvider {
                 logger.notice("hook cleanup could not remove \(entry.url.lastPathComponent, privacy: .public)")
             }
         }
+    }
+
+    /// Derives the owning account from a session's `transcript_path`:
+    ///   `…/.ccs/instances/<slug>/…` → `<slug>`
+    ///   `…/.claude/…`               → `"default"`
+    ///   anything else / nil          → nil (caller falls back to the feed directory)
+    static func account(fromTranscriptPath path: String?) -> String? {
+        guard let path else { return nil }
+        if let range = path.range(of: "/.ccs/instances/") {
+            let rest = path[range.upperBound...]
+            let slug = rest.prefix { $0 != "/" }
+            return slug.isEmpty ? nil : String(slug)
+        }
+        if path.contains("/.claude/") { return "default" }
+        return nil
     }
 
     /// Formats a USD `Decimal` with two fraction digits for the breakdown line.
