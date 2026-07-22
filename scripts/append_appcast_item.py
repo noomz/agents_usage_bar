@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import email.utils
+import html
 import os
 import re
 import shutil
@@ -102,32 +103,34 @@ def rfc822_pubdate_now() -> str:
     return email.utils.formatdate(time.time(), usegmt=True)
 
 
-def wrap_release_notes_html(body_html: str) -> str:
+def wrap_simple_update_html(*, version: str, release_url: str) -> str:
     """
-    Wrap a rendered-HTML release-notes fragment in a self-contained,
-    dark-mode-aware document for Sparkle's WKWebView.
+    Minimal update-dialog body: version line + link to GitHub Release page.
 
-    The fragment is the HTML GitHub's /markdown API produced from the
-    release body. Embedding it (vs. linking the GitHub Release page via
-    <sparkle:releaseNotesLink>) keeps the update dialog showing ONLY the
-    notes — no GitHub site chrome (nav bar, Sign-in button, repo tabs),
-    which is what a bare releaseNotesLink URL renders.
+    Intentionally does NOT embed full release-body HTML and does NOT use
+    <sparkle:releaseNotesLink> (that loads the whole GitHub page chrome
+    into Sparkle's WKWebView). Description takes priority, so this keeps
+    the dialog short and sends users out-of-app for details.
     """
+    # Escape user/tag-derived values; tags below are author-controlled.
+    # html.escape + later ElementTree XML escaping round-trips correctly:
+    # "&" → "&" in text → "&amp;" in XML → "&" after parse.
+    safe_version = html.escape(version, quote=True)
+    safe_url = html.escape(release_url, quote=True)
+    body = (
+        f"<p><strong>Version {safe_version}</strong> is available.</p>"
+        f'<p><a href="{safe_url}">View release notes on GitHub ↗</a></p>'
+    )
     return (
         '<!DOCTYPE html><html><head><meta charset="utf-8">'
         "<style>"
         ":root{color-scheme:light dark;}"
         "body{font:13px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;"
-        "margin:0;padding:4px 14px;color:#1d1d1f;}"
-        "h1,h2,h3{font-weight:600;margin:12px 0 6px;}"
-        "h1{font-size:17px;}h2{font-size:15px;}h3{font-size:13px;}"
-        "ul,ol{padding-left:20px;margin:6px 0;}li{margin:3px 0;}"
-        "code{font-family:ui-monospace,SFMono-Regular,monospace;"
-        "background:rgba(127,127,127,.18);padding:1px 4px;"
-        "border-radius:4px;font-size:12px;}"
+        "margin:0;padding:10px 14px;color:#1d1d1f;}"
+        "p{margin:0 0 8px;}"
         "a{color:#0a84ff;text-decoration:none;}"
         "@media (prefers-color-scheme:dark){body{color:#f5f5f7;}}"
-        "</style></head><body>" + body_html + "</body></html>"
+        "</style></head><body>" + body + "</body></html>"
     )
 
 
@@ -138,7 +141,6 @@ def make_item(
     dmg_url: str,
     edsig: str,
     length: str,
-    notes_html: str | None = None,
 ) -> ET.Element:
     """Build a new <item> Element with all required Sparkle fields."""
     item = ET.Element("item")
@@ -146,14 +148,15 @@ def make_item(
     title = ET.SubElement(item, "title")
     title.text = f"Version {version}"
 
-    # Inline release notes. ElementTree has no CDATA API, so we set the
-    # text and let it escape `<`/`&` on write; Sparkle's XML parser
-    # un-escapes them back to real HTML before handing the string to
-    # WKWebView, so escaped-text and CDATA are semantically identical here.
-    # When absent, Sparkle falls back to <sparkle:releaseNotesLink> below.
-    if notes_html and notes_html.strip():
-        description = ET.SubElement(item, "description")
-        description.text = wrap_release_notes_html(notes_html)
+    release_url = derive_release_notes_link(dmg_url)
+
+    # Always embed a short description so Sparkle never falls back to
+    # loading the GitHub Release page inside the update window.
+    # ElementTree escapes the HTML text; Sparkle un-escapes before WKWebView.
+    description = ET.SubElement(item, "description")
+    description.text = wrap_simple_update_html(
+        version=version, release_url=release_url
+    )
 
     pub_date = ET.SubElement(item, "pubDate")
     pub_date.text = rfc822_pubdate_now()
@@ -168,12 +171,6 @@ def make_item(
 
     sparkle_min = ET.SubElement(item, ET.QName(SPARKLE_NS, "minimumSystemVersion"))
     sparkle_min.text = "14.0"
-
-    # Release-notes link points to the GitHub Release page derived from
-    # the DMG URL's parent (.../releases/download/<tag>/<file> →
-    # .../releases/tag/<tag>).
-    notes_link = ET.SubElement(item, ET.QName(SPARKLE_NS, "releaseNotesLink"))
-    notes_link.text = derive_release_notes_link(dmg_url)
 
     enclosure = ET.SubElement(item, "enclosure")
     enclosure.set("url", dmg_url)
@@ -240,16 +237,6 @@ def main(argv: list[str]) -> int:
         required=True,
         help='Raw sign_update output, e.g. \'sparkle:edSignature="..." length="..."\'',
     )
-    parser.add_argument(
-        "--notes-html-file",
-        default=None,
-        help=(
-            "Optional path to a file of rendered-HTML release notes "
-            "(e.g. from `gh api /markdown`). Embedded as the item's "
-            "<description> so Sparkle renders clean notes instead of the "
-            "full GitHub Release page. Omitted/empty → link-only behavior."
-        ),
-    )
     parser.add_argument("appcast", help="Path to appcast.xml (seeded from template if missing)")
     args = parser.parse_args(argv)
 
@@ -258,25 +245,12 @@ def main(argv: list[str]) -> int:
 
     edsig, length = parse_sig_line(args.sig_line)
 
-    notes_html = None
-    if args.notes_html_file:
-        notes_path = Path(args.notes_html_file)
-        if notes_path.exists():
-            notes_html = notes_path.read_text(encoding="utf-8")
-        else:
-            print(
-                f"WARNING: --notes-html-file {notes_path} not found; "
-                "emitting item without inline <description>.",
-                file=sys.stderr,
-            )
-
     item = make_item(
         version=args.version,
         build_number=args.build_number,
         dmg_url=args.dmg_url,
         edsig=edsig,
         length=length,
-        notes_html=notes_html,
     )
 
     prepend_item(appcast_path, item)

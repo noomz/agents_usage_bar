@@ -283,15 +283,13 @@ jobs:
           unset SPARKLE_ED_PRIVATE_KEY
           echo "sign_update produced signature line (redacted)"
 
-          # Build the release-notes markdown ONCE here, then reuse the same
-          # /tmp/notes.md for both the appcast <description> (below) and the
-          # GitHub Release body (next step). Single source = the dialog and
-          # the Release page can never drift.
+          # Build release-body markdown for the GitHub Release step below.
+          # Appcast intentionally does NOT embed this — Sparkle dialog shows
+          # only version + link to the Release page (see append_appcast_item.py).
           #   - signed lane: GitHub's auto-changelog (generate-notes API);
           #     the tag already exists (this workflow is tag-triggered), so
           #     the release object need not exist yet.
-          #   - unsigned lane: the one-time "Open Anyway" Gatekeeper note,
-          #     matching the prior behavior of the Release step.
+          #   - unsigned lane: the one-time "Open Anyway" Gatekeeper note.
           if [ "${SIGNED}" = "true" ]; then
             gh api "repos/${GH_REPOSITORY}/releases/generate-notes" \
               -f tag_name="${REF_NAME}" -q .body > /tmp/notes.md
@@ -303,19 +301,6 @@ jobs:
               '> this once; Sparkle auto-updates afterward.' \
               > /tmp/notes.md
           fi
-
-          # Render markdown → HTML with GitHub's own /markdown endpoint so the
-          # appcast helper stays stdlib-only (no `pip install markdown`). The
-          # helper wraps this fragment in a styled, dark-mode-aware document.
-          #
-          # NOTE: `gh api -f text=@/tmp/notes.md` does NOT read the file — `-f`
-          # (--raw-field) sends the value verbatim, so the rendered notes ended up
-          # as the literal string "@/tmp/notes.md" (v0.1.4 regression). Read the file
-          # into a variable and pass its contents as a plain raw field instead.
-          NOTES_MD="$(cat /tmp/notes.md)"
-          gh api -X POST /markdown \
-            -f mode=gfm -f context="${GH_REPOSITORY}" -f text="${NOTES_MD}" \
-            > /tmp/notes.html || : > /tmp/notes.html
 
           # Append the appcast <item> in a DEDICATED gh-pages worktree.
           # A plain `git checkout gh-pages` fails two ways: (1) the version-bump
@@ -331,12 +316,12 @@ jobs:
 
           # Script is run from the main worktree (where scripts/ lives);
           # it writes into the gh-pages worktree's appcast.xml.
+          # Dialog body = version + Release-page link only (no embedded notes).
           python3 scripts/append_appcast_item.py \
             --version "$VERSION" \
             --build-number "$GITHUB_RUN_NUMBER" \
             --dmg-url "$DMG_URL" \
             --sig-line "$SIG_LINE" \
-            --notes-html-file /tmp/notes.html \
             /tmp/ghpages/appcast.xml
 
           git -C /tmp/ghpages config user.email "ci@github.com"
@@ -356,11 +341,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Reuse the exact markdown the appcast step already built at
-          # /tmp/notes.md (signed → auto-changelog, unsigned → Gatekeeper
-          # "Open Anyway" note). Single source means the Release page and the
-          # Sparkle update dialog show identical notes. Fall back to
-          # --generate-notes only if the file is somehow missing.
+          # Reuse /tmp/notes.md from the appcast/sign step (signed → auto-
+          # changelog, unsigned → Gatekeeper "Open Anyway" note). Full release
+          # body lives on the GitHub Release page; Sparkle dialog only links
+          # there. Fall back to --generate-notes if the file is missing.
           if [ -s /tmp/notes.md ]; then
             NOTES_ARGS=(--notes-file /tmp/notes.md)
           else
