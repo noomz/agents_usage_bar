@@ -113,8 +113,9 @@ public enum AppDependencies {
         let config = ConfigStore(env: ProcessInfoEnvReader()).load(preferences: preferences)
 
         // 5. Provider registry — OpenRouter only in Phase 1
+        //    Honor config.openrouter.enabled (prefs overlay via ConfigStore.load).
         var registry: [any UsageProvider] = []
-        if let apiKey = config.openrouter.apiKey {
+        if config.openrouter.enabled, let apiKey = config.openrouter.apiKey {
             let endpoint = OpenRouterEndpoint(
                 baseURL: config.openrouter.apiURL
             )
@@ -129,54 +130,59 @@ public enum AppDependencies {
             registry.append(provider)
         }
 
-        // 6. Claude provider (Plan 02.04 — always wired; degrades to local-only when no OAuth creds)
+        // 6. Claude provider (Plan 02.04 — wired when enabled; degrades to local-only when no OAuth)
+        //    Claude has no AppConfig.enabled flag; Settings toggle lives only in
+        //    preferences.providerEnabled[.claude] (absent = enabled).
+        let claudeEnabled = preferences.providerEnabled[.claude] ?? true
         let credLoader = ClaudeCredentialLoader()
         let oauthClient: (any ClaudeOAuthClientProtocol)?
-        if credLoader.loadCredentials() != nil {
+        if claudeEnabled, credLoader.loadCredentials() != nil {
             oauthClient = ClaudeOAuthClient(http: http, credentials: credLoader, clock: clock)
         } else {
             oauthClient = nil
         }
 
-        let claudePricing: ClaudeModelPricing
-        do {
-            claudePricing = try ClaudeModelPricing.loadBundled()
-        } catch {
-            os.Logger(subsystem: "app.agents-usage-bar", category: "composition")
-                .error("Claude pricing load failed: \(error.localizedDescription, privacy: .public)")
-            // Degrade to a hardcoded fallback rather than crash (T-02.02-03).
-            claudePricing = ClaudeModelPricing(
-                schemaVersion: 1,
-                lastUpdated: "fallback",
-                default: .init(
-                    inputPer1M: 3.00,
-                    outputPer1M: 15.00,
-                    cacheWritePer1M: 3.75,
-                    cacheReadPer1M: 0.30
-                ),
-                models: [:]
+        if claudeEnabled {
+            let claudePricing: ClaudeModelPricing
+            do {
+                claudePricing = try ClaudeModelPricing.loadBundled()
+            } catch {
+                os.Logger(subsystem: "app.agents-usage-bar", category: "composition")
+                    .error("Claude pricing load failed: \(error.localizedDescription, privacy: .public)")
+                // Degrade to a hardcoded fallback rather than crash (T-02.02-03).
+                claudePricing = ClaudeModelPricing(
+                    schemaVersion: 1,
+                    lastUpdated: "fallback",
+                    default: .init(
+                        inputPer1M: 3.00,
+                        outputPer1M: 15.00,
+                        cacheWritePer1M: 3.75,
+                        cacheReadPer1M: 0.30
+                    ),
+                    models: [:]
+                )
+            }
+
+            let claudeProvider = ClaudeJSONLProvider(
+                reader: TranscriptReader(),
+                scanner: TranscriptDirectoryScanner(),
+                pricing: claudePricing,
+                oauth: oauthClient,
+                cache: cache,
+                clock: clock
             )
+
+            // Wrap the JSONL provider and a hook (statusline-tee) provider in the switchable
+            // facade. The facade owns the `.claude` identity and delegates each fetch to the
+            // mode selected by `aub.provider.claude.source` (default `.sessionReads` — existing
+            // behavior). Only the facade is registered; the concrete providers are collaborators.
+            let claudeHookProvider = ClaudeHookProvider()
+            let claudeSwitchable = ClaudeSwitchableProvider(
+                jsonl: claudeProvider,
+                hookProvider: claudeHookProvider
+            )
+            registry.append(claudeSwitchable)
         }
-
-        let claudeProvider = ClaudeJSONLProvider(
-            reader: TranscriptReader(),
-            scanner: TranscriptDirectoryScanner(),
-            pricing: claudePricing,
-            oauth: oauthClient,
-            cache: cache,
-            clock: clock
-        )
-
-        // Wrap the JSONL provider and a hook (statusline-tee) provider in the switchable
-        // facade. The facade owns the `.claude` identity and delegates each fetch to the
-        // mode selected by `aub.provider.claude.source` (default `.sessionReads` — existing
-        // behavior). Only the facade is registered; the concrete providers are collaborators.
-        let claudeHookProvider = ClaudeHookProvider()
-        let claudeSwitchable = ClaudeSwitchableProvider(
-            jsonl: claudeProvider,
-            hookProvider: claudeHookProvider
-        )
-        registry.append(claudeSwitchable)
 
         // 6.1. Codex provider (Plan 03-08) — register when config.codex.enabled
         //      AND (~/.codex/sessions exists OR ~/.codex/auth.json exists).
@@ -309,11 +315,9 @@ public enum AppDependencies {
         //     seedPlaceholder declared in Plan 01.05's AggregateStore.swift
         //     ProviderState.placeholder declared in Plan 01.02's Domain/ProviderState.swift
 
-        // OpenRouter placeholder: only when api key is absent AND Claude is also absent
-        // (if Claude is present the store is non-empty and OpenRouter row is optional).
-        // Preserve Phase 1 invariant: when registry has neither provider, seed OpenRouter.
-        let hasOpenRouter = config.openrouter.apiKey != nil
-        if !hasOpenRouter {
+        // OpenRouter placeholder: only when enabled AND api key absent.
+        // Disabled providers stay off the popover entirely (D-04).
+        if config.openrouter.enabled, config.openrouter.apiKey == nil {
             store.seedPlaceholder(
                 providerID: ProviderID.openrouter,
                 displayName: "OpenRouter",
@@ -321,10 +325,11 @@ public enum AppDependencies {
             )
         }
 
-        // Claude placeholder: when neither OAuth credentials NOR any JSONL root exists (B10).
+        // Claude placeholder: when enabled AND neither OAuth credentials NOR any JSONL root
+        // exists (B10). Disabled Claude is omitted from the popover.
         let claudeRoots = ClaudeRoots.defaultRoots
         let hasTranscripts = claudeRoots.contains { FileManager.default.fileExists(atPath: $0.path) }
-        if oauthClient == nil && !hasTranscripts {
+        if claudeEnabled, oauthClient == nil, !hasTranscripts {
             store.seedPlaceholder(
                 providerID: ProviderID.claude,
                 displayName: "Claude",
@@ -332,10 +337,9 @@ public enum AppDependencies {
             )
         }
 
-        // Plan 03-08 Codex placeholder: when not registered (config disabled
-        // OR no rollouts AND no auth.json), seed a row so the popover always
-        // shows Codex in the provider list.
-        if !codexRegistered {
+        // Plan 03-08 Codex placeholder: seed only when enabled but not registered
+        // (no rollouts AND no auth.json). Disabled config hides Codex entirely.
+        if config.codex.enabled, !codexRegistered {
             store.seedPlaceholder(
                 providerID: ProviderID.codex,
                 displayName: "Codex",
@@ -343,10 +347,9 @@ public enum AppDependencies {
             )
         }
 
-        // Plan 03-08 Gemini placeholder: when not registered (config disabled
-        // OR settings gate closed OR no oauth_creds.json), seed a row so the
-        // popover always shows Gemini in the provider list.
-        if !geminiRegistered {
+        // Plan 03-08 Gemini placeholder: seed only when enabled but not registered
+        // (settings gate closed OR no oauth_creds.json). Disabled config hides Gemini.
+        if config.gemini.enabled, !geminiRegistered {
             store.seedPlaceholder(
                 providerID: ProviderID.gemini,
                 displayName: "Gemini",
@@ -375,16 +378,26 @@ public enum AppDependencies {
             )
         }
 
-        // Plan 04-08 — llama.cpp placeholder when not registered (D-04).
+        // Plan 04-08 — llama.cpp placeholder when enabled but not registered (D-04).
         // Renders a discoverability subtitle so the user knows the feature exists
         // without having to read docs. LOCAL-03 invariant preserved: no port scanning.
-        if !llamacppRegistered {
+        // Disabled config / prefs hide the row entirely.
+        if config.llamacpp.enabled, !llamacppRegistered {
             store.seedPlaceholder(
                 providerID: ProviderID.llamacpp,
                 displayName: "llama.cpp",
                 placeholderMessage: "Set [llamacpp] port in config.toml to enable",
                 status: .notRunning
             )
+        }
+
+        // D-04 cold-start: prefs may disable a provider that cache-load already seeded.
+        // Apply the disable set now so the first popover paint never shows hidden rows.
+        // (observePreferences only reacts to subsequent changes, not the initial map.)
+        for id in ProviderID.allKnown {
+            if preferences.providerEnabled[id] == false {
+                store.setProviderEnabled(id, enabled: false)
+            }
         }
 
         // Note: Plan 04-04 / 04-05 do NOT skip placeholders for Ollama / LM Studio.

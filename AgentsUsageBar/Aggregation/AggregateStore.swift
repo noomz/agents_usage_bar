@@ -74,6 +74,12 @@ public final class AggregateStore {
     /// first reference via `breaker(for:)`.
     private var perProviderBreakers: [ProviderID: CircuitBreaker] = [:]
 
+    /// Providers hidden by Settings → Providers toggle (D-04).
+    ///
+    /// Kept separate from `providers` so a later `performRefresh` / cache rehydrate /
+    /// `seedPlaceholder` cannot resurrect a user-disabled row. Absent = enabled.
+    private var disabledProviderIDs: Set<ProviderID> = []
+
     // MARK: - Init
 
     /// Creates the store, immediately loading cached provider state so the UI shows
@@ -188,6 +194,8 @@ public final class AggregateStore {
         placeholderMessage: String? = nil,
         status: ProviderStatus = .unauthenticated
     ) {
+        // D-04: never surface a row the user explicitly disabled.
+        guard !disabledProviderIDs.contains(providerID) else { return }
         providers[providerID] = ProviderState.placeholder(
             providerID: providerID,
             displayName: displayName,
@@ -227,17 +235,13 @@ public final class AggregateStore {
     /// `preferences.setProviderEnabled(_:enabled:)` — the AggregateStore wiring lives here.
     public func setProviderEnabled(_ providerID: ProviderID, enabled: Bool) {
         if !enabled {
-            // Cancel any in-flight task for this provider by tripping the circuit breaker
-            // open. The next performRefresh tick will synthesize a "circuit-open" result
-            // for this provider, which will set its state appropriately while leaving the
-            // structured concurrency task group unaffected.
-            //
-            // Additionally, mark the provider's row as disabled in the visible set by
-            // removing it from the providers dictionary. The row disappears from the
-            // popover immediately (D-04: "store hides row").
+            // Remember the disable so later refresh/apply/seed cannot resurrect the row.
+            // Also drop it from the visible dictionary immediately (D-04: "store hides row").
+            disabledProviderIDs.insert(providerID)
             providers.removeValue(forKey: providerID)
             rollupTotals()
         } else {
+            disabledProviderIDs.remove(providerID)
             // Re-include: seed a placeholder so the row appears on the next tick.
             // The poll scheduler will pick it up on its next interval — no immediate fetch.
             if providers[providerID] == nil {
@@ -315,11 +319,16 @@ public final class AggregateStore {
 
     private func performRefresh(now: Date) async {
         // Plan 02.06 — Pre-compute per-provider gating BEFORE fan-out:
+        // 0. D-04: skip user-disabled providers entirely (no fetch, no row revive).
         // 1. POLL-06: skip providers whose lastStatus is `.unauthenticated` (terminal until
         //    composition changes, which typically requires an app restart).
         // 2. POLL-05: skip providers whose 5-strike breaker is currently open.
         var gateDecisions: [(provider: any UsageProvider, allow: Bool, openBreaker: Bool)] = []
         for p in registry {
+            // D-04 — user disabled in Settings; leave no task and keep row hidden.
+            if disabledProviderIDs.contains(p.id) {
+                continue
+            }
             // POLL-06 — terminal unauthenticated; do not even consult the breaker.
             if let existing = providers[p.id], case .unauthenticated = existing.status {
                 gateDecisions.append((p, false, false))
@@ -393,6 +402,8 @@ public final class AggregateStore {
 
     /// Applies a per-provider fetch result, updating the provider's `ProviderState`.
     private func apply(_ result: Result<UsageSnapshot, Error>, for id: ProviderID, now: Date) {
+        // D-04: a fetch that crossed the disable edge must not recreate the hidden row.
+        guard !disabledProviderIDs.contains(id) else { return }
         let authoritativeName = displayNamesByID[id] ?? id.rawValue
         switch result {
         case .success(let snap):
