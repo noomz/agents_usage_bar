@@ -112,4 +112,15 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         self.tooltipLabel = tooltipLabel
         self.accounts = accounts
     }
+
+    /// Secondary-line caption when a provider has quota but no today tokens/cost
+    /// (Grok billing, Gemini windows). `nil` keeps the existing "— · —" dashes.
+    public var quotaUsageCaption: String? {
+        guard tokensToday == nil, costTodayUSD == nil, let quota else { return nil }
+        let pct = Int((quota.fraction * 100).rounded())
+        if let period = raw["period"], !period.isEmpty {
+            return "\(pct)% used · \(period)"
+        }
+        return "\(pct)% used"
+    }
 }

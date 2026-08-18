@@ -55,7 +55,8 @@ public actor GrokBillingProvider: UsageProvider {
         let quota = billing.makeQuota()
         var raw: [String: String] = [:]
         if let tier = billing.subscriptionTier { raw["subscriptionTier"] = tier }
-        if let period = billing.currentPeriod { raw["currentPeriod"] = period }
+        if let period = billing.periodLabel ?? billing.currentPeriod { raw["period"] = period }
+        if let product = billing.productLabel { raw["product"] = product }
         if let prepaid = billing.prepaidBalance { raw["prepaidBalance"] = String(prepaid) }
 
         let window: [QuotaWindow]?
@@ -72,11 +73,16 @@ public actor GrokBillingProvider: UsageProvider {
         }
 
         let balance: Decimal?
-        if let prepaid = billing.prepaidBalance {
+        if let prepaid = billing.prepaidBalance, prepaid > 0 {
             balance = Decimal(prepaid)
         } else {
             balance = nil
         }
+
+        var tooltipParts: [String] = []
+        if let product = billing.productLabel { tooltipParts.append(product) }
+        if let period = billing.periodLabel { tooltipParts.append(period.capitalized) }
+        if let tier = billing.subscriptionTier { tooltipParts.append(tier) }
 
         return UsageSnapshot(
             providerID: id,
@@ -87,7 +93,7 @@ public actor GrokBillingProvider: UsageProvider {
             quota: quota,
             raw: raw,
             quotaWindows: window,
-            tooltipLabel: billing.subscriptionTier
+            tooltipLabel: tooltipParts.isEmpty ? nil : tooltipParts.joined(separator: " · ")
         )
     }
 

@@ -79,6 +79,12 @@ public struct ProviderRowView: View {
                     if isLocal {
                         LocalRowSecondaryView(state: state)
                             .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                    } else if let quotaCaption = state.snapshot?.quotaUsageCaption {
+                        Text(quotaCaption)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .opacity(isStale || isDegraded ? 0.6 : 1.0)
                     } else {
                         // Token count · USD cost · balance
                         HStack(spacing: 4) {

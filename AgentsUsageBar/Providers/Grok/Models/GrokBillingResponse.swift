@@ -21,6 +21,10 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
     public let currentPeriod: String?
     public let isUnifiedBillingUser: Bool?
     public let onDemandEnabled: Bool?
+    /// Human period label from `currentPeriod.type` (e.g. "weekly").
+    public let periodLabel: String?
+    /// Product row used for the bar, typically "GrokBuild".
+    public let productLabel: String?
 
     public init(
         creditUsagePercent: Double? = nil,
@@ -35,7 +39,9 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
         billingPeriodEnd: Date? = nil,
         currentPeriod: String? = nil,
         isUnifiedBillingUser: Bool? = nil,
-        onDemandEnabled: Bool? = nil
+        onDemandEnabled: Bool? = nil,
+        periodLabel: String? = nil,
+        productLabel: String? = nil
     ) {
         self.creditUsagePercent = creditUsagePercent
         self.monthlyLimit = monthlyLimit
@@ -50,6 +56,8 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
         self.currentPeriod = currentPeriod
         self.isUnifiedBillingUser = isUnifiedBillingUser
         self.onDemandEnabled = onDemandEnabled
+        self.periodLabel = periodLabel
+        self.productLabel = productLabel
     }
 
     public init(from decoder: Decoder) throws {
@@ -76,7 +84,8 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
 
     /// 0...1 utilization for the billing window.
     public var normalizedPercent: Double? {
-        guard let raw = creditUsagePercent else { return nil }
+        let raw = creditUsagePercent
+        guard let raw else { return nil }
         let value = raw > 1.0 ? raw / 100.0 : raw
         return min(1.0, max(0.0, value))
     }
@@ -88,8 +97,12 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
     // MARK: - Decode helpers
 
     private static func decodeFields(from c: KeyedDecodingContainer<AnyCodingKey>) -> GrokBillingResponse? {
+        let period = c.decodePeriod()
+        let product = c.decodeProductUsage()
+        let percent = c.decodeFlexibleDouble("creditUsagePercent", "credit_usage_percent")
+            ?? product.percent
         let response = GrokBillingResponse(
-            creditUsagePercent: c.decodeFlexibleDouble("creditUsagePercent", "credit_usage_percent"),
+            creditUsagePercent: percent,
             monthlyLimit: c.decodeFlexibleDouble("monthlyLimit", "monthly_limit"),
             includedUsed: c.decodeFlexibleDouble("includedUsed", "included_used"),
             totalUsed: c.decodeFlexibleDouble("totalUsed", "total_used"),
@@ -97,21 +110,45 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
             onDemandCap: c.decodeFlexibleDouble("onDemandCap", "on_demand_cap"),
             onDemandUsed: c.decodeFlexibleDouble("onDemandUsed", "on_demand_used"),
             subscriptionTier: c.decodeFlexibleString("subscriptionTier", "subscription_tier"),
-            billingPeriodStart: c.decodeFlexibleDate("billingPeriodStart", "billing_period_start"),
-            billingPeriodEnd: c.decodeFlexibleDate("billingPeriodEnd", "billing_period_end"),
-            currentPeriod: c.decodeFlexibleString("currentPeriod", "current_period"),
+            billingPeriodStart: c.decodeFlexibleDate("billingPeriodStart", "billing_period_start")
+                ?? period.start,
+            billingPeriodEnd: c.decodeFlexibleDate("billingPeriodEnd", "billing_period_end")
+                ?? period.end,
+            currentPeriod: period.label,
             isUnifiedBillingUser: c.decodeFlexibleBool("isUnifiedBillingUser", "is_unified_billing_user"),
-            onDemandEnabled: c.decodeFlexibleBool("onDemandEnabled", "on_demand_enabled")
+            onDemandEnabled: c.decodeFlexibleBool("onDemandEnabled", "on_demand_enabled"),
+            periodLabel: period.label,
+            productLabel: product.label
         )
         if response.creditUsagePercent == nil
             && response.monthlyLimit == nil
             && response.includedUsed == nil
             && response.totalUsed == nil
             && response.prepaidBalance == nil
-            && response.subscriptionTier == nil {
+            && response.subscriptionTier == nil
+            && response.billingPeriodEnd == nil {
             return nil
         }
         return response
+    }
+}
+
+/// One `config.productUsage[]` row from the live billing payload.
+struct GrokProductUsageRow: Decodable, Sendable, Equatable {
+    let product: String?
+    let usagePercent: Double?
+
+    private enum CodingKeys: String, CodingKey {
+        case product
+        case usagePercent
+        case usage_percent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        product = try c.decodeIfPresent(String.self, forKey: .product)
+        usagePercent = try c.decodeIfPresent(Double.self, forKey: .usagePercent)
+            ?? c.decodeIfPresent(Double.self, forKey: .usage_percent)
     }
 }
 
@@ -148,8 +185,57 @@ private extension KeyedDecodingContainer where K == AnyCodingKey {
             if let v = try? decodeIfPresent(Double.self, forKey: k) { return v }
             if let v = try? decodeIfPresent(Int.self, forKey: k) { return Double(v) }
             if let s = try? decodeIfPresent(String.self, forKey: k), let v = Double(s) { return v }
+            // Live wire wraps money/caps as `{ "val": 0 }`.
+            if let nested = try? nestedContainer(keyedBy: AnyCodingKey.self, forKey: k) {
+                if let v = try? nested.decodeIfPresent(Double.self, forKey: AnyCodingKey("val")) { return v }
+                if let v = try? nested.decodeIfPresent(Int.self, forKey: AnyCodingKey("val")) { return Double(v) }
+            }
         }
         return nil
+    }
+
+    func decodePeriod() -> (label: String?, start: Date?, end: Date?) {
+        if let s = decodeFlexibleString("currentPeriod", "current_period") {
+            return (Self.humanizePeriod(s), nil, nil)
+        }
+        for key in ["currentPeriod", "current_period"] {
+            guard let nested = try? nestedContainer(keyedBy: AnyCodingKey.self, forKey: AnyCodingKey(key)) else {
+                continue
+            }
+            let type = (try? nested.decodeIfPresent(String.self, forKey: AnyCodingKey("type")))
+            let start = nested.decodeDateValue(for: "start")
+            let end = nested.decodeDateValue(for: "end")
+            return (type.map(Self.humanizePeriod), start, end)
+        }
+        return (nil, nil, nil)
+    }
+
+    func decodeProductUsage() -> (label: String?, percent: Double?) {
+        for key in ["productUsage", "product_usage"] {
+            guard let rows = try? decodeIfPresent([GrokProductUsageRow].self, forKey: AnyCodingKey(key)),
+                  !rows.isEmpty
+            else { continue }
+            let preferred = rows.first(where: { ($0.product ?? "").localizedCaseInsensitiveContains("grok") })
+                ?? rows.first
+            return (preferred?.product, preferred?.usagePercent)
+        }
+        return (nil, nil)
+    }
+
+    func decodeDateValue(for key: String) -> Date? {
+        if let s = try? decodeIfPresent(String.self, forKey: AnyCodingKey(key)) {
+            return Self.parseISO8601(s)
+        }
+        return nil
+    }
+
+    static func humanizePeriod(_ raw: String) -> String {
+        let upper = raw.uppercased()
+        if upper.contains("WEEKLY") { return "weekly" }
+        if upper.contains("MONTHLY") { return "monthly" }
+        if upper.contains("DAILY") { return "daily" }
+        if upper.contains("HOURLY") { return "hourly" }
+        return raw
     }
 
     func decodeFlexibleString(_ keys: String...) -> String? {
@@ -183,11 +269,17 @@ private extension KeyedDecodingContainer where K == AnyCodingKey {
     }
 
     static func parseISO8601(_ s: String) -> Date? {
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = fractional.date(from: s) { return d }
-        let plain = ISO8601DateFormatter()
-        plain.formatOptions = [.withInternetDateTime]
-        return plain.date(from: s)
+        let variants: [ISO8601DateFormatter.Options] = [
+            [.withInternetDateTime, .withFractionalSeconds, .withColonSeparatorInTimeZone],
+            [.withInternetDateTime, .withFractionalSeconds],
+            [.withInternetDateTime, .withColonSeparatorInTimeZone],
+            [.withInternetDateTime],
+        ]
+        for options in variants {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = options
+            if let d = f.date(from: s) { return d }
+        }
+        return nil
     }
 }

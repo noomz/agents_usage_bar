@@ -50,6 +50,7 @@ struct GrokBillingProviderTests {
         #expect(snap.quota?.limit == 1000)
         #expect(snap.balanceUSD == Decimal(12.5))
         #expect(snap.tooltipLabel == "supergrok")
+        #expect(snap.quotaUsageCaption == "43% used")
         #expect(provider.capabilities.hasTokens == false)
         #expect(provider.capabilities.hasQuota == true)
         if case .ok = await provider.status() {
@@ -57,6 +58,22 @@ struct GrokBillingProviderTests {
         } else {
             Issue.record("expected .ok status")
         }
+    }
+
+    @Test func live_weekly_payload_surfaces_percent_and_period() async throws {
+        let data = try Data(contentsOf: URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appending(path: "Fixtures/billing-config-weekly.json"))
+        let billing = try JSONDecoder().decode(GrokBillingResponse.self, from: data)
+        let client = FakeGrokBillingClient([.ok(billing)])
+        let provider = GrokBillingProvider(client: client, clock: SystemClock())
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.quotaUsageCaption == "24% used · weekly")
+        #expect(snap.tokensToday == nil)
+        #expect(snap.costTodayUSD == nil)
+        #expect(snap.balanceUSD == nil)
+        #expect(snap.tooltipLabel == "GrokBuild · Weekly")
+        #expect(snap.quotaWindows?.first?.resetsAt != nil)
     }
 
     @Test func unauthorized_is_muted_not_thrown() async throws {

@@ -45,6 +45,21 @@ struct GrokBillingResponseTests {
         #expect(quota?.used == 80)
     }
 
+    @Test func decodes_live_weekly_config_envelope() throws {
+        let data = try fixture("billing-config-weekly")
+        let decoded = try JSONDecoder().decode(GrokBillingResponse.self, from: data)
+        #expect(decoded.creditUsagePercent == 24)
+        #expect(decoded.periodLabel == "weekly")
+        #expect(decoded.productLabel == "GrokBuild")
+        #expect(decoded.prepaidBalance == 0)
+        #expect(decoded.onDemandCap == 0)
+        #expect(decoded.billingPeriodEnd != nil)
+        let quota = decoded.makeQuota()
+        #expect(quota?.used == 24)
+        #expect(quota?.limit == 100)
+        #expect(decoded.normalizedPercent == 0.24)
+    }
+
     @Test func unknown_future_fields_do_not_break_decode() throws {
         let json = Data(#"{ "monthlyLimit": 10, "brandNewField": { "x": 1 } }"#.utf8)
         let decoded = try JSONDecoder().decode(GrokBillingResponse.self, from: json)

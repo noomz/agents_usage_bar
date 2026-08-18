@@ -22,6 +22,32 @@ struct UsageSnapshotTooltipLabelTests {
 
     // MARK: - 1. Default nil
 
+    @Test func quotaUsageCaption_whenQuotaOnly() {
+        let snap = UsageSnapshot(
+            providerID: .grok,
+            asOf: Date(timeIntervalSince1970: 1_700_000_000),
+            tokensToday: nil,
+            costTodayUSD: nil,
+            balanceUSD: nil,
+            quota: Quota(used: 24, limit: 100, remaining: 76),
+            raw: ["period": "weekly"]
+        )
+        #expect(snap.quotaUsageCaption == "24% used · weekly")
+    }
+
+    @Test func quotaUsageCaption_nil_whenTodayCostPresent() {
+        let snap = UsageSnapshot(
+            providerID: .openrouter,
+            asOf: Date(timeIntervalSince1970: 1_700_000_000),
+            tokensToday: nil,
+            costTodayUSD: Decimal(string: "0.57"),
+            balanceUSD: nil,
+            quota: Quota(used: 1, limit: 10, remaining: 9),
+            raw: [:]
+        )
+        #expect(snap.quotaUsageCaption == nil)
+    }
+
     @Test func init_withoutTooltipLabel_defaultsToNil() {
         let snap = UsageSnapshot(
             providerID: .codex,
