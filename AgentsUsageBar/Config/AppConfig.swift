@@ -17,6 +17,8 @@ public struct AppConfig: Sendable, Equatable {
     public let codex: CodexConfig
     /// Per-provider configuration for Google Gemini OAuth-personal (Plan 03-08 — GEMINI-02..04).
     public let gemini: GeminiConfig
+    /// Per-provider configuration for xAI Grok Build TUI billing.
+    public let grok: GrokConfig
     /// Per-provider configuration for Ollama localhost runtime (Plan 04-02 — LOCAL-01).
     public let ollama: OllamaConfig
     /// Per-provider configuration for LM Studio localhost runtime (Plan 04-02 — LOCAL-02).
@@ -30,6 +32,7 @@ public struct AppConfig: Sendable, Equatable {
         openrouter: OpenRouterConfig,
         codex: CodexConfig,
         gemini: GeminiConfig,
+        grok: GrokConfig,
         ollama: OllamaConfig,
         lmstudio: LMStudioConfig,
         llamacpp: LlamaCppConfig
@@ -39,6 +42,7 @@ public struct AppConfig: Sendable, Equatable {
         self.openrouter = openrouter
         self.codex = codex
         self.gemini = gemini
+        self.grok = grok
         self.ollama = ollama
         self.lmstudio = lmstudio
         self.llamacpp = llamacpp
@@ -65,6 +69,11 @@ public struct AppConfig: Sendable, Equatable {
         gemini: GeminiConfig(
             enabled: true,
             projectIDOverride: nil
+        ),
+        grok: GrokConfig(
+            enabled: true,
+            apiKey: nil,
+            apiURL: URL(string: "https://cli-chat-proxy.grok.com/v1")!
         ),
         ollama: OllamaConfig(enabled: true),
         lmstudio: LMStudioConfig(enabled: true, port: 1234),
@@ -204,6 +213,36 @@ extension GeminiConfig {
     /// Plan 05-02: used by `ConfigStore.load(preferences:)` to apply UserDefaults overlay (D-02).
     func withEnabled(_ enabled: Bool) -> GeminiConfig {
         GeminiConfig(enabled: enabled, projectIDOverride: projectIDOverride)
+    }
+}
+
+// MARK: - GrokConfig
+
+/// Per-provider configuration for xAI Grok Build TUI billing.
+///
+/// `[grok] enabled` and `[grok] api_url` are TOML knobs.
+/// `XAI_API_KEY` is env-only (not TOML) — the normal path is `~/.grok/auth.json`.
+public struct GrokConfig: Sendable, Equatable {
+    /// Whether the Grok provider is enabled. Default: `true`.
+    public let enabled: Bool
+
+    /// Optional API-key fallback (`XAI_API_KEY`). Env-only. Wrapped in `Secret`.
+    public let apiKey: Secret?
+
+    /// CLI chat-proxy base URL. Default: `https://cli-chat-proxy.grok.com/v1`.
+    /// Override via `GROK_CLI_CHAT_PROXY_BASE_URL` or `[grok] api_url`.
+    public let apiURL: URL
+
+    public init(enabled: Bool, apiKey: Secret?, apiURL: URL) {
+        self.enabled = enabled
+        self.apiKey = apiKey
+        self.apiURL = apiURL
+    }
+}
+
+extension GrokConfig {
+    func withEnabled(_ enabled: Bool) -> GrokConfig {
+        GrokConfig(enabled: enabled, apiKey: apiKey, apiURL: apiURL)
     }
 }
 

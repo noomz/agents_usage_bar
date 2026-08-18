@@ -59,6 +59,33 @@ struct DetectionProbeTests {
 
     // MARK: - Gemini
 
+    @Test func grok_detected_whenAuthJsonExists() async throws {
+        let tmpDir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: tmpDir) }
+        let grokDir = tmpDir.appendingPathComponent(".grok", isDirectory: true)
+        try FileManager.default.createDirectory(at: grokDir, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: grokDir.appendingPathComponent("auth.json"))
+        let fm = FakeHomeFileManager(homeDir: tmpDir)
+        let results = await DetectionProbe.probeAll(
+            config: makeConfig(openrouterKey: nil),
+            localhostHTTP: makeStubHTTP(status: 500),
+            fileManager: fm
+        )
+        #expect(results[.grok] == .detected)
+    }
+
+    @Test func grok_notDetected_whenHomeHasNoGrokDir() async throws {
+        let tmpDir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: tmpDir) }
+        let fm = FakeHomeFileManager(homeDir: tmpDir)
+        let results = await DetectionProbe.probeAll(
+            config: makeConfig(openrouterKey: nil),
+            localhostHTTP: makeStubHTTP(status: 500),
+            fileManager: fm
+        )
+        #expect(results[.grok] == .notDetected)
+    }
+
     @Test func gemini_detected_whenCredsAndSettingsPresent() async throws {
         let tmpDir = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: tmpDir) }
@@ -117,11 +144,11 @@ struct DetectionProbeTests {
 
     // MARK: - All 7 providers present
 
-    @Test func probeAll_runsAllSevenProviders() async {
+    @Test func probeAll_runsAllKnownProviders() async {
         let config = makeConfig(openrouterKey: nil)
         let http = makeStubHTTP(status: 200)
         let results = await DetectionProbe.probeAll(config: config, localhostHTTP: http)
-        #expect(results.count == 7)
+        #expect(results.count == ProviderID.allKnown.count)
         for id in ProviderID.allKnown {
             #expect(results[id] != nil, "Missing result for \(id.rawValue)")
         }
@@ -169,6 +196,7 @@ private func makeConfig(
         ),
         codex: CodexConfig(enabled: true, bearerOverride: nil, sessionWindowDays: 2),
         gemini: GeminiConfig(enabled: true, projectIDOverride: nil),
+        grok: AppConfig.defaults.grok,
         ollama: OllamaConfig(enabled: true),
         lmstudio: LMStudioConfig(enabled: true, port: lmstudioPort),
         llamacpp: LlamaCppConfig(enabled: true, port: llamacppPort)

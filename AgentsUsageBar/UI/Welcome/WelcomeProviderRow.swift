@@ -137,6 +137,7 @@ struct WelcomeProviderRow: View {
         case .claude:     return "brain"
         case .codex:      return "chevron.left.forwardslash.chevron.right"
         case .gemini:     return "sparkles"
+        case .grok:       return "bolt.horizontal"
         case .ollama:     return "desktopcomputer"
         case .lmstudio:   return "display"
         case .llamacpp:   return "cpu"

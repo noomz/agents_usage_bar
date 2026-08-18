@@ -41,6 +41,7 @@ struct AppConfigCodexGeminiTests {
             openrouter: AppConfig.defaults.openrouter,
             codex: CodexConfig(enabled: false, bearerOverride: nil, sessionWindowDays: 2),
             gemini: GeminiConfig(enabled: false, projectIDOverride: nil),
+            grok: AppConfig.defaults.grok,
             ollama: AppConfig.defaults.ollama,
             lmstudio: AppConfig.defaults.lmstudio,
             llamacpp: AppConfig.defaults.llamacpp
@@ -80,6 +81,11 @@ struct AppConfigCodexGeminiTests {
             ),
             codex: CodexConfig(enabled: true, bearerOverride: nil, sessionWindowDays: 2),
             gemini: GeminiConfig(enabled: true, projectIDOverride: nil),
+            grok: GrokConfig(
+                enabled: true,
+                apiKey: nil,
+                apiURL: URL(string: "https://cli-chat-proxy.grok.com/v1")!
+            ),
             ollama: OllamaConfig(enabled: true),
             lmstudio: LMStudioConfig(enabled: true, port: 1234),
             llamacpp: LlamaCppConfig(enabled: true, port: nil)

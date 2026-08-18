@@ -68,6 +68,7 @@ public enum DetectionProbe {
             : probeClaudeFS(fileManager: fileManager)
         let codexResult = probeCodexFS(fileManager: fileManager)
         let geminiResult = probeGeminiFS(fileManager: fileManager)
+        let grokResult = probeGrok(config: config, fileManager: fileManager)
 
         // Per-provider port/URL values (Sendable: Int, URL, Optional<Int>)
         let lmstudioPort = config.lmstudio.port
@@ -86,6 +87,8 @@ public enum DetectionProbe {
 
             // 4. Gemini — pre-computed synchronous result
             group.addTask { (.gemini, geminiResult) }
+
+            group.addTask { (.grok, grokResult) }
 
             // 5. Ollama — HTTP probe (2s timeout via localhostHTTP)
             group.addTask {
@@ -161,6 +164,17 @@ public enum DetectionProbe {
             fileManager: fileManager
         ) else { return .notDetected }
         return .detected
+    }
+
+    private static func probeGrok(config: AppConfig, fileManager: FileManager) -> DetectionResult {
+        if config.grok.apiKey != nil { return .detected }
+        let home = GrokRoots.home(fileManager: fileManager)
+        let authPath = GrokRoots.authJSON(home: home).path
+        let sessionsPath = GrokRoots.sessionsDirectory(home: home).path
+        if fileManager.fileExists(atPath: authPath) || fileManager.fileExists(atPath: sessionsPath) {
+            return .detected
+        }
+        return .notDetected
     }
 
     // MARK: - HTTP probe helper (async)

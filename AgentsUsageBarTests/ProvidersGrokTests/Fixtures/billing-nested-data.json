@@ -1,0 +1,8 @@
+{
+  "data": {
+    "credit_usage_percent": 80,
+    "monthly_limit": 500,
+    "included_used": 400,
+    "subscriptionTier": "supergrok_plus"
+  }
+}

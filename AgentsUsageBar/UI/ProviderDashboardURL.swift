@@ -35,6 +35,9 @@ public enum ProviderDashboardURL {
     /// account-picker page (RESEARCH §"Dashboard URLs").
     public static let gemini = URL(string: "https://aistudio.google.com/u/0/usage")!
 
+    /// Grok / SuperGrok usage dashboard (CLI `/usage` destination).
+    public static let grok = URL(string: "https://grok.com/?_s=usage")!
+
     /// Returns the dashboard URL for `providerID`, or `nil` when no mapping
     /// exists (out-of-scope providers — local LLMs, unknown future IDs).
     ///
@@ -47,6 +50,7 @@ public enum ProviderDashboardURL {
         case "claude":     return claude
         case "codex":      return codex
         case "gemini":     return gemini
+        case "grok":       return grok
         default:           return nil
         }
     }

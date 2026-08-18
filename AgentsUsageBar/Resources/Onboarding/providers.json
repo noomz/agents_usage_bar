@@ -41,6 +41,16 @@
       "docsURL": "https://github.com/google-gemini/gemini-cli"
     },
     {
+      "providerID": "grok",
+      "displayName": "Grok",
+      "detectionDescription": "Run `grok login` to create ~/.grok/auth.json, or set XAI_API_KEY. Sessions under ~/.grok/sessions also count as detected.",
+      "envSnippet": "# Optional fallback when no grok login session is stored.\nexport XAI_API_KEY=<your-xai-key>",
+      "envNote": "Restart Agents Usage Bar to apply environment variable changes. Prefer `grok login` so the app can read ~/.grok/auth.json.",
+      "tomlSnippet": "# No API key in TOML — Grok reads ~/.grok/auth.json automatically.\n[grok]\nenabled = true",
+      "tomlNote": "Save the file — enable/disable applies on next app restart.",
+      "docsURL": "https://grok.com/?_s=usage"
+    },
+    {
       "providerID": "ollama",
       "displayName": "Ollama",
       "detectionDescription": "Start Ollama — detected via HTTP probe on localhost:11434.",

@@ -12,9 +12,10 @@ struct OnboardingCopyTests {
 
     // MARK: - Bundle loading
 
-    @Test func loadBundled_returnsAllSevenProviders() throws {
+    @Test func loadBundled_returnsAllKnownProviders() throws {
         let copy = try OnboardingCopy.loadBundled()
-        #expect(copy.providers.count == 7, "Expected 7 providers, got \(copy.providers.count)")
+        #expect(copy.providers.count == ProviderID.allKnown.count,
+                "Expected \(ProviderID.allKnown.count) providers, got \(copy.providers.count)")
     }
 
     @Test func loadBundled_allProviderIDsPresent() throws {

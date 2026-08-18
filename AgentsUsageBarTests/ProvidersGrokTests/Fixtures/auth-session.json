@@ -1,0 +1,8 @@
+{
+  "https://auth.x.ai::example-client": {
+    "key": "session-token-fixture",
+    "auth_mode": "oauth",
+    "user_id": "user-1",
+    "refresh_token": "refresh-token-fixture"
+  }
+}

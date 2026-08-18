@@ -255,6 +255,30 @@ public enum AppDependencies {
             geminiRegistered = false
         }
 
+        // 6.2b. Grok provider — register when enabled AND a bearer exists
+        //       (XAI_API_KEY or ~/.grok/auth.json). Sessions-only with no
+        //       creds seeds a muted placeholder; billing requires a token.
+        let grokRegistered: Bool
+        if config.grok.enabled {
+            let grokLoader = GrokCredentialLoader()
+            let grokCreds = grokLoader.loadCredentials() ?? config.grok.apiKey.map {
+                GrokCredentialLoader.Result(token: $0, source: .apiKey)
+            }
+            if let creds = grokCreds {
+                let grokClient = GrokBillingClient(
+                    http: http,
+                    bearer: creds.token,
+                    baseURL: config.grok.apiURL
+                )
+                registry.append(GrokBillingProvider(client: grokClient, clock: clock))
+                grokRegistered = true
+            } else {
+                grokRegistered = false
+            }
+        } else {
+            grokRegistered = false
+        }
+
         // 6.3. Ollama provider (Plan 04-04 — LOCAL-01) — register when config.ollama.enabled.
         //      Well-known port 11434; no presence detection (always probes — first probe
         //      writes .notRunning if server is absent per Phase 3 STATE #82 isolation).
@@ -353,6 +377,14 @@ public enum AppDependencies {
             store.seedPlaceholder(
                 providerID: ProviderID.gemini,
                 displayName: "Gemini",
+                status: .unauthenticated
+            )
+        }
+
+        if config.grok.enabled, !grokRegistered {
+            store.seedPlaceholder(
+                providerID: ProviderID.grok,
+                displayName: "Grok",
                 status: .unauthenticated
             )
         }

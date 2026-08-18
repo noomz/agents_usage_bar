@@ -67,6 +67,7 @@ public final class ConfigStore: @unchecked Sendable {
         // Plan 03-08 — new per-provider sections.
         let codexSection = toml["codex"] ?? [:]
         let geminiSection = toml["gemini"] ?? [:]
+        let grokSection = toml["grok"] ?? [:]
         // Plan 04-02 — local runtime sections (no env override — port + enable are config knobs).
         let ollamaSection = toml["ollama"] ?? [:]
         let lmstudioSection = toml["lmstudio"] ?? [:]
@@ -194,6 +195,33 @@ public final class ConfigStore: @unchecked Sendable {
             geminiProjectID = nil
         }
 
+        // --- grok section ---
+        let grokEnabled: Bool
+        if case .bool(let b) = grokSection["enabled"] {
+            grokEnabled = b
+        } else {
+            grokEnabled = defaults.grok.enabled
+        }
+
+        // XAI_API_KEY is env-only (not TOML). Empty string treated as absent.
+        let grokAPIKey: Secret?
+        if let envKey = env.value(forKey: "XAI_API_KEY") {
+            grokAPIKey = Secret(envKey)
+        } else {
+            grokAPIKey = nil
+        }
+
+        let grokAPIURL: URL
+        if let envURL = env.value(forKey: "GROK_CLI_CHAT_PROXY_BASE_URL"),
+           let parsed = URL(string: envURL) {
+            grokAPIURL = parsed
+        } else if case .string(let s) = grokSection["api_url"],
+                  let parsed = URL(string: s) {
+            grokAPIURL = parsed
+        } else {
+            grokAPIURL = defaults.grok.apiURL
+        }
+
         // --- Plan 04-02 — ollama section (toml > defaults; NO env override per CONTEXT Discretion) ---
 
         // ollama.enabled: TOML only.
@@ -261,6 +289,11 @@ public final class ConfigStore: @unchecked Sendable {
                 enabled: geminiEnabled,
                 projectIDOverride: geminiProjectID
             ),
+            grok: GrokConfig(
+                enabled: grokEnabled,
+                apiKey: grokAPIKey,
+                apiURL: grokAPIURL
+            ),
             ollama: OllamaConfig(enabled: ollamaEnabled),
             lmstudio: LMStudioConfig(enabled: lmstudioEnabled, port: lmstudioPort),
             llamacpp: LlamaCppConfig(enabled: llamacppEnabled, port: llamacppPort)
@@ -300,6 +333,9 @@ public final class ConfigStore: @unchecked Sendable {
             ),
             gemini: config.gemini.withEnabled(
                 prefs.providerEnabled[.gemini] ?? config.gemini.enabled
+            ),
+            grok: config.grok.withEnabled(
+                prefs.providerEnabled[.grok] ?? config.grok.enabled
             ),
             ollama: config.ollama.withEnabled(
                 prefs.providerEnabled[.ollama] ?? config.ollama.enabled

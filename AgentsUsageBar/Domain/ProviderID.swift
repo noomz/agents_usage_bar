@@ -56,10 +56,15 @@ extension ProviderID {
     /// registry isn't available in the view environment.
     public static let localIDs: Set<ProviderID> = [.ollama, .lmstudio, .llamacpp]
 
+    /// Grok — xAI Grok Build TUI via `~/.grok/auth.json` +
+    /// `GET {cli-chat-proxy}/billing?format=credits`. Quota/credits only;
+    /// local session files do not persist billed tokens.
+    public static let grok = ProviderID(rawValue: "grok")
+
     /// Plan 05-02 — Ordered array of all known providers in display order.
     /// Used by `UserPreferencesStore.loadAll()` and `SettingsProvidersTab` row enumeration.
     public static let allKnown: [ProviderID] = [
-        .openrouter, .claude, .codex, .gemini, .ollama, .lmstudio, .llamacpp
+        .openrouter, .claude, .codex, .gemini, .grok, .ollama, .lmstudio, .llamacpp
     ]
 
     /// Human-readable display hint for this provider.
@@ -72,6 +77,7 @@ extension ProviderID {
         case "claude":     return "Claude"
         case "codex":      return "Codex"
         case "gemini":     return "Gemini"
+        case "grok":       return "Grok"
         case "ollama":     return "Ollama"
         case "lmstudio":   return "LM Studio"
         case "llamacpp":   return "llama.cpp"

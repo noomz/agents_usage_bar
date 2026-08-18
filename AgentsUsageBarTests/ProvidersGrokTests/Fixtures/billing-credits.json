@@ -1,0 +1,12 @@
+{
+  "creditUsagePercent": 42.5,
+  "monthlyLimit": 1000,
+  "includedUsed": 425,
+  "totalUsed": 430,
+  "prepaidBalance": 12.5,
+  "subscription_tier": "supergrok",
+  "billingPeriodStart": "2026-08-01T00:00:00Z",
+  "billingPeriodEnd": "2026-09-01T00:00:00Z",
+  "currentPeriod": "2026-08",
+  "on_demand_enabled": false
+}
