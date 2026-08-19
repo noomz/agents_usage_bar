@@ -39,6 +39,8 @@ public actor GrokBillingProvider: UsageProvider {
             let snap = buildSnapshot(from: billing, now: now)
             lastGoodSnapshot = snap
             lastStatus = .ok(lastSuccess: now)
+            let percent = billing.normalizedPercent.map { String(Int(($0 * 100).rounded())) } ?? "nil"
+            logger.notice("grok billing percent=\(percent, privacy: .public) period=\(billing.periodLabel ?? "nil", privacy: .public)")
             return snap
         } catch GrokBillingError.noCredentials {
             lastStatus = .unauthenticated

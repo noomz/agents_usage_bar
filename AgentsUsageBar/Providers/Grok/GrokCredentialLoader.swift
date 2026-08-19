@@ -3,9 +3,9 @@ import os
 
 /// Resolves a Grok billing bearer from `XAI_API_KEY` or `~/.grok/auth.json`.
 ///
-/// Priority:
-/// 1. Non-empty `XAI_API_KEY` (env-only; never TOML).
-/// 2. First `auth.json` entry with a non-empty `key` string.
+/// Priority (matches the Grok CLI):
+/// 1. First `auth.json` session `key` (grok login / SuperGrok).
+/// 2. Non-empty `XAI_API_KEY` (env-only; never TOML) as fallback.
 ///    Wire shape is issuer-keyed: `{ "<issuer>::<client>": { "key": "...", ... } }`.
 ///    Older curl docs used `https://accounts.x.ai/sign-in` — both shapes work
 ///    because we iterate values rather than a hard-coded key.
@@ -47,20 +47,16 @@ public struct GrokCredentialLoader: Sendable {
     }
 
     public func loadCredentials() -> Result? {
+        if let data = try? Data(contentsOf: authPath),
+           let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let key = firstSessionKey(in: root) {
+            logger.notice("grok credentials: source=session")
+            return Result(token: Secret(key), source: .session)
+        }
+
         if let envKey = environment["XAI_API_KEY"], !envKey.isEmpty {
             logger.notice("grok credentials: source=apiKey")
             return Result(token: Secret(envKey), source: .apiKey)
-        }
-
-        guard let data = try? Data(contentsOf: authPath),
-              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else {
-            return nil
-        }
-
-        if let key = firstSessionKey(in: root) {
-            logger.notice("grok credentials: source=session")
-            return Result(token: Secret(key), source: .session)
         }
         return nil
     }

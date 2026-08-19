@@ -5,7 +5,7 @@ import Testing
 @Suite("GrokCredentialLoaderTests")
 struct GrokCredentialLoaderTests {
 
-    @Test func apiKey_env_wins_over_auth_json() throws {
+    @Test func session_wins_over_apiKey_env() throws {
         let dir = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: dir) }
         try writeAuth(in: dir, key: "session-token-fixture")
@@ -14,8 +14,8 @@ struct GrokCredentialLoaderTests {
             environment: ["XAI_API_KEY": "env-api-key-fixture"]
         )
         let result = loader.loadCredentials()
-        #expect(result?.source == .apiKey)
-        #expect(result?.token.revealForRequest() == "env-api-key-fixture")
+        #expect(result?.source == .session)
+        #expect(result?.token.revealForRequest() == "session-token-fixture")
     }
 
     @Test func empty_apiKey_env_falls_through_to_session() throws {

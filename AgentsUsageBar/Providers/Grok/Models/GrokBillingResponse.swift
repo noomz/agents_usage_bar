@@ -61,6 +61,12 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
     }
 
     public init(from decoder: Decoder) throws {
+        if let typed = try? GrokCreditsDocument(from: decoder),
+           typed.config != nil,
+           let mapped = Self.fromCreditsDocument(typed) {
+            self = mapped
+            return
+        }
         let top = try decoder.container(keyedBy: AnyCodingKey.self)
         let decoded = Self.decodeFields(from: top)
             ?? top.nestedFields(for: "data").flatMap(Self.decodeFields)
@@ -68,6 +74,49 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
             ?? top.nestedFields(for: "config").flatMap(Self.decodeFields)
             ?? Self()
         self = decoded
+    }
+
+    private static func fromCreditsDocument(_ doc: GrokCreditsDocument) -> GrokBillingResponse? {
+        let cfg = doc.config
+        let period = cfg?.currentPeriod
+        let product = (cfg?.productUsage ?? []).first(where: {
+            ($0.product ?? "").localizedCaseInsensitiveContains("grok")
+        }) ?? cfg?.productUsage?.first
+        let percent = cfg?.creditUsagePercent ?? doc.creditUsagePercent ?? product?.usagePercent
+        let used = cfg?.used?.value ?? cfg?.includedUsed?.value ?? cfg?.totalUsed?.value
+        let limit = cfg?.monthlyLimit?.value
+        let start = Self.parseDate(cfg?.billingPeriodStart ?? period?.start)
+        let end = Self.parseDate(cfg?.billingPeriodEnd ?? period?.end)
+        let periodLabel = period?.type.map { KeyedDecodingContainer<AnyCodingKey>.humanizePeriod($0) }
+        let response = GrokBillingResponse(
+            creditUsagePercent: percent,
+            monthlyLimit: limit,
+            includedUsed: used ?? cfg?.includedUsed?.value,
+            totalUsed: cfg?.totalUsed?.value,
+            prepaidBalance: cfg?.prepaidBalance?.value,
+            onDemandCap: cfg?.onDemandCap?.value,
+            onDemandUsed: cfg?.onDemandUsed?.value,
+            subscriptionTier: cfg?.subscriptionTier,
+            billingPeriodStart: start,
+            billingPeriodEnd: end,
+            currentPeriod: periodLabel,
+            isUnifiedBillingUser: cfg?.isUnifiedBillingUser,
+            onDemandEnabled: nil,
+            periodLabel: periodLabel,
+            productLabel: product?.product
+        )
+        if response.creditUsagePercent == nil
+            && response.monthlyLimit == nil
+            && response.includedUsed == nil
+            && response.billingPeriodEnd == nil {
+            return nil
+        }
+        return response
+    }
+
+    static func parseDate(_ raw: String?) -> Date? {
+        guard let raw else { return nil }
+        return KeyedDecodingContainer<AnyCodingKey>.parseISO8601(raw)
     }
 
     /// Primary quota from included-used / monthly-limit, else percent-of-100.
@@ -104,7 +153,7 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
         let response = GrokBillingResponse(
             creditUsagePercent: percent,
             monthlyLimit: c.decodeFlexibleDouble("monthlyLimit", "monthly_limit"),
-            includedUsed: c.decodeFlexibleDouble("includedUsed", "included_used"),
+            includedUsed: c.decodeFlexibleDouble("includedUsed", "included_used", "used"),
             totalUsed: c.decodeFlexibleDouble("totalUsed", "total_used"),
             prepaidBalance: c.decodeFlexibleDouble("prepaidBalance", "prepaid_balance"),
             onDemandCap: c.decodeFlexibleDouble("onDemandCap", "on_demand_cap"),
@@ -130,6 +179,62 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
             return nil
         }
         return response
+    }
+}
+
+/// Typed live `/billing?format=credits` (and bare `/billing`) envelope.
+private struct GrokCreditsDocument: Decodable {
+    let config: Config?
+    let creditUsagePercent: Double?
+
+    struct Config: Decodable {
+        let creditUsagePercent: Double?
+        let currentPeriod: Period?
+        let productUsage: [Row]?
+        let billingPeriodStart: String?
+        let billingPeriodEnd: String?
+        let monthlyLimit: FlexAmount?
+        let used: FlexAmount?
+        let includedUsed: FlexAmount?
+        let totalUsed: FlexAmount?
+        let prepaidBalance: FlexAmount?
+        let onDemandCap: FlexAmount?
+        let onDemandUsed: FlexAmount?
+        let isUnifiedBillingUser: Bool?
+        let subscriptionTier: String?
+    }
+
+    struct Period: Decodable {
+        let type: String?
+        let start: String?
+        let end: String?
+    }
+
+    struct Row: Decodable {
+        let product: String?
+        let usagePercent: Double?
+    }
+}
+
+/// Number or `{ "val": N }` box used by the billing service.
+private struct FlexAmount: Decodable {
+    let value: Double
+
+    init(from decoder: Decoder) throws {
+        if let single = try? decoder.singleValueContainer() {
+            if let d = try? single.decode(Double.self) { value = d; return }
+            if let i = try? single.decode(Int.self) { value = Double(i); return }
+        }
+        let c = try decoder.container(keyedBy: AnyCodingKey.self)
+        if let d = try c.decodeIfPresent(Double.self, forKey: AnyCodingKey("val")) {
+            value = d; return
+        }
+        if let i = try c.decodeIfPresent(Int.self, forKey: AnyCodingKey("val")) {
+            value = Double(i); return
+        }
+        throw DecodingError.dataCorrupted(
+            .init(codingPath: decoder.codingPath, debugDescription: "FlexAmount")
+        )
     }
 }
 

@@ -48,16 +48,29 @@ public actor GrokBillingClient: GrokBillingClientProtocol {
         }
     }
 
-    /// Accepts either the proxy base (`…/v1`) or a full billing URL.
+    /// SuperGrok weekly percent lives on `?format=credits`. Bare `/billing`
+    /// returns a monthly `{val:0}` stub that looks like "no limit".
+    public static let defaultCreditsURL = URL(
+        string: "https://cli-chat-proxy.grok.com/v1/billing?format=credits"
+    )!
+
+    /// Accepts the proxy base (`…/v1`) or a full billing URL. Always pins
+    /// `format=credits` so we never silently fall back to the monthly stub.
     public static func creditsURL(from baseURL: URL) -> URL {
-        let path = baseURL.path
-        if path.contains("/billing") {
-            return baseURL
+        let trimmed = baseURL.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        if trimmed == "https://cli-chat-proxy.grok.com/v1" {
+            return defaultCreditsURL
         }
-        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) ?? URLComponents()
-        let trimmed = path.hasSuffix("/") ? String(path.dropLast()) : path
-        components.path = trimmed + "/billing"
-        components.queryItems = [URLQueryItem(name: "format", value: "credits")]
-        return components.url ?? baseURL.appending(path: "billing")
+        var url = baseURL
+        if !url.path.contains("/billing") {
+            url = url.appending(path: "billing")
+        }
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return defaultCreditsURL
+        }
+        var items = (components.queryItems ?? []).filter { $0.name != "format" }
+        items.append(URLQueryItem(name: "format", value: "credits"))
+        components.queryItems = items
+        return components.url ?? defaultCreditsURL
     }
 }

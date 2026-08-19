@@ -70,6 +70,22 @@ struct GrokBillingResponseTests {
         let url = GrokBillingClient.creditsURL(from: GrokBillingClient.defaultBaseURL)
         #expect(url.path.hasSuffix("/billing"))
         #expect(url.query == "format=credits")
+        #expect(url.absoluteString == GrokBillingClient.defaultCreditsURL.absoluteString)
+    }
+
+    @Test func creditsURL_pins_format_even_when_base_already_has_billing() {
+        let base = URL(string: "https://cli-chat-proxy.grok.com/v1/billing")!
+        let url = GrokBillingClient.creditsURL(from: base)
+        #expect(url.query == "format=credits")
+    }
+
+    @Test func monthly_zero_stub_does_not_synthesize_a_fake_percent_quota() throws {
+        let data = try fixture("billing-monthly-zero")
+        let decoded = try JSONDecoder().decode(GrokBillingResponse.self, from: data)
+        #expect(decoded.monthlyLimit == 0)
+        #expect(decoded.includedUsed == 0)
+        #expect(decoded.makeQuota() == nil)
+        #expect(decoded.billingPeriodEnd != nil)
     }
 
     private func fixture(_ name: String) throws -> Data {
