@@ -8,4 +8,6 @@ public enum GrokBillingError: Error, Sendable, Equatable {
     case unauthorized(status: Int)
     case billingEndpointFailed(status: Int)
     case decodeFailed
+    /// 200 with no percent/limit/reset — treated as a miss, not a real "no limit".
+    case emptyPayload
 }

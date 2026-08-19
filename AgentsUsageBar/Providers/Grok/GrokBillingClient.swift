@@ -11,8 +11,11 @@ public actor GrokBillingClient: GrokBillingClientProtocol {
     public static let defaultBaseURL = URL(string: "https://cli-chat-proxy.grok.com/v1")!
 
     private let http: any HTTPClient
-    private let bearer: Secret
     private let endpoint: URL
+    /// Reloads `~/.grok/auth.json` (or env fallback) each request so a CLI token
+    /// rotation is picked up without restarting the menu bar app.
+    private let loadBearer: @Sendable () -> Secret?
+    private var bearer: Secret?
 
     public init(
         http: any HTTPClient,
@@ -20,11 +23,43 @@ public actor GrokBillingClient: GrokBillingClientProtocol {
         baseURL: URL = GrokBillingClient.defaultBaseURL
     ) {
         self.http = http
-        self.bearer = bearer
         self.endpoint = Self.creditsURL(from: baseURL)
+        self.loadBearer = { bearer }
+        self.bearer = bearer
+    }
+
+    public init(
+        http: any HTTPClient,
+        loadBearer: @escaping @Sendable () -> Secret?,
+        baseURL: URL = GrokBillingClient.defaultBaseURL
+    ) {
+        self.http = http
+        self.endpoint = Self.creditsURL(from: baseURL)
+        self.loadBearer = loadBearer
+        self.bearer = loadBearer()
     }
 
     public func fetchCredits() async throws -> GrokBillingResponse {
+        if let fresh = loadBearer() {
+            bearer = fresh
+        }
+        guard let token = bearer else {
+            throw GrokBillingError.noCredentials
+        }
+        do {
+            return try await getCredits(bearer: token)
+        } catch GrokBillingError.unauthorized {
+            // Grok CLI rewrites auth.json in the background; retry once with a
+            // freshly loaded key before giving up.
+            if let retried = loadBearer(), retried != token {
+                bearer = retried
+                return try await getCredits(bearer: retried)
+            }
+            throw GrokBillingError.unauthorized(status: 401)
+        }
+    }
+
+    private func getCredits(bearer: Secret) async throws -> GrokBillingResponse {
         do {
             return try await http.get(
                 endpoint,

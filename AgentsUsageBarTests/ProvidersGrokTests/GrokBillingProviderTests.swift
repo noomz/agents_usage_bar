@@ -85,6 +85,38 @@ struct GrokBillingProviderTests {
         #expect(await provider.status() == .unauthenticated)
     }
 
+    @Test func empty_payload_after_success_keeps_last_good_quota() async throws {
+        let good = GrokBillingResponse(
+            creditUsagePercent: 41,
+            periodLabel: "weekly",
+            productLabel: "GrokBuild"
+        )
+        let client = FakeGrokBillingClient([.ok(good), .ok(GrokBillingResponse())])
+        let provider = GrokBillingProvider(client: client, clock: SystemClock())
+        _ = try await provider.fetch(now: now)
+        let kept = try await provider.fetch(now: now.addingTimeInterval(300))
+        #expect(kept.quotaUsageCaption == "41% used · weekly")
+        #expect(kept.tooltipLabel == "GrokBuild · Weekly")
+        if case .ok = await provider.status() {
+            // keep serving last good rather than flipping to empty "no limit"
+        } else {
+            Issue.record("expected .ok while retaining last good snapshot")
+        }
+    }
+
+    @Test func unauthorized_after_success_keeps_last_good_quota() async throws {
+        let good = GrokBillingResponse(creditUsagePercent: 41, periodLabel: "weekly")
+        let client = FakeGrokBillingClient([
+            .ok(good),
+            .fail(GrokBillingError.unauthorized(status: 401)),
+        ])
+        let provider = GrokBillingProvider(client: client, clock: SystemClock())
+        _ = try await provider.fetch(now: now)
+        let kept = try await provider.fetch(now: now.addingTimeInterval(300))
+        #expect(kept.quotaUsageCaption == "41% used · weekly")
+        #expect(await provider.status() != .unauthenticated)
+    }
+
     @Test func transient_failure_degrades_without_throw_and_keeps_cache() async throws {
         let billing = GrokBillingResponse(monthlyLimit: 100, includedUsed: 10, subscriptionTier: "supergrok")
         let client = FakeGrokBillingClient([

@@ -36,6 +36,10 @@ public actor GrokBillingProvider: UsageProvider {
     public func fetch(now: Date) async throws -> UsageSnapshot {
         do {
             let billing = try await client.fetchCredits()
+            if isEmpty(billing) {
+                logger.warning("grok billing empty payload — keeping last good snapshot")
+                return retainLastGoodOrMute(now: now, error: GrokBillingError.emptyPayload)
+            }
             let snap = buildSnapshot(from: billing, now: now)
             lastGoodSnapshot = snap
             lastStatus = .ok(lastSuccess: now)
@@ -43,13 +47,37 @@ public actor GrokBillingProvider: UsageProvider {
             logger.notice("grok billing percent=\(percent, privacy: .public) period=\(billing.periodLabel ?? "nil", privacy: .public)")
             return snap
         } catch GrokBillingError.noCredentials {
-            lastStatus = .unauthenticated
-            return mutedNoData(now: now, tagged: false)
+            return retainLastGoodOrMute(now: now, error: GrokBillingError.noCredentials)
         } catch GrokBillingError.unauthorized {
-            lastStatus = .unauthenticated
-            return mutedNoData(now: now, tagged: false)
+            logger.warning("grok billing unauthorized — keeping last good snapshot if any")
+            return retainLastGoodOrMute(now: now, error: GrokBillingError.unauthorized(status: 401))
         } catch {
             return degrade(now: now, error: error)
+        }
+    }
+
+    /// True when the payload cannot drive a quota bar or reset countdown.
+    private func isEmpty(_ billing: GrokBillingResponse) -> Bool {
+        billing.makeQuota() == nil
+            && billing.normalizedPercent == nil
+            && billing.billingPeriodEnd == nil
+    }
+
+    /// Never apply an empty/"logged out" snapshot over a previously good row.
+    /// Returning the last good snapshot as success keeps POLL-06 from freezing
+    /// the provider (401-as-unauthenticated would skip all future polls).
+    private func retainLastGoodOrMute(now: Date, error: Error) -> UsageSnapshot {
+        if let last = lastGoodSnapshot {
+            lastStatus = .ok(lastSuccess: last.asOf)
+            return last
+        }
+        switch error as? GrokBillingError {
+        case .unauthorized, .noCredentials:
+            lastStatus = .unauthenticated
+            return mutedNoData(now: now, tagged: false)
+        default:
+            lastStatus = .error(ProviderError.from(error))
+            return mutedNoData(now: now, tagged: true)
         }
     }
 

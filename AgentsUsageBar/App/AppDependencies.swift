@@ -265,9 +265,12 @@ public enum AppDependencies {
                 GrokCredentialLoader.Result(token: $0, source: .apiKey)
             }
             if let creds = grokCreds {
+                let grokAPIKey = config.grok.apiKey
                 let grokClient = GrokBillingClient(
                     http: http,
-                    bearer: creds.token,
+                    loadBearer: {
+                        GrokCredentialLoader().loadCredentials()?.token ?? grokAPIKey
+                    },
                     baseURL: config.grok.apiURL
                 )
                 registry.append(GrokBillingProvider(client: grokClient, clock: clock))
