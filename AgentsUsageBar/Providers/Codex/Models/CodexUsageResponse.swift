@@ -68,8 +68,9 @@ public struct CodexUsageResponse: Decodable, Sendable, Equatable {
     /// `limit_window_seconds` instead of `window_minutes`.
     public struct Window: Decodable, Sendable, Equatable {
 
-        /// 0–100 percentage. Caller normalises to a 0.0–1.0 fraction for the UI.
-        public let usedPercent: Int?
+        /// 0–100 percentage. JSON may be an int (`48`) or a float (`48.0`).
+        /// Caller normalises to a 0.0–1.0 fraction for the UI.
+        public let usedPercent: Double?
 
         /// Absolute Unix epoch **seconds** at which this window resets.
         public let resetAt: Int?

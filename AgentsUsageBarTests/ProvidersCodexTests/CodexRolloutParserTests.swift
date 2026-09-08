@@ -172,4 +172,72 @@ struct CodexRolloutParserTests {
         #expect(result.event.timestamp == "2026-04-24T11:01:00.000Z")
         #expect(result.event.payload.info?.totalTokenUsage?.totalTokens == 2)
     }
+
+    // MARK: - Usage-limit hit: latest token_count nulls windows
+
+    @Test func float_used_percent_decodes() throws {
+        // Live rollouts emit `"used_percent": 98.0` (JSON number with a
+        // fractional component), not an integer `98`.
+        let line = """
+        {"timestamp":"2026-09-08T04:57:57.516Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":98163,"cached_input_tokens":77056,"output_tokens":292,"total_tokens":98455}},"rate_limits":{"primary":{"used_percent":98.0,"window_minutes":300,"resets_at":1788858959},"secondary":{"used_percent":15.0,"window_minutes":10080,"resets_at":1789445759},"plan_type":"plus"}}}
+        """
+        let url = try makeTempJsonl(named: "float-percent.jsonl", contents: line)
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        let result = try #require(CodexRolloutParser.lastTokenCount(in: [url]))
+        let primary = try #require(result.event.payload.rateLimits?.primary)
+        #expect(primary.usedPercent == 98.0)
+        #expect(result.event.payload.rateLimits?.secondary?.usedPercent == 15.0)
+    }
+
+    @Test func limit_reached_null_windows_inherits_same_file_rate_limits() throws {
+        // Live Codex shape (2026-09-08): used_percent climbs to 98.0, then ~3s
+        // later a token_count with the same totals but primary/secondary null
+        // (limit_id flips to "premium") is followed by usage_limit_exceeded.
+        // The fold must keep the 98% windows instead of collapsing to nil.
+        let contents = """
+        {"timestamp":"2026-09-08T04:57:57.516Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":98163,"cached_input_tokens":77056,"output_tokens":292,"total_tokens":98455}},"rate_limits":{"limit_id":"codex","primary":{"used_percent":98.0,"window_minutes":300,"resets_at":1788858959},"secondary":{"used_percent":15.0,"window_minutes":10080,"resets_at":1789445759},"plan_type":"plus"}}}
+        {"timestamp":"2026-09-08T04:58:00.593Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":98163,"cached_input_tokens":77056,"output_tokens":292,"total_tokens":98455}},"rate_limits":{"limit_id":"premium","primary":null,"secondary":null,"credits":{"has_credits":false,"unlimited":false,"balance":"0"},"plan_type":"plus","rate_limit_reached_type":null}}}
+        """
+        let url = try makeTempJsonl(named: "limit-reached.jsonl", contents: contents)
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        let result = try #require(CodexRolloutParser.lastTokenCount(in: [url]))
+        #expect(result.event.timestamp == "2026-09-08T04:58:00.593Z")
+        #expect(result.event.payload.info?.totalTokenUsage?.totalTokens == 98455)
+        let primary = try #require(result.event.payload.rateLimits?.primary)
+        #expect(primary.usedPercent == 98.0)
+        #expect(primary.resetsAt == 1788858959)
+        #expect(result.event.payload.rateLimits?.secondary?.usedPercent == 15.0)
+        #expect(result.event.payload.rateLimits?.planType == "plus")
+        // Latest event's credits/limit_id must survive the window fill.
+        #expect(result.event.payload.rateLimits?.credits?.balance == "0")
+        #expect(result.event.payload.rateLimits?.limitId == "premium")
+    }
+
+    @Test func null_windows_inherit_account_level_windows_from_another_file() throws {
+        // Windows are account-level. A later session whose only token_count
+        // has null windows (post-limit `limit_id=premium`) must keep the last
+        // known windows, even when they live in a different rollout file.
+        // Scan order is newer-first to prove the two-pass fold is order-safe.
+        let older = """
+        {"timestamp":"2026-09-08T04:00:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1,"cached_input_tokens":0,"output_tokens":1,"total_tokens":2}},"rate_limits":{"primary":{"used_percent":97.0,"window_minutes":300,"resets_at":1788858959},"secondary":{"used_percent":15.0,"window_minutes":10080,"resets_at":1789445759},"plan_type":"plus"}}}
+        """
+        let newerEmpty = """
+        {"timestamp":"2026-09-08T08:34:59.878Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":9199858,"cached_input_tokens":0,"output_tokens":1,"total_tokens":9199858}},"rate_limits":{"limit_id":"premium","primary":null,"secondary":null,"plan_type":"plus"}}}
+        """
+        let urlOlder = try makeTempJsonl(named: "older.jsonl", contents: older)
+        let urlNewer = try makeTempJsonl(named: "newer.jsonl", contents: newerEmpty)
+        defer {
+            try? FileManager.default.removeItem(at: urlOlder.deletingLastPathComponent())
+            try? FileManager.default.removeItem(at: urlNewer.deletingLastPathComponent())
+        }
+
+        let result = try #require(CodexRolloutParser.lastTokenCount(in: [urlNewer, urlOlder]))
+        #expect(result.event.timestamp == "2026-09-08T08:34:59.878Z")
+        #expect(result.event.payload.info?.totalTokenUsage?.totalTokens == 9199858)
+        #expect(result.event.payload.rateLimits?.primary?.usedPercent == 97.0)
+        #expect(result.event.payload.rateLimits?.secondary?.usedPercent == 15.0)
+        #expect(result.event.payload.rateLimits?.limitId == "premium")
+    }
 }

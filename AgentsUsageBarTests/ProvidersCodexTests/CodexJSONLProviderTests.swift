@@ -410,4 +410,45 @@ struct CodexJSONLProviderTests {
             Issue.record("Expected .ok status, got \(status)")
         }
     }
+
+    // MARK: - G. Limit reached — last token_count nulls windows; keep prior quota
+
+    @Test func rollout_limitReached_nullWindows_keepsPriorQuotaInsteadOfNoLimit() async throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let isoFractional = ISO8601DateFormatter()
+        isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let now = try #require(isoFractional.date(from: "2026-09-08T12:00:00.000Z"))
+
+        // Mirrors live Codex JSONL: 98% windows, then a later token_count with
+        // primary/secondary null. Without inherit, quota == nil → gray "no limit".
+        let content = """
+        {"timestamp":"2026-09-08T04:57:57.516Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":98163,"cached_input_tokens":77056,"output_tokens":292,"reasoning_output_tokens":0,"total_tokens":98455}},"rate_limits":{"limit_id":"codex","primary":{"used_percent":98.0,"window_minutes":300,"resets_at":1788858959},"secondary":{"used_percent":15.0,"window_minutes":10080,"resets_at":1789445759},"plan_type":"plus"}}}
+        {"timestamp":"2026-09-08T04:58:00.593Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":98163,"cached_input_tokens":77056,"output_tokens":292,"reasoning_output_tokens":0,"total_tokens":98455}},"rate_limits":{"limit_id":"premium","primary":null,"secondary":null,"plan_type":"plus","rate_limit_reached_type":null}}}
+        """
+        let todayDir = try dateDir(under: root, year: 2026, month: 9, day: 8)
+        try writeJsonl(content, to: todayDir.appendingPathComponent("rollout-limit.jsonl"))
+
+        let cache = FakeCodexCacheStore()
+        let provider = CodexJSONLProvider(
+            scannerFactory: scannerFactory(root: root),
+            reader: TranscriptReader(),
+            pricing: .testPricing,
+            oauth: nil,
+            cache: cache,
+            clock: SystemClock()
+        )
+
+        let snap = try await provider.fetch(now: now)
+
+        #expect(snap.tokensToday == 98455)
+        let quota = try #require(snap.quota)
+        #expect(abs(quota.fraction - 0.98) < 0.0001)
+        #expect(abs(quota.remaining - 0.02) < 0.0001)
+        let windows = try #require(snap.quotaWindows)
+        #expect(windows.contains { $0.name == "primary" && abs(($0.utilization ?? -1) - 0.98) < 0.0001 })
+        #expect(snap.tooltipLabel == "plus")
+        #expect(snap.raw["source"] == "rollout")
+    }
 }

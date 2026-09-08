@@ -111,6 +111,25 @@ public struct CodexRolloutEvent: Decodable, Sendable, Equatable {
             case planType = "plan_type"
             case rateLimitReachedType = "rate_limit_reached_type"
         }
+
+        /// True when at least one rolling window is populated. After a usage-limit
+        /// hit, Codex writes a later `token_count` with `primary`/`secondary` JSON
+        /// `null` (limit_id flips to `"premium"`) — that is not "no limit".
+        var hasWindows: Bool { primary != nil || secondary != nil }
+
+        /// Fills null primary/secondary from an earlier event, keeping this
+        /// event's credits / plan / limit-id when they are present.
+        func fillingEmptyWindows(from earlier: RateLimits) -> RateLimits {
+            RateLimits(
+                limitId: limitId ?? earlier.limitId,
+                limitName: limitName ?? earlier.limitName,
+                primary: primary ?? earlier.primary,
+                secondary: secondary ?? earlier.secondary,
+                credits: credits ?? earlier.credits,
+                planType: planType ?? earlier.planType,
+                rateLimitReachedType: rateLimitReachedType ?? earlier.rateLimitReachedType
+            )
+        }
     }
 
     /// A single rate-limit window. Carries either `resets_at` (current 2026+
@@ -118,7 +137,9 @@ public struct CodexRolloutEvent: Decodable, Sendable, Equatable {
     /// 2025-09 format, relative countdown). Exactly one is populated in
     /// well-formed files; `resetsAtDate(now:)` normalises to absolute `Date`.
     public struct Window: Decodable, Sendable, Equatable {
-        public let usedPercent: Int
+        /// 0–100 percentage. Live rollouts emit JSON floats (`98.0`); integer
+        /// `2` still decodes. Caller normalises to a 0.0–1.0 fraction.
+        public let usedPercent: Double
         public let windowMinutes: Int
         /// Current 2026+ format — absolute Unix epoch **seconds** (NOT
         /// milliseconds; verified from live files).
@@ -159,5 +180,20 @@ public struct CodexRolloutEvent: Decodable, Sendable, Equatable {
             case hasCredits = "has_credits"
             case unlimited, balance
         }
+    }
+
+    /// Copies this event but substitutes `rateLimits`. Used when the latest
+    /// `token_count` still has token totals but its windows were nulled after
+    /// hitting the usage limit — keep the last known primary/secondary.
+    func withRateLimits(_ rateLimits: RateLimits) -> CodexRolloutEvent {
+        CodexRolloutEvent(
+            timestamp: timestamp,
+            type: type,
+            payload: Payload(
+                type: payload.type,
+                info: payload.info,
+                rateLimits: rateLimits
+            )
+        )
     }
 }

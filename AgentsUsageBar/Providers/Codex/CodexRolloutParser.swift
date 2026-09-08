@@ -65,6 +65,13 @@ public enum CodexRolloutParser {
     ) -> (event: CodexRolloutEvent, fileURL: URL)? {
 
         var best: (event: CodexRolloutEvent, fileURL: URL, parsedTimestamp: Date)?
+        // Rate-limit windows are account-level, not session-level. After a
+        // usage-limit hit Codex writes a later `token_count` with
+        // `primary`/`secondary` JSON null (`limit_id` flips to `"premium"`),
+        // often in the same file and sometimes only in a newer session file.
+        // Fold the latest windows independently of the latest token event so
+        // file-scan order cannot drop quota to nil ("no limit" gray bar).
+        var lastWindows: (limits: CodexRolloutEvent.RateLimits, timestamp: Date)?
 
         for url in fileURLs {
             // Whole-file synchronous read — Plan 03-04 integrates streaming
@@ -100,6 +107,12 @@ public enum CodexRolloutParser {
                     continue
                 }
 
+                if let limits = event.payload.rateLimits, limits.hasWindows {
+                    if lastWindows == nil || parsedTs >= lastWindows!.timestamp {
+                        lastWindows = (limits, parsedTs)
+                    }
+                }
+
                 if best == nil || parsedTs > best!.parsedTimestamp {
                     best = (event, url, parsedTs)
                 }
@@ -107,6 +120,19 @@ public enum CodexRolloutParser {
         }
 
         guard let best else { return nil }
+
+        if best.event.payload.rateLimits?.hasWindows != true,
+           let lastWindows,
+           lastWindows.timestamp <= best.parsedTimestamp {
+            if let current = best.event.payload.rateLimits {
+                return (
+                    best.event.withRateLimits(current.fillingEmptyWindows(from: lastWindows.limits)),
+                    best.fileURL
+                )
+            }
+            return (best.event.withRateLimits(lastWindows.limits), best.fileURL)
+        }
+
         return (best.event, best.fileURL)
     }
 }

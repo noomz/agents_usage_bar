@@ -132,4 +132,21 @@ struct CodexUsageResponseTests {
         // RateLimit struct stays nil. This is the invariant.
         #expect(response.rateLimit == nil)
     }
+
+    // MARK: - 7. Float used_percent (live wham/usage may emit 48.0)
+
+    @Test func floatUsedPercent_decodes() throws {
+        let body = """
+        {
+          "plan_type": "plus",
+          "rate_limit": {
+            "primary_window": { "used_percent": 48.0, "reset_at": 1777970900, "limit_window_seconds": 18000 },
+            "secondary_window": { "used_percent": 26.5, "reset_at": 1778060488, "limit_window_seconds": 604800 }
+          }
+        }
+        """
+        let response = try decoder.decode(CodexUsageResponse.self, from: Data(body.utf8))
+        #expect(response.rateLimit?.primaryWindow?.usedPercent == 48.0)
+        #expect(response.rateLimit?.secondaryWindow?.usedPercent == 26.5)
+    }
 }
