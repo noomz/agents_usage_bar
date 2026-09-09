@@ -32,4 +32,15 @@ public struct QuotaWindow: Sendable, Equatable, Codable {
         self.utilization = utilization
         self.resetsAt = resetsAt
     }
+
+    /// Claude session window (`"5h"` or `"work 5h"`). Weekly is `"7d"` / `"7d-sonnet"`.
+    public var isFiveHour: Bool {
+        name == "5h" || name.hasSuffix(" 5h")
+    }
+
+    /// Utilization as a `Quota` triple (`limit` = 1.0). `nil` when utilization is omitted.
+    public var asQuota: Quota? {
+        guard let utilization else { return nil }
+        return Quota(used: utilization, limit: 1.0, remaining: max(0, 1.0 - utilization))
+    }
 }

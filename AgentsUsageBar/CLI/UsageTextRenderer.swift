@@ -75,16 +75,12 @@ public enum UsageTextRenderer {
     ) -> [String] {
         var lines: [String] = []
         let name = pad(p.displayName, to: nameWidth)
-        if let err = p.errorDescription {
-            lines.append("\(name)  error: \(err)")
-            return lines
-        }
         if p.isLocal {
             let caption = localCaption(p)
             lines.append("\(name)  \(caption)")
             return lines
         }
-        let (barLine, band) = quotaBarLine(p.snapshot?.quota, color: color)
+        let (barLine, band) = quotaBarLine(p.snapshot?.displayedQuota, color: color)
         lines.append("\(name)  \(barLine)")
         lines.append("\(pad("", to: nameWidth))  \(secondaryLine(p))")
         if let windows = p.snapshot?.quotaWindows, !windows.isEmpty {
@@ -94,6 +90,9 @@ public enum UsageTextRenderer {
             for account in accounts {
                 lines.append(contentsOf: accountLines(account, nameWidth: nameWidth, color: color, now: now, band: band))
             }
+        }
+        if isDegraded(p) {
+            lines.append("\(pad("", to: nameWidth))  usage temporarily unavailable")
         }
         return lines
     }
@@ -106,11 +105,7 @@ public enum UsageTextRenderer {
     ) -> [String] {
         var lines: [String] = []
         let name = pad(p.displayName, to: nameWidth)
-        if let err = p.errorDescription {
-            lines.append("\(name)  error: \(err)")
-            return lines
-        }
-        let (barLine, _) = quotaBarLine(p.snapshot?.quota, color: color)
+        let (barLine, _) = quotaBarLine(p.snapshot?.displayedQuota, color: color)
         lines.append("\(name)  \(barLine)")
         if let windows = p.snapshot?.quotaWindows, !windows.isEmpty {
             for w in windows {
@@ -118,6 +113,9 @@ public enum UsageTextRenderer {
                 let reset = w.resetsAt.map { resetsPhrase(until: $0, now: now) } ?? "—"
                 lines.append("\(pad("", to: nameWidth))  \(w.name)  \(pct)  \(reset)")
             }
+        }
+        if isDegraded(p) {
+            lines.append("\(pad("", to: nameWidth))  usage temporarily unavailable")
         }
         return lines
     }
@@ -181,12 +179,16 @@ public enum UsageTextRenderer {
         if let cost = account.costTodayUSD {
             head += " · " + cost.formatted(.currency(code: "USD"))
         }
-        let (barLine, _) = quotaBarLine(account.quota, color: color)
+        let (barLine, _) = quotaBarLine(account.displayedQuota, color: color)
         var lines = ["\(indent)  \(head)", "\(indent)  \(barLine)"]
-        if let soonest = account.quotaWindows?.compactMap(\.resetsAt).min() {
+        if let soonest = account.displayedResetsAt {
             lines.append("\(indent)  \(resetsPhrase(until: soonest, now: now))")
         }
         return lines
+    }
+
+    private static func isDegraded(_ p: ProviderReport) -> Bool {
+        p.snapshot?.raw["note"] == ThresholdEngine.degradedTag
     }
 
     private static func localCaption(_ p: ProviderReport) -> String {

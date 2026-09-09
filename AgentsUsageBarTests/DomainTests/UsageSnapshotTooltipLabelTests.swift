@@ -131,3 +131,115 @@ struct UsageSnapshotTooltipLabelTests {
         #expect(decoded.providerID == .codex)
     }
 }
+
+// MARK: - Glance bar prefers the 5h session window
+
+/// Live bug 2026-09-09: work 5h was 24% (Claude Code current session) but the
+/// child bar showed weekly 68% because `account.quota = max(5h, 7d)` while the
+/// reset caption used the soonest window (always 5h).
+@Suite("UsageSnapshotDisplayedQuota")
+struct UsageSnapshotDisplayedQuotaTests {
+
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private func snap(
+        quota: Quota?,
+        windows: [QuotaWindow]? = nil,
+        accounts: [UsageSnapshot.AccountUsage]? = nil
+    ) -> UsageSnapshot {
+        UsageSnapshot(
+            providerID: .claude,
+            asOf: now,
+            tokensToday: nil,
+            costTodayUSD: nil,
+            balanceUSD: nil,
+            quota: quota,
+            raw: [:],
+            quotaWindows: windows,
+            accounts: accounts
+        )
+    }
+
+    @Test func accountPrefersFiveHourOverWeekly() {
+        let account = UsageSnapshot.AccountUsage(
+            name: "work",
+            costTodayUSD: Decimal(string: "325.25"),
+            quota: Quota(used: 0.68, limit: 1, remaining: 0.32),
+            quotaWindows: [
+                QuotaWindow(name: "5h", utilization: 0.24, resetsAt: now.addingTimeInterval(4 * 3600 + 11 * 60)),
+                QuotaWindow(name: "7d", utilization: 0.68, resetsAt: now.addingTimeInterval(3 * 86400)),
+            ]
+        )
+        #expect(account.quota?.used == 0.68)
+        #expect(account.displayedQuota?.used == 0.24)
+        #expect(account.displayedResetsAt == now.addingTimeInterval(4 * 3600 + 11 * 60))
+    }
+
+    @Test func accountFallsBackToWeeklyWhenFiveHourMissing() {
+        let account = UsageSnapshot.AccountUsage(
+            name: "personal",
+            costTodayUSD: Decimal(string: "0.25"),
+            quota: Quota(used: 0.70, limit: 1, remaining: 0.30),
+            quotaWindows: [
+                QuotaWindow(name: "7d", utilization: 0.70, resetsAt: now.addingTimeInterval(86400)),
+            ]
+        )
+        #expect(account.displayedQuota?.used == 0.70)
+        #expect(account.displayedResetsAt == now.addingTimeInterval(86400))
+    }
+
+    @Test func parentBarUsesWorstFiveHourAcrossAccounts() {
+        let personal = UsageSnapshot.AccountUsage(
+            name: "personal",
+            costTodayUSD: Decimal(string: "78.15"),
+            quota: Quota(used: 0.41, limit: 1, remaining: 0.59),
+            quotaWindows: [
+                QuotaWindow(name: "5h", utilization: 0.20, resetsAt: now.addingTimeInterval(4 * 3600)),
+                QuotaWindow(name: "7d", utilization: 0.41, resetsAt: now.addingTimeInterval(2 * 86400)),
+            ]
+        )
+        let work = UsageSnapshot.AccountUsage(
+            name: "work",
+            costTodayUSD: Decimal(string: "325.25"),
+            quota: Quota(used: 0.68, limit: 1, remaining: 0.32),
+            quotaWindows: [
+                QuotaWindow(name: "5h", utilization: 0.24, resetsAt: now.addingTimeInterval(4 * 3600)),
+                QuotaWindow(name: "7d", utilization: 0.68, resetsAt: now.addingTimeInterval(3 * 86400)),
+            ]
+        )
+        let snapshot = snap(
+            quota: Quota(used: 0.68, limit: 1, remaining: 0.32),
+            windows: [
+                QuotaWindow(name: "personal 5h", utilization: 0.20, resetsAt: now.addingTimeInterval(4 * 3600)),
+                QuotaWindow(name: "personal 7d", utilization: 0.41, resetsAt: now.addingTimeInterval(2 * 86400)),
+                QuotaWindow(name: "work 5h", utilization: 0.24, resetsAt: now.addingTimeInterval(4 * 3600)),
+                QuotaWindow(name: "work 7d", utilization: 0.68, resetsAt: now.addingTimeInterval(3 * 86400)),
+            ],
+            accounts: [personal, work]
+        )
+        #expect(snapshot.quota?.used == 0.68)
+        #expect(snapshot.displayedQuota?.used == 0.24)
+    }
+
+    @Test func jsonlParentPrefersUnprefixedFiveHourWindow() {
+        let snapshot = snap(
+            quota: Quota(used: 0.62, limit: 1, remaining: 0.38),
+            windows: [
+                QuotaWindow(name: "5h", utilization: 0.38, resetsAt: now.addingTimeInterval(3 * 3600)),
+                QuotaWindow(name: "7d", utilization: 0.62, resetsAt: now.addingTimeInterval(4 * 86400)),
+            ]
+        )
+        #expect(snapshot.displayedQuota?.used == 0.38)
+    }
+
+    @Test func nonClaudeWindowsLeaveStoredQuota() {
+        let snapshot = snap(
+            quota: Quota(used: 0.80, limit: 1, remaining: 0.20),
+            windows: [
+                QuotaWindow(name: "primary", utilization: 0.80, resetsAt: now),
+                QuotaWindow(name: "secondary", utilization: 0.10, resetsAt: now),
+            ]
+        )
+        #expect(snapshot.displayedQuota?.used == 0.80)
+    }
+}

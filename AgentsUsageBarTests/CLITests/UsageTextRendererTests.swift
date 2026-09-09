@@ -69,7 +69,7 @@ struct UsageTextRendererTests {
         let text = UsageTextRenderer.renderUsage(report, color: false)
         #expect(text.contains("Today total"))
         #expect(text.contains("45,230 tokens") || text.contains("45230 tokens"))
-        #expect(text.contains("62%"))
+        #expect(text.contains("38%"))
         #expect(text.contains("no limit"))
         #expect(text.contains("Not running"))
         #expect(text.contains("5h"))
@@ -107,6 +107,56 @@ struct UsageTextRendererTests {
         let text = UsageTextRenderer.renderUsage(report, color: false)
         #expect(text.contains("default"))
         #expect(text.contains("work"))
+    }
+
+    @Test("claude child bar uses 5h not weekly max")
+    func childBarPrefersFiveHour() {
+        let now = Date()
+        let snap = UsageSnapshot(
+            providerID: .claude,
+            asOf: now,
+            tokensToday: 10,
+            costTodayUSD: 1,
+            balanceUSD: nil,
+            quota: Quota(used: 0.68, limit: 1, remaining: 0.32),
+            raw: [:],
+            accounts: [
+                .init(
+                    name: "work",
+                    costTodayUSD: Decimal(string: "325.25"),
+                    quota: Quota(used: 0.68, limit: 1, remaining: 0.32),
+                    quotaWindows: [
+                        QuotaWindow(name: "5h", utilization: 0.24, resetsAt: now.addingTimeInterval(4 * 3600)),
+                        QuotaWindow(name: "7d", utilization: 0.68, resetsAt: now.addingTimeInterval(3 * 86400)),
+                    ]
+                ),
+                .init(
+                    name: "personal",
+                    costTodayUSD: Decimal(string: "78.15"),
+                    quota: Quota(used: 0.41, limit: 1, remaining: 0.59),
+                    quotaWindows: [
+                        QuotaWindow(name: "5h", utilization: 0.20, resetsAt: now.addingTimeInterval(4 * 3600)),
+                        QuotaWindow(name: "7d", utilization: 0.41, resetsAt: now.addingTimeInterval(2 * 86400)),
+                    ]
+                ),
+            ]
+        )
+        let report = UsageReport(
+            asOf: now,
+            source: .live,
+            providers: [
+                ProviderReport(
+                    id: .claude, displayName: "Claude", status: .ok(lastSuccess: now),
+                    snapshot: snap, placeholderMessage: nil, errorDescription: nil,
+                    isLocal: false, hasTokens: true
+                )
+            ]
+        )
+        let text = UsageTextRenderer.renderUsage(report, color: false)
+        #expect(text.contains("24%"))
+        #expect(text.contains("20%"))
+        #expect(!text.contains("68%"))
+        #expect(!text.contains("41%"))
     }
 
     @Test("quota renderer lists windows")
@@ -165,6 +215,41 @@ struct UsageTextRendererTests {
         #expect(json.contains("\"source\" : \"cached\"") || json.contains("\"source\":\"cached\""))
         #expect(json.contains("codex"))
         #expect(json.contains("\"tokens\" : 10") || json.contains("\"tokens\":10"))
+    }
+
+    @Test("gemini degraded snapshot does not print NSError")
+    func geminiDegraded() {
+        let now = Date()
+        let snap = UsageSnapshot(
+            providerID: .gemini,
+            asOf: now,
+            tokensToday: nil,
+            costTodayUSD: nil,
+            balanceUSD: nil,
+            quota: Quota(used: 0.19, limit: 1, remaining: 0.81),
+            raw: ["note": ThresholdEngine.degradedTag],
+            quotaWindows: [
+                QuotaWindow(name: "gemini-2.5-pro", utilization: 0.19, resetsAt: now.addingTimeInterval(3600))
+            ]
+        )
+        let report = UsageReport(
+            asOf: now,
+            source: .live,
+            providers: [
+                ProviderReport(
+                    id: .gemini, displayName: "Gemini",
+                    status: .error(ProviderError(kind: .http, message: "x")),
+                    snapshot: snap, placeholderMessage: nil,
+                    errorDescription: "The operation couldn’t be completed. (AgentsUsageBar.GeminiOAuthError error 4.)",
+                    isLocal: false, hasTokens: false
+                )
+            ]
+        )
+        let text = UsageTextRenderer.renderUsage(report, color: false)
+        #expect(text.contains("usage temporarily unavailable"))
+        #expect(!text.contains("GeminiOAuthError"))
+        #expect(!text.contains("error 4"))
+        #expect(text.contains("19%"))
     }
 
     @Test("shouldColor respects --no-color and NO_COLOR")

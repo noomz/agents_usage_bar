@@ -60,7 +60,8 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         public let name: String
         /// Today's cost reported by this account's sessions. `nil` = no data today.
         public let costTodayUSD: Decimal?
-        /// Max utilization across this account's quota windows (drives the child bar).
+        /// Max utilization across this account's 5h/7d windows (notifications).
+        /// The child glance bar uses `displayedQuota` (5h when present).
         public let quota: Quota?
         /// This account's own quota windows (plain "5h"/"7d" names, with `resetsAt`).
         public let quotaWindows: [QuotaWindow]?
@@ -72,6 +73,26 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
             self.costTodayUSD = costTodayUSD
             self.quota = quota
             self.quotaWindows = quotaWindows
+        }
+
+        /// Glance-bar quota: the 5-hour session window when this account has one.
+        ///
+        /// `quota` stays `max(5h, 7d)` so notifications still fire on a high weekly
+        /// window. Pairing that max with a 5h reset caption painted weekly 68% as
+        /// if it were the current session (live 2026-09-09: work 5h 24%, 7d 68%).
+        public var displayedQuota: Quota? {
+            if let five = quotaWindows?.first(where: \.isFiveHour), let q = five.asQuota {
+                return q
+            }
+            return quota
+        }
+
+        /// Reset shown next to the glance bar — the 5h window when present, else soonest.
+        public var displayedResetsAt: Date? {
+            if let five = quotaWindows?.first(where: \.isFiveHour) {
+                return five.resetsAt
+            }
+            return quotaWindows?.compactMap(\.resetsAt).min()
         }
     }
 
@@ -111,6 +132,23 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         self.quotaWindows = quotaWindows
         self.tooltipLabel = tooltipLabel
         self.accounts = accounts
+    }
+
+    /// Glance-bar quota: prefer the 5-hour session window so the fill matches the
+    /// "Resets Xh Ym" caption. Falls back to stored `quota` (`max(5h, 7d)` / Codex
+    /// primary) when no 5h window exists. Notifications keep using `quota`.
+    public var displayedQuota: Quota? {
+        if let accounts, !accounts.isEmpty {
+            guard let used = accounts.compactMap({ $0.displayedQuota?.used }).max() else {
+                return quota
+            }
+            return Quota(used: used, limit: 1.0, remaining: max(0, 1.0 - used))
+        }
+        let fiveHour = quotaWindows?.filter(\.isFiveHour).compactMap(\.utilization) ?? []
+        if let used = fiveHour.max() {
+            return Quota(used: used, limit: 1.0, remaining: max(0, 1.0 - used))
+        }
+        return quota
     }
 
     /// Secondary-line caption when a provider has quota but no today tokens/cost

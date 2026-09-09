@@ -112,7 +112,7 @@ public struct ProviderRowView: View {
 
                     // Quota bar — opacity composes UI-08 stale dimming and the
                     // Plan 03-07 / D-11 degraded dimming.
-                    QuotaBar(quota: state.snapshot?.quota)
+                    QuotaBar(quota: state.snapshot?.displayedQuota)
                         .frame(maxWidth: .infinity)
                         .opacity(isStale || isDegraded ? 0.6 : 1.0)
 
@@ -264,15 +264,15 @@ struct AccountChildRow: View {
                         .monospacedDigit()
                 }
             }
-            QuotaBar(quota: account.quota)
+            QuotaBar(quota: account.displayedQuota)
                 .frame(maxWidth: .infinity)
         }
     }
 
-    /// Soonest reset across this account's windows; nil hides the label (no windows).
+    /// Reset for the glance bar (5h when present); nil hides the label (no windows).
     /// Mirrors ProviderRowView.resetsText formatting.
     private func resetsText() -> String? {
-        guard let soonest = account.quotaWindows?.compactMap(\.resetsAt).min() else { return nil }
+        guard let soonest = account.displayedResetsAt else { return nil }
         let interval = soonest.timeIntervalSince(now)
         if interval <= 0 { return "Resets now" }
         let totalMinutes = Int(interval / 60)
