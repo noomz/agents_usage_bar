@@ -38,8 +38,12 @@ public enum ClaudeHookError: Error, Equatable {
 ///   wholly to today — documented limitation (statusline reports cumulative session cost only).
 /// - Tokens: always `nil` — the statusline exposes no cumulative token totals
 ///   (`context_window.*` is occupancy, not a daily total).
-/// - Quota: from the **newest** payload (by mtime) that carries `rate_limits`. Windows
-///   `"5h"`/`"7d"`, `utilization = used_percentage / 100`, `resetsAt = Date(epoch)`.
+/// - Quota: per window (`five_hour` / `seven_day`) independently. A later `resets_at`
+///   is a new window and replaces the stored one. The same `resets_at` keeps the
+///   **peak** `used_percentage` — a session that hits 100% stops writing (rate-limited),
+///   and a later still-running session can dump a lower reading for the same window
+///   (live 2026-09-09: work 5h 100% overwritten by 86%). Windows `"5h"`/`"7d"`,
+///   `utilization = used_percentage / 100`, `resetsAt = Date(epoch)`.
 /// - Primary quota = `max(fiveHour, sevenDay)` fraction — same rule as
 ///   `ClaudeJSONLProvider` (RESEARCH Open Question 4).
 /// - Empty / missing feed dir → throw `ClaudeHookError.noFeedData` (hook not installed /
@@ -164,16 +168,16 @@ public actor ClaudeHookProvider: UsageProvider {
                 return snap
             }
 
-            // Per-account aggregation: today's cost sum + the newest rate_limits per account.
+            // Per-account aggregation: today's cost sum + peak-within-window rate limits.
             struct AccountAgg {
                 var costToday: Decimal = 0
                 var sawTodayCost = false
-                var newestQuotaMTime: Date?
-                var newestQuotaLimits: ClaudeHookPayload.RateLimits?
+                var fiveHour: ClaudeHookPayload.Window?
+                var sevenDay: ClaudeHookPayload.Window?
             }
             var accounts: [String: AccountAgg] = [:]
 
-            for entry in entries.sorted(by: { $0.mtime < $1.mtime }) {
+            for entry in entries {
                 guard let data = try? Data(contentsOf: entry.url),
                       let payload = try? ClaudeHookPayload.decode(data)
                 else { continue }
@@ -193,13 +197,9 @@ public actor ClaudeHookProvider: UsageProvider {
                     agg.sawTodayCost = true
                 }
 
-                if let limits = payload.rateLimits,
-                   limits.fiveHour != nil || limits.sevenDay != nil {
-                    // Iterating oldest→newest means the last assignment wins = newest payload.
-                    if agg.newestQuotaMTime == nil || entry.mtime >= agg.newestQuotaMTime! {
-                        agg.newestQuotaMTime = entry.mtime
-                        agg.newestQuotaLimits = limits
-                    }
+                if let limits = payload.rateLimits {
+                    agg.fiveHour = Self.mergeWindow(agg.fiveHour, with: limits.fiveHour)
+                    agg.sevenDay = Self.mergeWindow(agg.sevenDay, with: limits.sevenDay)
                 }
 
                 accounts[account] = agg
@@ -233,9 +233,9 @@ public actor ClaudeHookProvider: UsageProvider {
 
                 var accountMaxPct: Double?
                 var accountWindows: [QuotaWindow] = []
-                if let limits = agg.newestQuotaLimits {
+                if agg.fiveHour != nil || agg.sevenDay != nil {
                     let prefix = isMultiAccount ? "\(account) " : ""
-                    if let fh = limits.fiveHour {
+                    if let fh = agg.fiveHour {
                         let utilization = fh.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
                             name: prefix + "5h", utilization: utilization, resetsAt: fh.resetsAtDate
@@ -244,7 +244,7 @@ public actor ClaudeHookProvider: UsageProvider {
                             name: "5h", utilization: utilization, resetsAt: fh.resetsAtDate
                         ))
                     }
-                    if let sd = limits.sevenDay {
+                    if let sd = agg.sevenDay {
                         let utilization = sd.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
                             name: prefix + "7d", utilization: utilization, resetsAt: sd.resetsAtDate
@@ -253,7 +253,7 @@ public actor ClaudeHookProvider: UsageProvider {
                             name: "7d", utilization: utilization, resetsAt: sd.resetsAtDate
                         ))
                     }
-                    accountMaxPct = [limits.fiveHour?.usedPercentage, limits.sevenDay?.usedPercentage]
+                    accountMaxPct = [agg.fiveHour?.usedPercentage, agg.sevenDay?.usedPercentage]
                         .compactMap { $0 }.max()
                     if let pct = accountMaxPct {
                         maxUtilizationPct = max(maxUtilizationPct ?? 0, pct)
@@ -344,6 +344,31 @@ public actor ClaudeHookProvider: UsageProvider {
     }
 
     // MARK: - Private helpers
+
+    /// Merge one rate-limit window across session payloads.
+    ///
+    /// - A later `resetsAt` is a new window and replaces `stored`.
+    /// - The same `resetsAt` (or both nil) keeps the higher `usedPercentage` —
+    ///   a rate-limited session stops writing, so newest-mtime is not the peak.
+    /// - `candidate == nil` leaves `stored` (a dump that omits `five_hour` must
+    ///   not wipe a same-window peak from another session).
+    static func mergeWindow(
+        _ stored: ClaudeHookPayload.Window?,
+        with candidate: ClaudeHookPayload.Window?
+    ) -> ClaudeHookPayload.Window? {
+        guard let candidate else { return stored }
+        guard let stored else { return candidate }
+        switch (stored.resetsAt, candidate.resetsAt) {
+        case let (storedReset?, candidateReset?) where candidateReset > storedReset:
+            return candidate
+        case let (storedReset?, candidateReset?) where candidateReset < storedReset:
+            return stored
+        default:
+            let storedPct = stored.usedPercentage ?? -.infinity
+            let candidatePct = candidate.usedPercentage ?? -.infinity
+            return candidatePct > storedPct ? candidate : stored
+        }
+    }
 
     /// Account-aware feed enumeration:
     ///   `<feedDir>/<session>.json`           → account `"default"` (legacy flat layout)

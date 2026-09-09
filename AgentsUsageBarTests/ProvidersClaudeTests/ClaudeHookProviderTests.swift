@@ -92,18 +92,47 @@ struct ClaudeHookProviderTests {
 
     // MARK: - Quota
 
-    @Test func picksQuotaFromNewestPayload() async throws {
+    /// Live bug 2026-09-09: a work session hit 5h 100% and stopped writing (rate-limited).
+    /// A later still-running session dumped 86% for the SAME `resets_at`. Newest-mtime
+    /// overwrote the peak, so the popover bar was red but not full.
+    @Test func sameWindowKeepsPeakUtilization() async throws {
         let dir = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let now = Date()
         let reset = now.addingTimeInterval(3600).timeIntervalSince1970
 
-        // Older payload: high utilization.
-        try writeSession("old", json: quotaJSON(sessionId: "old", fivePct: 90, sevenPct: 90, resetsAt: reset),
+        try writeSession("hit-limit", json: quotaJSON(sessionId: "hit-limit", fivePct: 100, sevenPct: 66, resetsAt: reset),
                          mtime: now.addingTimeInterval(-600), in: dir)
-        // Newer payload: 40% five-hour, 10% seven-day → should win.
-        try writeSession("new", json: quotaJSON(sessionId: "new", fivePct: 40, sevenPct: 10, resetsAt: reset),
+        try writeSession("later", json: quotaJSON(sessionId: "later", fivePct: 86, sevenPct: 64, resetsAt: reset),
+                         mtime: now, in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        let windows = try #require(snap.quotaWindows)
+        let five = try #require(windows.first { $0.name == "5h" })
+        let seven = try #require(windows.first { $0.name == "7d" })
+        #expect(five.utilization == 1.0)
+        #expect(seven.utilization == 0.66)
+        #expect(five.resetsAt == Date(timeIntervalSince1970: reset))
+
+        let quota = try #require(snap.quota)
+        #expect(quota.used == 1.0)
+        #expect(quota.remaining == 0)
+    }
+
+    @Test func newWindowReplacesPreviousUtilization() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let oldReset = now.addingTimeInterval(-60).timeIntervalSince1970
+        let newReset = now.addingTimeInterval(3600).timeIntervalSince1970
+
+        try writeSession("old-window", json: quotaJSON(sessionId: "old-window", fivePct: 100, sevenPct: 90, resetsAt: oldReset),
+                         mtime: now.addingTimeInterval(-600), in: dir)
+        try writeSession("new-window", json: quotaJSON(sessionId: "new-window", fivePct: 40, sevenPct: 10, resetsAt: newReset),
                          mtime: now, in: dir)
 
         let provider = ClaudeHookProvider(feedDir: dir)
@@ -114,12 +143,43 @@ struct ClaudeHookProviderTests {
         let seven = try #require(windows.first { $0.name == "7d" })
         #expect(five.utilization == 0.4)
         #expect(seven.utilization == 0.1)
-        #expect(five.resetsAt == Date(timeIntervalSince1970: reset))
+        #expect(five.resetsAt == Date(timeIntervalSince1970: newReset))
 
-        // Primary quota = max(5h, 7d) fraction = 0.4.
         let quota = try #require(snap.quota)
         #expect(quota.used == 0.4)
         #expect(quota.limit == 1.0)
+    }
+
+    /// Newest payload can omit `five_hour` (observed on idle / post-reset dumps).
+    /// That must not wipe a same-window peak captured by an older session.
+    @Test func newerPayloadMissingFiveHourPreservesPeak() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let reset = now.addingTimeInterval(3600).timeIntervalSince1970
+
+        try writeSession("with-5h", json: quotaJSON(sessionId: "with-5h", fivePct: 90, sevenPct: 20, resetsAt: reset),
+                         mtime: now.addingTimeInterval(-600), in: dir)
+        try writeSession("seven-only", json: """
+        {
+          "session_id": "seven-only",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "seven_day": { "used_percentage": 22, "resets_at": \(reset) }
+          }
+        }
+        """, mtime: now, in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        let windows = try #require(snap.quotaWindows)
+        let five = try #require(windows.first { $0.name == "5h" })
+        let seven = try #require(windows.first { $0.name == "7d" })
+        #expect(five.utilization == 0.9)
+        #expect(seven.utilization == 0.22)
+        #expect(try #require(snap.quota).used == 0.9)
     }
 
     // MARK: - Empty / stale
