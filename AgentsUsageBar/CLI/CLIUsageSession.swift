@@ -102,13 +102,19 @@ public struct CLIUsageSession {
                 hasTokens: provider.capabilities.hasTokens
             )
         } catch {
+            // Match AggregateStore.apply(.failure): keep last snapshot, never
+            // surface NSError strings. Popover shows stale/degraded data instead.
+            if let cached {
+                let next = cached.applyingError(error, at: now)
+                return ProviderReport(state: next, isLocal: isLocal)
+            }
             return ProviderReport(
                 id: provider.id,
                 displayName: provider.displayName,
                 status: .error(ProviderError.from(error)),
-                snapshot: cached?.snapshot,
-                placeholderMessage: cached?.placeholderMessage,
-                errorDescription: error.localizedDescription,
+                snapshot: nil,
+                placeholderMessage: nil,
+                errorDescription: nil,
                 isLocal: isLocal,
                 hasTokens: provider.capabilities.hasTokens
             )

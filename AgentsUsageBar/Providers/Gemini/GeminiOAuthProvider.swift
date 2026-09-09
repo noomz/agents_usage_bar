@@ -156,19 +156,24 @@ public actor GeminiOAuthProvider: UsageProvider {
         let bearer: Secret
         do {
             bearer = try await oauth.freshAccessToken(now: now)
-        } catch GeminiOAuthError.notSignedIn,
-                GeminiOAuthError.noCredentials {
-            lastStatus = .unauthenticated
-            // Pitfall 9: muted no-data row, never an error.
-            return mutedNoData(now: now, tagged: false)
-        } catch let err as GeminiOAuthError where isRefreshFailed(err) {
-            // Refresh endpoint lives on a different host
-            // (oauth2.googleapis.com). A sustained failure there
-            // justifies opening the AggregateStore-level breaker
-            // (POLL-05). RETHROW per the GEMINI-04 carve-out.
-            let pe = ProviderError.from(err)
-            lastStatus = .error(pe)
-            throw err
+        } catch let err as GeminiOAuthError {
+            switch err {
+            case .notSignedIn, .noCredentials:
+                lastStatus = .unauthenticated
+                // Pitfall 9: muted no-data row, never an error.
+                return mutedNoData(now: now, tagged: false)
+            case .refreshFailed, .refreshDisabled:
+                // Refresh endpoint lives on a different host
+                // (oauth2.googleapis.com). A sustained failure there
+                // justifies opening the AggregateStore-level breaker
+                // (POLL-05). RETHROW per the GEMINI-04 carve-out.
+                let pe = ProviderError.from(err)
+                lastStatus = .error(pe)
+                throw err
+            case .settingsGateClosed, .transport:
+                logger.notice("oauth resolution failed; entering degraded UX: \(String(describing: err), privacy: .public)")
+                return degradedSnapshot(now: now, underlying: err)
+            }
         } catch {
             // Any other OAuth failure (transport, decode) — degrade
             // rather than throw (GEMINI-04 cross-provider isolation).

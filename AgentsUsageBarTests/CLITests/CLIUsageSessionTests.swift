@@ -21,6 +21,10 @@ private actor FakeUsageProvider: UsageProvider {
         if let throwError { throw throwError }
         return snapshot
     }
+
+    func setThrow(_ error: Error?) {
+        throwError = error
+    }
 }
 
 private final class MemCache: CacheStore, @unchecked Sendable {
@@ -101,6 +105,39 @@ struct CLIUsageSessionTests {
         let session = CLIUsageSession(providers: [claude, grok])
         let report = await session.fetch(filter: .one(.grok), cached: false, now: now)
         #expect(report.providers.map(\.id) == [.grok])
+    }
+
+    @Test("fetch error keeps cached snapshot and does not leak NSError")
+    func fetchErrorKeepsCache() async {
+        let now = Date()
+        let prior = UsageSnapshot(
+            providerID: .gemini, asOf: now, tokensToday: nil,
+            costTodayUSD: nil, balanceUSD: nil,
+            quota: Quota(used: 0.4, limit: 1, remaining: 0.6),
+            raw: ["note": ThresholdEngine.degradedTag]
+        )
+        let cached = ProviderState(
+            id: .gemini, displayName: "Gemini",
+            snapshot: prior, status: .ok(lastSuccess: now), lastSuccess: now
+        )
+        let cache = MemCache()
+        cache.stored = [.gemini: cached]
+        let provider = FakeUsageProvider(
+            id: .gemini, displayName: "Gemini",
+            capabilities: ProviderCapabilities(hasQuota: true, hasCost: false, hasTokens: false, isLocal: false),
+            snapshot: prior
+        )
+        await provider.setThrow(GeminiOAuthError.notSignedIn)
+        let session = CLIUsageSession(providers: [provider], cache: cache)
+        let report = await session.fetch(filter: .all, cached: false, now: now)
+        let row = report.providers[0]
+        #expect(row.errorDescription == nil)
+        #expect(row.snapshot?.quota?.used == 0.4)
+        if case .stale = row.status {
+            // popover keeps last snapshot as stale
+        } else {
+            Issue.record("expected stale status, got \(row.status)")
+        }
     }
 
     @Test("enabled filter honors isEnabled")
