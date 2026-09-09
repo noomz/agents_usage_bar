@@ -59,6 +59,14 @@ struct SettingsGeneralTab: View {
                     .accessibilityLabel("Warning threshold")
                     .accessibilityValue("\(Int(preferences.threshold * 100)) percent")
                 }
+
+                Toggle("Warn if usage is on pace to hit limits", isOn: Binding(
+                    get: { preferences.paceWarningsEnabled },
+                    set: { preferences.setPaceWarningsEnabled($0) }
+                ))
+                Text("Applies to every provider with a reset window. Warns when the current or recent usage rate would exhaust the window before it resets.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             // MARK: Theme (D-07, Discretion)

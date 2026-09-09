@@ -55,6 +55,11 @@ public final class AggregateStore {
     /// Plan 02.05 — per-(provider, day) FSM persistence + snooze (NOTIF-04 / NOTIF-05).
     /// Defaulted to `InMemoryNotificationStateStore()` so existing tests stay back-compat.
     private let notificationState: any NotificationStateStorage
+    private let paceEngine: PaceEngine
+    /// In-RAM last utilization per (provider, window) for recent-stream pace (B).
+    private var paceSamples: [PaceSample] = []
+    /// Global pace-warning toggle. Default on; Settings / observePreferences flips it.
+    private var paceWarningsEnabled: Bool = true
 
     // MARK: - Coalescing state
 
@@ -98,6 +103,7 @@ public final class AggregateStore {
         self.thresholds = thresholds
         self.notifications = notifications
         self.notificationState = notificationState
+        self.paceEngine = PaceEngine()
 
         var names: [ProviderID: String] = [:]
         // Plan 03-08 D-07: capture hasTokens alongside displayName in a single
@@ -141,7 +147,8 @@ public final class AggregateStore {
         let existing = notificationState.record(forProviderID: providerID, day: day)
         let updated = NotificationStateRecord(
             lastBand: existing?.lastBand ?? .normal,
-            snoozedUntilDay: day
+            snoozedUntilDay: day,
+            firedPaceWindows: existing?.firedPaceWindows ?? []
         )
         notificationState.setRecord(updated, forProviderID: providerID, day: day)
     }
@@ -220,6 +227,11 @@ public final class AggregateStore {
     /// touched — existing records survive the swap intact (Research Q7 confirmed safe).
     public func updateWarningFraction(_ newFraction: Double) {
         thresholds = ThresholdEngine(warningFraction: newFraction, calendar: .current)
+    }
+
+    /// Enables or disables pace-limit warnings for every provider.
+    public func updatePaceWarningsEnabled(_ enabled: Bool) {
+        paceWarningsEnabled = enabled
     }
 
     /// Enables or disables a provider at runtime per D-04 (CONTEXT.md).
@@ -383,6 +395,7 @@ public final class AggregateStore {
         lastTick = now
         rollupTotals()
         await fireThresholdNotificationsIfNeeded(now: now)
+        await firePaceNotificationsIfNeeded(now: now)
         cache.save(providers)
     }
 
@@ -501,9 +514,55 @@ public final class AggregateStore {
             let existing = notificationState.record(forProviderID: decision.providerID, day: day)
             let updated = NotificationStateRecord(
                 lastBand: decision.band,
-                snoozedUntilDay: existing?.snoozedUntilDay
+                snoozedUntilDay: existing?.snoozedUntilDay,
+                firedPaceWindows: existing?.firedPaceWindows ?? []
             )
             notificationState.setRecord(updated, forProviderID: decision.providerID, day: day)
+        }
+    }
+
+    /// Evaluates window-average + recent-stream pace independently of the 80/95/100% FSM.
+    /// Each pace decision is scheduled alone so it is not coalesced into "N providers crossed 80%".
+    private func firePaceNotificationsIfNeeded(now: Date) async {
+        let snapshots = providers.values.compactMap(\.snapshot)
+        let day = TodayHelper.formatYYYYMMDD(now)
+        let allRecords = notificationState.allRecordsForToday(day)
+        let snoozedUntilDay: [ProviderID: String] = Dictionary(
+            uniqueKeysWithValues: allRecords.compactMap { pid, rec in
+                rec.snoozedUntilDay.map { (pid, $0) }
+            }
+        )
+        let alreadyFired: [ProviderID: Set<String>] = Dictionary(
+            uniqueKeysWithValues: allRecords.map { pid, rec in
+                (pid, Set(rec.firedPaceWindows))
+            }
+        )
+
+        let result = paceEngine.decisions(
+            for: snapshots,
+            now: now,
+            previous: paceSamples,
+            snoozedUntilDay: snoozedUntilDay,
+            alreadyFired: alreadyFired,
+            enabled: paceWarningsEnabled
+        )
+        paceSamples = result.nextSamples
+
+        for decision in result.decisions {
+            await notifications.schedule([decision])
+            guard let windowName = decision.windowName else { continue }
+            let existing = notificationState.record(forProviderID: decision.providerID, day: day)
+            var fired = existing?.firedPaceWindows ?? []
+            if !fired.contains(windowName) { fired.append(windowName) }
+            notificationState.setRecord(
+                NotificationStateRecord(
+                    lastBand: existing?.lastBand ?? .normal,
+                    snoozedUntilDay: existing?.snoozedUntilDay,
+                    firedPaceWindows: fired
+                ),
+                forProviderID: decision.providerID,
+                day: day
+            )
         }
     }
 }

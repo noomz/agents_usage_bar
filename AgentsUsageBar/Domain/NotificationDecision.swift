@@ -31,8 +31,14 @@ public struct NotificationDecision: Sendable, Equatable {
     public let displayName: String
 
     /// The threshold band that triggered this decision.
-    /// Always `.warning` in Phase 1 (D-11).
+    /// Always `.warning` in Phase 1 (D-11). Pace warnings also use `.warning`
+    /// so they share the snooze category; they are identified by `windowName`
+    /// and an id suffix of `:pace:`.
     public let band: ThresholdBand
+
+    /// Quota-window name for pace warnings (e.g. `"5h"`, `"primary"`). `nil` for
+    /// threshold-band decisions.
+    public let windowName: String?
 
     public init(
         id: String,
@@ -40,7 +46,8 @@ public struct NotificationDecision: Sendable, Equatable {
         body: String,
         providerID: ProviderID,
         displayName: String,
-        band: ThresholdBand
+        band: ThresholdBand,
+        windowName: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -48,5 +55,6 @@ public struct NotificationDecision: Sendable, Equatable {
         self.providerID = providerID
         self.displayName = displayName
         self.band = band
+        self.windowName = windowName
     }
 }

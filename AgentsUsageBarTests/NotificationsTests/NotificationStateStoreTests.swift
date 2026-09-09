@@ -152,6 +152,23 @@ struct NotificationStateStoreTests {
         #expect(store.record(forProviderID: Self.pidA, day: Self.twoWeeksAgo) == nil)
     }
 
+    @Test("UserDefaults: records written without firedPaceWindows decode as empty")
+    func userDefaults_legacyJSON_missingFiredPaceWindows_defaultsEmpty() throws {
+        let (defaults, suite) = makeIsolatedDefaults()
+        defer { clearDefaults(defaults, suite: suite) }
+        let encoded = try JSONEncoder().encode(
+            NotificationStateRecord(lastBand: .warning, snoozedUntilDay: nil, firedPaceWindows: ["5h"])
+        )
+        var json = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        json.removeValue(forKey: "firedPaceWindows")
+        let legacy = try JSONSerialization.data(withJSONObject: json)
+        defaults.set(legacy, forKey: "notif.openrouter.2026-05-13")
+        let store = UserDefaultsNotificationStateStore(defaults: defaults)
+        let record = try #require(store.record(forProviderID: Self.pidA, day: Self.today))
+        #expect(record.lastBand == .warning)
+        #expect(record.firedPaceWindows.isEmpty)
+    }
+
     @Test("UserDefaults: key format is 'notif.<rawValue>.<yyyy-MM-dd>' (source contract check)")
     func userDefaults_keyFormat_contract() {
         let (defaults, suite) = makeIsolatedDefaults()

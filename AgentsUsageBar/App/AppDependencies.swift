@@ -337,6 +337,7 @@ public enum AppDependencies {
             notifications: notifications,
             notificationState: notificationState
         )
+        store.updatePaceWarningsEnabled(preferences.paceWarningsEnabled)
 
         // 10. Seed placeholder rows when providers are not configured (B10)
         //     seedPlaceholder declared in Plan 01.05's AggregateStore.swift
@@ -509,6 +510,7 @@ public enum AppDependencies {
     ) async {
         var lastInterval = preferences.refreshInterval
         var lastThreshold = preferences.threshold
+        var lastPaceWarningsEnabled = preferences.paceWarningsEnabled
         var lastProviderEnabled = preferences.providerEnabled
 
         while !Task.isCancelled {
@@ -519,6 +521,7 @@ public enum AppDependencies {
                     // Access the properties we want to observe:
                     _ = preferences.refreshInterval
                     _ = preferences.threshold
+                    _ = preferences.paceWarningsEnabled
                     _ = preferences.providerEnabled
                 } onChange: {
                     // onChange fires on the thread that made the change.
@@ -532,6 +535,7 @@ public enum AppDependencies {
             // Re-read and react to changes:
             let newInterval = preferences.refreshInterval
             let newThreshold = preferences.threshold
+            let newPaceWarningsEnabled = preferences.paceWarningsEnabled
             let newProviderEnabled = preferences.providerEnabled
 
             if newInterval != lastInterval {
@@ -541,6 +545,10 @@ public enum AppDependencies {
             if newThreshold != lastThreshold {
                 lastThreshold = newThreshold
                 store.updateWarningFraction(newThreshold)
+            }
+            if newPaceWarningsEnabled != lastPaceWarningsEnabled {
+                lastPaceWarningsEnabled = newPaceWarningsEnabled
+                store.updatePaceWarningsEnabled(newPaceWarningsEnabled)
             }
             if newProviderEnabled != lastProviderEnabled {
                 // Find changed providers and propagate to AggregateStore

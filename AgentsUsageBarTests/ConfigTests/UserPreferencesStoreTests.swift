@@ -133,6 +133,7 @@ struct UserPreferencesStoreTests {
         #expect(store.openAtLogin == false)
         #expect(store.hasSeenWelcome == false)
         #expect(store.claudeSource == .sessionReads)
+        #expect(store.paceWarningsEnabled == true)
         #expect(store.providerEnabled.isEmpty == true)
     }
 
@@ -164,5 +165,22 @@ struct UserPreferencesStoreTests {
         // `double(forKey:)` returns 0.0 for absent keys — `UserPreferencesStore` must use
         // `object(forKey:) as? Double` to distinguish "not set" from "set to 0".
         #expect(store.threshold == 0.80)
+    }
+
+    @Test("roundTrip_paceWarningsEnabled")
+    func roundTrip_paceWarningsEnabled() async throws {
+        let defaults = makeDefaults()
+        let store = UserPreferencesStore(defaults: defaults)
+        store.setPaceWarningsEnabled(false)
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(store.paceWarningsEnabled == false)
+    }
+
+    @Test("absentKey_doesNotOverrideDefaultPaceWarningsEnabled")
+    func absentKey_doesNotOverrideDefaultPaceWarningsEnabled() {
+        let defaults = makeDefaults()
+        #expect(defaults.object(forKey: AUBDefaultsKey.paceWarningsEnabled) == nil)
+        let store = UserPreferencesStore(defaults: defaults)
+        #expect(store.paceWarningsEnabled == true)
     }
 }

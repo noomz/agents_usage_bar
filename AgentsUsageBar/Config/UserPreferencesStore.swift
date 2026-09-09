@@ -12,6 +12,7 @@ public enum AUBDefaultsKey {
     public static let openAtLogin     = "aub.openAtLogin"       // Bool
     public static let hasSeenWelcome  = "aub.hasSeenWelcome"    // Bool
     public static let claudeSource    = "aub.provider.claude.source"  // String (ClaudeUsageSource.rawValue)
+    public static let paceWarningsEnabled = "aub.paceWarningsEnabled"  // Bool (default true)
     /// Per-provider enabled flag: "aub.provider.<providerID.rawValue>.enabled"
     public static func providerEnabled(_ id: ProviderID) -> String {
         "aub.provider.\(id.rawValue).enabled"
@@ -68,6 +69,10 @@ public final class UserPreferencesStore {
     /// Which mechanism the Claude row uses for today's usage. Default `.sessionReads`
     /// (existing JSONL + OAuth behavior preserved when the key is absent).
     public private(set) var claudeSource: ClaudeUsageSource = .sessionReads
+
+    /// Pace-limit warnings (window-average or recent stream would exhaust a reset window).
+    /// Default `true`. Absent key must NOT be read via `bool(forKey:)` (that returns false).
+    public private(set) var paceWarningsEnabled: Bool = true
 
     /// Per-provider enabled flags. Absent key = not yet explicitly set (treat as enabled for
     /// providers that exist in the registry; detection seeding sets these on first launch).
@@ -130,6 +135,10 @@ public final class UserPreferencesStore {
         defaults.set(v.rawValue, forKey: AUBDefaultsKey.claudeSource)
     }
 
+    public func setPaceWarningsEnabled(_ v: Bool) {
+        defaults.set(v, forKey: AUBDefaultsKey.paceWarningsEnabled)
+    }
+
     public func setProviderEnabled(_ id: ProviderID, enabled: Bool) {
         defaults.set(enabled, forKey: AUBDefaultsKey.providerEnabled(id))
     }
@@ -155,6 +164,8 @@ public final class UserPreferencesStore {
         claudeSource = ClaudeUsageSource(
             rawValue: defaults.string(forKey: AUBDefaultsKey.claudeSource) ?? ""
         ) ?? .sessionReads
+
+        paceWarningsEnabled = (defaults.object(forKey: AUBDefaultsKey.paceWarningsEnabled) as? Bool) ?? true
 
         var map: [ProviderID: Bool] = [:]
         for id in ProviderID.allKnown {

@@ -11,13 +11,40 @@ import os
 ///   notification bands for this provider until local-midnight rollover (NOTIF-05 +
 ///   default decision #2: snooze suppresses every band, not just the band that was
 ///   showing when the user tapped Snooze).
+/// - `firedPaceWindows` — window names that already produced a pace warning today
+///   (once per window per local day). Absent in records written before this field
+///   existed; decoder defaults to `[]`.
 public struct NotificationStateRecord: Sendable, Codable, Equatable {
     public let lastBand: ThresholdBand
     public let snoozedUntilDay: String?
+    public let firedPaceWindows: [String]
 
-    public init(lastBand: ThresholdBand, snoozedUntilDay: String?) {
+    public init(
+        lastBand: ThresholdBand,
+        snoozedUntilDay: String?,
+        firedPaceWindows: [String] = []
+    ) {
         self.lastBand = lastBand
         self.snoozedUntilDay = snoozedUntilDay
+        self.firedPaceWindows = firedPaceWindows
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case lastBand, snoozedUntilDay, firedPaceWindows
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        lastBand = try c.decode(ThresholdBand.self, forKey: .lastBand)
+        snoozedUntilDay = try c.decodeIfPresent(String.self, forKey: .snoozedUntilDay)
+        firedPaceWindows = try c.decodeIfPresent([String].self, forKey: .firedPaceWindows) ?? []
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(lastBand, forKey: .lastBand)
+        try c.encodeIfPresent(snoozedUntilDay, forKey: .snoozedUntilDay)
+        try c.encode(firedPaceWindows, forKey: .firedPaceWindows)
     }
 }
 

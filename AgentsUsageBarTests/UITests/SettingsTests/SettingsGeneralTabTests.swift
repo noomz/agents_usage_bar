@@ -40,6 +40,14 @@ struct SettingsGeneralTabTests {
         #expect(source.contains("0.5...0.95"), "Slider range must be exactly 0.5...0.95 per Discretion")
     }
 
+    @Test("SettingsGeneralTab contains pace-warnings Toggle bound to preferences")
+    func settingsGeneralTab_containsPaceWarningsToggle() throws {
+        let source = try settingsGeneralTabSource()
+        #expect(source.contains("Warn if usage is on pace to hit limits"))
+        #expect(source.contains("paceWarningsEnabled"))
+        #expect(source.contains("setPaceWarningsEnabled"))
+    }
+
     @Test("SettingsGeneralTab contains theme Picker with AppTheme tags")
     func settingsGeneralTab_containsThemePicker() throws {
         let source = try settingsGeneralTabSource()
