@@ -112,210 +112,16 @@ public enum AppDependencies {
         //    Extended with preferences overlay per D-02 (userDefaults > env > toml > defaults).
         let config = ConfigStore(env: ProcessInfoEnvReader()).load(preferences: preferences)
 
-        // 5. Provider registry — OpenRouter only in Phase 1
-        //    Honor config.openrouter.enabled (prefs overlay via ConfigStore.load).
-        var registry: [any UsageProvider] = []
-        if config.openrouter.enabled, let apiKey = config.openrouter.apiKey {
-            let endpoint = OpenRouterEndpoint(
-                baseURL: config.openrouter.apiURL
-            )
-            let client = HTTPOpenRouterClient(
-                http: http,
-                endpoint: endpoint,
-                bearer: apiKey,
-                httpReferer: config.openrouter.httpReferer,
-                xTitle: config.openrouter.xTitle
-            )
-            let provider = OpenRouterProvider(client: client, cache: cache, clock: clock)
-            registry.append(provider)
-        }
-
-        // 6. Claude provider (Plan 02.04 — wired when enabled; degrades to local-only when no OAuth)
-        //    Claude has no AppConfig.enabled flag; Settings toggle lives only in
-        //    preferences.providerEnabled[.claude] (absent = enabled).
-        let claudeEnabled = preferences.providerEnabled[.claude] ?? true
-        let credLoader = ClaudeCredentialLoader()
-        let oauthClient: (any ClaudeOAuthClientProtocol)?
-        if claudeEnabled, credLoader.loadCredentials() != nil {
-            oauthClient = ClaudeOAuthClient(http: http, credentials: credLoader, clock: clock)
-        } else {
-            oauthClient = nil
-        }
-
-        if claudeEnabled {
-            let claudePricing: ClaudeModelPricing
-            do {
-                claudePricing = try ClaudeModelPricing.loadBundled()
-            } catch {
-                os.Logger(subsystem: "app.agents-usage-bar", category: "composition")
-                    .error("Claude pricing load failed: \(error.localizedDescription, privacy: .public)")
-                // Degrade to a hardcoded fallback rather than crash (T-02.02-03).
-                claudePricing = ClaudeModelPricing(
-                    schemaVersion: 1,
-                    lastUpdated: "fallback",
-                    default: .init(
-                        inputPer1M: 3.00,
-                        outputPer1M: 15.00,
-                        cacheWritePer1M: 3.75,
-                        cacheReadPer1M: 0.30
-                    ),
-                    models: [:]
-                )
-            }
-
-            let claudeProvider = ClaudeJSONLProvider(
-                reader: TranscriptReader(),
-                scanner: TranscriptDirectoryScanner(),
-                pricing: claudePricing,
-                oauth: oauthClient,
-                cache: cache,
-                clock: clock
-            )
-
-            // Wrap the JSONL provider and a hook (statusline-tee) provider in the switchable
-            // facade. The facade owns the `.claude` identity and delegates each fetch to the
-            // mode selected by `aub.provider.claude.source` (default `.sessionReads` — existing
-            // behavior). Only the facade is registered; the concrete providers are collaborators.
-            let claudeHookProvider = ClaudeHookProvider()
-            let claudeSwitchable = ClaudeSwitchableProvider(
-                jsonl: claudeProvider,
-                hookProvider: claudeHookProvider
-            )
-            registry.append(claudeSwitchable)
-        }
-
-        // 6.1. Codex provider (Plan 03-08) — register when config.codex.enabled
-        //      AND (~/.codex/sessions exists OR ~/.codex/auth.json exists).
-        //      Otherwise the placeholder is seeded later (step 10).
-        let codexRegistered: Bool
-        if config.codex.enabled {
-            let codexCredsLoader = CodexCredentialLoader()
-            let codexCreds = codexCredsLoader.loadCredentials()
-            let codexSessionsExists = FileManager.default.fileExists(
-                atPath: NSHomeDirectory() + "/.codex/sessions"
-            )
-            if codexCreds != nil || codexSessionsExists {
-                let codexPricing: CodexModelPricing?
-                do {
-                    codexPricing = try CodexModelPricing.loadBundled()
-                } catch {
-                    os.Logger(subsystem: "app.agents-usage-bar", category: "composition")
-                        .error("Codex pricing load failed: \(error.localizedDescription, privacy: .public)")
-                    codexPricing = nil  // graceful — cost renders nil
-                }
-                let codexOAuth: (any CodexOAuthClientProtocol)?
-                if codexCreds != nil {
-                    codexOAuth = CodexOAuthClient(
-                        http: http,
-                        credentialLoader: codexCredsLoader,
-                        clock: clock
-                    )
-                } else {
-                    codexOAuth = nil
-                }
-                let codexProvider = CodexJSONLProvider(
-                    scannerFactory: { now in CodexRolloutScanner(now: now) },
-                    reader: TranscriptReader(),
-                    pricing: codexPricing,
-                    oauth: codexOAuth,
-                    cache: cache,
-                    clock: clock
-                )
-                registry.append(codexProvider)
-                codexRegistered = true
-            } else {
-                codexRegistered = false
-            }
-        } else {
-            codexRegistered = false
-        }
-
-        // 6.2. Gemini provider (Plan 03-08) — register when config.gemini.enabled
-        //      AND GeminiSettingsGate.isOAuthPersonal() (the user opted into
-        //      oauth-personal in ~/.gemini/settings.json) AND credentials present.
-        let geminiRegistered: Bool
-        if config.gemini.enabled,
-           GeminiSettingsGate.isOAuthPersonal(),
-           GeminiCredentialLoader().loadCredentials() != nil
-        {
-            let geminiPublicCreds = GeminiCLIPublicCreds.fromEnvironment(ProcessInfo.processInfo.environment)
-            let geminiOAuth = GeminiOAuthClient(
-                http: http,
-                clock: clock,
-                publicCreds: geminiPublicCreds
-            )
-            let geminiProvider = GeminiOAuthProvider(
-                http: http,
-                oauth: geminiOAuth,
-                clock: clock
-            )
-            registry.append(geminiProvider)
-            geminiRegistered = true
-        } else {
-            geminiRegistered = false
-        }
-
-        // 6.2b. Grok provider — register when enabled AND a bearer exists
-        //       (XAI_API_KEY or ~/.grok/auth.json). Sessions-only with no
-        //       creds seeds a muted placeholder; billing requires a token.
-        let grokRegistered: Bool
-        if config.grok.enabled {
-            let grokLoader = GrokCredentialLoader()
-            let grokCreds = grokLoader.loadCredentials() ?? config.grok.apiKey.map {
-                GrokCredentialLoader.Result(token: $0, source: .apiKey)
-            }
-            if let creds = grokCreds {
-                let grokAPIKey = config.grok.apiKey
-                let grokClient = GrokBillingClient(
-                    http: http,
-                    loadBearer: {
-                        GrokCredentialLoader().loadCredentials()?.token ?? grokAPIKey
-                    },
-                    baseURL: config.grok.apiURL
-                )
-                registry.append(GrokBillingProvider(client: grokClient, clock: clock))
-                grokRegistered = true
-            } else {
-                grokRegistered = false
-            }
-        } else {
-            grokRegistered = false
-        }
-
-        // 6.3. Ollama provider (Plan 04-04 — LOCAL-01) — register when config.ollama.enabled.
-        //      Well-known port 11434; no presence detection (always probes — first probe
-        //      writes .notRunning if server is absent per Phase 3 STATE #82 isolation).
-        if config.ollama.enabled {
-            let ollamaProvider = OllamaProvider(http: localhostHTTP, clock: clock)
-            registry.append(ollamaProvider)
-        }
-
-        // 6.4. LM Studio provider (Plan 04-05 — LOCAL-02) — register when config.lmstudio.enabled.
-        //      Default port 1234; override via [lmstudio] port = <int> in config.toml.
-        if config.lmstudio.enabled {
-            let lmstudioProvider = LMStudioProvider(
-                http: localhostHTTP,
-                clock: clock,
-                port: config.lmstudio.port
-            )
-            registry.append(lmstudioProvider)
-        }
-
-        // 6.5. llama.cpp provider (Plan 04-06 — LOCAL-03) — register ONLY when both enabled AND
-        //      port is configured (LOCAL-03 no scanning). Unconfigured → seed D-04 placeholder
-        //      AFTER the store is constructed (see Step 10 below).
-        let llamacppRegistered: Bool
-        if config.llamacpp.enabled, let port = config.llamacpp.port {
-            let llamacppProvider = LlamaCppProvider(
-                http: localhostHTTP,
-                clock: clock,
-                port: port
-            )
-            registry.append(llamacppProvider)
-            llamacppRegistered = true
-        } else {
-            llamacppRegistered = false
-        }
+        // 5–6. Provider registry (shared with `aub` via ProviderRegistryFactory).
+        let built = ProviderRegistryFactory.build(
+            config: config,
+            preferences: preferences,
+            http: http,
+            localhostHTTP: localhostHTTP,
+            cache: cache,
+            clock: clock
+        )
+        let registry = built.providers
 
         // 7. Threshold engine (warning-at-80% gate per D-11)
         let thresholds = ThresholdEngine(warningFraction: config.threshold)
@@ -339,91 +145,14 @@ public enum AppDependencies {
         )
         store.updatePaceWarningsEnabled(preferences.paceWarningsEnabled)
 
-        // 10. Seed placeholder rows when providers are not configured (B10)
-        //     seedPlaceholder declared in Plan 01.05's AggregateStore.swift
-        //     ProviderState.placeholder declared in Plan 01.02's Domain/ProviderState.swift
-
-        // OpenRouter placeholder: only when enabled AND api key absent.
-        // Disabled providers stay off the popover entirely (D-04).
-        if config.openrouter.enabled, config.openrouter.apiKey == nil {
+        // 10. Seed placeholder rows when providers are not configured (B10).
+        //     Specs come from ProviderRegistryFactory so the GUI and `aub` stay aligned.
+        for seed in built.placeholders {
             store.seedPlaceholder(
-                providerID: ProviderID.openrouter,
-                displayName: "OpenRouter",
-                status: .unauthenticated
-            )
-        }
-
-        // Claude placeholder: when enabled AND neither OAuth credentials NOR any JSONL root
-        // exists (B10). Disabled Claude is omitted from the popover.
-        let claudeRoots = ClaudeRoots.defaultRoots
-        let hasTranscripts = claudeRoots.contains { FileManager.default.fileExists(atPath: $0.path) }
-        if claudeEnabled, oauthClient == nil, !hasTranscripts {
-            store.seedPlaceholder(
-                providerID: ProviderID.claude,
-                displayName: "Claude",
-                status: .unauthenticated
-            )
-        }
-
-        // Plan 03-08 Codex placeholder: seed only when enabled but not registered
-        // (no rollouts AND no auth.json). Disabled config hides Codex entirely.
-        if config.codex.enabled, !codexRegistered {
-            store.seedPlaceholder(
-                providerID: ProviderID.codex,
-                displayName: "Codex",
-                status: .unauthenticated
-            )
-        }
-
-        // Plan 03-08 Gemini placeholder: seed only when enabled but not registered
-        // (settings gate closed OR no oauth_creds.json). Disabled config hides Gemini.
-        if config.gemini.enabled, !geminiRegistered {
-            store.seedPlaceholder(
-                providerID: ProviderID.gemini,
-                displayName: "Gemini",
-                status: .unauthenticated
-            )
-        }
-
-        if config.grok.enabled, !grokRegistered {
-            store.seedPlaceholder(
-                providerID: ProviderID.grok,
-                displayName: "Grok",
-                status: .unauthenticated
-            )
-        }
-
-        // Plan 04-08 — Ollama placeholder for cold-launch visibility. The actor is also
-        // registered (it polls every 5 min); this placeholder ensures the row appears
-        // in the popover the moment the user clicks the menu bar icon, BEFORE the first
-        // probe returns.
-        if config.ollama.enabled {
-            store.seedPlaceholder(
-                providerID: ProviderID.ollama,
-                displayName: "Ollama",
-                status: .notRunning
-            )
-        }
-
-        // Plan 04-08 — LM Studio placeholder (same rationale).
-        if config.lmstudio.enabled {
-            store.seedPlaceholder(
-                providerID: ProviderID.lmstudio,
-                displayName: "LM Studio",
-                status: .notRunning
-            )
-        }
-
-        // Plan 04-08 — llama.cpp placeholder when enabled but not registered (D-04).
-        // Renders a discoverability subtitle so the user knows the feature exists
-        // without having to read docs. LOCAL-03 invariant preserved: no port scanning.
-        // Disabled config / prefs hide the row entirely.
-        if config.llamacpp.enabled, !llamacppRegistered {
-            store.seedPlaceholder(
-                providerID: ProviderID.llamacpp,
-                displayName: "llama.cpp",
-                placeholderMessage: "Set [llamacpp] port in config.toml to enable",
-                status: .notRunning
+                providerID: seed.providerID,
+                displayName: seed.displayName,
+                placeholderMessage: seed.placeholderMessage,
+                status: seed.status
             )
         }
 

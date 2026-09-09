@@ -3,7 +3,6 @@ import AppKit
 import UserNotifications
 import Sparkle
 
-@main
 struct AgentsUsageBarApp: App {
     /// Composition root — holds the store, scheduler, and clock for the app lifetime.
     /// `@State` is correct: `Dependencies` is a reference type whose `store` is `@Observable`,

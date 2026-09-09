@@ -349,6 +349,24 @@
 		AA061000000000000000011A /* ClaudeHookProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000011B /* ClaudeHookProviderTests.swift */; };
 		AA061000000000000000012A /* ClaudeHookInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000012B /* ClaudeHookInstallerTests.swift */; };
 		AA061000000000000000013A /* ClaudeSwitchableProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000013B /* ClaudeSwitchableProviderTests.swift */; };
+		/* aub CLI */
+		AA070100000000000000001A /* AUBMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000001B /* AUBMain.swift */; };
+		AA070100000000000000002A /* ProviderRegistryFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000002B /* ProviderRegistryFactory.swift */; };
+		AA070100000000000000003A /* QuotaBand.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000003B /* QuotaBand.swift */; };
+		AA070100000000000000004A /* AUBCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000004B /* AUBCommand.swift */; };
+		AA070100000000000000005A /* CLIUsageSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000005B /* CLIUsageSession.swift */; };
+		AA070100000000000000006A /* UsageTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000006B /* UsageTextRenderer.swift */; };
+		AA070100000000000000007A /* UsageJSONRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000007B /* UsageJSONRenderer.swift */; };
+		AA070100000000000000008A /* CLISettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000008B /* CLISettings.swift */; };
+		AA070100000000000000009A /* CLIInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000009B /* CLIInstaller.swift */; };
+		AA07010000000000000000AA /* CLIInstallSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA07010000000000000000AB /* CLIInstallSection.swift */; };
+		AA07010000000000000000BA /* AUBCommandRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA07010000000000000000BB /* AUBCommandRun.swift */; };
+		AA070100000000000000010A /* QuotaBandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000010B /* QuotaBandTests.swift */; };
+		AA070100000000000000011A /* AUBCommandParseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000011B /* AUBCommandParseTests.swift */; };
+		AA070100000000000000012A /* CLISettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000012B /* CLISettingsTests.swift */; };
+		AA070100000000000000013A /* CLIInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000013B /* CLIInstallerTests.swift */; };
+		AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000014B /* UsageTextRendererTests.swift */; };
+		AA070100000000000000015A /* CLIUsageSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000015B /* CLIUsageSessionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -718,6 +736,24 @@
 		AA061000000000000000011B /* ClaudeHookProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookProviderTests.swift; sourceTree = "<group>"; };
 		AA061000000000000000012B /* ClaudeHookInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookInstallerTests.swift; sourceTree = "<group>"; };
 		AA061000000000000000013B /* ClaudeSwitchableProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSwitchableProviderTests.swift; sourceTree = "<group>"; };
+		/* aub CLI file references */
+		AA070100000000000000001B /* AUBMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBMain.swift; sourceTree = "<group>"; };
+		AA070100000000000000002B /* ProviderRegistryFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderRegistryFactory.swift; sourceTree = "<group>"; };
+		AA070100000000000000003B /* QuotaBand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaBand.swift; sourceTree = "<group>"; };
+		AA070100000000000000004B /* AUBCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBCommand.swift; sourceTree = "<group>"; };
+		AA070100000000000000005B /* CLIUsageSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIUsageSession.swift; sourceTree = "<group>"; };
+		AA070100000000000000006B /* UsageTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTextRenderer.swift; sourceTree = "<group>"; };
+		AA070100000000000000007B /* UsageJSONRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageJSONRenderer.swift; sourceTree = "<group>"; };
+		AA070100000000000000008B /* CLISettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISettings.swift; sourceTree = "<group>"; };
+		AA070100000000000000009B /* CLIInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstaller.swift; sourceTree = "<group>"; };
+		AA07010000000000000000AB /* CLIInstallSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstallSection.swift; sourceTree = "<group>"; };
+		AA07010000000000000000BB /* AUBCommandRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBCommandRun.swift; sourceTree = "<group>"; };
+		AA070100000000000000010B /* QuotaBandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaBandTests.swift; sourceTree = "<group>"; };
+		AA070100000000000000011B /* AUBCommandParseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBCommandParseTests.swift; sourceTree = "<group>"; };
+		AA070100000000000000012B /* CLISettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISettingsTests.swift; sourceTree = "<group>"; };
+		AA070100000000000000013B /* CLIInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstallerTests.swift; sourceTree = "<group>"; };
+		AA070100000000000000014B /* UsageTextRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTextRendererTests.swift; sourceTree = "<group>"; };
+		AA070100000000000000015B /* CLIUsageSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIUsageSessionTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -761,6 +797,7 @@
 				AA030300000000000000030B /* Config */,
 				AA040400000000000000030B /* Providers */,
 				AA050500000000000000030B /* Notifications */,
+				AA070100000000000000030B /* CLI */,
 			);
 			path = AgentsUsageBar;
 			sourceTree = "<group>";
@@ -773,6 +810,8 @@
 				AA080800000000000000001B /* AppEnvironment.swift */,
 				/* Plan 05-01 — WindowActivationObserver */
 				AA050100000000000000001B /* WindowActivationObserver.swift */,
+				AA070100000000000000001B /* AUBMain.swift */,
+				AA070100000000000000002B /* ProviderRegistryFactory.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -796,6 +835,7 @@
 				AA020100000000000000001B /* TranscriptOffset.swift */,
 				AA020300000000000000001B /* QuotaWindow.swift */,
 				AA061000000000000000001B /* ClaudeUsageSource.swift */,
+				AA070100000000000000003B /* QuotaBand.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -837,6 +877,7 @@
 				AA040100000000000000012B /* ProviderErrorLocalhostClassifierTests.swift */,
 				/* Plan 04-06 — ProviderState placeholder message test */
 				AA040600000000000000012B /* ProviderStatePlaceholderMessageTests.swift */,
+				AA070100000000000000010B /* QuotaBandTests.swift */,
 			);
 			path = DomainTests;
 			sourceTree = "<group>";
@@ -1217,8 +1258,35 @@
 				AA050100000000000000003B /* SettingsGeneralTab.swift */,
 				AA050100000000000000004B /* SettingsProvidersTab.swift */,
 				AA050100000000000000005B /* SettingsAboutTab.swift */,
+				AA07010000000000000000AB /* CLIInstallSection.swift */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		AA070100000000000000030B /* CLI */ = {
+			isa = PBXGroup;
+			children = (
+				AA070100000000000000004B /* AUBCommand.swift */,
+				AA07010000000000000000BB /* AUBCommandRun.swift */,
+				AA070100000000000000005B /* CLIUsageSession.swift */,
+				AA070100000000000000006B /* UsageTextRenderer.swift */,
+				AA070100000000000000007B /* UsageJSONRenderer.swift */,
+				AA070100000000000000008B /* CLISettings.swift */,
+				AA070100000000000000009B /* CLIInstaller.swift */,
+			);
+			path = CLI;
+			sourceTree = "<group>";
+		};
+		AA070100000000000000031B /* CLITests */ = {
+			isa = PBXGroup;
+			children = (
+				AA070100000000000000011B /* AUBCommandParseTests.swift */,
+				AA070100000000000000012B /* CLISettingsTests.swift */,
+				AA070100000000000000013B /* CLIInstallerTests.swift */,
+				AA070100000000000000014B /* UsageTextRendererTests.swift */,
+				AA070100000000000000015B /* CLIUsageSessionTests.swift */,
+			);
+			path = CLITests;
 			sourceTree = "<group>";
 		};
 		/* Plan 01.06 — UI Components subgroup */
@@ -1374,6 +1442,7 @@
 				AA040500000000000000060B /* ProvidersLMStudioTests */,
 				/* Plan 04-06 — LlamaCpp provider tests */
 				AA040600000000000000060B /* ProvidersLlamaCppTests */,
+				AA070100000000000000031B /* CLITests */,
 			);
 			path = AgentsUsageBarTests;
 			sourceTree = "<group>";
@@ -1862,6 +1931,18 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA050500050000000000001A /* WelcomeWindowController.swift in Sources */,
 				AA050500050000000000002A /* WelcomeRootView.swift in Sources */,
 				AA050500050000000000003A /* WelcomeProviderRow.swift in Sources */,
+				/* aub CLI */
+				AA070100000000000000001A /* AUBMain.swift in Sources */,
+				AA070100000000000000002A /* ProviderRegistryFactory.swift in Sources */,
+				AA070100000000000000003A /* QuotaBand.swift in Sources */,
+				AA070100000000000000004A /* AUBCommand.swift in Sources */,
+				AA07010000000000000000BA /* AUBCommandRun.swift in Sources */,
+				AA070100000000000000005A /* CLIUsageSession.swift in Sources */,
+				AA070100000000000000006A /* UsageTextRenderer.swift in Sources */,
+				AA070100000000000000007A /* UsageJSONRenderer.swift in Sources */,
+				AA070100000000000000008A /* CLISettings.swift in Sources */,
+				AA070100000000000000009A /* CLIInstaller.swift in Sources */,
+				AA07010000000000000000AA /* CLIInstallSection.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2025,6 +2106,13 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA061000000000000000011A /* ClaudeHookProviderTests.swift in Sources */,
 				AA061000000000000000012A /* ClaudeHookInstallerTests.swift in Sources */,
 				AA061000000000000000013A /* ClaudeSwitchableProviderTests.swift in Sources */,
+				/* aub CLI tests */
+				AA070100000000000000010A /* QuotaBandTests.swift in Sources */,
+				AA070100000000000000011A /* AUBCommandParseTests.swift in Sources */,
+				AA070100000000000000012A /* CLISettingsTests.swift in Sources */,
+				AA070100000000000000013A /* CLIInstallerTests.swift in Sources */,
+				AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */,
+				AA070100000000000000015A /* CLIUsageSessionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

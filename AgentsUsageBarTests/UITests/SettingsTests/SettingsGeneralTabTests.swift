@@ -74,4 +74,11 @@ struct SettingsGeneralTabTests {
         // Verify the warning logger path IS present (correct silent-revert pattern)
         #expect(source.contains("logger.warning"), "Source must log the failure via logger.warning")
     }
+
+    @Test("SettingsGeneralTab embeds CLIInstallSection")
+    func settingsGeneralTab_containsCLIInstallSection() throws {
+        let source = try settingsGeneralTabSource()
+        #expect(source.contains("CLIInstallSection()"), "General tab must offer one-click aub install")
+        #expect(source.contains("Command Line") || source.contains("CLIInstallSection"))
+    }
 }

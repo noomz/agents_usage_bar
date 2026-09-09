@@ -77,6 +77,26 @@ api_key   = "<your-openrouter-key>"  # overridden by OPENROUTER_API_KEY env var
 
 Environment variables take precedence over `config.toml` values (env > toml > defaults).
 
+## Command line (`aub`)
+
+The app binary is also the `aub` CLI. Install it from **Settings → General → Command Line**, or:
+
+```
+ln -sf "/Applications/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar" /opt/homebrew/bin/aub
+```
+
+```
+aub                         # today's usage with quota bars (same layout as the popover)
+aub usage --json            # machine-readable snapshot
+aub quota claude            # limits + reset windows
+aub settings                # list keys
+aub settings get threshold
+aub settings set threshold 0.70
+aub usage --cached          # read the menu-bar cache (no live fetch)
+```
+
+Settings writes go to the same `aub.*` UserDefaults keys as the GUI. API keys are still env / `config.toml` only.
+
 ## Build for distribution
 
 Releases are produced by the GitHub Actions release workflow (`.github/workflows/release.yml`) on `v*` tag push: archive → sign with Developer ID → export → DMG via `create-dmg/create-dmg` → notarize via `xcrun notarytool` → staple → EdDSA-sign for Sparkle → publish to GitHub Releases + update appcast on `gh-pages`. The one-time credential provisioning (Apple Developer ID `.p12`, App Store Connect API `.p8`, Sparkle EdDSA key pair, etc.) is documented in [`docs/release-setup.md`](docs/release-setup.md).

@@ -78,6 +78,44 @@ public struct ProviderState: Sendable, Equatable, Codable {
 
     // MARK: - Mutating helpers (value-type update pattern)
 
+    /// Secondary line for local LLM rows (LOCAL-06). Same strings as
+    /// `LocalRowSecondaryView` — CLI text output reuses this so the popover
+    /// and `aub usage` cannot drift.
+    public var localSecondaryCaption: String {
+        if let msg = placeholderMessage, !msg.isEmpty {
+            return msg
+        }
+        if snapshot?.raw["loadingModel"] == "true" {
+            return "Running — loading model…"
+        }
+        if case .notRunning = status {
+            return "Not running"
+        }
+        let raw = snapshot?.raw ?? [:]
+        let count = Int(raw["modelCount"] ?? "") ?? 0
+        let installedCount = Int(raw["installedCount"] ?? "") ?? -1
+        let name = raw["modelName"]
+        let vramBytes = Int64(raw["vramBytes"] ?? "") ?? 0
+        let vramSuffix: String = {
+            guard vramBytes > 0 else { return "" }
+            let gb = Double(vramBytes) / 1_073_741_824.0
+            return String(format: " · %.1f GB VRAM", gb)
+        }()
+        if count == 0 {
+            if installedCount == 0 {
+                return "Idle — no models installed"
+            }
+            return "Idle — 0 models loaded"
+        }
+        if count == 1, let name {
+            return "\(name)\(vramSuffix)"
+        }
+        if count > 1, let name {
+            return "\(name) · +\(count - 1) more"
+        }
+        return "—"
+    }
+
     /// Returns a copy updated with a successful fetch result.
     ///
     /// Plan 04 hotfix H-01: `placeholderMessage` is cleared on first successful snapshot.

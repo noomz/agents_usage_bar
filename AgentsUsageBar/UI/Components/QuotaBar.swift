@@ -88,11 +88,12 @@ public struct QuotaBar: View {
     /// nonisolated `@Test` functions in QuotaBarTests / QuotaBarThresholdConvention
     /// could not call it synchronously. The `@MainActor` `body` calls it fine.
     internal nonisolated static func color(forFraction fraction: Double?) -> Color {
-        guard let f = fraction else { return .gray }
-        let clamped = min(max(f, 0), 1)
-        if clamped < 0.20 { return .red }
-        if clamped < 0.50 { return .yellow }
-        return .green  // fraction >= 0.50 (UI-02 authoritative, B4)
+        switch QuotaBand.fromRemainingFraction(fraction) {
+        case .none:     return .gray
+        case .critical: return .red
+        case .warning:  return .yellow
+        case .healthy:  return .green
+        }
     }
 }
 

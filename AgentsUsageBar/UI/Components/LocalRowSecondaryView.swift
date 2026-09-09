@@ -19,53 +19,9 @@ public struct LocalRowSecondaryView: View {
     }
 
     /// Pure value-type helper — exposed `internal` for direct unit-testing.
+    /// Delegates to `ProviderState.localSecondaryCaption` (shared with `aub`).
     internal var secondaryText: String {
-        // D-04 placeholder takes precedence — Plan 04-08 seeds this with the
-        // "Set [llamacpp] port in config.toml to enable" subtitle.
-        if let msg = state.placeholderMessage, !msg.isEmpty {
-            return msg
-        }
-
-        // State E (RESEARCH §5.1 row E) — llama.cpp transient warmup.
-        if state.snapshot?.raw["loadingModel"] == "true" {
-            return "Running — loading model…"
-        }
-
-        // State A — lastStatus == .notRunning (RESEARCH §5.1 row A).
-        if case .notRunning = state.status {
-            return "Not running"
-        }
-
-        let raw = state.snapshot?.raw ?? [:]
-        let count = Int(raw["modelCount"] ?? "") ?? 0
-        let installedCount = Int(raw["installedCount"] ?? "") ?? -1
-        let name = raw["modelName"]
-        let vramBytes = Int64(raw["vramBytes"] ?? "") ?? 0
-        let vramSuffix: String = {
-            guard vramBytes > 0 else { return "" }
-            // RESEARCH §5.1 — format "X.X GB VRAM" via Double / GiB.
-            let gb = Double(vramBytes) / 1_073_741_824.0
-            return String(format: " · %.1f GB VRAM", gb)
-        }()
-
-        if count == 0 {
-            if installedCount == 0 {
-                return "Idle — no models installed"  // State B' (degenerate)
-            }
-            return "Idle — 0 models loaded"  // State B
-        }
-
-        if count == 1, let name {
-            return "\(name)\(vramSuffix)"  // State C
-        }
-
-        if count > 1, let name {
-            return "\(name) · +\(count - 1) more"  // State D
-        }
-
-        // Fallback — should never reach unless rendering a snapshot from a
-        // future provider with an unknown raw shape; print "—" as a safe default.
-        return "—"
+        state.localSecondaryCaption
     }
 }
 

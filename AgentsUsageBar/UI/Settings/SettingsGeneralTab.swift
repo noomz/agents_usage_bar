@@ -120,6 +120,8 @@ struct SettingsGeneralTab: View {
                     }
                 }
             }
+
+            CLIInstallSection()
         }
         .formStyle(.grouped)
         .padding()

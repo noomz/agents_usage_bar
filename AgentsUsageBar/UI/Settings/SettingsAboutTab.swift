@@ -45,6 +45,10 @@ struct SettingsAboutTab: View {
 
             Divider()
 
+            CLIAboutStatus()
+
+            Divider()
+
             // Phase 6 placeholder — Sparkle "Check for Updates" wiring
             // TODO(Phase 6 REL-02): replace this Text with a Sparkle SPUUpdater button.
             Text("Automatic updates available in a future release.")
@@ -56,5 +60,28 @@ struct SettingsAboutTab: View {
         }
         .padding(24)
         .frame(minWidth: 360, minHeight: 300)
+    }
+}
+
+private struct CLIAboutStatus: View {
+    private var status: CLIInstallStatus { CLIInstaller().status() }
+
+    var body: some View {
+        VStack(spacing: 4) {
+            switch status {
+            case .installed(let path):
+                Text("CLI installed at \(path)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            case .repairNeeded:
+                Text("CLI symlink needs repair — open Settings → General.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            case .notInstalled:
+                Text("Install the `aub` CLI from Settings → General.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }
