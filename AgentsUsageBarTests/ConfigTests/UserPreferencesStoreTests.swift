@@ -134,6 +134,7 @@ struct UserPreferencesStoreTests {
         #expect(store.hasSeenWelcome == false)
         #expect(store.claudeSource == .sessionReads)
         #expect(store.paceWarningsEnabled == true)
+        #expect(store.resetNotificationsEnabled == true)
         #expect(store.providerEnabled.isEmpty == true)
     }
 
@@ -182,5 +183,22 @@ struct UserPreferencesStoreTests {
         #expect(defaults.object(forKey: AUBDefaultsKey.paceWarningsEnabled) == nil)
         let store = UserPreferencesStore(defaults: defaults)
         #expect(store.paceWarningsEnabled == true)
+    }
+
+    @Test("roundTrip_resetNotificationsEnabled")
+    func roundTrip_resetNotificationsEnabled() async throws {
+        let defaults = makeDefaults()
+        let store = UserPreferencesStore(defaults: defaults)
+        store.setResetNotificationsEnabled(false)
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(store.resetNotificationsEnabled == false)
+    }
+
+    @Test("absentKey_doesNotOverrideDefaultResetNotificationsEnabled")
+    func absentKey_doesNotOverrideDefaultResetNotificationsEnabled() {
+        let defaults = makeDefaults()
+        #expect(defaults.object(forKey: AUBDefaultsKey.resetNotificationsEnabled) == nil)
+        let store = UserPreferencesStore(defaults: defaults)
+        #expect(store.resetNotificationsEnabled == true)
     }
 }

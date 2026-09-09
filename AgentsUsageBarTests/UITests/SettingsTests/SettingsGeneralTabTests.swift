@@ -48,6 +48,14 @@ struct SettingsGeneralTabTests {
         #expect(source.contains("setPaceWarningsEnabled"))
     }
 
+    @Test("SettingsGeneralTab contains reset-notifications Toggle bound to preferences")
+    func settingsGeneralTab_containsResetNotificationsToggle() throws {
+        let source = try settingsGeneralTabSource()
+        #expect(source.contains("Notify when limits reset"))
+        #expect(source.contains("resetNotificationsEnabled"))
+        #expect(source.contains("setResetNotificationsEnabled"))
+    }
+
     @Test("SettingsGeneralTab contains theme Picker with AppTheme tags")
     func settingsGeneralTab_containsThemePicker() throws {
         let source = try settingsGeneralTabSource()

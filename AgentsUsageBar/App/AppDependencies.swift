@@ -144,6 +144,7 @@ public enum AppDependencies {
             notificationState: notificationState
         )
         store.updatePaceWarningsEnabled(preferences.paceWarningsEnabled)
+        store.updateResetNotificationsEnabled(preferences.resetNotificationsEnabled)
 
         // 10. Seed placeholder rows when providers are not configured (B10).
         //     Specs come from ProviderRegistryFactory so the GUI and `aub` stay aligned.
@@ -240,6 +241,7 @@ public enum AppDependencies {
         var lastInterval = preferences.refreshInterval
         var lastThreshold = preferences.threshold
         var lastPaceWarningsEnabled = preferences.paceWarningsEnabled
+        var lastResetNotificationsEnabled = preferences.resetNotificationsEnabled
         var lastProviderEnabled = preferences.providerEnabled
 
         while !Task.isCancelled {
@@ -251,6 +253,7 @@ public enum AppDependencies {
                     _ = preferences.refreshInterval
                     _ = preferences.threshold
                     _ = preferences.paceWarningsEnabled
+                    _ = preferences.resetNotificationsEnabled
                     _ = preferences.providerEnabled
                 } onChange: {
                     // onChange fires on the thread that made the change.
@@ -265,6 +268,7 @@ public enum AppDependencies {
             let newInterval = preferences.refreshInterval
             let newThreshold = preferences.threshold
             let newPaceWarningsEnabled = preferences.paceWarningsEnabled
+            let newResetNotificationsEnabled = preferences.resetNotificationsEnabled
             let newProviderEnabled = preferences.providerEnabled
 
             if newInterval != lastInterval {
@@ -278,6 +282,10 @@ public enum AppDependencies {
             if newPaceWarningsEnabled != lastPaceWarningsEnabled {
                 lastPaceWarningsEnabled = newPaceWarningsEnabled
                 store.updatePaceWarningsEnabled(newPaceWarningsEnabled)
+            }
+            if newResetNotificationsEnabled != lastResetNotificationsEnabled {
+                lastResetNotificationsEnabled = newResetNotificationsEnabled
+                store.updateResetNotificationsEnabled(newResetNotificationsEnabled)
             }
             if newProviderEnabled != lastProviderEnabled {
                 // Find changed providers and propagate to AggregateStore

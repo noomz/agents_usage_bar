@@ -114,8 +114,11 @@
 		AA050500000000000000001A /* PollScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500000000000000001B /* PollScheduler.swift */; };
 		AA050500000000000000002A /* ThresholdEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500000000000000002B /* ThresholdEngine.swift */; };
 		AA090902000000000000001A /* PaceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA090902000000000000001B /* PaceEngine.swift */; };
+		AA090903000000000000001A /* ResetEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA090903000000000000001B /* ResetEngine.swift */; };
 		AA090902000000000000010A /* PaceEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA090902000000000000010B /* PaceEngineTests.swift */; };
+		AA090903000000000000010A /* ResetEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA090903000000000000010B /* ResetEngineTests.swift */; };
 		AA090902000000000000011A /* AggregateStorePaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA090902000000000000011B /* AggregateStorePaceTests.swift */; };
+		AA090903000000000000011A /* AggregateStoreResetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA090903000000000000011B /* AggregateStoreResetTests.swift */; };
 		AA050500000000000000003A /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500000000000000003B /* NotificationManager.swift */; };
 		/* Plan 01.05 — Test sources */
 		AA050500000000000000010A /* AggregateStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050500000000000000010B /* AggregateStoreTests.swift */; };
@@ -487,8 +490,11 @@
 		AA050500000000000000001B /* PollScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollScheduler.swift; sourceTree = "<group>"; };
 		AA050500000000000000002B /* ThresholdEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdEngine.swift; sourceTree = "<group>"; };
 		AA090902000000000000001B /* PaceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceEngine.swift; sourceTree = "<group>"; };
+		AA090903000000000000001B /* ResetEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetEngine.swift; sourceTree = "<group>"; };
 		AA090902000000000000010B /* PaceEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceEngineTests.swift; sourceTree = "<group>"; };
+		AA090903000000000000010B /* ResetEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetEngineTests.swift; sourceTree = "<group>"; };
 		AA090902000000000000011B /* AggregateStorePaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStorePaceTests.swift; sourceTree = "<group>"; };
+		AA090903000000000000011B /* AggregateStoreResetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreResetTests.swift; sourceTree = "<group>"; };
 		AA050500000000000000003B /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		/* Plan 01.05 — Test file references */
 		AA050500000000000000010B /* AggregateStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreTests.swift; sourceTree = "<group>"; };
@@ -1186,6 +1192,7 @@
 			children = (
 				AA050500000000000000002B /* ThresholdEngine.swift */,
 				AA090902000000000000001B /* PaceEngine.swift */,
+				AA090903000000000000001B /* ResetEngine.swift */,
 				AA050500000000000000003B /* NotificationManager.swift */,
 				AA070700000000000000001B /* UNUserNotificationCenterProtocol.swift */,
 				AA020500000000000000001B /* NotificationStateStore.swift */,
@@ -1202,6 +1209,7 @@
 				AA050500000000000000011B /* PollSchedulerTests.swift */,
 				AA020500000000000000014B /* AggregateStoreSnoozeTests.swift */,
 				AA090902000000000000011B /* AggregateStorePaceTests.swift */,
+				AA090903000000000000011B /* AggregateStoreResetTests.swift */,
 				/* Plan 02.06 — sleep/wake integration tests */
 				AA020600000000000000013B /* PollSchedulerSleepWakeTests.swift */,
 				/* Plan 02.07 — stale + tint tests */
@@ -1384,6 +1392,7 @@
 			children = (
 				AA070700000000000000010B /* ThresholdEngineTests.swift */,
 				AA090902000000000000010B /* PaceEngineTests.swift */,
+				AA090903000000000000010B /* ResetEngineTests.swift */,
 				AA070700000000000000011B /* NotificationManagerTests.swift */,
 				AA020500000000000000010B /* ThresholdEngineFSMTests.swift */,
 				AA020500000000000000011B /* NotificationStateStoreTests.swift */,
@@ -1828,6 +1837,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA050500000000000000001A /* PollScheduler.swift in Sources */,
 				AA050500000000000000002A /* ThresholdEngine.swift in Sources */,
 				AA090902000000000000001A /* PaceEngine.swift in Sources */,
+				AA090903000000000000001A /* ResetEngine.swift in Sources */,
 				AA050500000000000000003A /* NotificationManager.swift in Sources */,
 				/* Plan 01.06 — UI Environment + Components + Views */
 				AA060600000000000000001A /* ClockEnvironmentKey.swift in Sources */,
@@ -1979,7 +1989,9 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				/* Plan 01.07 — NotificationsTests */
 				AA070700000000000000010A /* ThresholdEngineTests.swift in Sources */,
 				AA090902000000000000010A /* PaceEngineTests.swift in Sources */,
+				AA090903000000000000010A /* ResetEngineTests.swift in Sources */,
 				AA090902000000000000011A /* AggregateStorePaceTests.swift in Sources */,
+				AA090903000000000000011A /* AggregateStoreResetTests.swift in Sources */,
 				AA070700000000000000011A /* NotificationManagerTests.swift in Sources */,
 				/* Plan 01.09 — Hover-style gap closure tests */
 				AA090900000000000000010A /* HoverableBorderedButtonStyleTests.swift in Sources */,

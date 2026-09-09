@@ -13,6 +13,7 @@ public enum AUBDefaultsKey {
     public static let hasSeenWelcome  = "aub.hasSeenWelcome"    // Bool
     public static let claudeSource    = "aub.provider.claude.source"  // String (ClaudeUsageSource.rawValue)
     public static let paceWarningsEnabled = "aub.paceWarningsEnabled"  // Bool (default true)
+    public static let resetNotificationsEnabled = "aub.resetNotificationsEnabled"  // Bool (default true)
     /// Per-provider enabled flag: "aub.provider.<providerID.rawValue>.enabled"
     public static func providerEnabled(_ id: ProviderID) -> String {
         "aub.provider.\(id.rawValue).enabled"
@@ -73,6 +74,10 @@ public final class UserPreferencesStore {
     /// Pace-limit warnings (window-average or recent stream would exhaust a reset window).
     /// Default `true`. Absent key must NOT be read via `bool(forKey:)` (that returns false).
     public private(set) var paceWarningsEnabled: Bool = true
+
+    /// Notify when a quota window resets after it was at/above the warning threshold.
+    /// Default `true`. Absent key must NOT be read via `bool(forKey:)`.
+    public private(set) var resetNotificationsEnabled: Bool = true
 
     /// Per-provider enabled flags. Absent key = not yet explicitly set (treat as enabled for
     /// providers that exist in the registry; detection seeding sets these on first launch).
@@ -139,6 +144,10 @@ public final class UserPreferencesStore {
         defaults.set(v, forKey: AUBDefaultsKey.paceWarningsEnabled)
     }
 
+    public func setResetNotificationsEnabled(_ v: Bool) {
+        defaults.set(v, forKey: AUBDefaultsKey.resetNotificationsEnabled)
+    }
+
     public func setProviderEnabled(_ id: ProviderID, enabled: Bool) {
         defaults.set(enabled, forKey: AUBDefaultsKey.providerEnabled(id))
     }
@@ -166,6 +175,7 @@ public final class UserPreferencesStore {
         ) ?? .sessionReads
 
         paceWarningsEnabled = (defaults.object(forKey: AUBDefaultsKey.paceWarningsEnabled) as? Bool) ?? true
+        resetNotificationsEnabled = (defaults.object(forKey: AUBDefaultsKey.resetNotificationsEnabled) as? Bool) ?? true
 
         var map: [ProviderID: Bool] = [:]
         for id in ProviderID.allKnown {

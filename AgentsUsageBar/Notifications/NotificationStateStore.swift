@@ -14,23 +14,28 @@ import os
 /// - `firedPaceWindows` — window names that already produced a pace warning today
 ///   (once per window per local day). Absent in records written before this field
 ///   existed; decoder defaults to `[]`.
+/// - `firedResetKeys` — `"<window>:<oldResetsAt epoch>"` tokens for reset-back
+///   notifications already sent today. Absent in older records; decoder defaults to `[]`.
 public struct NotificationStateRecord: Sendable, Codable, Equatable {
     public let lastBand: ThresholdBand
     public let snoozedUntilDay: String?
     public let firedPaceWindows: [String]
+    public let firedResetKeys: [String]
 
     public init(
         lastBand: ThresholdBand,
         snoozedUntilDay: String?,
-        firedPaceWindows: [String] = []
+        firedPaceWindows: [String] = [],
+        firedResetKeys: [String] = []
     ) {
         self.lastBand = lastBand
         self.snoozedUntilDay = snoozedUntilDay
         self.firedPaceWindows = firedPaceWindows
+        self.firedResetKeys = firedResetKeys
     }
 
     enum CodingKeys: String, CodingKey {
-        case lastBand, snoozedUntilDay, firedPaceWindows
+        case lastBand, snoozedUntilDay, firedPaceWindows, firedResetKeys
     }
 
     public init(from decoder: Decoder) throws {
@@ -38,6 +43,7 @@ public struct NotificationStateRecord: Sendable, Codable, Equatable {
         lastBand = try c.decode(ThresholdBand.self, forKey: .lastBand)
         snoozedUntilDay = try c.decodeIfPresent(String.self, forKey: .snoozedUntilDay)
         firedPaceWindows = try c.decodeIfPresent([String].self, forKey: .firedPaceWindows) ?? []
+        firedResetKeys = try c.decodeIfPresent([String].self, forKey: .firedResetKeys) ?? []
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -45,6 +51,7 @@ public struct NotificationStateRecord: Sendable, Codable, Equatable {
         try c.encode(lastBand, forKey: .lastBand)
         try c.encodeIfPresent(snoozedUntilDay, forKey: .snoozedUntilDay)
         try c.encode(firedPaceWindows, forKey: .firedPaceWindows)
+        try c.encode(firedResetKeys, forKey: .firedResetKeys)
     }
 }
 

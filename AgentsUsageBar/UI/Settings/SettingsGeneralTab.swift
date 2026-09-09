@@ -67,6 +67,14 @@ struct SettingsGeneralTab: View {
                 Text("Applies to every provider with a reset window. Warns when the current or recent usage rate would exhaust the window before it resets.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                Toggle("Notify when limits reset", isOn: Binding(
+                    get: { preferences.resetNotificationsEnabled },
+                    set: { preferences.setResetNotificationsEnabled($0) }
+                ))
+                Text("Fires after a window that was at or above the warning threshold (or exhausted) rolls over. Idle windows stay quiet.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             // MARK: Theme (D-07, Discretion)

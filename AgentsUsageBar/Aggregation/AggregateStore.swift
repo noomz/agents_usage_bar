@@ -56,10 +56,15 @@ public final class AggregateStore {
     /// Defaulted to `InMemoryNotificationStateStore()` so existing tests stay back-compat.
     private let notificationState: any NotificationStateStorage
     private let paceEngine: PaceEngine
+    private let resetEngine: ResetEngine
     /// In-RAM last utilization per (provider, window) for recent-stream pace (B).
     private var paceSamples: [PaceSample] = []
+    /// In-RAM last (utilization, resetsAt) per (provider, window) for reset-back detection.
+    private var resetSamples: [ResetSample] = []
     /// Global pace-warning toggle. Default on; Settings / observePreferences flips it.
     private var paceWarningsEnabled: Bool = true
+    /// Global reset-back notification toggle. Default on; Settings / observePreferences flips it.
+    private var resetNotificationsEnabled: Bool = true
 
     // MARK: - Coalescing state
 
@@ -104,6 +109,7 @@ public final class AggregateStore {
         self.notifications = notifications
         self.notificationState = notificationState
         self.paceEngine = PaceEngine()
+        self.resetEngine = ResetEngine()
 
         var names: [ProviderID: String] = [:]
         // Plan 03-08 D-07: capture hasTokens alongside displayName in a single
@@ -148,7 +154,8 @@ public final class AggregateStore {
         let updated = NotificationStateRecord(
             lastBand: existing?.lastBand ?? .normal,
             snoozedUntilDay: day,
-            firedPaceWindows: existing?.firedPaceWindows ?? []
+            firedPaceWindows: existing?.firedPaceWindows ?? [],
+            firedResetKeys: existing?.firedResetKeys ?? []
         )
         notificationState.setRecord(updated, forProviderID: providerID, day: day)
     }
@@ -232,6 +239,11 @@ public final class AggregateStore {
     /// Enables or disables pace-limit warnings for every provider.
     public func updatePaceWarningsEnabled(_ enabled: Bool) {
         paceWarningsEnabled = enabled
+    }
+
+    /// Enables or disables reset-back notifications for every provider.
+    public func updateResetNotificationsEnabled(_ enabled: Bool) {
+        resetNotificationsEnabled = enabled
     }
 
     /// Enables or disables a provider at runtime per D-04 (CONTEXT.md).
@@ -396,6 +408,7 @@ public final class AggregateStore {
         rollupTotals()
         await fireThresholdNotificationsIfNeeded(now: now)
         await firePaceNotificationsIfNeeded(now: now)
+        await fireResetNotificationsIfNeeded(now: now)
         cache.save(providers)
     }
 
@@ -515,7 +528,8 @@ public final class AggregateStore {
             let updated = NotificationStateRecord(
                 lastBand: decision.band,
                 snoozedUntilDay: existing?.snoozedUntilDay,
-                firedPaceWindows: existing?.firedPaceWindows ?? []
+                firedPaceWindows: existing?.firedPaceWindows ?? [],
+                firedResetKeys: existing?.firedResetKeys ?? []
             )
             notificationState.setRecord(updated, forProviderID: decision.providerID, day: day)
         }
@@ -558,7 +572,55 @@ public final class AggregateStore {
                 NotificationStateRecord(
                     lastBand: existing?.lastBand ?? .normal,
                     snoozedUntilDay: existing?.snoozedUntilDay,
-                    firedPaceWindows: fired
+                    firedPaceWindows: fired,
+                    firedResetKeys: existing?.firedResetKeys ?? []
+                ),
+                forProviderID: decision.providerID,
+                day: day
+            )
+        }
+    }
+
+    /// Evaluates quota-window resets independently of the 80/95/100% FSM and pace warnings.
+    /// Each reset decision is scheduled alone so it is not coalesced into "N providers crossed 80%".
+    /// Snooze-today does not suppress these — snooze is for "running out", not "you're back".
+    private func fireResetNotificationsIfNeeded(now: Date) async {
+        let snapshots = providers.values.compactMap(\.snapshot)
+        let day = TodayHelper.formatYYYYMMDD(now)
+        let allRecords = notificationState.allRecordsForToday(day)
+        let alreadyFired: [ProviderID: Set<String>] = Dictionary(
+            uniqueKeysWithValues: allRecords.map { pid, rec in
+                (pid, Set(rec.firedResetKeys))
+            }
+        )
+
+        let result = resetEngine.decisions(
+            for: snapshots,
+            now: now,
+            previous: resetSamples,
+            alreadyFired: alreadyFired,
+            warningFraction: thresholds.warningFraction,
+            enabled: resetNotificationsEnabled
+        )
+        resetSamples = result.nextSamples
+
+        for decision in result.decisions {
+            await notifications.schedule([decision])
+            guard let windowName = decision.windowName,
+                  let epoch = decision.id.split(separator: ":").last, !epoch.isEmpty
+            else { continue }
+            let existing = notificationState.record(forProviderID: decision.providerID, day: day)
+            var fired = existing?.firedResetKeys ?? []
+            // Dedup key is the *old* resetsAt. Reconstruct from the decision id suffix
+            // (`…:reset:<slug>:<epoch>`) because `resetSamples` already holds the new window.
+            let key = "\(windowName):\(epoch)"
+            if !fired.contains(key) { fired.append(key) }
+            notificationState.setRecord(
+                NotificationStateRecord(
+                    lastBand: existing?.lastBand ?? .normal,
+                    snoozedUntilDay: existing?.snoozedUntilDay,
+                    firedPaceWindows: existing?.firedPaceWindows ?? [],
+                    firedResetKeys: fired
                 ),
                 forProviderID: decision.providerID,
                 day: day

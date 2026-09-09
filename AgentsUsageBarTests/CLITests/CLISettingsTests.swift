@@ -19,6 +19,7 @@ struct CLISettingsTests {
         #expect(try! store.get("threshold").get().value == "0.80")
         #expect(try! store.get("theme").get().value == "auto")
         #expect(try! store.get("pace-warnings").get().value == "true")
+        #expect(try! store.get("reset-notifications").get().value == "true")
         #expect(try! store.get("claude-source").get().value == "sessionReads")
         #expect(try! store.get("provider.claude.enabled").get().value == "true")
     }
@@ -30,6 +31,7 @@ struct CLISettingsTests {
         #expect(try! store.get("refresh-interval").get().value == "1m")
         #expect(try! store.set("theme", value: "dark").get().value == "dark")
         #expect(try! store.set("pace-warnings", value: "no").get().value == "false")
+        #expect(try! store.set("reset-notifications", value: "no").get().value == "false")
         #expect(try! store.set("claude-source", value: "hook").get().value == "hook")
         #expect(try! store.set("provider.openrouter.enabled", value: "0").get().value == "false")
     }

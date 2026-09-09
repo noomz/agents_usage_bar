@@ -101,6 +101,7 @@ public struct CLISettings {
             Spec(cli: "threshold", defaultsKey: AUBDefaultsKey.threshold, defaultValue: "0.80", kind: .threshold),
             Spec(cli: "theme", defaultsKey: AUBDefaultsKey.theme, defaultValue: "auto", kind: .theme),
             Spec(cli: "pace-warnings", defaultsKey: AUBDefaultsKey.paceWarningsEnabled, defaultValue: "true", kind: .bool),
+            Spec(cli: "reset-notifications", defaultsKey: AUBDefaultsKey.resetNotificationsEnabled, defaultValue: "true", kind: .bool),
             Spec(cli: "claude-source", defaultsKey: AUBDefaultsKey.claudeSource, defaultValue: "sessionReads", kind: .claudeSource),
             Spec(cli: "open-at-login", defaultsKey: AUBDefaultsKey.openAtLogin, defaultValue: "false", kind: .bool),
             Spec(cli: "has-seen-welcome", defaultsKey: AUBDefaultsKey.hasSeenWelcome, defaultValue: "false", kind: .bool),
