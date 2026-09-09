@@ -14,6 +14,28 @@ A macOS menu bar app showing today's AI agent usage across providers — tokens,
 
 _Screenshot pending capture from a notarized DMG build (Phase 6 Plan 06-05 — human-gated)._
 
+## Notifications
+
+Native macOS banners when a provider crosses a quota threshold, is on pace to exhaust a reset window, or a window rolls over. Toggle each kind in **Settings → Notifications**.
+
+**Pace warning** — current or recent usage would exhaust the window before it resets:
+
+![Codex primary limit at risk](docs/01-primary-limit-at-risk.png)
+
+![Grok billing limit at risk](docs/04-billing-limit-at-risk.png)
+
+**Limit reset** — a window that was at or above the warning threshold is available again:
+
+![Codex primary limit reset](docs/02-primary-limit-reset.png)
+
+**Threshold** — usage crossed the configured quota fraction (default 80%; 100% shown here):
+
+![Claude at 100%](docs/03-provider-usage-threshold.png)
+
+**Coalesced** — several providers crossed the same band on one poll:
+
+![Two providers crossed 100%](docs/05-multiple-providers-crossed-limit.png)
+
 ## Status
 
 All v1 functionality (Claude, Codex, Gemini, OpenRouter, local LLMs, settings + welcome window) is complete; Phase 6 ships notarized DMG distribution, Sparkle auto-update, and OSS hygiene. See [`.planning/ROADMAP.md`](.planning/ROADMAP.md) for phase-by-phase status.
