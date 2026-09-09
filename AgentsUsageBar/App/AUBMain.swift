@@ -6,6 +6,7 @@ import SwiftUI
 @main
 enum AUBMain {
     static func main() async {
+        CLIProcess.reexecIfInvokedViaSymlink()
         let args = CommandLine.arguments
         let exe = URL(fileURLWithPath: args[0]).lastPathComponent
         let rest = Array(args.dropFirst())

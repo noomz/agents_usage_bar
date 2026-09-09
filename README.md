@@ -79,10 +79,19 @@ Environment variables take precedence over `config.toml` values (env > toml > de
 
 ## Command line (`aub`)
 
-The app binary is also the `aub` CLI. Install it from **Settings → General → Command Line**, or:
+The app binary is also the `aub` CLI. Install it from **Settings → General → Command Line**. The default destination is `~/.local/bin` (XDG user executables; no admin prompt). The picker also offers `/opt/homebrew/bin` and `/usr/local/bin` — the latter is on stock macOS PATH via `path_helper`, but usually needs administrator access.
+
+If you install to `~/.local/bin`, add it to PATH:
 
 ```
-ln -sf "/Applications/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar" /opt/homebrew/bin/aub
+fish_add_path ~/.local/bin
+# zsh/bash: export PATH="$HOME/.local/bin:$PATH"
+```
+
+Or symlink yourself:
+
+```
+ln -sf "/Applications/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar" ~/.local/bin/aub
 ```
 
 ```

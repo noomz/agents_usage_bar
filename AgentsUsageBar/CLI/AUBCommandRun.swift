@@ -40,7 +40,8 @@ extension AUBCommand {
             let installer = CLIInstaller()
             let path = try installer.install(prefix: prefix)
             fputs("Installed aub → \(path)\n", stdout)
-            if let hint = installer.pathHint() {
+            let dir = (path as NSString).deletingLastPathComponent
+            if let hint = installer.pathHint(for: dir) {
                 fputs("\(hint)\n", stdout)
             }
             return 0

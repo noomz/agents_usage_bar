@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Settings → General → Command Line. Installs a symlink named `aub` onto PATH.
 struct CLIInstallSection: View {
+    @State private var preset: CLIInstallPreset = .homeLocal
     @State private var status: CLIInstallStatus = .notInstalled
     @State private var pathHint: String?
     @State private var lastError: String?
@@ -10,6 +11,15 @@ struct CLIInstallSection: View {
     var body: some View {
         Section("Command Line") {
             VStack(alignment: .leading, spacing: 6) {
+                Picker("Install to", selection: $preset) {
+                    ForEach(CLIInstallPreset.allCases) { item in
+                        Text(item.menuLabel).tag(item)
+                    }
+                }
+                .pickerStyle(.menu)
+                .disabled(isWorking)
+                .onChange(of: preset) { _, _ in refresh() }
+
                 HStack {
                     statusLabel
                     Spacer()
@@ -33,7 +43,7 @@ struct CLIInstallSection: View {
                 }
             }
         }
-        .onAppear { refresh() }
+        .onAppear { refresh(selectInstalled: true) }
     }
 
     @ViewBuilder
@@ -54,16 +64,28 @@ struct CLIInstallSection: View {
         }
     }
 
-    private func refresh() {
+    private func selectedDirectory(installer: CLIInstaller) -> String {
+        preset.directory(homeDirectory: installer.fs.homeDirectory)
+    }
+
+    private func refresh(selectInstalled: Bool = false) {
         let installer = CLIInstaller()
-        status = installer.status()
-        pathHint = installer.pathHint()
+        if selectInstalled, case .installed(let path) = installer.status() {
+            let dir = (path as NSString).deletingLastPathComponent
+            if let match = CLIInstallPreset.matching(path: dir, homeDirectory: installer.fs.homeDirectory) {
+                preset = match
+            }
+        }
+        let selected = selectedDirectory(installer: installer)
+        status = installer.status(in: selected)
+        pathHint = installer.pathHint(for: selected)
     }
 
     private func perform() {
         isWorking = true
         lastError = nil
         let current = status
+        let prefix = preset.directory(homeDirectory: CLIInstaller().fs.homeDirectory)
         Task.detached(priority: .userInitiated) {
             let installer = CLIInstaller()
             do {
@@ -71,7 +93,7 @@ struct CLIInstallSection: View {
                 case .installed:
                     try installer.uninstall()
                 case .notInstalled, .repairNeeded:
-                    _ = try installer.install()
+                    _ = try installer.install(prefix: prefix)
                 }
                 await MainActor.run {
                     refresh()

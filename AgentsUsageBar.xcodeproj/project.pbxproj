@@ -359,6 +359,8 @@
 		AA070100000000000000007A /* UsageJSONRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000007B /* UsageJSONRenderer.swift */; };
 		AA070100000000000000008A /* CLISettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000008B /* CLISettings.swift */; };
 		AA070100000000000000009A /* CLIInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000009B /* CLIInstaller.swift */; };
+		AA07010000000000000000CA /* CLIProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA07010000000000000000CB /* CLIProcess.swift */; };
+		AA070100000000000000017A /* CLIProcessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000017B /* CLIProcessTests.swift */; };
 		AA07010000000000000000AA /* CLIInstallSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA07010000000000000000AB /* CLIInstallSection.swift */; };
 		AA07010000000000000000BA /* AUBCommandRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA07010000000000000000BB /* AUBCommandRun.swift */; };
 		AA070100000000000000010A /* QuotaBandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000010B /* QuotaBandTests.swift */; };
@@ -746,6 +748,8 @@
 		AA070100000000000000007B /* UsageJSONRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageJSONRenderer.swift; sourceTree = "<group>"; };
 		AA070100000000000000008B /* CLISettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISettings.swift; sourceTree = "<group>"; };
 		AA070100000000000000009B /* CLIInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstaller.swift; sourceTree = "<group>"; };
+		AA07010000000000000000CB /* CLIProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIProcess.swift; sourceTree = "<group>"; };
+		AA070100000000000000017B /* CLIProcessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIProcessTests.swift; sourceTree = "<group>"; };
 		AA07010000000000000000AB /* CLIInstallSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstallSection.swift; sourceTree = "<group>"; };
 		AA07010000000000000000BB /* AUBCommandRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBCommandRun.swift; sourceTree = "<group>"; };
 		AA070100000000000000010B /* QuotaBandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaBandTests.swift; sourceTree = "<group>"; };
@@ -1273,6 +1277,7 @@
 				AA070100000000000000007B /* UsageJSONRenderer.swift */,
 				AA070100000000000000008B /* CLISettings.swift */,
 				AA070100000000000000009B /* CLIInstaller.swift */,
+				AA07010000000000000000CB /* CLIProcess.swift */,
 			);
 			path = CLI;
 			sourceTree = "<group>";
@@ -1285,6 +1290,7 @@
 				AA070100000000000000013B /* CLIInstallerTests.swift */,
 				AA070100000000000000014B /* UsageTextRendererTests.swift */,
 				AA070100000000000000015B /* CLIUsageSessionTests.swift */,
+				AA070100000000000000017B /* CLIProcessTests.swift */,
 			);
 			path = CLITests;
 			sourceTree = "<group>";
@@ -1942,6 +1948,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000007A /* UsageJSONRenderer.swift in Sources */,
 				AA070100000000000000008A /* CLISettings.swift in Sources */,
 				AA070100000000000000009A /* CLIInstaller.swift in Sources */,
+				AA07010000000000000000CA /* CLIProcess.swift in Sources */,
 				AA07010000000000000000AA /* CLIInstallSection.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2113,6 +2120,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000013A /* CLIInstallerTests.swift in Sources */,
 				AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */,
 				AA070100000000000000015A /* CLIUsageSessionTests.swift in Sources */,
+				AA070100000000000000017A /* CLIProcessTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

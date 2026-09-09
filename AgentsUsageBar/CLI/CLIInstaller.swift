@@ -89,6 +89,44 @@ public struct FoundationCLIInstallerFileSystem: CLIInstallerFileSystem, Sendable
     }
 }
 
+/// Preset destinations for the Settings picker and `aub install`.
+///
+/// Default is `~/.local/bin` (XDG user executables; pipx / uv / mise). That
+/// directory is **not** on stock macOS PATH (`path_helper` only ships
+/// `/usr/local/bin` in `/etc/paths`), so we show a PATH hint after install.
+/// `/usr/local/bin` is on PATH but often needs admin; `/opt/homebrew/bin` is
+/// on PATH only after Homebrew's `shellenv`.
+public enum CLIInstallPreset: String, CaseIterable, Identifiable, Sendable, Equatable {
+    case homeLocal
+    case homebrew
+    case usrLocal
+
+    public var id: String { rawValue }
+
+    public var menuLabel: String {
+        switch self {
+        case .homeLocal: return "~/.local/bin"
+        case .homebrew:  return "/opt/homebrew/bin"
+        case .usrLocal:  return "/usr/local/bin"
+        }
+    }
+
+    public func directory(homeDirectory: String) -> String {
+        switch self {
+        case .homeLocal:
+            return (homeDirectory as NSString).appendingPathComponent(".local/bin")
+        case .homebrew:
+            return "/opt/homebrew/bin"
+        case .usrLocal:
+            return "/usr/local/bin"
+        }
+    }
+
+    public static func matching(path: String, homeDirectory: String) -> CLIInstallPreset? {
+        allCases.first { $0.directory(homeDirectory: homeDirectory) == path }
+    }
+}
+
 public enum CLIInstallStatus: Equatable, Sendable {
     case notInstalled
     case installed(path: String)
@@ -140,66 +178,82 @@ public struct CLIInstaller: Sendable {
         self.fs = fs
     }
 
-    /// Candidate bin directories, first match wins for a no-sudo install.
+    /// Known bin directories we may have written a symlink into.
     public func candidateDirectories() -> [String] {
-        let homeLocal = (fs.homeDirectory as NSString).appendingPathComponent(".local/bin")
-        return ["/opt/homebrew/bin", "/usr/local/bin", homeLocal]
+        CLIInstallPreset.allCases.map { $0.directory(homeDirectory: fs.homeDirectory) }
+    }
+
+    public func defaultDirectory() -> String {
+        CLIInstallPreset.homeLocal.directory(homeDirectory: fs.homeDirectory)
+    }
+
+    public func status(in directory: String) -> CLIInstallStatus {
+        let exe = (fs.executablePath as NSString).standardizingPath
+        let link = (directory as NSString).appendingPathComponent(Self.binaryName)
+        guard fs.fileExists(atPath: link) || fs.isSymlink(atPath: link) else {
+            return .notInstalled
+        }
+        guard fs.isSymlink(atPath: link),
+              let dest = try? fs.destinationOfSymlink(atPath: link) else {
+            return .repairNeeded(path: link)
+        }
+        let resolved = (dest as NSString).standardizingPath
+        if resolved == exe || dest == fs.executablePath {
+            return .installed(path: link)
+        }
+        return .repairNeeded(path: link)
     }
 
     public func status() -> CLIInstallStatus {
-        let exe = (fs.executablePath as NSString).standardizingPath
         var firstBroken: String?
         for dir in candidateDirectories() {
-            let link = (dir as NSString).appendingPathComponent(Self.binaryName)
-            guard fs.fileExists(atPath: link) || fs.isSymlink(atPath: link) else { continue }
-            guard fs.isSymlink(atPath: link),
-                  let dest = try? fs.destinationOfSymlink(atPath: link) else {
-                if firstBroken == nil { firstBroken = link }
+            switch status(in: dir) {
+            case .installed(let path):
+                return .installed(path: path)
+            case .repairNeeded(let path):
+                if firstBroken == nil { firstBroken = path }
+            case .notInstalled:
                 continue
             }
-            let resolved = (dest as NSString).standardizingPath
-            if resolved == exe || dest == fs.executablePath {
-                return .installed(path: link)
-            }
-            if firstBroken == nil { firstBroken = link }
         }
         if let broken = firstBroken { return .repairNeeded(path: broken) }
         return .notInstalled
     }
 
-    public func pathHint() -> String? {
-        let dirs = candidateDirectories()
-        let path = fs.pathEnvironment
-        let chosen = dirs.first { dir in
-            path.split(separator: ":").contains { String($0) == dir }
+    public func isOnPATH(_ directory: String) -> Bool {
+        fs.pathEnvironment.split(separator: ":").contains { String($0) == directory }
+    }
+
+    /// Shell snippet when `directory` is missing from PATH. `nil` when already searchable.
+    public func pathHint(for directory: String) -> String? {
+        if isOnPATH(directory) { return nil }
+        if directory == defaultDirectory() {
+            return "Not on PATH. fish: fish_add_path ~/.local/bin   zsh/bash: export PATH=\"$HOME/.local/bin:$PATH\""
         }
-        if chosen != nil { return nil }
-        let homeLocal = (fs.homeDirectory as NSString).appendingPathComponent(".local/bin")
-        return "Add \(homeLocal) to PATH, e.g. fish_add_path ~/.local/bin"
+        if directory == CLIInstallPreset.homebrew.directory(homeDirectory: fs.homeDirectory) {
+            return "Not on PATH. Add Homebrew to your shell: eval \"$(/opt/homebrew/bin/brew shellenv)\""
+        }
+        return "Not on PATH. Add \(directory) to PATH in your shell profile."
     }
 
     @discardableResult
     public func install(prefix: String? = nil) throws -> String {
         let exe = fs.executablePath
-        if let prefix {
-            return try installLink(in: prefix, destination: exe, createDir: true)
+        let dir = prefix ?? defaultDirectory()
+        try uninstall()
+        if !fs.directoryExists(atPath: dir) {
+            do {
+                try fs.createDirectory(atPath: dir)
+            } catch {
+                try installPrivileged(directory: dir, destination: exe)
+                return (dir as NSString).appendingPathComponent(Self.binaryName)
+            }
         }
-
-        if let dir = firstWritableExistingDir() {
+        if fs.isWritableDirectory(atPath: dir) {
             return try installLink(in: dir, destination: exe, createDir: false)
         }
-
-        let homeLocal = (fs.homeDirectory as NSString).appendingPathComponent(".local/bin")
-        if !fs.directoryExists(atPath: homeLocal) {
-            try fs.createDirectory(atPath: homeLocal)
-        }
-        if fs.isWritableDirectory(atPath: homeLocal) {
-            return try installLink(in: homeLocal, destination: exe, createDir: false)
-        }
-
-        try installPrivileged(destination: exe)
-        if case .installed(let path) = status() { return path }
-        return "/usr/local/bin/\(Self.binaryName)"
+        try installPrivileged(directory: dir, destination: exe)
+        return (dir as NSString).appendingPathComponent(Self.binaryName)
     }
 
     public func uninstall() throws {
@@ -212,12 +266,6 @@ public struct CLIInstaller: Sendable {
             if resolved == exe || dest == fs.executablePath {
                 try fs.removeItem(atPath: link)
             }
-        }
-    }
-
-    private func firstWritableExistingDir() -> String? {
-        candidateDirectories().first { dir in
-            fs.directoryExists(atPath: dir) && fs.isWritableDirectory(atPath: dir)
         }
     }
 
@@ -238,14 +286,14 @@ public struct CLIInstaller: Sendable {
         return link
     }
 
-    private func installPrivileged(destination: String) throws {
-        var lines: [String] = ["set -eu"]
-        for dir in ["/usr/local/bin", "/opt/homebrew/bin"] where fs.directoryExists(atPath: dir) {
-            lines.append("/bin/mkdir -p \(shellEscape(dir))")
-            lines.append("/bin/ln -sf \(shellEscape(destination)) \(shellEscape((dir as NSString).appendingPathComponent(Self.binaryName)))")
-        }
-        guard lines.count > 1 else { throw Error.noWritableDestination }
-        try fs.runPrivileged(script: lines.joined(separator: "\n"))
+    private func installPrivileged(directory: String, destination: String) throws {
+        let link = (directory as NSString).appendingPathComponent(Self.binaryName)
+        let script = [
+            "set -eu",
+            "/bin/mkdir -p \(shellEscape(directory))",
+            "/bin/ln -sf \(shellEscape(destination)) \(shellEscape(link))",
+        ].joined(separator: "\n")
+        try fs.runPrivileged(script: script)
     }
 
     private func shellEscape(_ s: String) -> String {

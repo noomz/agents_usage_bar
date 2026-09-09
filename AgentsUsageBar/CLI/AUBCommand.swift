@@ -66,7 +66,7 @@ public enum AUBCommand: Equatable, Sendable {
       aub settings             List settings keys and values
       aub settings get <key>
       aub settings set <key> <value>
-      aub install [--prefix PATH]
+      aub install [--prefix PATH]   Default: ~/.local/bin
       aub uninstall
       aub version
       aub help

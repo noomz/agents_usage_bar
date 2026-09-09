@@ -41,18 +41,19 @@ private final class FakeFS: CLIInstallerFileSystem, @unchecked Sendable {
 @Suite("CLIInstaller")
 struct CLIInstallerTests {
 
-    @Test("prefers writable Homebrew bin")
-    func prefersHomebrew() throws {
+    @Test("default is ~/.local/bin even when Homebrew is writable")
+    func defaultIsHomeLocal() throws {
         let fs = FakeFS()
         fs.dirs = ["/opt/homebrew/bin", "/usr/local/bin"]
-        fs.writable = ["/opt/homebrew/bin"]
+        fs.writable = ["/opt/homebrew/bin", "/usr/local/bin"]
         let installer = CLIInstaller(fs: fs)
         let path = try installer.install()
-        #expect(path == "/opt/homebrew/bin/aub")
+        #expect(path == "/Users/test/.local/bin/aub")
         #expect(fs.files[path] == fs.executablePath)
+        #expect(fs.files["/opt/homebrew/bin/aub"] == nil)
     }
 
-    @Test("falls back to ~/.local/bin and creates it")
+    @Test("creates ~/.local/bin when missing")
     func createsHomeLocal() throws {
         let fs = FakeFS()
         let installer = CLIInstaller(fs: fs)
@@ -65,9 +66,9 @@ struct CLIInstallerTests {
     @Test("refuses to clobber a regular file")
     func refusesClobber() {
         let fs = FakeFS()
-        fs.dirs = ["/opt/homebrew/bin"]
-        fs.writable = ["/opt/homebrew/bin"]
-        fs.files["/opt/homebrew/bin/aub"] = "" // regular file
+        fs.dirs = ["/Users/test/.local/bin"]
+        fs.writable = ["/Users/test/.local/bin"]
+        fs.files["/Users/test/.local/bin/aub"] = "" // regular file
         let installer = CLIInstaller(fs: fs)
         do {
             _ = try installer.install()
@@ -82,12 +83,22 @@ struct CLIInstallerTests {
     @Test("replaces our existing symlink")
     func replacesOwnSymlink() throws {
         let fs = FakeFS()
-        fs.dirs = ["/opt/homebrew/bin"]
-        fs.writable = ["/opt/homebrew/bin"]
-        fs.files["/opt/homebrew/bin/aub"] = "/old/AgentsUsageBar"
+        fs.dirs = ["/Users/test/.local/bin"]
+        fs.writable = ["/Users/test/.local/bin"]
+        fs.files["/Users/test/.local/bin/aub"] = "/old/AgentsUsageBar"
         let installer = CLIInstaller(fs: fs)
         let path = try installer.install()
         #expect(fs.files[path] == fs.executablePath)
+    }
+
+    @Test("prefix selects Homebrew over the default")
+    func prefixSelectsHomebrew() throws {
+        let fs = FakeFS()
+        fs.dirs = ["/opt/homebrew/bin"]
+        fs.writable = ["/opt/homebrew/bin"]
+        let installer = CLIInstaller(fs: fs)
+        let path = try installer.install(prefix: "/opt/homebrew/bin")
+        #expect(path == "/opt/homebrew/bin/aub")
     }
 
     @Test("uninstall removes only our symlink")
@@ -101,6 +112,16 @@ struct CLIInstallerTests {
         try installer.uninstall()
         #expect(fs.files["/opt/homebrew/bin/aub"] == nil)
         #expect(fs.files["/usr/local/bin/aub"] == "/someone/else")
+    }
+
+    @Test("status(in:) is per destination")
+    func statusInDirectory() {
+        let fs = FakeFS()
+        fs.dirs = ["/Users/test/.local/bin", "/opt/homebrew/bin"]
+        fs.files["/Users/test/.local/bin/aub"] = fs.executablePath
+        let installer = CLIInstaller(fs: fs)
+        #expect(installer.status(in: "/Users/test/.local/bin") == .installed(path: "/Users/test/.local/bin/aub"))
+        #expect(installer.status(in: "/opt/homebrew/bin") == .notInstalled)
     }
 
     @Test("status installed / not installed / repair")
@@ -135,15 +156,32 @@ struct CLIInstallerTests {
         #expect(fs.dirs.contains("/custom/bin"))
     }
 
-    @Test("admin fallback records script")
+    @Test("admin fallback records script for the selected prefix")
     func adminFallback() throws {
         let fs = FakeFS()
         fs.dirs = ["/usr/local/bin"]
-        // home local exists but is not writable, brew dirs not writable
-        fs.dirs.insert("/Users/test/.local/bin")
         let installer = CLIInstaller(fs: fs)
-        _ = try installer.install()
+        _ = try installer.install(prefix: "/usr/local/bin")
         #expect(!fs.privilegedScripts.isEmpty)
+        #expect(fs.privilegedScripts[0].contains("/usr/local/bin"))
         #expect(fs.privilegedScripts[0].contains("ln -sf"))
+    }
+
+    @Test("pathHint for ~/.local/bin when missing from PATH")
+    func pathHintHomeLocal() {
+        let fs = FakeFS()
+        fs.pathEnvironment = "/usr/bin:/bin"
+        let installer = CLIInstaller(fs: fs)
+        let hint = installer.pathHint(for: "/Users/test/.local/bin")
+        #expect(hint != nil)
+        #expect(hint?.contains("fish_add_path") == true)
+        #expect(installer.pathHint(for: "/usr/bin") == nil)
+    }
+
+    @Test("preset matching")
+    func presetMatching() {
+        #expect(CLIInstallPreset.homeLocal.directory(homeDirectory: "/Users/test") == "/Users/test/.local/bin")
+        #expect(CLIInstallPreset.matching(path: "/opt/homebrew/bin", homeDirectory: "/Users/test") == .homebrew)
+        #expect(CLIInstallPreset.matching(path: "/usr/local/bin", homeDirectory: "/Users/test") == .usrLocal)
     }
 }
