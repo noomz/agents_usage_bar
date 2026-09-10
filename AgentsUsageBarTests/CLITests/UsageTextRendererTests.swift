@@ -153,10 +153,83 @@ struct UsageTextRendererTests {
             ]
         )
         let text = UsageTextRenderer.renderUsage(report, color: false)
-        #expect(text.contains("24%"))
-        #expect(text.contains("20%"))
-        #expect(!text.contains("68%"))
-        #expect(!text.contains("41%"))
+        let barLines = text.split(whereSeparator: \.isNewline).filter { $0.contains("░") || $0.contains("█") }
+        #expect(barLines.contains { $0.contains("24%") })
+        #expect(barLines.contains { $0.contains("20%") })
+        #expect(!barLines.contains { $0.contains("68%") })
+        #expect(!barLines.contains { $0.contains("41%") })
+        // Weekly utilization still listed as its own window row, not jammed onto the 5h bar.
+        #expect(text.contains("68%"))
+        #expect(text.contains("41%"))
+    }
+
+    @Test("claude personal+work windows are one per line, not jammed with ·")
+    func claudeWindowsNotJammed() {
+        let now = Date()
+        let personal5h = now.addingTimeInterval(4 * 3600 + 20 * 60)
+        let personal7d = now.addingTimeInterval(31 * 3600)
+        let work5h = now.addingTimeInterval(3 * 3600)
+        let work7d = now.addingTimeInterval(55 * 3600)
+        let snap = UsageSnapshot(
+            providerID: .claude,
+            asOf: now,
+            tokensToday: 89_919_043,
+            costTodayUSD: Decimal(string: "141.71"),
+            balanceUSD: nil,
+            quota: Quota(used: 0.86, limit: 1, remaining: 0.14),
+            raw: [:],
+            quotaWindows: [
+                QuotaWindow(name: "personal 5h", utilization: 0.31, resetsAt: personal5h),
+                QuotaWindow(name: "personal 7d", utilization: 0.44, resetsAt: personal7d),
+                QuotaWindow(name: "work 5h", utilization: 0.35, resetsAt: work5h),
+                QuotaWindow(name: "work 7d", utilization: 0.86, resetsAt: work7d),
+            ],
+            accounts: [
+                .init(
+                    name: "personal",
+                    costTodayUSD: Decimal(string: "78.15"),
+                    quota: Quota(used: 0.44, limit: 1, remaining: 0.56),
+                    quotaWindows: [
+                        QuotaWindow(name: "5h", utilization: 0.31, resetsAt: personal5h),
+                        QuotaWindow(name: "7d", utilization: 0.44, resetsAt: personal7d),
+                    ]
+                ),
+                .init(
+                    name: "work",
+                    costTodayUSD: Decimal(string: "63.56"),
+                    quota: Quota(used: 0.86, limit: 1, remaining: 0.14),
+                    quotaWindows: [
+                        QuotaWindow(name: "5h", utilization: 0.35, resetsAt: work5h),
+                        QuotaWindow(name: "7d", utilization: 0.86, resetsAt: work7d),
+                    ]
+                ),
+            ]
+        )
+        let report = UsageReport(
+            asOf: now,
+            source: .live,
+            providers: [
+                ProviderReport(
+                    id: .claude, displayName: "Claude Code", status: .ok(lastSuccess: now),
+                    snapshot: snap, placeholderMessage: nil, errorDescription: nil,
+                    isLocal: false, hasTokens: true
+                )
+            ]
+        )
+        let text = UsageTextRenderer.renderUsage(report, color: false)
+        #expect(!text.contains("personal 5h"))
+        #expect(!text.contains(" · work "))
+        #expect(text.contains("personal"))
+        #expect(text.contains("work"))
+        #expect(text.contains("5h"))
+        #expect(text.contains("7d"))
+        #expect(text.contains("86%"))
+        let lines = text.split(whereSeparator: \.isNewline).map(String.init)
+        let fiveHourLines = lines.filter { $0.contains("5h") }
+        let sevenDayLines = lines.filter { $0.contains("7d") }
+        #expect(fiveHourLines.count == 2)
+        #expect(sevenDayLines.count == 2)
+        #expect(fiveHourLines.allSatisfy { !$0.contains("7d") })
     }
 
     @Test("quota renderer lists windows")

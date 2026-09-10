@@ -80,16 +80,18 @@ public enum UsageTextRenderer {
             lines.append("\(name)  \(caption)")
             return lines
         }
-        let (barLine, band) = quotaBarLine(p.snapshot?.displayedQuota, color: color)
+        let (barLine, _) = quotaBarLine(p.snapshot?.displayedQuota, color: color)
         lines.append("\(name)  \(barLine)")
         lines.append("\(pad("", to: nameWidth))  \(secondaryLine(p))")
-        if let windows = p.snapshot?.quotaWindows, !windows.isEmpty {
-            lines.append("\(pad("", to: nameWidth))  \(windowsLine(windows, now: now))")
-        }
-        if let accounts = p.snapshot?.accounts, accounts.count >= 2 {
+        let accounts = p.snapshot?.accounts
+        if let accounts, accounts.count >= 2 {
+            // Per-account blocks already list 5h/7d; skip the parent dump of
+            // "personal 5h · personal 7d · work 5h · work 7d".
             for account in accounts {
-                lines.append(contentsOf: accountLines(account, nameWidth: nameWidth, color: color, now: now, band: band))
+                lines.append(contentsOf: accountLines(account, nameWidth: nameWidth, color: color, now: now))
             }
+        } else if let windows = p.snapshot?.quotaWindows, !windows.isEmpty {
+            lines.append(contentsOf: windowLines(windows, nameWidth: nameWidth, now: now))
         }
         if isDegraded(p) {
             lines.append("\(pad("", to: nameWidth))  usage temporarily unavailable")
@@ -108,11 +110,7 @@ public enum UsageTextRenderer {
         let (barLine, _) = quotaBarLine(p.snapshot?.displayedQuota, color: color)
         lines.append("\(name)  \(barLine)")
         if let windows = p.snapshot?.quotaWindows, !windows.isEmpty {
-            for w in windows {
-                let pct = w.utilization.map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
-                let reset = w.resetsAt.map { resetsPhrase(until: $0, now: now) } ?? "—"
-                lines.append("\(pad("", to: nameWidth))  \(w.name)  \(pct)  \(reset)")
-            }
+            lines.append(contentsOf: windowLines(windows, nameWidth: nameWidth, now: now))
         }
         if isDegraded(p) {
             lines.append("\(pad("", to: nameWidth))  usage temporarily unavailable")
@@ -156,24 +154,27 @@ public enum UsageTextRenderer {
         return parts.joined(separator: " · ")
     }
 
-    private static func windowsLine(_ windows: [QuotaWindow], now: Date) -> String {
-        windows.map { w in
-            let pct = w.utilization.map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
-            if let reset = w.resetsAt {
-                return "\(w.name) \(pct)  \(resetsPhrase(until: reset, now: now))"
-            }
-            return "\(w.name) \(pct)"
-        }.joined(separator: " · ")
+    /// One aligned `name  pct  Resets …` row per window. Four Claude windows on a
+    /// single ` · `-joined line wrapped and collided in the terminal.
+    private static func windowLines(_ windows: [QuotaWindow], nameWidth: Int, now: Date) -> [String] {
+        let labelWidth = windows.map(\.name.count).max() ?? 0
+        return windows.map { w in
+            "\(pad("", to: nameWidth))  \(windowCaption(w, labelWidth: labelWidth, now: now))"
+        }
+    }
+
+    private static func windowCaption(_ w: QuotaWindow, labelWidth: Int, now: Date) -> String {
+        let pct = w.utilization.map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
+        let reset = w.resetsAt.map { resetsPhrase(until: $0, now: now) } ?? "—"
+        return "\(pad(w.name, to: labelWidth))  \(pad(pct, to: 4))  \(reset)"
     }
 
     private static func accountLines(
         _ account: UsageSnapshot.AccountUsage,
         nameWidth: Int,
         color: Bool,
-        now: Date,
-        band: QuotaBand
+        now: Date
     ) -> [String] {
-        _ = band
         let indent = pad("", to: nameWidth)
         var head = "  \(account.name)"
         if let cost = account.costTodayUSD {
@@ -181,7 +182,9 @@ public enum UsageTextRenderer {
         }
         let (barLine, _) = quotaBarLine(account.displayedQuota, color: color)
         var lines = ["\(indent)  \(head)", "\(indent)  \(barLine)"]
-        if let soonest = account.displayedResetsAt {
+        if let windows = account.quotaWindows, !windows.isEmpty {
+            lines.append(contentsOf: windowLines(windows, nameWidth: nameWidth, now: now))
+        } else if let soonest = account.displayedResetsAt {
             lines.append("\(indent)  \(resetsPhrase(until: soonest, now: now))")
         }
         return lines
@@ -204,19 +207,7 @@ public enum UsageTextRenderer {
     }
 
     public static func resetsPhrase(until date: Date, now: Date) -> String {
-        let interval = date.timeIntervalSince(now)
-        if interval <= 0 { return "Resets now" }
-        let totalMinutes = Int(interval / 60)
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        if hours >= 24 {
-            let days = hours / 24
-            let remH = hours % 24
-            return "Resets \(days)d \(remH)h"
-        }
-        if hours >= 1 { return "Resets \(hours)h \(minutes)m" }
-        if totalMinutes >= 1 { return "Resets \(totalMinutes)m" }
-        return "Resets <1m"
+        ResetCountdown.phrase(until: date, now: now)
     }
 
     private static func pad(_ s: String, to n: Int) -> String {

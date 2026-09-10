@@ -142,10 +142,12 @@ public struct ProviderRowView: View {
                     HStack(spacing: 8) {
                         RelativeTimestampLabel(date: state.lastSuccess, isStale: isStale)
                         Spacer()
-                        Text(resetsText(state.snapshot, now: ctx.date))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
+                        if (state.snapshot?.accounts?.count ?? 0) < 2 {
+                            Text(resetsText(state.snapshot, now: ctx.date))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
                     }
 
                     // Plan 03-07 / D-11 — degraded subtitle. Placed AFTER the
@@ -209,35 +211,22 @@ public struct ProviderRowView: View {
     /// nil (OpenRouter, Claude). When the soonest reset is already in the
     /// past, returns "Resets now" until the next poll rebases the window.
     ///
-    /// Format: `Resets Xh Ym` (≥ 1h), `Resets Xm` (≥ 1m), `Resets <1m` (< 1m).
+    /// Format: `Resets Xd Yh` (≥ 24h), `Resets Xh Ym` (< 24h), `Resets Xm`, `Resets <1m`.
     private func resetsText(_ snapshot: UsageSnapshot?, now: Date) -> String {
         guard let windows = snapshot?.quotaWindows,
               let soonest = windows.compactMap(\.resetsAt).min()
         else {
             return "Resets —"
         }
-        let interval = soonest.timeIntervalSince(now)
-        if interval <= 0 {
-            return "Resets now"
-        }
-        let totalMinutes = Int(interval / 60)
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        if hours >= 1 {
-            return "Resets \(hours)h \(minutes)m"
-        }
-        if totalMinutes >= 1 {
-            return "Resets \(totalMinutes)m"
-        }
-        return "Resets <1m"
+        return ResetCountdown.phrase(until: soonest, now: now)
     }
 }
 
 // MARK: - AccountChildRow
 
 /// One indented per-account sub-row under an aggregated provider row (Claude hook mode):
-/// account name · today cost, its own color-coded quota bar, and a per-account reset
-/// countdown. Pure value render from `UsageSnapshot.AccountUsage`.
+/// account name · today cost, 5h glance bar, and one caption per quota window (5h / 7d).
+/// Pure value render from `UsageSnapshot.AccountUsage`.
 struct AccountChildRow: View {
     let account: UsageSnapshot.AccountUsage
     let now: Date
@@ -257,30 +246,42 @@ struct AccountChildRow: View {
                         .monospacedDigit()
                 }
                 Spacer()
-                if let resets = resetsText() {
-                    Text(resets)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .monospacedDigit()
-                }
             }
             QuotaBar(quota: account.displayedQuota)
                 .frame(maxWidth: .infinity)
+            if let windows = account.quotaWindows, !windows.isEmpty {
+                ForEach(Array(windows.enumerated()), id: \.offset) { _, window in
+                    windowCaption(window)
+                }
+            } else if let resets = resetsText() {
+                Text(resets)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .monospacedDigit()
+            }
         }
     }
 
-    /// Reset for the glance bar (5h when present); nil hides the label (no windows).
-    /// Mirrors ProviderRowView.resetsText formatting.
+    private func windowCaption(_ window: QuotaWindow) -> some View {
+        let pct = window.utilization.map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
+        let reset = window.resetsAt.map { ResetCountdown.phrase(until: $0, now: now) }
+        return HStack(spacing: 8) {
+            Text(window.name)
+            Text(pct)
+            Spacer()
+            if let reset {
+                Text(reset)
+            }
+        }
+        .font(.caption2)
+        .foregroundStyle(.tertiary)
+        .monospacedDigit()
+    }
+
+    /// Fallback when an account has quota but no named windows.
     private func resetsText() -> String? {
         guard let soonest = account.displayedResetsAt else { return nil }
-        let interval = soonest.timeIntervalSince(now)
-        if interval <= 0 { return "Resets now" }
-        let totalMinutes = Int(interval / 60)
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        if hours >= 1 { return "Resets \(hours)h \(minutes)m" }
-        if totalMinutes >= 1 { return "Resets \(totalMinutes)m" }
-        return "Resets <1m"
+        return ResetCountdown.phrase(until: soonest, now: now)
     }
 }
 

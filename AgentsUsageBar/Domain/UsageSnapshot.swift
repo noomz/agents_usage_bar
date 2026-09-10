@@ -135,7 +135,7 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
     }
 
     /// Glance-bar quota: prefer the 5-hour session window so the fill matches the
-    /// "Resets Xh Ym" caption. Falls back to stored `quota` (`max(5h, 7d)` / Codex
+    /// reset countdown caption. Falls back to stored `quota` (`max(5h, 7d)` / Codex
     /// primary) when no 5h window exists. Notifications keep using `quota`.
     public var displayedQuota: Quota? {
         if let accounts, !accounts.isEmpty {

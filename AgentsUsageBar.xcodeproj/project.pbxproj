@@ -356,6 +356,7 @@
 		AA070100000000000000001A /* AUBMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000001B /* AUBMain.swift */; };
 		AA070100000000000000002A /* ProviderRegistryFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000002B /* ProviderRegistryFactory.swift */; };
 		AA070100000000000000003A /* QuotaBand.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000003B /* QuotaBand.swift */; };
+		AA091000000000000000001A /* ResetCountdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA091000000000000000001B /* ResetCountdown.swift */; };
 		AA070100000000000000004A /* AUBCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000004B /* AUBCommand.swift */; };
 		AA070100000000000000005A /* CLIUsageSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000005B /* CLIUsageSession.swift */; };
 		AA070100000000000000006A /* UsageTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000006B /* UsageTextRenderer.swift */; };
@@ -367,6 +368,7 @@
 		AA07010000000000000000AA /* CLIInstallSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA07010000000000000000AB /* CLIInstallSection.swift */; };
 		AA07010000000000000000BA /* AUBCommandRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA07010000000000000000BB /* AUBCommandRun.swift */; };
 		AA070100000000000000010A /* QuotaBandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000010B /* QuotaBandTests.swift */; };
+		AA091000000000000000010A /* ResetCountdownTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA091000000000000000010B /* ResetCountdownTests.swift */; };
 		AA070100000000000000011A /* AUBCommandParseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000011B /* AUBCommandParseTests.swift */; };
 		AA070100000000000000012A /* CLISettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000012B /* CLISettingsTests.swift */; };
 		AA070100000000000000013A /* CLIInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000013B /* CLIInstallerTests.swift */; };
@@ -748,6 +750,7 @@
 		AA070100000000000000001B /* AUBMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBMain.swift; sourceTree = "<group>"; };
 		AA070100000000000000002B /* ProviderRegistryFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderRegistryFactory.swift; sourceTree = "<group>"; };
 		AA070100000000000000003B /* QuotaBand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaBand.swift; sourceTree = "<group>"; };
+		AA091000000000000000001B /* ResetCountdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetCountdown.swift; sourceTree = "<group>"; };
 		AA070100000000000000004B /* AUBCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBCommand.swift; sourceTree = "<group>"; };
 		AA070100000000000000005B /* CLIUsageSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIUsageSession.swift; sourceTree = "<group>"; };
 		AA070100000000000000006B /* UsageTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTextRenderer.swift; sourceTree = "<group>"; };
@@ -759,6 +762,7 @@
 		AA07010000000000000000AB /* CLIInstallSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstallSection.swift; sourceTree = "<group>"; };
 		AA07010000000000000000BB /* AUBCommandRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBCommandRun.swift; sourceTree = "<group>"; };
 		AA070100000000000000010B /* QuotaBandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaBandTests.swift; sourceTree = "<group>"; };
+		AA091000000000000000010B /* ResetCountdownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetCountdownTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000011B /* AUBCommandParseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBCommandParseTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000012B /* CLISettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISettingsTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000013B /* CLIInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstallerTests.swift; sourceTree = "<group>"; };
@@ -846,6 +850,7 @@
 				AA020300000000000000001B /* QuotaWindow.swift */,
 				AA061000000000000000001B /* ClaudeUsageSource.swift */,
 				AA070100000000000000003B /* QuotaBand.swift */,
+				AA091000000000000000001B /* ResetCountdown.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -888,6 +893,7 @@
 				/* Plan 04-06 — ProviderState placeholder message test */
 				AA040600000000000000012B /* ProviderStatePlaceholderMessageTests.swift */,
 				AA070100000000000000010B /* QuotaBandTests.swift */,
+				AA091000000000000000010B /* ResetCountdownTests.swift */,
 			);
 			path = DomainTests;
 			sourceTree = "<group>";
@@ -1951,6 +1957,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000001A /* AUBMain.swift in Sources */,
 				AA070100000000000000002A /* ProviderRegistryFactory.swift in Sources */,
 				AA070100000000000000003A /* QuotaBand.swift in Sources */,
+				AA091000000000000000001A /* ResetCountdown.swift in Sources */,
 				AA070100000000000000004A /* AUBCommand.swift in Sources */,
 				AA07010000000000000000BA /* AUBCommandRun.swift in Sources */,
 				AA070100000000000000005A /* CLIUsageSession.swift in Sources */,
@@ -2127,6 +2134,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA061000000000000000013A /* ClaudeSwitchableProviderTests.swift in Sources */,
 				/* aub CLI tests */
 				AA070100000000000000010A /* QuotaBandTests.swift in Sources */,
+				AA091000000000000000010A /* ResetCountdownTests.swift in Sources */,
 				AA070100000000000000011A /* AUBCommandParseTests.swift in Sources */,
 				AA070100000000000000012A /* CLISettingsTests.swift in Sources */,
 				AA070100000000000000013A /* CLIInstallerTests.swift in Sources */,
