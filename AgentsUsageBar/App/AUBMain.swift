@@ -6,7 +6,6 @@ import SwiftUI
 @main
 enum AUBMain {
     static func main() async {
-        CLIProcess.reexecIfInvokedViaSymlink()
         let args = CommandLine.arguments
         let exe = URL(fileURLWithPath: args[0]).lastPathComponent
         let rest = Array(args.dropFirst())
@@ -14,6 +13,12 @@ enum AUBMain {
             exe == CLIInstaller.binaryName
             || rest.first == "--cli"
             || (rest.first.map(AUBCommand.isSubcommand) ?? false)
+        // Before re-exec so a PATH `aub` symlink inherits the env, and so an
+        // instrumented binary never dumps default.profraw into the caller's cwd.
+        if isCLI {
+            CLIProcess.suppressCoverageDump()
+        }
+        CLIProcess.reexecIfInvokedViaSymlink()
         if isCLI {
             let code = await AUBCommand.run(arguments: rest.filter { $0 != "--cli" })
             Foundation.exit(code)

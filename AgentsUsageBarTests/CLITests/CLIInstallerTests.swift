@@ -178,6 +178,27 @@ struct CLIInstallerTests {
         #expect(installer.pathHint(for: "/usr/bin") == nil)
     }
 
+    @Test("install refuses a coverage-instrumented executable")
+    func refusesInstrumentedBinary() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("aub-install-prf-\(UUID().uuidString)")
+        try Data("x__llvm_prf_namesx".utf8).write(to: tmp)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let fs = FakeFS()
+        fs.executablePath = tmp.path
+        let installer = CLIInstaller(fs: fs)
+        do {
+            _ = try installer.install()
+            Issue.record("expected coverageInstrumented")
+        } catch CLIInstaller.Error.coverageInstrumented {
+            // expected
+        } catch {
+            Issue.record("wrong error \(error)")
+        }
+        #expect(fs.files["/Users/test/.local/bin/aub"] == nil)
+    }
+
     @Test("preset matching")
     func presetMatching() {
         #expect(CLIInstallPreset.homeLocal.directory(homeDirectory: "/Users/test") == "/Users/test/.local/bin")

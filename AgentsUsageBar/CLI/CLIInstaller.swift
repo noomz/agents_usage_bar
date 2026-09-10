@@ -158,6 +158,7 @@ public struct CLIInstaller: Sendable {
         case wouldClobberFile(String)
         case authorizationCancelled
         case noWritableDestination
+        case coverageInstrumented
         case underlying(String)
 
         public var description: String {
@@ -166,6 +167,8 @@ public struct CLIInstaller: Sendable {
             case .wouldClobberFile(let p): return "refusing to clobber regular file: \(p)"
             case .authorizationCancelled: return "administrator authorization cancelled"
             case .noWritableDestination: return "no writable bin directory found"
+            case .coverageInstrumented:
+                return "this binary is a coverage-instrumented test/Debug build and would write default.profraw into the caller's working directory. Install from a Release build (scripts/build-local.sh or a GitHub Release)."
             case .underlying(let s): return s
             }
         }
@@ -239,6 +242,9 @@ public struct CLIInstaller: Sendable {
     @discardableResult
     public func install(prefix: String? = nil) throws -> String {
         let exe = fs.executablePath
+        if CLIProcess.containsCoverageInstrumentation(atPath: exe) {
+            throw Error.coverageInstrumented
+        }
         let dir = prefix ?? defaultDirectory()
         try uninstall()
         if !fs.directoryExists(atPath: dir) {

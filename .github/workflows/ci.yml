@@ -179,3 +179,18 @@ jobs:
             echo "FAIL (REL-09): pbxproj contains ENABLE_APP_SANDBOX = YES somewhere — must always be NO (D-08)"
             exit 1
           fi
+          # Issue #8 — Release must not gather LLVM coverage (instrumented
+          # binaries dump default.profraw into the caller's cwd).
+          if grep -q "CLANG_ENABLE_CODE_COVERAGE = YES" "$PBXPROJ"; then
+            echo "FAIL (issue #8): pbxproj enables CLANG_ENABLE_CODE_COVERAGE — Release/shipped aub must not be instrumented"
+            exit 1
+          fi
+          if grep -q "CLANG_COVERAGE_MAPPING = YES" "$PBXPROJ"; then
+            echo "FAIL (issue #8): pbxproj enables CLANG_COVERAGE_MAPPING — that instruments Release binaries"
+            exit 1
+          fi
+          if ! grep -q "CLANG_COVERAGE_MAPPING = NO" "$PBXPROJ"; then
+            echo "FAIL (issue #8): pbxproj must set CLANG_COVERAGE_MAPPING = NO on Release"
+            exit 1
+          fi
+          echo "OK (issue #8): Release coverage instrumentation is disabled"

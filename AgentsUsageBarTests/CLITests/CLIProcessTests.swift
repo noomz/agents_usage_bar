@@ -62,4 +62,55 @@ struct CLIProcessTests {
         )
         #expect(withSub == [real, "--cli", "usage", "--json"])
     }
+
+    @Test("coverage scanner finds __llvm_prf and ignores a clean file")
+    func coverageScanner() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("aub-prf-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let dirty = tmp.appendingPathComponent("dirty.bin")
+        let clean = tmp.appendingPathComponent("clean.bin")
+        try Data("header\0__llvm_prf_cnts\0tail".utf8).write(to: dirty)
+        try Data("plain mach-o placeholder".utf8).write(to: clean)
+
+        #expect(CLIProcess.coverageNeedle == Data("__llvm_prf".utf8))
+        #expect(CLIProcess.containsCoverageInstrumentation(atPath: dirty.path))
+        #expect(!CLIProcess.containsCoverageInstrumentation(atPath: clean.path))
+        #expect(!CLIProcess.containsCoverageInstrumentation(atPath: tmp.appendingPathComponent("missing").path))
+    }
+
+    @Test("check-no-coverage.sh rejects __llvm_prf and accepts a clean file")
+    func checkNoCoverageScript() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("aub-prf-sh-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let dirty = tmp.appendingPathComponent("dirty.bin")
+        let clean = tmp.appendingPathComponent("clean.bin")
+        try Data("header__llvm_prf_datatail".utf8).write(to: dirty)
+        try Data("no instrumentation here".utf8).write(to: clean)
+
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let script = root.appendingPathComponent("scripts/check-no-coverage.sh")
+
+        func run(_ file: URL) throws -> Int32 {
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/bin/bash")
+            proc.arguments = [script.path, file.path]
+            proc.standardOutput = Pipe()
+            proc.standardError = Pipe()
+            try proc.run()
+            proc.waitUntilExit()
+            return proc.terminationStatus
+        }
+
+        #expect(try run(dirty) == 1)
+        #expect(try run(clean) == 0)
+    }
 }

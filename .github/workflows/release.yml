@@ -130,7 +130,9 @@ jobs:
             -scheme AgentsUsageBar \
             -configuration Release \
             -archivePath build/AgentsUsageBar.xcarchive \
-            -destination 'generic/platform=macOS'
+            -destination 'generic/platform=macOS' \
+            CLANG_COVERAGE_MAPPING=NO \
+            ENABLE_CODE_COVERAGE=NO
 
       # Xcode -exportArchive automatically re-signs all nested Sparkle helpers
       # (Installer.xpc, Downloader.xpc, Autoupdate, Updater.app) correctly.
@@ -171,7 +173,9 @@ jobs:
             -configuration Release \
             -derivedDataPath build/dd \
             -destination 'generic/platform=macOS' \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            CLANG_COVERAGE_MAPPING=NO \
+            ENABLE_CODE_COVERAGE=NO
 
           APP="build/dd/Build/Products/Release/AgentsUsageBar.app"
           test -d "$APP"
@@ -188,6 +192,14 @@ jobs:
 
           mkdir -p build/export
           cp -R "$APP" build/export/AgentsUsageBar.app
+
+      # Instrumented binaries dump default.profraw into the caller's cwd
+      # (GitHub issue #8). Both lanes have produced build/export by here.
+      - name: Reject coverage-instrumented binary
+        run: |
+          set -euo pipefail
+          bash scripts/check-no-coverage.sh \
+            build/export/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar
 
       # D-05 — pin create-dmg/create-dmg v1.2.3 (shell). NOT sindresorhus
       # (Node). Pinned tarball + `make install` for reproducibility.

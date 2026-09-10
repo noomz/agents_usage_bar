@@ -34,9 +34,12 @@ xcodebuild build \
   -configuration Release \
   -derivedDataPath "$DD" \
   -destination 'generic/platform=macOS' \
-  CODE_SIGNING_ALLOWED=NO
+  CODE_SIGNING_ALLOWED=NO \
+  CLANG_COVERAGE_MAPPING=NO \
+  ENABLE_CODE_COVERAGE=NO
 
 test -d "$APP"
+bash scripts/check-no-coverage.sh "$APP/Contents/MacOS/$SCHEME"
 
 echo "==> Ad-hoc signing (nested helpers first, no hardened runtime)…"
 # `find ... -depth` yields children before parents so each nested XPC/app/
