@@ -49,8 +49,9 @@ T2|x|Render composite Claude bar and compact labels in popover|V1,V2,V3,V4,V5,V6
 T3|x|Replace Claude account child bars with compact dual-window text|V9,V10,I1
 T4|x|Update aub usage human renderer; retain detailed quota renderer|V11,V12,V13,I2,I3
 T5|x|Verify JSON output remains compatible|V13,I4
-T6|.|Add regression tests for opposing bands, both healthy, both critical, equal, near-equal, missing windows, and multi-account selection|V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15
+T6|~|Add regression tests for opposing bands, both healthy, both critical, equal, near-equal, missing windows, and multi-account selection|V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15
 
 ## §B
 
 id|date|cause|fix
+B1|2026-09-11|production smoke test assumed host provider preferences|remove host-dependent provider assertions
