@@ -29,7 +29,8 @@ struct UsageTextRendererTests {
                 quota: Quota(used: 0.62, limit: 1, remaining: 0.38),
                 raw: [:],
                 quotaWindows: [
-                    QuotaWindow(name: "5h", utilization: 0.38, resetsAt: now.addingTimeInterval(3 * 3600 + 12 * 60))
+                    QuotaWindow(name: "5h", utilization: 0.38, resetsAt: now.addingTimeInterval(3 * 3600 + 12 * 60)),
+                    QuotaWindow(name: "7d", utilization: 0.62, resetsAt: now.addingTimeInterval(3 * 86400))
                 ]
             ),
             placeholderMessage: nil,
@@ -73,6 +74,8 @@ struct UsageTextRendererTests {
         #expect(text.contains("no limit"))
         #expect(text.contains("Not running"))
         #expect(text.contains("5h"))
+        #expect(text.contains("7d"))
+        #expect(text.contains("Active: 7d 62%"))
         #expect(!text.contains("Ollama") || text.contains("Not running"))
         #expect(text.contains("Total excludes quota-only providers"))
     }
@@ -154,13 +157,12 @@ struct UsageTextRendererTests {
         )
         let text = UsageTextRenderer.renderUsage(report, color: false)
         let barLines = text.split(whereSeparator: \.isNewline).filter { $0.contains("░") || $0.contains("█") }
-        #expect(barLines.contains { $0.contains("24%") })
-        #expect(barLines.contains { $0.contains("20%") })
-        #expect(!barLines.contains { $0.contains("68%") })
-        #expect(!barLines.contains { $0.contains("41%") })
-        // Weekly utilization still listed as its own window row, not jammed onto the 5h bar.
-        #expect(text.contains("68%"))
-        #expect(text.contains("41%"))
+        #expect(text.contains("5h 24% · 7d 68%"))
+        #expect(text.contains("5h 20% · 7d 41%"))
+        // One provider-level bar represents aggregate active weekly constraint.
+        #expect(barLines.contains { $0.contains("68%") })
+        #expect(!barLines.contains { $0.contains("24%") })
+        #expect(!barLines.contains { $0.contains("20%") })
     }
 
     @Test("claude personal+work windows are one per line, not jammed with ·")
@@ -229,7 +231,7 @@ struct UsageTextRendererTests {
         let sevenDayLines = lines.filter { $0.contains("7d") }
         #expect(fiveHourLines.count == 2)
         #expect(sevenDayLines.count == 2)
-        #expect(fiveHourLines.allSatisfy { !$0.contains("7d") })
+        #expect(fiveHourLines.allSatisfy { $0.contains("7d") })
     }
 
     @Test("quota renderer lists windows")

@@ -80,7 +80,9 @@ public enum UsageTextRenderer {
             lines.append("\(name)  \(caption)")
             return lines
         }
-        let (barLine, _) = quotaBarLine(p.snapshot?.displayedQuota, color: color)
+        let glance = p.id == .claude ? p.snapshot?.quotaGlance : nil
+        let activeQuota = glance?.active?.utilization.map { Quota(used: $0, limit: 1, remaining: max(0, 1 - $0)) }
+        let (barLine, _) = quotaBarLine(activeQuota ?? p.snapshot?.displayedQuota, color: color)
         lines.append("\(name)  \(barLine)")
         lines.append("\(pad("", to: nameWidth))  \(secondaryLine(p))")
         let accounts = p.snapshot?.accounts
@@ -90,6 +92,8 @@ public enum UsageTextRenderer {
             for account in accounts {
                 lines.append(contentsOf: accountLines(account, nameWidth: nameWidth, color: color, now: now))
             }
+        } else if let glance, glance.hasAnyWindow {
+            lines.append(contentsOf: claudeUsageLines(glance, nameWidth: nameWidth, now: now))
         } else if let windows = p.snapshot?.quotaWindows, !windows.isEmpty {
             lines.append(contentsOf: windowLines(windows, nameWidth: nameWidth, now: now))
         }
@@ -154,6 +158,16 @@ public enum UsageTextRenderer {
         return parts.joined(separator: " · ")
     }
 
+    /// Claude `usage` shows one conventional active-constraint bar plus text for both windows.
+    private static func claudeUsageLines(_ glance: QuotaGlance, nameWidth: Int, now: Date) -> [String] {
+        let indent = pad("", to: nameWidth)
+        let values = "5h \(glance.percent(for: .fiveHours)) · 7d \(glance.percent(for: .sevenDays))"
+        guard let active = glance.active else { return ["\(indent)  \(values)"] }
+        let account = active.accountName.map { "\($0) " } ?? ""
+        let reset = active.resetsAt.map { "  \(resetsPhrase(until: $0, now: now))" } ?? ""
+        return ["\(indent)  Active: \(account)\(active.period.rawValue) \(glance.percent(for: active.period))\(reset)", "\(indent)  \(values)"]
+    }
+
     /// One aligned `name  pct  Resets …` row per window. Four Claude windows on a
     /// single ` · `-joined line wrapped and collided in the terminal.
     private static func windowLines(_ windows: [QuotaWindow], nameWidth: Int, now: Date) -> [String] {
@@ -180,14 +194,9 @@ public enum UsageTextRenderer {
         if let cost = account.costTodayUSD {
             head += " · " + cost.formatted(.currency(code: "USD"))
         }
-        let (barLine, _) = quotaBarLine(account.displayedQuota, color: color)
-        var lines = ["\(indent)  \(head)", "\(indent)  \(barLine)"]
-        if let windows = account.quotaWindows, !windows.isEmpty {
-            lines.append(contentsOf: windowLines(windows, nameWidth: nameWidth, now: now))
-        } else if let soonest = account.displayedResetsAt {
-            lines.append("\(indent)  \(resetsPhrase(until: soonest, now: now))")
-        }
-        return lines
+        let glance = account.quotaGlance
+        let values = "5h \(glance.percent(for: .fiveHours)) · 7d \(glance.percent(for: .sevenDays))"
+        return ["\(indent)  \(head)", "\(indent)  \(values)"]
     }
 
     private static func isDegraded(_ p: ProviderReport) -> Bool {
