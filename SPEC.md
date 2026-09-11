@@ -8,7 +8,7 @@ G1|Show Claude 5h and 7d quota pressure at a glance without two full-size bars.
 
 C1|Design only until build invoked.
 C2|Popover stays 360pt wide.
-C3|One visual quota bar per provider.
+C3|One aggregate visual quota bar per provider; Claude account children may show compact dual-lane bars.
 C4|Percent means consumed quota.
 C5|QuotaBand colors keep current remaining-quota thresholds.
 C6|Text always carries period and percent; color and lane position never stand alone.
@@ -33,7 +33,7 @@ V5|When displayed rounded percentages tie, neither label is emphasized. Exact ra
 V6|When only one utilization exists, UI renders one full-height conventional bar and shows the absent window as —.
 V7|When neither utilization exists, current no-limit or unavailable fallback remains.
 V8|UI accessibility value names both periods, both percentages or unavailable states, active constraint, and applicable reset.
-V9|Multi-account Claude uses one aggregate provider bar. Account child rows show account name, cost, 5h text, and 7d text without child bars.
+V9|Multi-account Claude uses one aggregate provider bar. Account child rows show account name, cost, and compact 5h/7d composite bars.
 V10|Aggregate active constraint identifies account and period with highest primary-window utilization; raw tie uses sooner reset.
 V11|aub usage renders one conventional bar for active constraint, then prints active period plus both 5h and 7d values as text.
 V12|aub usage does not use half-block dual-progress glyph encoding.
@@ -50,6 +50,7 @@ T3|x|Replace Claude account child bars with compact dual-window text|V9,V10,I1
 T4|x|Update aub usage human renderer; retain detailed quota renderer|V11,V12,V13,I2,I3
 T5|x|Verify JSON output remains compatible|V13,I4
 T6|x|Add regression tests for opposing bands, both healthy, both critical, equal, near-equal, missing windows, and multi-account selection|V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15
+T7|x|Restore compact dual-lane bars for Claude account children|V1,V2,V3,V6,V9,V10,I1
 
 ## §B
 

@@ -129,7 +129,7 @@ public struct ProviderRowView: View {
                     if let accountRows = state.snapshot?.accounts, accountRows.count >= 2 {
                         VStack(alignment: .leading, spacing: 6) {
                             ForEach(accountRows) { account in
-                                AccountChildRow(account: account)
+                                AccountChildRow(account: account, now: ctx.date)
                             }
                         }
                         .padding(.leading, 14)
@@ -233,6 +233,7 @@ public struct ProviderRowView: View {
 /// One indented per-account text row under aggregated Claude usage. Child rows never add bars.
 struct AccountChildRow: View {
     let account: UsageSnapshot.AccountUsage
+    let now: Date
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -246,11 +247,8 @@ struct AccountChildRow: View {
                 }
                 Spacer()
             }
-            let glance = account.quotaGlance
-            Text("5h \(glance.percent(for: .fiveHours)) · 7d \(glance.percent(for: .sevenDays))")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .monospacedDigit()
+            ClaudeQuotaGlanceView(glance: account.quotaGlance, now: now)
+                .frame(maxWidth: .infinity)
         }
     }
 }

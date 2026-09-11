@@ -63,6 +63,13 @@ struct ProviderRowViewLocalRowTests {
                 "ProviderRowView must key off ProviderID.localIDs.contains for the isLocal check")
     }
 
+    @Test("Claude account children use compact dual-lane glance bars")
+    func accountChildrenUseDualLaneBars() throws {
+        let src = try Self.providerRowViewSource()
+        #expect(src.contains("ClaudeQuotaGlanceView(glance: account.quotaGlance, now: now)"),
+                "AccountChildRow must render its own 5h/7d composite glance bar")
+    }
+
     @Test("ProviderRowView branches on 'if isLocal {' before dashboard button rendering")
     func providerRowView_branchesOnIsLocal() throws {
         let src = try Self.providerRowViewSource()
