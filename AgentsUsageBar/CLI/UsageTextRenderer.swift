@@ -218,8 +218,7 @@ public enum UsageTextRenderer {
             head += " · " + cost.formatted(.currency(code: "USD"))
         }
         let glance = account.quotaGlance
-        let values = "5h \(glance.percent(for: .fiveHours)) · 7d \(glance.percent(for: .sevenDays))"
-        return ["\(indent)  \(head)", "\(indent)  \(values)"]
+        return ["\(indent)  \(head)", "\(indent)  \(claudeDualBarLine(glance))"]
     }
 
     private static func isDegraded(_ p: ProviderReport) -> Bool {

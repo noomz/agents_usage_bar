@@ -33,7 +33,7 @@ V5|When displayed rounded percentages tie, neither label is emphasized. Exact ra
 V6|When only one utilization exists, UI renders one full-height conventional bar and shows the absent window as —.
 V7|When neither utilization exists, current no-limit or unavailable fallback remains.
 V8|UI accessibility value names both periods, both percentages or unavailable states, active constraint, and applicable reset.
-V9|Multi-account Claude uses one aggregate provider bar. Account child rows show account name, cost, and compact 5h/7d composite bars.
+V9|Multi-account Claude uses one aggregate provider bar. Account child rows show account name, cost, and compact 5h/7d composite bars in UI and aub usage.
 V10|Aggregate active constraint identifies account and period with highest primary-window utilization; raw tie uses sooner reset.
 V11|aub usage renders one 20-cell composite Claude bar: 5h uses upper half `▀`, 7d uses lower half `▄`, shared fill uses `█`, empty uses `░`; then prints active period plus both 5h and 7d values as text.
 V12|aub usage composite glyph bar preserves explicit 5h and 7d text; glyphs never stand alone.
@@ -52,6 +52,7 @@ T5|x|Verify JSON output remains compatible|V13,I4
 T6|x|Add regression tests for opposing bands, both healthy, both critical, equal, near-equal, missing windows, and multi-account selection|V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15
 T7|x|Restore compact dual-lane bars for Claude account children|V1,V2,V3,V6,V9,V10,I1
 T8|x|Render prototype dual-glyph Claude bar in aub usage|V11,V12,I2
+T9|x|Render prototype dual-glyph bars for Claude account rows in aub usage|V9,V11,V12,I2
 
 ## §B
 

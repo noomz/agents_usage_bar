@@ -161,9 +161,10 @@ struct UsageTextRendererTests {
         #expect(text.contains("Active: work 7d 68%"))
         #expect(text.contains("5h 24% · 7d 68%"))
         #expect(text.contains("5h 20% · 7d 41%"))
-        // One provider-level dual glyph bar represents both aggregate windows.
-        #expect(barLines.count == 1)
-        #expect(barLines[0].contains("5h 24% · 7d 68%"))
+        // Aggregate and each child use their own dual glyph bar.
+        #expect(barLines.count == 3)
+        #expect(barLines.contains { $0.contains("5h 24% · 7d 68%") })
+        #expect(barLines.contains { $0.contains("5h 20% · 7d 41%") })
     }
 
     @Test("claude personal+work windows are one per line, not jammed with ·")
