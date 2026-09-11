@@ -60,3 +60,4 @@ id|date|cause|fix
 B1|2026-09-11|production smoke test assumed host provider preferences|remove host-dependent provider assertions
 B2|2026-09-11|multi-account CLI branch skipped shared active constraint text|render shared Claude usage lines before child rows
 B3|2026-09-11|dual-glyph closure omitted Swift return|return glyph from each cell
+B4|2026-09-11|account cost lacked caption font; reset caption duplicated prefix|apply caption font and use one reset prefix

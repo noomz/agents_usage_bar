@@ -73,7 +73,10 @@ struct ClaudeQuotaGlanceView: View {
 
     private func resetCaption(for active: QuotaGlance.Window, reset: Date) -> String {
         let tied = glance.fiveHours?.utilization == glance.sevenDays?.utilization
-        return "\(tied ? "Next reset" : "Resets") \(ResetCountdown.phrase(until: reset, now: now))"
+        if tied {
+            return "Next reset \(ResetCountdown.compact(reset.timeIntervalSince(now)))"
+        }
+        return ResetCountdown.phrase(until: reset, now: now)
     }
 
     private var accessibilityLabel: String { "Claude quota" }

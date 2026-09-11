@@ -242,8 +242,12 @@ struct AccountChildRow: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
                 if let cost = account.costTodayUSD {
-                    Text("·").foregroundStyle(.secondary)
-                    Text(cost.formatted(.currency(code: "USD"))).monospacedDigit()
+                    Text("·")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(cost.formatted(.currency(code: "USD")))
+                        .font(.caption2)
+                        .monospacedDigit()
                 }
                 Spacer()
             }

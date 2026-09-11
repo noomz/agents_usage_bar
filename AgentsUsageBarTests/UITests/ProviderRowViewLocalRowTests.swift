@@ -63,6 +63,13 @@ struct ProviderRowViewLocalRowTests {
                 "ProviderRowView must key off ProviderID.localIDs.contains for the isLocal check")
     }
 
+    @Test("Claude account costs use compact caption typography")
+    func accountChildCostsUseCaptionFont() throws {
+        let src = try Self.providerRowViewSource()
+        #expect(src.contains("Text(cost.formatted(.currency(code: \"USD\")))\n                        .font(.caption2)"),
+                "AccountChildRow cost must match its compact account label")
+    }
+
     @Test("Claude account children use compact dual-lane glance bars")
     func accountChildrenUseDualLaneBars() throws {
         let src = try Self.providerRowViewSource()
