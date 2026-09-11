@@ -75,6 +75,7 @@ struct UsageTextRendererTests {
         #expect(text.contains("Not running"))
         #expect(text.contains("5h"))
         #expect(text.contains("7d"))
+        #expect(text.contains("███████▄▄▄▄▄░░░░░░░░  5h 38% · 7d 62%"))
         #expect(text.contains("Active: 7d 62%"))
         #expect(!text.contains("Ollama") || text.contains("Not running"))
         #expect(text.contains("Total excludes quota-only providers"))
@@ -160,10 +161,9 @@ struct UsageTextRendererTests {
         #expect(text.contains("Active: work 7d 68%"))
         #expect(text.contains("5h 24% · 7d 68%"))
         #expect(text.contains("5h 20% · 7d 41%"))
-        // One provider-level bar represents aggregate active weekly constraint.
-        #expect(barLines.contains { $0.contains("68%") })
-        #expect(!barLines.contains { $0.contains("24%") })
-        #expect(!barLines.contains { $0.contains("20%") })
+        // One provider-level dual glyph bar represents both aggregate windows.
+        #expect(barLines.count == 1)
+        #expect(barLines[0].contains("5h 24% · 7d 68%"))
     }
 
     @Test("claude personal+work windows are one per line, not jammed with ·")
@@ -230,8 +230,8 @@ struct UsageTextRendererTests {
         let lines = text.split(whereSeparator: \.isNewline).map(String.init)
         let fiveHourLines = lines.filter { $0.contains("5h") }
         let sevenDayLines = lines.filter { $0.contains("7d") }
-        #expect(fiveHourLines.count == 3) // aggregate summary + two accounts
-        #expect(sevenDayLines.count == 4) // active line + aggregate summary + two accounts
+        #expect(fiveHourLines.count == 4) // dual bar + aggregate summary + two accounts
+        #expect(sevenDayLines.count == 5) // active line + dual bar + aggregate summary + two accounts
         #expect(fiveHourLines.allSatisfy { $0.contains("7d") })
     }
 

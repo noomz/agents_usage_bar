@@ -82,7 +82,12 @@ public enum UsageTextRenderer {
         }
         let glance = p.id == .claude ? p.snapshot?.quotaGlance : nil
         let activeQuota = glance?.active?.utilization.map { Quota(used: $0, limit: 1, remaining: max(0, 1 - $0)) }
-        let (barLine, _) = quotaBarLine(activeQuota ?? p.snapshot?.displayedQuota, color: color)
+        let barLine: String
+        if let glance, glance.hasAnyWindow {
+            barLine = claudeDualBarLine(glance)
+        } else {
+            barLine = quotaBarLine(activeQuota ?? p.snapshot?.displayedQuota, color: color).0
+        }
         lines.append("\(name)  \(barLine)")
         lines.append("\(pad("", to: nameWidth))  \(secondaryLine(p))")
         let accounts = p.snapshot?.accounts
@@ -119,6 +124,25 @@ public enum UsageTextRenderer {
             lines.append("\(pad("", to: nameWidth))  usage temporarily unavailable")
         }
         return lines
+    }
+
+    /// 20-cell Claude dual-limit glyph bar from approved prototype.
+    /// `▀` = 5h only, `▄` = 7d only, `█` = both, `░` = neither.
+    private static func claudeDualBarLine(_ glance: QuotaGlance) -> String {
+        let five = glance.fiveHours?.utilization
+        let seven = glance.sevenDays?.utilization
+        let glyphs = (1...barWidth).map { cell -> Character in
+            let edge = Double(cell) / Double(barWidth)
+            let fiveFilled = five.map { $0 >= edge } ?? false
+            let sevenFilled = seven.map { $0 >= edge } ?? false
+            return switch (fiveFilled, sevenFilled) {
+            case (true, true): "█"
+            case (true, false): "▀"
+            case (false, true): "▄"
+            case (false, false): "░"
+            }
+        }
+        return "\(String(glyphs))  5h \(glance.percent(for: .fiveHours)) · 7d \(glance.percent(for: .sevenDays))"
     }
 
     private static func quotaBarLine(_ quota: Quota?, color: Bool) -> (String, QuotaBand) {
