@@ -279,7 +279,8 @@ struct UsageTextRendererTests {
                     snapshot: UsageSnapshot(
                         providerID: .codex, asOf: now, tokensToday: 10,
                         costTodayUSD: 2, balanceUSD: nil,
-                        quota: Quota(used: 0.5, limit: 1, remaining: 0.5), raw: [:]
+                        quota: Quota(used: 0.5, limit: 1, remaining: 0.5), raw: [:],
+                        quotaWindows: [QuotaWindow(name: "5h", utilization: 0.5, resetsAt: now)]
                     ),
                     placeholderMessage: nil, errorDescription: nil,
                     isLocal: false, hasTokens: true
@@ -289,6 +290,7 @@ struct UsageTextRendererTests {
         let json = try UsageJSONRenderer.renderUsage(report)
         #expect(json.contains("\"source\" : \"cached\"") || json.contains("\"source\":\"cached\""))
         #expect(json.contains("codex"))
+        #expect(json.contains("quotaWindows"))
         #expect(json.contains("\"tokens\" : 10") || json.contains("\"tokens\":10"))
     }
 
