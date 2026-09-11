@@ -86,15 +86,14 @@ public enum UsageTextRenderer {
         lines.append("\(name)  \(barLine)")
         lines.append("\(pad("", to: nameWidth))  \(secondaryLine(p))")
         let accounts = p.snapshot?.accounts
+        if let glance, glance.hasAnyWindow {
+            lines.append(contentsOf: claudeUsageLines(glance, nameWidth: nameWidth, now: now))
+        }
         if let accounts, accounts.count >= 2 {
-            // Per-account blocks already list 5h/7d; skip the parent dump of
-            // "personal 5h · personal 7d · work 5h · work 7d".
             for account in accounts {
                 lines.append(contentsOf: accountLines(account, nameWidth: nameWidth, color: color, now: now))
             }
-        } else if let glance, glance.hasAnyWindow {
-            lines.append(contentsOf: claudeUsageLines(glance, nameWidth: nameWidth, now: now))
-        } else if let windows = p.snapshot?.quotaWindows, !windows.isEmpty {
+        } else if !(glance?.hasAnyWindow ?? false), let windows = p.snapshot?.quotaWindows, !windows.isEmpty {
             lines.append(contentsOf: windowLines(windows, nameWidth: nameWidth, now: now))
         }
         if isDegraded(p) {

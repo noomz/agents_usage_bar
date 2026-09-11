@@ -56,3 +56,4 @@ T7|x|Restore compact dual-lane bars for Claude account children|V1,V2,V3,V6,V9,V
 
 id|date|cause|fix
 B1|2026-09-11|production smoke test assumed host provider preferences|remove host-dependent provider assertions
+B2|2026-09-11|multi-account CLI branch skipped shared active constraint text|render shared Claude usage lines before child rows

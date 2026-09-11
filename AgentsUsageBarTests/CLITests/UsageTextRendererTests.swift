@@ -157,6 +157,7 @@ struct UsageTextRendererTests {
         )
         let text = UsageTextRenderer.renderUsage(report, color: false)
         let barLines = text.split(whereSeparator: \.isNewline).filter { $0.contains("░") || $0.contains("█") }
+        #expect(text.contains("Active: work 7d 68%"))
         #expect(text.contains("5h 24% · 7d 68%"))
         #expect(text.contains("5h 20% · 7d 41%"))
         // One provider-level bar represents aggregate active weekly constraint.
@@ -229,8 +230,8 @@ struct UsageTextRendererTests {
         let lines = text.split(whereSeparator: \.isNewline).map(String.init)
         let fiveHourLines = lines.filter { $0.contains("5h") }
         let sevenDayLines = lines.filter { $0.contains("7d") }
-        #expect(fiveHourLines.count == 2)
-        #expect(sevenDayLines.count == 2)
+        #expect(fiveHourLines.count == 3) // aggregate summary + two accounts
+        #expect(sevenDayLines.count == 4) // active line + aggregate summary + two accounts
         #expect(fiveHourLines.allSatisfy { $0.contains("7d") })
     }
 
