@@ -129,7 +129,7 @@ public struct ProviderRowView: View {
                     if let accountRows = state.snapshot?.accounts, accountRows.count >= 2 {
                         VStack(alignment: .leading, spacing: 6) {
                             ForEach(accountRows) { account in
-                                AccountChildRow(account: account, now: ctx.date)
+                                AccountChildRow(account: account)
                             }
                         }
                         .padding(.leading, 14)
@@ -230,12 +230,9 @@ public struct ProviderRowView: View {
 
 // MARK: - AccountChildRow
 
-/// One indented per-account sub-row under an aggregated provider row (Claude hook mode):
-/// account name · today cost, 5h glance bar, and one caption per quota window (5h / 7d).
-/// Pure value render from `UsageSnapshot.AccountUsage`.
+/// One indented per-account text row under aggregated Claude usage. Child rows never add bars.
 struct AccountChildRow: View {
     let account: UsageSnapshot.AccountUsage
-    let now: Date
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -244,50 +241,17 @@ struct AccountChildRow: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
                 if let cost = account.costTodayUSD {
-                    Text("·")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Text(cost.formatted(.currency(code: "USD")))
-                        .font(.caption2)
-                        .monospacedDigit()
+                    Text("·").foregroundStyle(.secondary)
+                    Text(cost.formatted(.currency(code: "USD"))).monospacedDigit()
                 }
                 Spacer()
             }
-            QuotaBar(quota: account.displayedQuota)
-                .frame(maxWidth: .infinity)
-            if let windows = account.quotaWindows, !windows.isEmpty {
-                ForEach(Array(windows.enumerated()), id: \.offset) { _, window in
-                    windowCaption(window)
-                }
-            } else if let resets = resetsText() {
-                Text(resets)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .monospacedDigit()
-            }
+            let glance = account.quotaGlance
+            Text("5h \(glance.percent(for: .fiveHours)) · 7d \(glance.percent(for: .sevenDays))")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .monospacedDigit()
         }
-    }
-
-    private func windowCaption(_ window: QuotaWindow) -> some View {
-        let pct = window.utilization.map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
-        let reset = window.resetsAt.map { ResetCountdown.phrase(until: $0, now: now) }
-        return HStack(spacing: 8) {
-            Text(window.name)
-            Text(pct)
-            Spacer()
-            if let reset {
-                Text(reset)
-            }
-        }
-        .font(.caption2)
-        .foregroundStyle(.tertiary)
-        .monospacedDigit()
-    }
-
-    /// Fallback when an account has quota but no named windows.
-    private func resetsText() -> String? {
-        guard let soonest = account.displayedResetsAt else { return nil }
-        return ResetCountdown.phrase(until: soonest, now: now)
     }
 }
 
