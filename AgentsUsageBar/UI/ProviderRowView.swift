@@ -110,11 +110,17 @@ public struct ProviderRowView: View {
                         .opacity(isStale || isDegraded ? 0.6 : 1.0)
                     }
 
-                    // Quota bar — opacity composes UI-08 stale dimming and the
-                    // Plan 03-07 / D-11 degraded dimming.
-                    QuotaBar(quota: state.snapshot?.displayedQuota)
-                        .frame(maxWidth: .infinity)
-                        .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                    // Claude's canonical 5h/7d windows share one compact composite bar.
+                    // Every other provider retains its established quota presentation.
+                    if state.id == .claude, let snapshot = state.snapshot, snapshot.quotaGlance.hasAnyWindow {
+                        ClaudeQuotaGlanceView(glance: snapshot.quotaGlance, now: ctx.date)
+                            .frame(maxWidth: .infinity)
+                            .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                    } else {
+                        QuotaBar(quota: state.snapshot?.displayedQuota)
+                            .frame(maxWidth: .infinity)
+                            .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                    }
 
                     // Per-account child rows (Claude hook mode aggregating ≥2 ccs
                     // accounts): one indented sub-row per account with its own cost,

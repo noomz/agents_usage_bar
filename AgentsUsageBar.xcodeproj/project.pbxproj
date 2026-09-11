@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA111111000000000000001A /* QuotaGlance.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA111111000000000000001B /* QuotaGlance.swift */; };
+		AA111111000000000000002A /* ClaudeQuotaGlanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA111111000000000000002B /* ClaudeQuotaGlanceView.swift */; };
+		AA111111000000000000003A /* QuotaGlanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA111111000000000000003B /* QuotaGlanceTests.swift */; };
 		AA000001000000000000001A /* AgentsUsageBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000001B /* AgentsUsageBarApp.swift */; };
 		AA000001000000000000002A /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000002B /* AppDependencies.swift */; };
 		AA080800000000000000001A /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA080800000000000000001B /* AppEnvironment.swift */; };
@@ -387,6 +390,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		AA111111000000000000001B /* QuotaGlance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaGlance.swift; sourceTree = "<group>"; };
+		AA111111000000000000002B /* ClaudeQuotaGlanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeQuotaGlanceView.swift; sourceTree = "<group>"; };
+		AA111111000000000000003B /* QuotaGlanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaGlanceTests.swift; sourceTree = "<group>"; };
 		AA00000100000000000000BB /* AgentsUsageBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgentsUsageBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA000001000000000000001B /* AgentsUsageBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsUsageBarApp.swift; sourceTree = "<group>"; };
 		AA000001000000000000002B /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
@@ -851,6 +857,7 @@
 				AA061000000000000000001B /* ClaudeUsageSource.swift */,
 				AA070100000000000000003B /* QuotaBand.swift */,
 				AA091000000000000000001B /* ResetCountdown.swift */,
+				AA111111000000000000001B /* QuotaGlance.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -894,6 +901,7 @@
 				AA040600000000000000012B /* ProviderStatePlaceholderMessageTests.swift */,
 				AA070100000000000000010B /* QuotaBandTests.swift */,
 				AA091000000000000000010B /* ResetCountdownTests.swift */,
+				AA111111000000000000003B /* QuotaGlanceTests.swift */,
 			);
 			path = DomainTests;
 			sourceTree = "<group>";
@@ -1319,6 +1327,7 @@
 				AA090900000000000000001B /* HoverableBorderedButtonStyle.swift */,
 				/* Plan 04-07 — LocalRowSecondaryView helper */
 				AA040700000000000000001B /* LocalRowSecondaryView.swift */,
+				AA111111000000000000002B /* ClaudeQuotaGlanceView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1848,6 +1857,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				/* Plan 01.06 — UI Environment + Components + Views */
 				AA060600000000000000001A /* ClockEnvironmentKey.swift in Sources */,
 				AA060600000000000000002A /* QuotaBar.swift in Sources */,
+				AA111111000000000000002A /* ClaudeQuotaGlanceView.swift in Sources */,
 				AA060600000000000000003A /* StatusDot.swift in Sources */,
 				AA060600000000000000004A /* RelativeTimestampLabel.swift in Sources */,
 				AA060600000000000000005A /* TotalsHeaderView.swift in Sources */,
@@ -1862,6 +1872,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA020100000000000000004A /* TranscriptDirectoryScanner.swift in Sources */,
 				/* Plan 02.03 — Domain + Claude OAuth sources */
 				AA020300000000000000001A /* QuotaWindow.swift in Sources */,
+				AA111111000000000000001A /* QuotaGlance.swift in Sources */,
 				AA020300000000000000002A /* KeychainReader.swift in Sources */,
 				AA020300000000000000003A /* ClaudeCredentialLoader.swift in Sources */,
 				/* Plan 02.02 — Claude model pricing loader + calculator */
@@ -1979,6 +1990,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA020200000000000000021A /* TodayHelperTests.swift in Sources */,
 				AA020200000000000000022A /* QuotaTests.swift in Sources */,
 				AA020200000000000000023A /* ThresholdStateTests.swift in Sources */,
+				AA111111000000000000003A /* QuotaGlanceTests.swift in Sources */,
 				AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */,
 				AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */,
 				AA040300000000000000010A /* URLSessionHTTPClientTimeoutTierTests.swift in Sources */,

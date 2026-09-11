@@ -45,7 +45,7 @@ V15|Non-Claude providers retain current quota presentation unless they explicitl
 
 id|status|task|cites
 T1|x|Add shared QuotaGlance presentation value and selection logic|V4,V5,V6,V7,V10,V14,V15,I5
-T2|.|Render composite Claude bar and compact labels in popover|V1,V2,V3,V4,V5,V6,V7,V8,I1
+T2|x|Render composite Claude bar and compact labels in popover|V1,V2,V3,V4,V5,V6,V7,V8,I1
 T3|.|Replace Claude account child bars with compact dual-window text|V9,V10,I1
 T4|.|Update aub usage human renderer; retain detailed quota renderer|V11,V12,V13,I2,I3
 T5|.|Verify JSON output remains compatible|V13,I4
