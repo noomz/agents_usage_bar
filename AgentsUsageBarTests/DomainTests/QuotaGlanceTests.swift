@@ -18,6 +18,28 @@ struct QuotaGlanceTests {
         #expect(glance.active?.period == .sevenDays)
     }
 
+    @Test("opposing, healthy, and critical bands retain independent values")
+    func independentBands() {
+        let opposing = QuotaGlance(windows: [
+            .init(period: .fiveHours, utilization: 0.1, resetsAt: early),
+            .init(period: .sevenDays, utilization: 0.9, resetsAt: late),
+        ])
+        #expect(opposing.percent(for: .fiveHours) == "10%")
+        #expect(opposing.percent(for: .sevenDays) == "90%")
+        #expect(opposing.active?.period == .sevenDays)
+
+        let healthy = QuotaGlance(windows: [
+            .init(period: .fiveHours, utilization: 0.1, resetsAt: early),
+            .init(period: .sevenDays, utilization: 0.2, resetsAt: late),
+        ])
+        let critical = QuotaGlance(windows: [
+            .init(period: .fiveHours, utilization: 0.9, resetsAt: early),
+            .init(period: .sevenDays, utilization: 0.8, resetsAt: late),
+        ])
+        #expect(healthy.active?.period == .sevenDays)
+        #expect(critical.active?.period == .fiveHours)
+    }
+
     @Test("exact raw tie selects sooner reset")
     func exactTieUsesSoonerReset() {
         let glance = QuotaGlance(windows: [
