@@ -5,7 +5,10 @@ import os
 ///
 /// Fetches `GET /api/v1/credits` and `GET /api/v1/key` concurrently via `async let`,
 /// applies the D-01..D-05 baseline-delta logic for today's USD cost, and returns
-/// a `UsageSnapshot` with quota (or nil for unlimited accounts per ROUTER-03 / D-14).
+/// a `UsageSnapshot` with quota sourced from the key's monthly limit when present;
+/// otherwise from prepaid credits (`total_credits` / `total_usage`); quota is nil
+/// only when neither a key limit nor positive prepaid credits are available
+/// (ROUTER-03 / D-14).
 ///
 /// Construction pattern for Plan 01.05 composition root:
 /// ```swift
@@ -81,14 +84,31 @@ public actor OpenRouterProvider: UsageProvider {
             cache.maintainBaseline(for: id, now: now, currentValue: c.data.totalUsage)
 
             // MARK: Quota construction (D-14 / ROUTER-03)
-
-            // nil limit → unlimited account → quota = nil → engine emits no decision
-            let quota: Quota? = k.data.limit.map { lim in
-                Quota(
+            //
+            // Branch 1: key limit present → quota from the key limit (unchanged), no tooltip.
+            // Branch 2: no key limit, positive prepaid credits → quota from credits balance,
+            //           tooltip explains the source.
+            // Branch 3: no key limit and no (or zero/negative) credits → quota stays nil,
+            //           engine emits no decision.
+            let quota: Quota?
+            let quotaTooltip: String?
+            if let lim = k.data.limit {
+                quota = Quota(
                     used: k.data.usage,
                     limit: lim,
                     remaining: k.data.limitRemaining ?? max(0, lim - k.data.usage)
                 )
+                quotaTooltip = nil
+            } else if c.data.totalCredits > 0 {
+                quota = Quota(
+                    used: c.data.totalUsage,
+                    limit: c.data.totalCredits,
+                    remaining: max(0, c.data.totalCredits - c.data.totalUsage)
+                )
+                quotaTooltip = "Prepaid credits"
+            } else {
+                quota = nil
+                quotaTooltip = nil
             }
 
             // MARK: Balance (ROUTER-03)
@@ -104,7 +124,8 @@ public actor OpenRouterProvider: UsageProvider {
                 costTodayUSD: Decimal(costToday),
                 balanceUSD: Decimal(balance),
                 quota: quota,
-                raw: [:]
+                raw: [:],
+                tooltipLabel: quotaTooltip
             )
 
             lastStatus = .ok(lastSuccess: now)

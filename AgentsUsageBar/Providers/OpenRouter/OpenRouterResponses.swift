@@ -35,9 +35,11 @@ public struct OpenRouterKeyResponse: Decodable, Sendable, Equatable {
 
         /// Monthly credit cap in USD.
         ///
-        /// nil means the account has no quota cap (unlimited). Per D-14 / ROUTER-03,
-        /// UI renders "no limit" gray bar instead of red; ThresholdEngine receives
-        /// `quota == nil` and emits no decision.
+        /// nil means the API key itself has no monthly cap. Per D-14 / ROUTER-03,
+        /// a nil limit routes quota to the prepaid-credits fallback (`OpenRouterCreditsResponse.Payload.totalCredits`
+        /// / `totalUsage`) instead. ThresholdEngine still sees `quota == nil` — and the UI
+        /// still renders the "no limit" gray bar — only when credits are unavailable too
+        /// (no purchase yet, or a zero/negative balance).
         public let limit: Double?
 
         /// Date/time string when the limit resets; nil if it never resets or is not set.

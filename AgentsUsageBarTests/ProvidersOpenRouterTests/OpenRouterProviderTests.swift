@@ -159,20 +159,39 @@ struct OpenRouterProviderTests {
         #expect(snap.quota?.remaining == 1.80)
         #expect(snap.tokensToday == nil)
         #expect(snap.providerID == .openrouter)
+        #expect(snap.tooltipLabel == nil)
     }
 
-    // MARK: Test 2: No-limit account — quota must be nil (D-14 / ROUTER-03)
+    // MARK: Test 2: No-limit account with positive credits — quota falls back to prepaid credits (ROUTER-03)
 
-    @Test("fetch_happyPath_noLimit_quotaIsNil")
-    func fetch_happyPath_noLimit_quotaIsNil() async throws {
+    @Test("fetch_noLimit_withCredits_quotaFromPrepaidCredits")
+    func fetch_noLimit_withCredits_quotaFromPrepaidCredits() async throws {
         let now = Date()
         let provider = makeProvider(
             credits: makeCreditsResponse(totalCredits: 100.0, totalUsage: 42.50),
             key: makeKeyNoLimit()
         )
         let snap = try await provider.fetch(now: now)
-        #expect(snap.quota == nil)
+        #expect(snap.quota?.used == 42.50)
+        #expect(snap.quota?.limit == 100.0)
+        #expect(snap.quota?.remaining == 57.50)
+        #expect(snap.tooltipLabel == "Prepaid credits")
+        #expect(snap.balanceUSD == Decimal(57.50))
         #expect(snap.tokensToday == nil)
+    }
+
+    // MARK: Test 2b: No-limit account with zero credits — quota stays nil (never-purchased/free-tier)
+
+    @Test("fetch_noLimit_zeroCredits_quotaIsNil")
+    func fetch_noLimit_zeroCredits_quotaIsNil() async throws {
+        let now = Date()
+        let provider = makeProvider(
+            credits: makeCreditsResponse(totalCredits: 0, totalUsage: 0),
+            key: makeKeyNoLimit()
+        )
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.quota == nil)
+        #expect(snap.tooltipLabel == nil)
     }
 
     // MARK: Test 3: 401 auth error — throws, status becomes .error(.auth)
