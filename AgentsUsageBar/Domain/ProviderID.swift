@@ -49,12 +49,26 @@ extension ProviderID {
     /// "llama.cpp" for this rawValue.
     public static let llamacpp = ProviderID(rawValue: "llamacpp")
 
-    /// Plan 04-01 — Phase 4 lookup constant. The three localhost-runtime IDs
-    /// whose `ProviderCapabilities.isLocal == true`.
-    ///
-    /// `ProviderRowView` (Plan 04-07) keys on this `Set` when the provider
-    /// registry isn't available in the view environment.
-    public static let localIDs: Set<ProviderID> = [.ollama, .lmstudio, .llamacpp]
+    /// LM Studio's bundled llama.cpp backend (`~/.lmstudio/extensions/backends/**/llama-server`).
+    /// Distinct from `.lmstudio` (Express on :1234) and from brew `.llamacpp`.
+    public static let lmstudioLlamaCpp = ProviderID(rawValue: "lms-llamacpp")
+
+    /// Plan 04-01 — built-in localhost-runtime IDs.
+    /// Custom `[engine.<slug>]` rows are also local via `isLocalRuntime`.
+    public static let localIDs: Set<ProviderID> = [.ollama, .lmstudio, .llamacpp, .lmstudioLlamaCpp]
+
+    /// True for built-in local runtimes and user-defined `[engine.*]` rows.
+    public var isLocalRuntime: Bool {
+        Self.localIDs.contains(self) || rawValue.hasPrefix("engine.")
+    }
+
+    /// Slug used in `[engine.<slug>]` TOML and placeholder copy.
+    public var engineSlug: String {
+        if rawValue.hasPrefix("engine.") {
+            return String(rawValue.dropFirst("engine.".count))
+        }
+        return rawValue
+    }
 
     /// Grok — xAI Grok Build TUI via `~/.grok/auth.json` +
     /// `GET {cli-chat-proxy}/billing?format=credits`. Quota/credits only;
@@ -64,7 +78,7 @@ extension ProviderID {
     /// Plan 05-02 — Ordered array of all known providers in display order.
     /// Used by `UserPreferencesStore.loadAll()` and `SettingsProvidersTab` row enumeration.
     public static let allKnown: [ProviderID] = [
-        .openrouter, .claude, .codex, .gemini, .grok, .ollama, .lmstudio, .llamacpp
+        .openrouter, .claude, .codex, .gemini, .grok, .ollama, .lmstudio, .lmstudioLlamaCpp, .llamacpp
     ]
 
     /// Human-readable display hint for this provider.
@@ -80,8 +94,16 @@ extension ProviderID {
         case "grok":       return "Grok"
         case "ollama":     return "Ollama"
         case "lmstudio":   return "LM Studio"
+        case "lms-llamacpp": return "LM Studio llama.cpp"
         case "llamacpp":   return "llama.cpp"
-        default:           return rawValue.capitalized
+        default:
+            if rawValue.hasPrefix("engine.") {
+                return engineSlug
+                    .split(separator: "-")
+                    .map { $0.capitalized }
+                    .joined(separator: " ")
+            }
+            return rawValue.capitalized
         }
     }
 }

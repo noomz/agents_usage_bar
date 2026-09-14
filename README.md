@@ -95,6 +95,22 @@ threshold = 0.80           # 0.0–1.0 — quota fraction that triggers a warnin
 
 [openrouter]
 api_key   = "<your-openrouter-key>"  # overridden by OPENROUTER_API_KEY env var
+
+[llamacpp]
+port = 8080                          # Homebrew / vanilla llama-server only
+
+# Built-in: LM Studio's bundled llama-server (not the Express app server on 1234).
+# Matched by binary path under ~/.lmstudio/extensions/backends/
+# [engine.lms-llamacpp]
+# enabled = true
+# port = 8123                        # optional fallback if process discovery misses
+
+# Add more llama.cpp-compatible engines:
+# [engine.classifier]
+# name = "DRM classifier"
+# kind = "llamacpp"
+# port = 8123
+# # or: match_path = "/path/fragment/in/the/binary"
 ```
 
 Environment variables take precedence over `config.toml` values (env > toml > defaults).

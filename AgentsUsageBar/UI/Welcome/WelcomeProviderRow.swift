@@ -139,8 +139,9 @@ struct WelcomeProviderRow: View {
         case .gemini:     return "sparkles"
         case .grok:       return "bolt.horizontal"
         case .ollama:     return "desktopcomputer"
-        case .lmstudio:   return "display"
-        case .llamacpp:   return "cpu"
+        case .lmstudio:         return "display"
+        case .lmstudioLlamaCpp: return "cpu"
+        case .llamacpp:         return "cpu"
         default:          return "cpu"
         }
     }

@@ -71,6 +71,16 @@
       "docsURL": "https://lmstudio.ai"
     },
     {
+      "providerID": "lms-llamacpp",
+      "displayName": "LM Studio llama.cpp",
+      "detectionDescription": "Detected when LM Studio's bundled llama-server is listening (binary under ~/.lmstudio/extensions/backends/). Separate from the LM Studio app server on port 1234 and from Homebrew llama.cpp.",
+      "envSnippet": "# Started by LM Studio or by another app using LM Studio's llama-server binary.\n# Example: llama-server --port 8123 -m model.gguf",
+      "envNote": "This row matches the LM Studio backend binary by path. Homebrew llama-server is the llama.cpp row.",
+      "tomlSnippet": "[engine.lms-llamacpp]\nenabled = true\n# optional fallback if process discovery misses:\n# port = 8123",
+      "tomlNote": "Save the file — enable/disable applies on next app restart. Add more engines with [engine.<slug>].",
+      "docsURL": "https://lmstudio.ai"
+    },
+    {
       "providerID": "llamacpp",
       "displayName": "llama.cpp",
       "detectionDescription": "Configure the port in config.toml, then start llama-server — detected via HTTP probe on that port.",

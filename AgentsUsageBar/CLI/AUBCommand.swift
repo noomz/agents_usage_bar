@@ -79,7 +79,7 @@ public enum AUBCommand: Equatable, Sendable {
       --prefix PATH   Install symlink into PATH (install only)
 
     Providers:
-      openrouter, claude, codex, gemini, grok, ollama, lmstudio, llamacpp
+      openrouter, claude, codex, gemini, grok, ollama, lmstudio, lms-llamacpp, llamacpp
 
     Settings keys:
       refresh-interval, threshold, theme, pace-warnings, reset-notifications,
@@ -255,6 +255,9 @@ extension AUBCommand {
     }
 
     private static func parseKnownProvider(_ token: String) -> ProviderID? {
-        ProviderID.allKnown.first { $0.rawValue == token }
+        if token.hasPrefix("engine."), token.count > "engine.".count {
+            return ProviderID(rawValue: token)
+        }
+        return ProviderID.allKnown.first { $0.rawValue == token }
     }
 }

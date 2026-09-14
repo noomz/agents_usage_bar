@@ -59,8 +59,8 @@ struct ProviderRowViewLocalRowTests {
                 "ProviderRowView must reference LocalRowSecondaryView for local rows (Plan 04-07)")
         #expect(src.contains("isLocal"),
                 "ProviderRowView must declare/use the isLocal computed property")
-        #expect(src.contains("ProviderID.localIDs.contains"),
-                "ProviderRowView must key off ProviderID.localIDs.contains for the isLocal check")
+        #expect(src.contains("isLocalRuntime"),
+                "ProviderRowView must key off ProviderID.isLocalRuntime for the isLocal check")
     }
 
     @Test("Claude account costs use compact caption typography")

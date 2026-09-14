@@ -25,6 +25,8 @@ public struct AppConfig: Sendable, Equatable {
     public let lmstudio: LMStudioConfig
     /// Per-provider configuration for llama.cpp / llamafile localhost runtime (Plan 04-02 — LOCAL-03).
     public let llamacpp: LlamaCppConfig
+    /// Built-in + user `[engine.<slug>]` local engines (LM Studio llama.cpp, custom).
+    public let engines: [LocalEngineConfig]
 
     public init(
         refreshInterval: RefreshInterval,
@@ -35,7 +37,8 @@ public struct AppConfig: Sendable, Equatable {
         grok: GrokConfig,
         ollama: OllamaConfig,
         lmstudio: LMStudioConfig,
-        llamacpp: LlamaCppConfig
+        llamacpp: LlamaCppConfig,
+        engines: [LocalEngineConfig] = LocalEngineConfig.builtIns
     ) {
         self.refreshInterval = refreshInterval
         self.threshold = threshold
@@ -46,6 +49,7 @@ public struct AppConfig: Sendable, Equatable {
         self.ollama = ollama
         self.lmstudio = lmstudio
         self.llamacpp = llamacpp
+        self.engines = engines
     }
 
     /// Built-in defaults (D-15).
@@ -77,7 +81,8 @@ public struct AppConfig: Sendable, Equatable {
         ),
         ollama: OllamaConfig(enabled: true),
         lmstudio: LMStudioConfig(enabled: true, port: 1234),
-        llamacpp: LlamaCppConfig(enabled: true, port: nil)
+        llamacpp: LlamaCppConfig(enabled: true, port: nil),
+        engines: LocalEngineConfig.builtIns
     )
 }
 

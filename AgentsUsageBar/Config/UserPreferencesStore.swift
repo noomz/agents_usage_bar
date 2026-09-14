@@ -178,10 +178,14 @@ public final class UserPreferencesStore {
         resetNotificationsEnabled = (defaults.object(forKey: AUBDefaultsKey.resetNotificationsEnabled) as? Bool) ?? true
 
         var map: [ProviderID: Bool] = [:]
-        for id in ProviderID.allKnown {
-            let key = AUBDefaultsKey.providerEnabled(id)
+        let prefix = "aub.provider."
+        let suffix = ".enabled"
+        for (key, _) in defaults.dictionaryRepresentation() {
+            guard key.hasPrefix(prefix), key.hasSuffix(suffix) else { continue }
+            let raw = String(key.dropFirst(prefix.count).dropLast(suffix.count))
+            guard !raw.isEmpty else { continue }
             if defaults.object(forKey: key) != nil {
-                map[id] = defaults.bool(forKey: key)
+                map[ProviderID(rawValue: raw)] = defaults.bool(forKey: key)
             }
         }
         providerEnabled = map

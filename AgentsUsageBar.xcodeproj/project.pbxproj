@@ -377,6 +377,12 @@
 		AA070100000000000000013A /* CLIInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000013B /* CLIInstallerTests.swift */; };
 		AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000014B /* UsageTextRendererTests.swift */; };
 		AA070100000000000000015A /* CLIUsageSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000015B /* CLIUsageSessionTests.swift */; };
+		AA091400000000000000001A /* LocalEngineConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA091400000000000000001B /* LocalEngineConfig.swift */; };
+		AA091400000000000000002A /* ProcessCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA091400000000000000002B /* ProcessCatalog.swift */; };
+		AA091400000000000000003A /* LocalEngineResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA091400000000000000003B /* LocalEngineResolver.swift */; };
+		AA091400000000000000010A /* LocalEngineResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA091400000000000000010B /* LocalEngineResolverTests.swift */; };
+		AA091400000000000000011A /* LocalEngineConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA091400000000000000011B /* LocalEngineConfigTests.swift */; };
+		AA091400000000000000012A /* LocalEngineRegistrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA091400000000000000012B /* LocalEngineRegistrationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -774,6 +780,12 @@
 		AA070100000000000000013B /* CLIInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstallerTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000014B /* UsageTextRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTextRendererTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000015B /* CLIUsageSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIUsageSessionTests.swift; sourceTree = "<group>"; };
+		AA091400000000000000001B /* LocalEngineConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEngineConfig.swift; sourceTree = "<group>"; };
+		AA091400000000000000002B /* ProcessCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessCatalog.swift; sourceTree = "<group>"; };
+		AA091400000000000000003B /* LocalEngineResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEngineResolver.swift; sourceTree = "<group>"; };
+		AA091400000000000000010B /* LocalEngineResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEngineResolverTests.swift; sourceTree = "<group>"; };
+		AA091400000000000000011B /* LocalEngineConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEngineConfigTests.swift; sourceTree = "<group>"; };
+		AA091400000000000000012B /* LocalEngineRegistrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEngineRegistrationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -858,6 +870,7 @@
 				AA070100000000000000003B /* QuotaBand.swift */,
 				AA091000000000000000001B /* ResetCountdown.swift */,
 				AA111111000000000000001B /* QuotaGlance.swift */,
+				AA091400000000000000003B /* LocalEngineResolver.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -876,6 +889,7 @@
 				AA020600000000000000001B /* RetryPolicy.swift */,
 				AA020600000000000000002B /* CircuitBreaker.swift */,
 				AA020600000000000000003B /* PowerObserver.swift */,
+				AA091400000000000000002B /* ProcessCatalog.swift */,
 			);
 			path = Infrastructure;
 			sourceTree = "<group>";
@@ -902,6 +916,7 @@
 				AA070100000000000000010B /* QuotaBandTests.swift */,
 				AA091000000000000000010B /* ResetCountdownTests.swift */,
 				AA111111000000000000003B /* QuotaGlanceTests.swift */,
+				AA091400000000000000010B /* LocalEngineResolverTests.swift */,
 			);
 			path = DomainTests;
 			sourceTree = "<group>";
@@ -1151,6 +1166,7 @@
 				AA030300000000000000004B /* ConfigStore.swift */,
 				/* Plan 05-02 — UserPreferencesStore */
 				AA050200000000000000001B /* UserPreferencesStore.swift */,
+				AA091400000000000000001B /* LocalEngineConfig.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -1174,6 +1190,7 @@
 				AA050200000000000000011B /* ConfigStorePrecedenceTests.swift */,
 				/* Plan 06-01 — SEC-03 ConfigStore permissions tests */
 				AA060100000000000000010B /* ConfigStorePermissionsTests.swift */,
+				AA091400000000000000011B /* LocalEngineConfigTests.swift */,
 				AA030300000000000000032B /* Fixtures */,
 			);
 			path = ConfigTests;
@@ -1240,6 +1257,7 @@
 				AA050302000000000000011B /* AggregateStoreUpdateWarningFractionTests.swift */,
 				/* Plan 05-03 — AggregateStore.setProviderEnabled tests (D-04) */
 				AA050303000000000000010B /* AggregateStoreProviderEnabledTests.swift */,
+				AA091400000000000000012B /* LocalEngineRegistrationTests.swift */,
 			);
 			path = AggregationTests;
 			sourceTree = "<group>";
@@ -1946,6 +1964,9 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA040600000000000000002A /* LlamaCppHealthResponse.swift in Sources */,
 				AA040600000000000000003A /* LlamaCppV1ModelsResponse.swift in Sources */,
 				AA040600000000000000004A /* LlamaCppSlotsResponse.swift in Sources */,
+				AA091400000000000000001A /* LocalEngineConfig.swift in Sources */,
+				AA091400000000000000002A /* ProcessCatalog.swift in Sources */,
+				AA091400000000000000003A /* LocalEngineResolver.swift in Sources */,
 				/* Plan 04-07 — LocalRowSecondaryView UI helper */
 				AA040700000000000000001A /* LocalRowSecondaryView.swift in Sources */,
 				/* Plan 05-01 — WindowActivationObserver + Settings scene scaffold */
@@ -2153,6 +2174,9 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */,
 				AA070100000000000000015A /* CLIUsageSessionTests.swift in Sources */,
 				AA070100000000000000017A /* CLIProcessTests.swift in Sources */,
+				AA091400000000000000010A /* LocalEngineResolverTests.swift in Sources */,
+				AA091400000000000000011A /* LocalEngineConfigTests.swift in Sources */,
+				AA091400000000000000012A /* LocalEngineRegistrationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

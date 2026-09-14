@@ -36,8 +36,8 @@ public actor LlamaCppProvider: UsageProvider {
 
     // MARK: - UsageProvider nonisolated constants
 
-    public nonisolated let id: ProviderID = .llamacpp
-    public nonisolated let displayName: String = "llama.cpp"
+    public nonisolated let id: ProviderID
+    public nonisolated let displayName: String
 
     /// LOCAL-06: `hasTokens: false` auto-excludes from D-07 rollup;
     /// `isLocal: true` keys ProviderRowView secondary-line branching (Plan 04-07).
@@ -63,12 +63,20 @@ public actor LlamaCppProvider: UsageProvider {
 
     // MARK: - Init
 
-    /// Port is non-optional here — composition root gates registration on `config.llamacpp.port != nil`.
-    /// The actor itself never sees nil (LOCAL-03).
-    public init(http: any HTTPClient, clock: any Clock = SystemClock(), port: Int) {
+    /// Port is non-optional here — composition root gates registration on a resolved port.
+    /// `id` / `displayName` default to brew llama.cpp; custom engines pass their own.
+    public init(
+        http: any HTTPClient,
+        clock: any Clock = SystemClock(),
+        port: Int,
+        id: ProviderID = .llamacpp,
+        displayName: String = "llama.cpp"
+    ) {
         self.http = http
         self.clock = clock
         self.port = port
+        self.id = id
+        self.displayName = displayName
     }
 
     // MARK: - URL builders (dynamic — port is injected at construction)

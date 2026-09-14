@@ -138,8 +138,41 @@ struct DetectionProbeTests {
     @Test func llamacpp_notConfigured_whenPortAbsent() async {
         let config = makeConfig(openrouterKey: nil, llamacppPort: nil)
         let http = makeStubHTTP(status: 200)
-        let results = await DetectionProbe.probeAll(config: config, localhostHTTP: http)
+        let results = await DetectionProbe.probeAll(
+            config: config,
+            localhostHTTP: http,
+            processCatalog: StaticProcessCatalog()
+        )
         #expect(results[.llamacpp] == .notConfigured)
+    }
+
+    @Test func lmsLlamaCpp_detected_whenBackendProcessMatches() async {
+        let catalog = StaticProcessCatalog([
+            RunningProcess(
+                pid: 7,
+                executablePath: "/Users/me/.lmstudio/extensions/backends/llama.cpp-mac/llama-server",
+                arguments: ["llama-server", "--port", "8123"]
+            )
+        ])
+        let config = makeConfig(openrouterKey: nil)
+        let http = makeStubHTTP(status: 200)
+        let results = await DetectionProbe.probeAll(
+            config: config,
+            localhostHTTP: http,
+            processCatalog: catalog
+        )
+        #expect(results[.lmstudioLlamaCpp] == .detected)
+    }
+
+    @Test func lmsLlamaCpp_notRunning_whenNoBackendProcess() async {
+        let config = makeConfig(openrouterKey: nil)
+        let http = makeStubHTTP(status: 200)
+        let results = await DetectionProbe.probeAll(
+            config: config,
+            localhostHTTP: http,
+            processCatalog: StaticProcessCatalog()
+        )
+        #expect(results[.lmstudioLlamaCpp] == .notRunning)
     }
 
     // MARK: - All 7 providers present
@@ -147,7 +180,11 @@ struct DetectionProbeTests {
     @Test func probeAll_runsAllKnownProviders() async {
         let config = makeConfig(openrouterKey: nil)
         let http = makeStubHTTP(status: 200)
-        let results = await DetectionProbe.probeAll(config: config, localhostHTTP: http)
+        let results = await DetectionProbe.probeAll(
+            config: config,
+            localhostHTTP: http,
+            processCatalog: StaticProcessCatalog()
+        )
         #expect(results.count == ProviderID.allKnown.count)
         for id in ProviderID.allKnown {
             #expect(results[id] != nil, "Missing result for \(id.rawValue)")

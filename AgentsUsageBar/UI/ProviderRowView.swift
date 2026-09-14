@@ -42,9 +42,8 @@ public struct ProviderRowView: View {
     private var dashboardURL: URL? { ProviderDashboardURL.lookup(state.id) }
 
     /// Plan 04-07 — true when the row's provider is a local LLM runtime
-    /// (Ollama / LM Studio / llama.cpp). Keyed off `ProviderID.localIDs`
-    /// (Plan 04-01 static Set) so no capability registry is needed in the view.
-    private var isLocal: Bool { ProviderID.localIDs.contains(state.id) }
+    /// (Ollama / LM Studio / llama.cpp / custom engines).
+    private var isLocal: Bool { state.id.isLocalRuntime }
 
     /// Plan 03-07 / D-11 — detects Gemini's `"usage-temporarily-unavailable"`
     /// degraded snapshot via the canonical `ThresholdEngine.degradedTag`

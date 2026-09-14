@@ -160,7 +160,9 @@ public enum AppDependencies {
         // D-04 cold-start: prefs may disable a provider that cache-load already seeded.
         // Apply the disable set now so the first popover paint never shows hidden rows.
         // (observePreferences only reacts to subsequent changes, not the initial map.)
-        for id in ProviderID.allKnown {
+        var launchIDs = Set(ProviderID.allKnown)
+        launchIDs.formUnion(config.engines.map(\.id))
+        for id in launchIDs {
             if preferences.providerEnabled[id] == false {
                 store.setProviderEnabled(id, enabled: false)
             }
@@ -289,7 +291,10 @@ public enum AppDependencies {
             }
             if newProviderEnabled != lastProviderEnabled {
                 // Find changed providers and propagate to AggregateStore
-                for id in ProviderID.allKnown {
+                var ids = Set(ProviderID.allKnown)
+                ids.formUnion(lastProviderEnabled.keys)
+                ids.formUnion(newProviderEnabled.keys)
+                for id in ids {
                     let wasEnabled = lastProviderEnabled[id] ?? true  // absent = enabled (default)
                     let isEnabled  = newProviderEnabled[id] ?? true
                     if wasEnabled != isEnabled {

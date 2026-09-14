@@ -37,7 +37,8 @@ public enum ProviderRegistryFactory {
         http: any HTTPClient,
         localhostHTTP: any HTTPClient,
         cache: any CacheStore,
-        clock: any Clock
+        clock: any Clock,
+        processCatalog: any ProcessCatalog = ProcProcessCatalog()
     ) -> ProviderRegistry {
         var registry: [any UsageProvider] = []
         var placeholders: [PlaceholderSeed] = []
@@ -253,6 +254,61 @@ public enum ProviderRegistryFactory {
             ))
         }
 
+        registerLocalEngines(
+            config: config,
+            localhostHTTP: localhostHTTP,
+            clock: clock,
+            processCatalog: processCatalog,
+            registry: &registry,
+            placeholders: &placeholders
+        )
+
         return ProviderRegistry(providers: registry, placeholders: placeholders)
+    }
+
+    /// Registers `[engine.*]` + the built-in LM Studio llama.cpp row.
+    ///
+    /// Ports already claimed by Ollama / LM Studio Express / `[llamacpp]` are
+    /// reserved so an LMS sidecar cannot steal the brew llama.cpp row.
+    private static func registerLocalEngines(
+        config: AppConfig,
+        localhostHTTP: any HTTPClient,
+        clock: any Clock,
+        processCatalog: any ProcessCatalog,
+        registry: inout [any UsageProvider],
+        placeholders: inout [PlaceholderSeed]
+    ) {
+        var reserved: Set<Int> = [11434, config.lmstudio.port]
+        if let port = config.llamacpp.port { reserved.insert(port) }
+
+        let processes = processCatalog.processes()
+        for engine in config.engines where engine.enabled && engine.kind == .llamacpp {
+            if let port = LocalEngineResolver.resolvePort(
+                engine: engine,
+                processes: processes,
+                reservedPorts: reserved
+            ) {
+                registry.append(LlamaCppProvider(
+                    http: localhostHTTP,
+                    clock: clock,
+                    port: port,
+                    id: engine.id,
+                    displayName: engine.displayName
+                ))
+                placeholders.append(PlaceholderSeed(
+                    providerID: engine.id,
+                    displayName: engine.displayName,
+                    status: .notRunning
+                ))
+                reserved.insert(port)
+            } else {
+                placeholders.append(PlaceholderSeed(
+                    providerID: engine.id,
+                    displayName: engine.displayName,
+                    placeholderMessage: engine.unresolvedPlaceholderMessage,
+                    status: .notRunning
+                ))
+            }
+        }
     }
 }

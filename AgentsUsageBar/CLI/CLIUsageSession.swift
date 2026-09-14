@@ -35,7 +35,7 @@ public struct CLIUsageSession {
         if cached {
             reports = cachedStates.values
                 .sorted { $0.id.rawValue < $1.id.rawValue }
-                .map { ProviderReport(state: $0, isLocal: ProviderID.localIDs.contains($0.id)) }
+                .map { ProviderReport(state: $0, isLocal: $0.id.isLocalRuntime) }
         } else {
             var seen = Set<ProviderID>()
 
@@ -56,7 +56,7 @@ public struct CLIUsageSession {
             for seed in placeholders {
                 guard wants(seed.providerID, filter: filter), !seen.contains(seed.providerID) else { continue }
                 if let cached = cachedStates[seed.providerID], cached.snapshot != nil {
-                    reports.append(ProviderReport(state: cached, isLocal: ProviderID.localIDs.contains(seed.providerID)))
+                    reports.append(ProviderReport(state: cached, isLocal: cached.id.isLocalRuntime))
                 } else {
                     reports.append(ProviderReport(placeholder: seed))
                 }
@@ -200,7 +200,7 @@ public struct ProviderReport: Sendable, Equatable {
             snapshot: nil,
             placeholderMessage: placeholder.placeholderMessage,
             errorDescription: nil,
-            isLocal: ProviderID.localIDs.contains(placeholder.providerID),
+            isLocal: placeholder.providerID.isLocalRuntime,
             hasTokens: placeholder.providerID.contributesToTodayTotal
         )
     }

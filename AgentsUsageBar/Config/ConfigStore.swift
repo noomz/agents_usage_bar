@@ -296,7 +296,8 @@ public final class ConfigStore: @unchecked Sendable {
             ),
             ollama: OllamaConfig(enabled: ollamaEnabled),
             lmstudio: LMStudioConfig(enabled: lmstudioEnabled, port: lmstudioPort),
-            llamacpp: LlamaCppConfig(enabled: llamacppEnabled, port: llamacppPort)
+            llamacpp: LlamaCppConfig(enabled: llamacppEnabled, port: llamacppPort),
+            engines: LocalEngineConfig.parse(from: toml)
         )
     }
 
@@ -345,7 +346,10 @@ public final class ConfigStore: @unchecked Sendable {
             ),
             llamacpp: config.llamacpp.withEnabled(
                 prefs.providerEnabled[.llamacpp] ?? config.llamacpp.enabled
-            )
+            ),
+            engines: config.engines.map { engine in
+                engine.withEnabled(prefs.providerEnabled[engine.id] ?? engine.enabled)
+            }
         )
         // NOTE: apiKey, bearer, OAuth credentials are NOT touched here (D-03, CFG-01).
         return config

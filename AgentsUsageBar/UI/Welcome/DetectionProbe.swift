@@ -56,7 +56,8 @@ public enum DetectionProbe {
     public static func probeAll(
         config: AppConfig,
         localhostHTTP: any HTTPClient,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        processCatalog: any ProcessCatalog = ProcProcessCatalog()
     ) async -> [ProviderID: DetectionResult] {
         // Pre-compute all synchronous FS probes BEFORE entering the task group.
         // FileManager is not Sendable under Swift 6 strict concurrency, so it cannot
@@ -73,6 +74,20 @@ public enum DetectionProbe {
         // Per-provider port/URL values (Sendable: Int, URL, Optional<Int>)
         let lmstudioPort = config.lmstudio.port
         let llamacppPort = config.llamacpp.port
+        let enginePorts: [(ProviderID, Int?)] = {
+            var reserved: Set<Int> = [11434, lmstudioPort]
+            if let p = llamacppPort { reserved.insert(p) }
+            let processes = processCatalog.processes()
+            return config.engines.filter(\.enabled).map { engine in
+                let port = LocalEngineResolver.resolvePort(
+                    engine: engine,
+                    processes: processes,
+                    reservedPorts: reserved
+                )
+                if let port { reserved.insert(port) }
+                return (engine.id, port)
+            }
+        }()
 
         return await withTaskGroup(of: (ProviderID, DetectionResult).self) { group in
 
@@ -112,6 +127,17 @@ public enum DetectionProbe {
                 let url = URL(string: "http://localhost:\(port)/health")!
                 let result = await probeLocalHTTP(url: url, http: localhostHTTP)
                 return (.llamacpp, result)
+            }
+
+            for (engineID, port) in enginePorts {
+                group.addTask {
+                    guard let port else {
+                        return (engineID, .notRunning)
+                    }
+                    let url = URL(string: "http://localhost:\(port)/health")!
+                    let result = await probeLocalHTTP(url: url, http: localhostHTTP)
+                    return (engineID, result)
+                }
             }
 
             var results: [ProviderID: DetectionResult] = [:]

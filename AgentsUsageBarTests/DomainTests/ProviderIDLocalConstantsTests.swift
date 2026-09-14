@@ -31,14 +31,22 @@ struct ProviderIDLocalConstantsTests {
     func displayHints_renderHumanReadable() {
         #expect(ProviderID.ollama.displayHint == "Ollama")
         #expect(ProviderID.lmstudio.displayHint == "LM Studio")
+        #expect(ProviderID.lmstudioLlamaCpp.displayHint == "LM Studio llama.cpp")
         #expect(ProviderID.llamacpp.displayHint == "llama.cpp")
     }
 
     // MARK: - localIDs set
 
-    @Test("localIDs set equals exactly {ollama, lmstudio, llamacpp}")
-    func localIDs_setEqualsThreeMembers() {
-        #expect(ProviderID.localIDs == Set([.ollama, .lmstudio, .llamacpp]))
+    @Test("localIDs includes built-in local runtimes plus LM Studio llama.cpp")
+    func localIDs_setEqualsBuiltInLocals() {
+        #expect(ProviderID.localIDs == Set([.ollama, .lmstudio, .llamacpp, .lmstudioLlamaCpp]))
+    }
+
+    @Test("custom engine ids are local runtimes")
+    func customEngine_isLocalRuntime() {
+        #expect(ProviderID(rawValue: "engine.classifier").isLocalRuntime)
+        #expect(ProviderID.lmstudioLlamaCpp.isLocalRuntime)
+        #expect(ProviderID.openrouter.isLocalRuntime == false)
     }
 
     @Test("localIDs does not contain any hosted provider")

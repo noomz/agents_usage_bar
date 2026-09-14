@@ -188,10 +188,10 @@ struct LocalRowSecondaryViewTests {
 
     // MARK: - ProviderID.localIDs regression
 
-    @Test("ProviderID.localIDs contains exactly ollama, lmstudio, llamacpp (Plan 04-01 contract)")
+    @Test("ProviderID.localIDs contains built-in local runtimes including lms-llamacpp")
     func localIDsCarrier_containsOllamaLMStudioLlamacpp() {
-        #expect(ProviderID.localIDs == Set([.ollama, .lmstudio, .llamacpp]),
-                "Plan 04-01 localIDs Set must contain exactly the three local runtime IDs")
+        #expect(ProviderID.localIDs == Set([.ollama, .lmstudio, .llamacpp, .lmstudioLlamaCpp]),
+                "localIDs Set must contain the built-in local runtime IDs")
     }
 
     // MARK: - LOCAL-06 enforcement
