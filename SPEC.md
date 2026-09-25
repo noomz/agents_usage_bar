@@ -84,7 +84,7 @@ id|status|task|cites
 T1|x|Capture classic golden on `main` before refactor: Swift fixture builder + full-output `==` tests for `renderUsage`/`renderQuota`, colour on/off; also JSON golden for same fixture|V4,V5,V6,I1,I2,I6
 T2|x|Extract shared CLI primitives; add `CLITheme` enum with `classic` only routed through it; goldens green; add `scripts/bench-cli-themes.sh` + gate run vs main|V1,V2,V3,V4,V5,V6,V33,V34,V36,I9
 T3|x|Build `CompactTextRenderer` (usage, quota, single, empty views; width; labels; errors; local line) + provider changes (`QuotaWindow` duration, OpenRouter daily/weekly/monthly); compact goldens at 66 cols; `AUB_BENCH` render bench; gate run|V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23,V35,V33,V34,I1,I2,I8,I9
-T4|.|Selection plumbing: `--theme`, `AUB_THEME`, `cli-theme` setting, `aub themes` (+`--json`), help text, compact as default; parser + settings tests; gate run|V24,V25,V26,V27,V28,V29,V33,V34,V36,I3,I4,I5
+T4|~|Selection plumbing: `--theme`, `AUB_THEME`, `cli-theme` setting, `aub themes` (+`--json`), help text, compact as default; parser + settings tests; gate run|V24,V25,V26,V27,V28,V29,V33,V34,V36,I3,I4,I5
 T5|.|Provider order: shared ordering helper, `provider-order` setting + validation, compact + popover adopt helper; tests incl. classic/json order unchanged|V15,V30,V31,V32,V5,V6,I4,I7
 T6|.|Final full perf gate run on HEAD vs main; results in PR|V33,V34,V35,V36,I9
 
