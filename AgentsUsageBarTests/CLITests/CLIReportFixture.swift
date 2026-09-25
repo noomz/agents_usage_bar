@@ -73,8 +73,8 @@ enum CLIReportFixture {
             quota: Quota(used: 0.69, limit: 1, remaining: 0.31),
             raw: [:],
             quotaWindows: [
-                QuotaWindow(name: "primary", utilization: 0.69, resetsAt: asOf.addingTimeInterval(2 * 3600 + 50 * 60)),
-                QuotaWindow(name: "secondary", utilization: 0.22, resetsAt: asOf.addingTimeInterval(5 * 86400)),
+                QuotaWindow(name: "primary", utilization: 0.69, resetsAt: asOf.addingTimeInterval(2 * 3600 + 50 * 60), duration: 5 * 3600),
+                QuotaWindow(name: "secondary", utilization: 0.22, resetsAt: asOf.addingTimeInterval(5 * 86400), duration: 7 * 86400),
             ]
         )
         return report(.codex, "Codex", status: .ok(lastSuccess: asOf), snapshot: snap, hasTokens: true)
@@ -88,7 +88,8 @@ enum CLIReportFixture {
             costTodayUSD: Decimal(string: "1.25"),
             balanceUSD: Decimal(string: "9.40"),
             quota: Quota(used: 0.94, limit: 1, remaining: 0.06),
-            raw: [:]
+            raw: [:],
+            periodSpendUSD: .init(day: Decimal(string: "1.25")!, week: Decimal(string: "8.10")!, month: Decimal(string: "31.40")!)
         )
         return report(.openrouter, "OpenRouter", status: .ok(lastSuccess: asOf), snapshot: snap)
     }

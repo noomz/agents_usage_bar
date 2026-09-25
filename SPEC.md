@@ -43,18 +43,18 @@ V6|`--json` output byte-identical to `main` for the same report.
 ### Compact layout (ticket 05; mock `.scratch/aub-cli-themes/compact-v2-mock.txt`)
 V7|Header 1: `today $<cost> spent · <tok> tok · HH:mm`; cost/tokens = providers with `contributesToTodayTotal` (Claude + Codex); tokens SI-abbreviated; time = `report.asOf` local; no cached marker.
 V8|Header 2 always printed, zeros included: `N at ≥80% · N at 50–79% · N unavailable`; counts every printed bar row (each Claude account) and every `!` row.
-V9|Row grammar: `<glyph> <name> <bar> <pct> <window> ↻ <reset> <money>`. Glyph `▲` ≥80 %, `△` 50–79 %, blank <50 %, `!` unavailable. Colour red/yellow/green by same bands; glyph carries severity with colour off.
+V9|Row grammar: `<glyph> <name> <bar> <pct> <window> ↻ <reset> <money>`. Glyph `▲` ≥80 %, `△` 50–79 %, blank <50 %, `!` unavailable. Colour red/yellow/green by same bands; glyph carries severity with colour off. Cut-offs are compact's own, on consumed fraction (exactly 80 % = `▲` red); popover `QuotaBand` untouched.
 V10|Bar: 10 cells base, eighth blocks `▏▎▍▌▋▊▉█`, dim `░` track. Nothing capped → text `no limit`, no bar.
 V11|Window per row = highest-utilisation window, labelled `5h`/`7d`/`weekly`/`credits`; Codex label from `QuotaWindow` duration, fallback raw name (`primary`/`secondary`).
 V12|Reset = shared countdown phrase without `Resets ` prefix (`2h 50m`, `3d 8h`, `now`, `<1m`); nil → `↻ unknown`.
 V13|Money: Claude/Codex `$X spent`; Grok `no cost data`; OpenRouter `$<balance> left · $<usage_daily> today`. OpenRouter % = consumed: used ÷ key limit, else spent ÷ prepaid credits; label `credits`; neither → `no limit`.
 V14|Compact owns short-label table per provider id (OpenRouter, Claude, Codex, Gemini, Grok, Ollama, LM Studio, llama.cpp); `engine.*`/unknown → `displayName`. Live and cached labels identical.
 V15|Row order: never by severity; compact sorts rows itself via shared provider-order helper (V31); session sort untouched.
-V16|Claude accounts: one row per account, alphabetical, `●` on active; `Claude` label on first row, others indented; no accounts → single `Claude` row.
+V16|Claude accounts: one row per account, alphabetical, `●` on the active-constraint account (`quotaGlance.active.accountName`, classic's `Active:`); `Claude` label on first row, others indented; no accounts → single `Claude` row.
 V17|Error rows: no snapshot → `!` row replaces bar row; snapshot degraded/stale → bar row + `!` line under it. Words: `unauthenticated`, `unavailable`, `stale`. `.disabled` hidden.
 V18|Local line: one `local` line — `● name model` (`+N` more loaded), `◐ name loading`, `○ name idle`, `○ name stopped`; unconfigured/placeholder/disabled hidden; custom engines by name; wraps to indented continuation lines.
 V19|Width: `TIOCGWINSZ` on TTY, else `$COLUMNS`, else 66 (pipes/tests deterministic). Extra width widens name column to longest label, then bar up to 20 cells. Narrow: bar shrinks to 5-cell floor, then labels truncate with `…`. Base width recomputed from widest row (OpenRouter `left · today`).
-V20|`aub quota` compact: header = severity line only; one row per window, same grammar, no money (Claude 5h + 7d per account; Codex both; OpenRouter `credits` + `day`/`week`/`month`; Gemini per model; Grok billing).
+V20|`aub quota` compact: header = severity line only; one row per window, same grammar, no money (Claude 5h + 7d per account; Codex both; OpenRouter `credits` + `day`/`week`/`month` rows showing `$X spent` in the bar's place (no bar, no %, not counted in severity line); Gemini per model; Grok billing).
 V21|Single provider (`aub claude`): filtered usage view; header totals + severity counts cover shown provider only.
 V22|Empty: zero headers + one dim line `no providers enabled` or `no cached data yet — run aub without --cached`; exit 0.
 V23|`QuotaWindow` gains optional duration; Codex providers keep parsed `window_minutes`/`limit_window_seconds`. OpenRouter snapshot surfaces `usage_daily/weekly/monthly`; spec note: `usage_daily` is UTC day, header total is local-midnight.
@@ -83,7 +83,7 @@ V36|Matrix: `usage --cached`, `quota --cached`, `claude --cached`, `usage --cach
 id|status|task|cites
 T1|x|Capture classic golden on `main` before refactor: Swift fixture builder + full-output `==` tests for `renderUsage`/`renderQuota`, colour on/off; also JSON golden for same fixture|V4,V5,V6,I1,I2,I6
 T2|x|Extract shared CLI primitives; add `CLITheme` enum with `classic` only routed through it; goldens green; add `scripts/bench-cli-themes.sh` + gate run vs main|V1,V2,V3,V4,V5,V6,V33,V34,V36,I9
-T3|.|Build `CompactTextRenderer` (usage, quota, single, empty views; width; labels; errors; local line) + provider changes (`QuotaWindow` duration, OpenRouter daily/weekly/monthly); compact goldens at 66 cols; `AUB_BENCH` render bench; gate run|V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23,V35,V33,V34,I1,I2,I8,I9
+T3|x|Build `CompactTextRenderer` (usage, quota, single, empty views; width; labels; errors; local line) + provider changes (`QuotaWindow` duration, OpenRouter daily/weekly/monthly); compact goldens at 66 cols; `AUB_BENCH` render bench; gate run|V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23,V35,V33,V34,I1,I2,I8,I9
 T4|.|Selection plumbing: `--theme`, `AUB_THEME`, `cli-theme` setting, `aub themes` (+`--json`), help text, compact as default; parser + settings tests; gate run|V24,V25,V26,V27,V28,V29,V33,V34,V36,I3,I4,I5
 T5|.|Provider order: shared ordering helper, `provider-order` setting + validation, compact + popover adopt helper; tests incl. classic/json order unchanged|V15,V30,V31,V32,V5,V6,I4,I7
 T6|.|Final full perf gate run on HEAD vs main; results in PR|V33,V34,V35,V36,I9
