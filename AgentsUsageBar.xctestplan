@@ -10,6 +10,8 @@
   ],
   "defaultOptions" : {
     "codeCoverage" : false,
+    "language" : "en",
+    "region" : "US",
     "testExecutionOrdering" : "alphabetical"
   },
   "testTargets" : [
