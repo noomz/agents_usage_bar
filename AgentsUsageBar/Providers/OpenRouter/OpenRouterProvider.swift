@@ -125,7 +125,12 @@ public actor OpenRouterProvider: UsageProvider {
                 balanceUSD: Decimal(balance),
                 quota: quota,
                 raw: [:],
-                tooltipLabel: quotaTooltip
+                tooltipLabel: quotaTooltip,
+                periodSpendUSD: UsageSnapshot.PeriodSpend(
+                    day: Decimal(k.data.usageDaily),
+                    week: Decimal(k.data.usageWeekly),
+                    month: Decimal(k.data.usageMonthly)
+                )
             )
 
             lastStatus = .ok(lastSuccess: now)

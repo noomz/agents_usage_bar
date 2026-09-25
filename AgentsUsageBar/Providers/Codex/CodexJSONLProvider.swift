@@ -267,7 +267,8 @@ public actor CodexJSONLProvider: UsageProvider {
             windows.append(QuotaWindow(
                 name: "primary",
                 utilization: frac,
-                resetsAt: primary.resetsAtDate(now: now)
+                resetsAt: primary.resetsAtDate(now: now),
+                duration: TimeInterval(primary.windowMinutes * 60)
             ))
         }
         if let secondary = event.payload.rateLimits?.secondary {
@@ -276,7 +277,8 @@ public actor CodexJSONLProvider: UsageProvider {
             windows.append(QuotaWindow(
                 name: "secondary",
                 utilization: frac,
-                resetsAt: secondary.resetsAtDate(now: now)
+                resetsAt: secondary.resetsAtDate(now: now),
+                duration: TimeInterval(secondary.windowMinutes * 60)
             ))
         }
 
@@ -337,7 +339,8 @@ public actor CodexJSONLProvider: UsageProvider {
             windows.append(QuotaWindow(
                 name: "primary",
                 utilization: frac,
-                resetsAt: primary.resetDate()
+                resetsAt: primary.resetDate(),
+                duration: primary.limitWindowSeconds.map(TimeInterval.init)
             ))
         }
         if let secondary = response.rateLimit?.secondaryWindow {
@@ -346,7 +349,8 @@ public actor CodexJSONLProvider: UsageProvider {
             windows.append(QuotaWindow(
                 name: "secondary",
                 utilization: frac,
-                resetsAt: secondary.resetDate()
+                resetsAt: secondary.resetDate(),
+                duration: secondary.limitWindowSeconds.map(TimeInterval.init)
             ))
         }
 
