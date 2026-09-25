@@ -108,16 +108,14 @@ extension AUBCommand {
     @MainActor
     private static func runUsage(_ opts: UsageOptions, quotaOnly: Bool) async throws -> Int32 {
         let report = await makeSession().fetch(filter: opts.filter, cached: opts.cached)
-        let color = UsageTextRenderer.shouldColor(noColor: opts.noColor)
+        let color = CLIFormat.shouldColor(noColor: opts.noColor)
         if opts.json {
             let text = quotaOnly
                 ? try UsageJSONRenderer.renderQuota(report)
                 : try UsageJSONRenderer.renderUsage(report)
             fputs(text, stdout)
         } else {
-            let text = quotaOnly
-                ? UsageTextRenderer.renderQuota(report, color: color)
-                : UsageTextRenderer.renderUsage(report, color: color)
+            let text = CLITheme.classic.render(report, view: quotaOnly ? .quota : .usage, color: color)
             fputs(text, stdout)
         }
         return 0
