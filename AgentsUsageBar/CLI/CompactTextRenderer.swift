@@ -157,12 +157,11 @@ public enum CompactTextRenderer {
         }
         var lines: [Line]
         if p.id == .claude, let accounts = snap.accounts, !accounts.isEmpty {
-            let active = snap.quotaGlance.active?.accountName
-            lines = accounts.sorted { $0.name < $1.name }.enumerated().map { index, account in
-                let mark = account.name == active ? "●" : ""
-                let rowName = index == 0 ? "\(name) \(account.name)\(mark)" : "  \(account.name)\(mark)"
-                let (gauge, windowLabel, reset) = claudeWindow(account.quotaGlance.active, now: now)
-                return .row(name: rowName, gauge: gauge, label: windowLabel, reset: reset, money: spent(account.costTodayUSD))
+            // Header row with the combined cost, then one indented row per account.
+            lines = [.row(name: name, gauge: .text(""), label: "", reset: nil, money: spent(snap.costTodayUSD))]
+            for account in accountsInOrder(snap) {
+                let (gauge, windowLabel, reset) = claudeWindow(account.value.quotaGlance.active, now: now)
+                lines.append(.row(name: account.name, gauge: gauge, label: windowLabel, reset: reset, money: spent(account.value.costTodayUSD)))
             }
         } else {
             let (gauge, windowLabel, reset) = worstWindow(p, snap, now: now)
@@ -246,6 +245,15 @@ public enum CompactTextRenderer {
         }
     }
 
+    /// Claude accounts alphabetically, each named `  <account>` with `●` on the
+    /// active-constraint account (V16).
+    static func accountsInOrder(_ snap: UsageSnapshot) -> [(name: String, value: UsageSnapshot.AccountUsage)] {
+        let active = snap.quotaGlance.active?.accountName
+        return (snap.accounts ?? []).sorted { $0.name < $1.name }.map { account in
+            ("  " + account.name + (account.name == active ? "●" : ""), account)
+        }
+    }
+
     // MARK: - Quota view rows
 
     static func quotaLines(_ p: ProviderReport, now: Date) -> [Line] {
@@ -255,14 +263,12 @@ public enum CompactTextRenderer {
         }
         var rows: [(name: String, gauge: Gauge, label: String, reset: String?)] = []
         if p.id == .claude, let accounts = snap.accounts, !accounts.isEmpty {
-            let active = snap.quotaGlance.active?.accountName
-            for (index, account) in accounts.sorted(by: { $0.name < $1.name }).enumerated() {
-                let mark = account.name == active ? "●" : ""
-                let head = index == 0 ? "\(name) \(account.name)\(mark)" : "  \(account.name)\(mark)"
-                let glance = account.quotaGlance
+            rows.append((name, .text(""), "", nil))
+            for account in accountsInOrder(snap) {
+                let glance = account.value.quotaGlance
                 for (i, window) in [glance.fiveHours, glance.sevenDays].compactMap({ $0 }).enumerated() {
                     let (gauge, windowLabel, reset) = claudeWindow(window, now: now)
-                    rows.append((i == 0 ? head : "", gauge, windowLabel, reset))
+                    rows.append((i == 0 ? account.name : "", gauge, windowLabel, reset))
                 }
             }
         } else if p.id == .claude, snap.quotaGlance.hasAnyWindow {

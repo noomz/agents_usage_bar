@@ -86,12 +86,15 @@ struct CompactTextRendererTests {
         #expect(positions == positions.sorted())
     }
 
-    @Test("claude accounts alphabetical, ● on the active constraint")
+    @Test("claude: header row with total, accounts indented alphabetically, ● on the active constraint")
     func claudeAccounts() {
-        let lines = Self.render(width: 110).split(separator: "\n").map(String.init)
-        let personal = lines.firstIndex { $0.contains("Claude personal") }
-        let work = lines.firstIndex { $0.contains("  work●") }
-        #expect(personal != nil && work != nil && personal! < work!)
+        let lines = Self.render().split(separator: "\n").map(String.init)
+        let header = lines.firstIndex { $0.hasPrefix("  Claude ") }
+        let personal = lines.firstIndex { $0.hasPrefix("    personal ") }
+        let work = lines.firstIndex { $0.hasPrefix("    work● ") }
+        #expect(header != nil && personal != nil && work != nil)
+        #expect(header! + 1 == personal! && personal! + 1 == work!)
+        #expect(lines[header!].hasSuffix("$273.86 spent") && !lines[header!].contains("%"))
         #expect(lines[work!].contains("47% 7d"))
         #expect(lines[personal!].contains("17% 7d") && lines[personal!].contains("↻ unknown"))
     }
