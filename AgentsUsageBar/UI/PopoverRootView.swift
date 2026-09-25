@@ -49,7 +49,7 @@ public struct PopoverRootView: View {
         Self.ordered(Array(store.providers.values), preference: UserDefaults.standard.aubProviderOrder)
     }
 
-    static func ordered(_ states: [ProviderState], preference: [ProviderID]) -> [ProviderState] {
+    nonisolated static func ordered(_ states: [ProviderState], preference: [ProviderID]) -> [ProviderState] {
         ProviderID.ordered(states, id: \.id, preference: preference)
     }
 }

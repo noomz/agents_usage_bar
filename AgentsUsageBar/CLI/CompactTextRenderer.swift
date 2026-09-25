@@ -444,7 +444,9 @@ public enum CompactTextRenderer {
                         + CLIFormat.paint(track, band: .none, color: color)
                         + " " + String(repeating: " ", count: max(0, 4 - pct.count)) + pct
                 case .text(let text):
-                    out = "  \(fitName(name)) " + CLIFormat.paint(CLIFormat.pad(text, to: gaugeWidth), band: .none, color: color)
+                    // Pad outside the ANSI span so the trailing-space trim below reaches it.
+                    out = "  \(fitName(name)) " + CLIFormat.paint(text, band: .none, color: color)
+                        + String(repeating: " ", count: max(0, gaugeWidth - text.count))
                 }
                 if labelWidth > 0 { out += " " + CLIFormat.pad(label, to: labelWidth) }
                 if resetWidth > 0 { out += " " + CLIFormat.pad(reset ?? "", to: resetWidth) }
