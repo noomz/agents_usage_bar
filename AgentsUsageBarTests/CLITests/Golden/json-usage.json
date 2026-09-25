@@ -1,0 +1,205 @@
+{
+  "asOf" : "2026-09-24T05:20:00Z",
+  "providers" : [
+    {
+      "balanceUSD" : "9.4",
+      "costTodayUSD" : "1.25",
+      "displayName" : "OpenRouter",
+      "id" : "openrouter",
+      "quota" : {
+        "fraction" : 0.94,
+        "limit" : 1,
+        "remaining" : 0.06,
+        "used" : 0.94
+      },
+      "raw" : {
+
+      },
+      "status" : "ok"
+    },
+    {
+      "accounts" : [
+        {
+          "costTodayUSD" : "53.63",
+          "name" : "personal",
+          "quota" : {
+            "fraction" : 0.17,
+            "limit" : 1,
+            "remaining" : 0.83,
+            "used" : 0.17
+          },
+          "quotaWindows" : [
+            {
+              "name" : "5h",
+              "resetsAt" : "2026-09-24T09:40:00Z",
+              "utilization" : 0.12
+            },
+            {
+              "name" : "7d",
+              "utilization" : 0.17
+            }
+          ]
+        },
+        {
+          "costTodayUSD" : "220.23",
+          "name" : "work",
+          "quota" : {
+            "fraction" : 0.47,
+            "limit" : 1,
+            "remaining" : 0.53,
+            "used" : 0.47
+          },
+          "quotaWindows" : [
+            {
+              "name" : "5h",
+              "resetsAt" : "2026-09-24T08:10:00Z",
+              "utilization" : 0.31
+            },
+            {
+              "name" : "7d",
+              "resetsAt" : "2026-09-27T13:20:00Z",
+              "utilization" : 0.47
+            }
+          ]
+        }
+      ],
+      "costTodayUSD" : "273.86",
+      "displayName" : "Claude",
+      "id" : "claude",
+      "quota" : {
+        "fraction" : 0.47,
+        "limit" : 1,
+        "remaining" : 0.53,
+        "used" : 0.47
+      },
+      "quotaWindows" : [
+        {
+          "name" : "personal 5h",
+          "resetsAt" : "2026-09-24T09:40:00Z",
+          "utilization" : 0.12
+        },
+        {
+          "name" : "personal 7d",
+          "resetsAt" : "2026-09-25T12:20:00Z",
+          "utilization" : 0.17
+        },
+        {
+          "name" : "work 5h",
+          "resetsAt" : "2026-09-24T08:10:00Z",
+          "utilization" : 0.31
+        },
+        {
+          "name" : "work 7d",
+          "resetsAt" : "2026-09-27T13:20:00Z",
+          "utilization" : 0.47
+        }
+      ],
+      "raw" : {
+
+      },
+      "status" : "ok",
+      "tokensToday" : 232400512
+    },
+    {
+      "costTodayUSD" : "0.07",
+      "displayName" : "Codex",
+      "id" : "codex",
+      "quota" : {
+        "fraction" : 0.69,
+        "limit" : 1,
+        "remaining" : 0.31,
+        "used" : 0.69
+      },
+      "quotaWindows" : [
+        {
+          "name" : "primary",
+          "resetsAt" : "2026-09-24T08:10:00Z",
+          "utilization" : 0.69
+        },
+        {
+          "name" : "secondary",
+          "resetsAt" : "2026-09-29T05:20:00Z",
+          "utilization" : 0.22
+        }
+      ],
+      "raw" : {
+
+      },
+      "status" : "ok",
+      "tokensToday" : 1204331
+    },
+    {
+      "displayName" : "Gemini",
+      "id" : "gemini",
+      "quota" : {
+        "fraction" : 0.19,
+        "limit" : 1,
+        "remaining" : 0.81,
+        "used" : 0.19
+      },
+      "quotaWindows" : [
+        {
+          "name" : "gemini-2.5-pro",
+          "resetsAt" : "2026-09-24T06:20:00Z",
+          "utilization" : 0.19
+        },
+        {
+          "name" : "gemini-2.5-flash",
+          "resetsAt" : "2026-09-24T06:20:00Z",
+          "utilization" : 0.04
+        }
+      ],
+      "raw" : {
+        "note" : "usage-temporarily-unavailable"
+      },
+      "status" : "error"
+    },
+    {
+      "displayName" : "Grok",
+      "id" : "grok",
+      "raw" : {
+
+      },
+      "status" : "unauthenticated"
+    },
+    {
+      "displayName" : "Ollama",
+      "id" : "ollama",
+      "raw" : {
+
+      },
+      "status" : "notRunning"
+    },
+    {
+      "displayName" : "LM Studio llama.cpp",
+      "id" : "lms-llamacpp",
+      "raw" : {
+
+      },
+      "status" : "notRunning"
+    },
+    {
+      "displayName" : "llama.cpp",
+      "id" : "llamacpp",
+      "raw" : {
+        "modelCount" : "1",
+        "modelName" : "Qwen3.5-4B",
+        "vramBytes" : "3221225472"
+      },
+      "status" : "ok"
+    },
+    {
+      "displayName" : "gpu-box",
+      "id" : "engine.gpu-box",
+      "raw" : {
+
+      },
+      "status" : "notRunning"
+    }
+  ],
+  "source" : "cached",
+  "totals" : {
+    "costUSD" : "273.93",
+    "tokens" : 233604843
+  }
+}

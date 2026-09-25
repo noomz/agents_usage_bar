@@ -1,0 +1,108 @@
+[
+  {
+    "id" : "openrouter",
+    "quota" : {
+      "fraction" : 0.94,
+      "limit" : 1,
+      "remaining" : 0.06,
+      "used" : 0.94
+    },
+    "status" : "ok"
+  },
+  {
+    "id" : "claude",
+    "quota" : {
+      "fraction" : 0.47,
+      "limit" : 1,
+      "remaining" : 0.53,
+      "used" : 0.47
+    },
+    "quotaWindows" : [
+      {
+        "name" : "personal 5h",
+        "resetsAt" : "2026-09-24T09:40:00Z",
+        "utilization" : 0.12
+      },
+      {
+        "name" : "personal 7d",
+        "resetsAt" : "2026-09-25T12:20:00Z",
+        "utilization" : 0.17
+      },
+      {
+        "name" : "work 5h",
+        "resetsAt" : "2026-09-24T08:10:00Z",
+        "utilization" : 0.31
+      },
+      {
+        "name" : "work 7d",
+        "resetsAt" : "2026-09-27T13:20:00Z",
+        "utilization" : 0.47
+      }
+    ],
+    "status" : "ok"
+  },
+  {
+    "id" : "codex",
+    "quota" : {
+      "fraction" : 0.69,
+      "limit" : 1,
+      "remaining" : 0.31,
+      "used" : 0.69
+    },
+    "quotaWindows" : [
+      {
+        "name" : "primary",
+        "resetsAt" : "2026-09-24T08:10:00Z",
+        "utilization" : 0.69
+      },
+      {
+        "name" : "secondary",
+        "resetsAt" : "2026-09-29T05:20:00Z",
+        "utilization" : 0.22
+      }
+    ],
+    "status" : "ok"
+  },
+  {
+    "id" : "gemini",
+    "quota" : {
+      "fraction" : 0.19,
+      "limit" : 1,
+      "remaining" : 0.81,
+      "used" : 0.19
+    },
+    "quotaWindows" : [
+      {
+        "name" : "gemini-2.5-pro",
+        "resetsAt" : "2026-09-24T06:20:00Z",
+        "utilization" : 0.19
+      },
+      {
+        "name" : "gemini-2.5-flash",
+        "resetsAt" : "2026-09-24T06:20:00Z",
+        "utilization" : 0.04
+      }
+    ],
+    "status" : "error"
+  },
+  {
+    "id" : "grok",
+    "status" : "unauthenticated"
+  },
+  {
+    "id" : "ollama",
+    "status" : "notRunning"
+  },
+  {
+    "id" : "lms-llamacpp",
+    "status" : "notRunning"
+  },
+  {
+    "id" : "llamacpp",
+    "status" : "ok"
+  },
+  {
+    "id" : "engine.gpu-box",
+    "status" : "notRunning"
+  }
+]

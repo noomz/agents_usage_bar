@@ -1,0 +1,18 @@
+OpenRouter           [31m███████████████████░[0m  94%
+Claude               [32m██████░░░░░░░░░░░░░░[0m  31%
+                     personal 5h  12%   Resets 4h 20m
+                     personal 7d  17%   Resets 1d 7h
+                     work 5h      31%   Resets 2h 50m
+                     work 7d      47%   Resets 3d 8h
+Codex                [33m██████████████░░░░░░[0m  69%
+                     primary    69%   Resets 2h 50m
+                     secondary  22%   Resets 5d
+Gemini               [32m████░░░░░░░░░░░░░░░░[0m  19%
+                     gemini-2.5-pro    19%   Resets 1h
+                     gemini-2.5-flash  4%    Resets 1h
+                     usage temporarily unavailable
+Grok                 [90m████████████████████[0m  no limit
+Ollama               [90m████████████████████[0m  no limit
+LM Studio llama.cpp  [90m████████████████████[0m  no limit
+llama.cpp            [90m████████████████████[0m  no limit
+gpu-box              [90m████████████████████[0m  no limit

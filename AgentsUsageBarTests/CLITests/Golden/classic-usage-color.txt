@@ -1,0 +1,28 @@
+Today total          233,604,843 tokens      $273.93
+Total excludes quota-only providers
+─────────────────────────────────────────────────────────
+OpenRouter           [31m███████████████████░[0m  94%
+                     — · $1.25 · bal $9.40
+Claude               ██████▄▄▄░░░░░░░░░░░  5h 31% · 7d 47%
+                     232,400,512 tokens · $273.86
+                     Active: work 7d 47%  Resets 3d 8h
+                     5h 31% · 7d 47%
+                       personal · $53.63
+                     ██▄░░░░░░░░░░░░░░░░░  5h 12% · 7d 17%
+                       work · $220.23
+                     ██████▄▄▄░░░░░░░░░░░  5h 31% · 7d 47%
+Codex                [33m██████████████░░░░░░[0m  69%
+                     1,204,331 tokens · $0.07
+                     primary    69%   Resets 2h 50m
+                     secondary  22%   Resets 5d
+Gemini               [32m████░░░░░░░░░░░░░░░░[0m  19%
+                     19% used
+                     gemini-2.5-pro    19%   Resets 1h
+                     gemini-2.5-flash  4%    Resets 1h
+                     usage temporarily unavailable
+Grok                 [90m████████████████████[0m  no limit
+                     — · —
+Ollama               Not running
+LM Studio llama.cpp  Start LM Studio's llama.cpp server
+llama.cpp            Qwen3.5-4B · 3.0 GB VRAM
+gpu-box              Set [engine.gpu-box] port or match_path in config.toml
