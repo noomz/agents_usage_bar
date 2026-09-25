@@ -31,7 +31,11 @@ public enum CLITheme: String, CaseIterable, Sendable {
     public func render(_ report: UsageReport, view: CLIView, color: Bool) -> String {
         switch self {
         case .compact:
-            return CompactTextRenderer.render(report, view: view, color: color, width: CompactTextRenderer.terminalWidth())
+            return CompactTextRenderer.render(
+                report, view: view, color: color,
+                width: CompactTextRenderer.terminalWidth(),
+                providerOrder: UserDefaults.standard.aubProviderOrder
+            )
         case .classic:
             switch view {
             case .usage: return UsageTextRenderer.renderUsage(report, color: color)

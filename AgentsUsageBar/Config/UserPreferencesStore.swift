@@ -10,6 +10,7 @@ public enum AUBDefaultsKey {
     public static let threshold       = "aub.threshold"         // Double
     public static let theme           = "aub.theme"             // String (AppTheme.rawValue)
     public static let cliTheme        = "aub.cliTheme"          // String (CLITheme.rawValue); `aub` text layout
+    public static let providerOrder   = "aub.providerOrder"     // String, comma list of ProviderID.rawValue
     public static let openAtLogin     = "aub.openAtLogin"       // Bool
     public static let hasSeenWelcome  = "aub.hasSeenWelcome"    // Bool
     public static let claudeSource    = "aub.provider.claude.source"  // String (ClaudeUsageSource.rawValue)
@@ -18,6 +19,17 @@ public enum AUBDefaultsKey {
     /// Per-provider enabled flag: "aub.provider.<providerID.rawValue>.enabled"
     public static func providerEnabled(_ id: ProviderID) -> String {
         "aub.provider.\(id.rawValue).enabled"
+    }
+}
+
+extension UserDefaults {
+    /// Stored `provider-order` ids (SPEC V30); empty when unset. Not validated:
+    /// `ProviderID.ordered` skips ids that no longer exist.
+    public var aubProviderOrder: [ProviderID] {
+        (string(forKey: AUBDefaultsKey.providerOrder) ?? "")
+            .split(separator: ",")
+            .map { ProviderID(rawValue: $0.trimmingCharacters(in: .whitespaces).lowercased()) }
+            .filter { !$0.rawValue.isEmpty }
     }
 }
 

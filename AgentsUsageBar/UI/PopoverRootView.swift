@@ -8,7 +8,7 @@ import SwiftUI
 /// Layout:
 ///   TotalsHeaderView   ← summed tokens + USD (UI-01)
 ///   Divider
-///   ProviderRowView    ← one per provider, sorted by displayName
+///   ProviderRowView    ← one per provider, in `provider-order` (SPEC V32)
 ///   Divider
 ///   FooterView         ← Refresh now (Cmd-R) + Quit (Cmd-Q)
 ///
@@ -43,9 +43,14 @@ public struct PopoverRootView: View {
 
     // MARK: - Helpers
 
-    /// Provider states sorted alphabetically by displayName for stable row ordering.
+    /// Rows in the user's `provider-order`, read on each render so a changed
+    /// setting shows on the next popover open.
     private func sortedProviderStates() -> [ProviderState] {
-        store.providers.values.sorted { $0.displayName < $1.displayName }
+        Self.ordered(Array(store.providers.values), preference: UserDefaults.standard.aubProviderOrder)
+    }
+
+    static func ordered(_ states: [ProviderState], preference: [ProviderID]) -> [ProviderState] {
+        ProviderID.ordered(states, id: \.id, preference: preference)
     }
 }
 

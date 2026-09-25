@@ -195,4 +195,14 @@ struct CompactTextRendererTests {
         let expected = try String(contentsOf: url, encoding: .utf8)
         #expect(actual == expected, "golden mismatch: \(name)")
     }
+
+    @Test("rows follow provider-order; Claude accounts stay alphabetical")
+    func providerOrder() {
+        let text = CompactTextRenderer.render(
+            CLIReportFixture.rich(), view: .usage, color: false, width: nil, timeZone: Self.utc,
+            providerOrder: [.codex, .grok, .claude]
+        )
+        let names = text.split(separator: "\n").dropFirst(2).map { String($0.dropFirst(2).prefix(12)).trimmingCharacters(in: .whitespaces) }
+        #expect(Array(names.prefix(6)) == ["Codex", "Grok", "Claude", "personal", "work●", "OpenRouter"])
+    }
 }

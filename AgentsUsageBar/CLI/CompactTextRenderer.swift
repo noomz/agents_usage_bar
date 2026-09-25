@@ -34,14 +34,18 @@ public enum CompactTextRenderer {
     /// - Parameters:
     ///   - width: available columns; `nil` renders at the base width.
     ///   - timeZone: zone for the header clock (tests pin UTC).
+    ///   - providerOrder: stored `provider-order` ids; empty = `allKnown` order.
     public static func render(
         _ report: UsageReport,
         view: CLIView,
         color: Bool,
         width: Int?,
-        timeZone: TimeZone = .current
+        timeZone: TimeZone = .current,
+        providerOrder: [ProviderID] = []
     ) -> String {
-        let providers = ordered(report.providers.filter { $0.status != .disabled })
+        let providers = ProviderID.ordered(
+            report.providers.filter { $0.status != .disabled }, id: \.id, preference: providerOrder
+        )
         let remote = providers.filter { !$0.isLocal }
         let now = report.asOf
 
@@ -351,14 +355,6 @@ public enum CompactTextRenderer {
 
     static func label(for p: ProviderReport) -> String {
         shortLabels[p.id] ?? p.displayName
-    }
-
-    /// Known-provider order, then custom `engine.*` rows by slug.
-    static func ordered(_ providers: [ProviderReport]) -> [ProviderReport] {
-        func key(_ id: ProviderID) -> (Int, String) {
-            (ProviderID.allKnown.firstIndex(of: id) ?? ProviderID.allKnown.count, id.rawValue)
-        }
-        return providers.sorted { key($0.id) < key($1.id) }
     }
 
     static func dim(_ text: String, color: Bool) -> String {

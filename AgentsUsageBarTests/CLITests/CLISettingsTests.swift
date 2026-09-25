@@ -9,7 +9,7 @@ struct CLISettingsTests {
         let suite = "test.aub.cli.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
-        return (CLISettings(defaults: defaults), defaults)
+        return (CLISettings(defaults: defaults, customEngines: { [ProviderID(rawValue: "engine.gpu-box")] }), defaults)
     }
 
     @Test("defaults when keys are absent")
@@ -93,5 +93,27 @@ struct CLISettingsTests {
         defaults.set("garbage", forKey: AUBDefaultsKey.cliTheme)
         #expect(try! store.get("cli-theme").get().value == "compact")
         #expect(store.storedCLITheme == nil)
+    }
+
+    @Test("provider-order default, validation, case-fold, reset")
+    func providerOrder() {
+        let (store, defaults) = make()
+        let all = ProviderID.allKnown.map(\.rawValue).joined(separator: ",")
+        #expect(try! store.get("provider-order").get().value == all)
+        #expect(try! store.set("provider-order", value: "Codex, engine.gpu-box,claude").get().value
+                == "codex,engine.gpu-box,claude")
+        #expect(defaults.aubProviderOrder == [.codex, ProviderID(rawValue: "engine.gpu-box"), .claude])
+        #expect(try! store.get("provider-order").get().value == "codex,engine.gpu-box,claude")
+        for bad in ["codex,nope", "codex,Codex", "engine.unknown", "codex,,claude"] {
+            switch store.set("provider-order", value: bad) {
+            case .failure(.invalidValue(key: "provider-order", value: bad, let expected)):
+                #expect(expected.contains("openrouter, claude"))
+                #expect(expected.contains("engine.gpu-box"))
+            default: Issue.record("expected invalidValue for \(bad)")
+            }
+        }
+        #expect(defaults.string(forKey: AUBDefaultsKey.providerOrder) == "codex,engine.gpu-box,claude")
+        #expect(try! store.set("provider-order", value: "").get().value == all)
+        #expect(defaults.object(forKey: AUBDefaultsKey.providerOrder) == nil)
     }
 }

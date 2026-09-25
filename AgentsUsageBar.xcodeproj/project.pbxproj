@@ -146,6 +146,7 @@
 		AA070700000000000000011A /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070700000000000000011B /* NotificationManagerTests.swift */; };
 		/* Plan 03-01 Task 1 — Codex ProviderID constant test */
 		AA030100000000000000001A /* ProviderIDCodexTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000001B /* ProviderIDCodexTests.swift */; };
+		AA070100000000000000047A /* ProviderOrderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000047B /* ProviderOrderTests.swift */; };
 		/* Plan 03-01 Task 2 — CodexRoots + CodexRolloutScanner (app target) + tests */
 		AA030100000000000000002A /* CodexRoots.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000002B /* CodexRoots.swift */; };
 		AA030100000000000000003A /* CodexRolloutScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000003B /* CodexRolloutScanner.swift */; };
@@ -540,6 +541,7 @@
 		AA070700000000000000011B /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
 		/* Plan 03-01 Task 1 — Codex ProviderID constant test file reference */
 		AA030100000000000000001B /* ProviderIDCodexTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderIDCodexTests.swift; sourceTree = "<group>"; };
+		AA070100000000000000047B /* ProviderOrderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderOrderTests.swift; sourceTree = "<group>"; };
 		/* Plan 03-01 Task 2 — CodexRoots + CodexRolloutScanner file references */
 		AA030100000000000000002B /* CodexRoots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRoots.swift; sourceTree = "<group>"; };
 		AA030100000000000000003B /* CodexRolloutScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRolloutScanner.swift; sourceTree = "<group>"; };
@@ -919,6 +921,7 @@
 				AA020700000000000000010B /* TodayHelperResetClockTests.swift */,
 				/* Plan 03-01 — Codex ProviderID constant */
 				AA030100000000000000001B /* ProviderIDCodexTests.swift */,
+				AA070100000000000000047B /* ProviderOrderTests.swift */,
 				/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel extension */
 				AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */,
 				/* Plan 04-01 -- ProviderStatus.notRunning + ProviderID local constants + classifier */
@@ -2092,6 +2095,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA020700000000000000014A /* MenuBarTintTests.swift in Sources */,
 				/* Plan 03-01 Task 1 — Codex ProviderID constant test */
 				AA030100000000000000001A /* ProviderIDCodexTests.swift in Sources */,
+				AA070100000000000000047A /* ProviderOrderTests.swift in Sources */,
 				/* Plan 03-01 Task 2 — CodexRolloutScanner tests */
 				AA030100000000000000010A /* CodexRolloutScannerTests.swift in Sources */,
 				/* Plan 03-01 Task 3 — CodexRolloutParser tests */

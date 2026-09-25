@@ -81,6 +81,22 @@ extension ProviderID {
         .openrouter, .claude, .codex, .gemini, .grok, .ollama, .lmstudio, .lmstudioLlamaCpp, .llamacpp
     ]
 
+    /// User-set provider order (`provider-order`, SPEC V31): ids listed in
+    /// `preference` first, in that order; then unlisted ids in `allKnown` order;
+    /// then everything else (`engine.*`) alphabetically by raw value. Listed ids
+    /// with no matching item are skipped.
+    public static func ordered<T>(_ items: [T], id: (T) -> ProviderID, preference: [ProviderID]) -> [T] {
+        func key(_ pid: ProviderID) -> (Int, Int, String) {
+            if let i = preference.firstIndex(of: pid) { return (0, i, "") }
+            if let i = allKnown.firstIndex(of: pid) { return (1, i, "") }
+            return (2, 0, pid.rawValue)
+        }
+        return items
+            .map { (key(id($0)), $0) }
+            .sorted { $0.0 < $1.0 }
+            .map(\.1)
+    }
+
     /// Human-readable display hint for this provider.
     ///
     /// Used by `ThresholdEngine` to populate `NotificationDecision.displayName` (B3),
