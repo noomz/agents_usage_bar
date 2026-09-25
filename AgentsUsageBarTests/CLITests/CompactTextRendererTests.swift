@@ -205,4 +205,23 @@ struct CompactTextRendererTests {
         let names = text.split(separator: "\n").dropFirst(2).map { String($0.dropFirst(2).prefix(12)).trimmingCharacters(in: .whitespaces) }
         #expect(Array(names.prefix(6)) == ["Codex", "Grok", "Claude", "personal", "work●", "OpenRouter"])
     }
+
+    @Test("text gauge rows carry no trailing spaces with colour on")
+    func textGaugeNoTrailingSpaces() {
+        var noLimit = CLIReportFixture.codex()
+        noLimit.snapshot = UsageSnapshot(
+            providerID: .codex, asOf: CLIReportFixture.asOf, tokensToday: 0,
+            costTodayUSD: nil, balanceUSD: nil, quota: nil, raw: [:], quotaWindows: nil
+        )
+        let report = UsageReport(asOf: CLIReportFixture.asOf, source: .cached, providers: [CLIReportFixture.openrouter(), noLimit])
+        for color in [false, true] {
+            let rows = Self.render(report, color: color).split(separator: "\n").map(String.init)
+            let row = rows.first { $0.contains("no limit") }
+            #expect(row != nil)
+            for line in rows {
+                #expect(!line.hasSuffix(" "), "trailing space: \(line.debugDescription)")
+                #expect(!line.hasSuffix(" " + CLIFormat.ansiReset), "padding inside ANSI span: \(line.debugDescription)")
+            }
+        }
+    }
 }
