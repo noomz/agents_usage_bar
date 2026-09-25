@@ -1,0 +1,20 @@
+usage --cached | run 1 | real=0.08s rss=28639232 B
+usage --cached | run 2 | real=0.06s rss=28196864 B
+usage --cached | run 3 | real=0.04s rss=28573696 B
+usage --cached | run 4 | real=0.04s rss=28770304 B
+usage --cached | run 5 | real=0.04s rss=29556736 B
+usage --cached --json | run 1 | real=0.04s rss=28508160 B
+usage --cached --json | run 2 | real=0.04s rss=28557312 B
+usage --cached --json | run 3 | real=0.04s rss=27918336 B
+usage --cached --json | run 4 | real=0.04s rss=28246016 B
+usage --cached --json | run 5 | real=0.04s rss=27607040 B
+quota --cached | run 1 | real=0.05s rss=28377088 B
+quota --cached | run 2 | real=0.04s rss=27574272 B
+quota --cached | run 3 | real=0.04s rss=27082752 B
+quota --cached | run 4 | real=0.05s rss=27049984 B
+quota --cached | run 5 | real=0.04s rss=27951104 B
+version | run 1 | real=0.00s rss=11108352 B
+version | run 2 | real=0.00s rss=11108352 B
+version | run 3 | real=0.00s rss=11124736 B
+version | run 4 | real=0.00s rss=11108352 B
+version | run 5 | real=0.00s rss=11141120 B

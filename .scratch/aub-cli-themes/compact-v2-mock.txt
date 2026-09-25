@@ -1,0 +1,26 @@
+# Compact v2 — winner (canvas https://claude.ai/artifact/6GLyBUiMZ2KWUpeRUwnWEk, board CompactV2.dc.html)
+# Transcribed 2026-09-25, colour stripped. Bars in the mock are 10 cells.
+
+❯ aub
+today $273.93 spent · 232.4M tok · 14:02
+1 at ≥80% · 1 at 50–79% · 1 unavailable
+▲ OpenRouter   █████████▍  94% credits            $9.40 left
+△ Codex        ██████▉░░░  69% 5h      ↻ 2h 50m     $0.07 spent
+  Claude work● ████▊░░░░░  47% 7d      ↻ 3d 8h    $220.23 spent
+    personal   █▊░░░░░░░░  17% 7d      ↻ unknown   $53.63 spent
+  Grok         █▍░░░░░░░░  14% weekly  ↻ 4d 22h    no cost data
+! Gemini       unavailable
+  local ● llama.cpp Qwen3.5-4B  ○ Ollama idle  ○ LM Studio stopped
+
+# Rules board (Rules.dc.html), legend:
+# ▲ 94%  ≥ 80% used  red + glyph
+# △ 69%  50–79%      yellow + glyph
+#   37%  < 50%       green, no glyph
+# ! msg  provider error, own line, same indent
+# █████████▍░░░░░░░░░░  eighth-block precision (47%)   [20 cells here; 10 in Compact v2]
+# no limit  never a bar when nothing is capped
+# Notes: glyph + colour never colour alone; one direction for % (always "used"; credits = spent ÷ total);
+#        relative resets ("in 3d 8h"), absolute in --json; errors in place under their row.
+# Compact v2 notes: 66 columns, one line per provider, worst first; work and personal each get a line, ● marks active;
+#        every dollar says what it is ("$0.07 spent" vs "$9.40 left").
+# Votes sticky: FINAL Compact v2 75 · Sentences 64; 3 wins + 1 tie; accuracy 20/20 both.

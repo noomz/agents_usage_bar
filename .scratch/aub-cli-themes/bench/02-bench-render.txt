@@ -1,0 +1,24 @@
+## run 1
+stage                        iters   total ms   mean us/it    min us/it
+C  direct render              2000      77.33        38.66        32.96
+B  doc->adapter->render       2000     121.26        60.63        51.71
+E  JSON encode                2000     153.51        76.75        65.17
+D  JSON decode                2000     126.97        63.48        53.71
+B2 E+D+adapter+render         2000     401.61       200.81       163.79
+json bytes=4592 blackHole=18840000
+## run 2
+stage                        iters   total ms   mean us/it    min us/it
+C  direct render              2000      75.36        37.68        32.62
+B  doc->adapter->render       2000     117.24        58.62        52.29
+E  JSON encode                2000     154.06        77.03        66.12
+D  JSON decode                2000     125.88        62.94        55.96
+B2 E+D+adapter+render         2000     374.34       187.17       163.75
+json bytes=4592 blackHole=18840000
+## run 3
+stage                        iters   total ms   mean us/it    min us/it
+C  direct render              2000      75.36        37.68        32.79
+B  doc->adapter->render       2000     116.52        58.26        52.21
+E  JSON encode                2000     148.70        74.35        65.08
+D  JSON decode                2000     125.36        62.68        54.00
+B2 E+D+adapter+render         2000     372.56       186.28       163.50
+json bytes=4592 blackHole=18840000

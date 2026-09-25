@@ -1,0 +1,63 @@
+# SPEC — Claude dual-limit glance
+
+## §G
+
+G1|Show Claude 5h and 7d quota pressure at a glance without two full-size bars.
+
+## §C
+
+C1|Design only until build invoked.
+C2|Popover stays 360pt wide.
+C3|One aggregate visual quota bar per provider; Claude account children may show compact dual-lane bars.
+C4|Percent means consumed quota.
+C5|QuotaBand colors keep current remaining-quota thresholds.
+C6|Text always carries period and percent; color and lane position never stand alone.
+C7|No JSON schema change.
+C8|7d-sonnet and 7d-opus stay secondary details; they do not add lanes to the primary bar.
+
+## §I
+
+I1|macOS popover|Claude quota glance in ProviderRowView.
+I2|CLI usage|Human output from aub usage.
+I3|CLI quota|Detailed per-window output from aub quota and aub limits.
+I4|JSON CLI|Existing quotaWindows output unchanged.
+I5|Shared presentation|Pure quota-window selection consumed by UI and CLI.
+
+## §V
+
+V1|When Claude 5h and 7d utilization exist, UI renders one 10pt rounded composite bar: 5h top lane, 7d bottom lane, 1pt separator.
+V2|UI always renders compact text in fixed order: 5h <percent> · 7d <percent>.
+V3|Each lane fills to its own consumed fraction and receives its own QuotaBand color.
+V4|Higher raw utilization is active constraint; its label is emphasized and its reset is shown.
+V5|When displayed rounded percentages tie, neither label is emphasized. Exact raw tie uses sooner reset and caption says Next reset.
+V6|When only one utilization exists, UI renders one full-height conventional bar and shows the absent window as —.
+V7|When neither utilization exists, current no-limit or unavailable fallback remains.
+V8|UI accessibility value names both periods, both percentages or unavailable states, active constraint, and applicable reset.
+V9|Multi-account Claude uses one aggregate provider bar. Account child rows show account name, cost, and compact 5h/7d composite bars in UI and aub usage.
+V10|Aggregate active constraint identifies account and period with highest primary-window utilization; raw tie uses sooner reset.
+V11|aub usage renders one 20-cell composite Claude bar: 5h uses upper half `▀`, 7d uses lower half `▄`, shared fill uses `█`, empty uses `░`; then prints active period plus both 5h and 7d values as text.
+V12|aub usage composite glyph bar preserves explicit 5h and 7d text; glyphs never stand alone.
+V13|aub quota and aub limits keep one detailed line per quota window.
+V14|UI and CLI derive active constraint, displayed values, and reset selection from one pure shared module.
+V15|Non-Claude providers retain current quota presentation unless they explicitly provide canonical 5h and 7d windows.
+
+## §T
+
+id|status|task|cites
+T1|x|Add shared QuotaGlance presentation value and selection logic|V4,V5,V6,V7,V10,V14,V15,I5
+T2|x|Render composite Claude bar and compact labels in popover|V1,V2,V3,V4,V5,V6,V7,V8,I1
+T3|x|Replace Claude account child bars with compact dual-window text|V9,V10,I1
+T4|x|Update aub usage human renderer; retain detailed quota renderer|V11,V12,V13,I2,I3
+T5|x|Verify JSON output remains compatible|V13,I4
+T6|x|Add regression tests for opposing bands, both healthy, both critical, equal, near-equal, missing windows, and multi-account selection|V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15
+T7|x|Restore compact dual-lane bars for Claude account children|V1,V2,V3,V6,V9,V10,I1
+T8|x|Render prototype dual-glyph Claude bar in aub usage|V11,V12,I2
+T9|x|Render prototype dual-glyph bars for Claude account rows in aub usage|V9,V11,V12,I2
+
+## §B
+
+id|date|cause|fix
+B1|2026-09-11|production smoke test assumed host provider preferences|remove host-dependent provider assertions
+B2|2026-09-11|multi-account CLI branch skipped shared active constraint text|render shared Claude usage lines before child rows
+B3|2026-09-11|dual-glyph closure omitted Swift return|return glyph from each cell
+B4|2026-09-11|account cost lacked caption font; reset caption duplicated prefix|apply caption font and use one reset prefix
