@@ -9,6 +9,7 @@ public enum AUBDefaultsKey {
     public static let refreshInterval = "aub.refreshInterval"  // String (RefreshInterval.rawValue)
     public static let threshold       = "aub.threshold"         // Double
     public static let theme           = "aub.theme"             // String (AppTheme.rawValue)
+    public static let cliTheme        = "aub.cliTheme"          // String (CLITheme.rawValue); `aub` text layout
     public static let openAtLogin     = "aub.openAtLogin"       // Bool
     public static let hasSeenWelcome  = "aub.hasSeenWelcome"    // Bool
     public static let claudeSource    = "aub.provider.claude.source"  // String (ClaudeUsageSource.rawValue)

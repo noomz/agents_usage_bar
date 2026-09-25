@@ -82,13 +82,24 @@ public struct CLISettings {
             }
             defaults.set(value, forKey: spec.defaultsKey)
             return .success(SetResult(key: spec.cli, value: value, warning: nil))
+        case .cliTheme:
+            guard let theme = CLITheme.named(value) else {
+                return .failure(.invalidValue(key: key, value: value, expected: CLITheme.expectedNames))
+            }
+            defaults.set(theme.rawValue, forKey: spec.defaultsKey)
+            return .success(SetResult(key: spec.cli, value: theme.rawValue, warning: nil))
         }
+    }
+
+    /// Stored `cli-theme`, nil when unset or unreadable (resolution then falls to default).
+    public var storedCLITheme: CLITheme? {
+        defaults.string(forKey: AUBDefaultsKey.cliTheme).flatMap(CLITheme.named)
     }
 
     // MARK: - Catalog
 
     fileprivate struct Spec {
-        enum Kind { case interval, threshold, theme, bool, claudeSource }
+        enum Kind { case interval, threshold, theme, cliTheme, bool, claudeSource }
         let cli: String
         let defaultsKey: String
         let defaultValue: String
@@ -100,6 +111,7 @@ public struct CLISettings {
             Spec(cli: "refresh-interval", defaultsKey: AUBDefaultsKey.refreshInterval, defaultValue: "5m", kind: .interval),
             Spec(cli: "threshold", defaultsKey: AUBDefaultsKey.threshold, defaultValue: "0.80", kind: .threshold),
             Spec(cli: "theme", defaultsKey: AUBDefaultsKey.theme, defaultValue: "auto", kind: .theme),
+            Spec(cli: "cli-theme", defaultsKey: AUBDefaultsKey.cliTheme, defaultValue: CLITheme.defaultTheme.rawValue, kind: .cliTheme),
             Spec(cli: "pace-warnings", defaultsKey: AUBDefaultsKey.paceWarningsEnabled, defaultValue: "true", kind: .bool),
             Spec(cli: "reset-notifications", defaultsKey: AUBDefaultsKey.resetNotificationsEnabled, defaultValue: "true", kind: .bool),
             Spec(cli: "claude-source", defaultsKey: AUBDefaultsKey.claudeSource, defaultValue: "sessionReads", kind: .claudeSource),
@@ -134,6 +146,8 @@ public struct CLISettings {
         case .theme:
             return AppTheme(rawValue: defaults.string(forKey: spec.defaultsKey) ?? "")?.rawValue
                 ?? spec.defaultValue
+        case .cliTheme:
+            return storedCLITheme?.rawValue ?? spec.defaultValue
         case .claudeSource:
             return ClaudeUsageSource(rawValue: defaults.string(forKey: spec.defaultsKey) ?? "")?.rawValue
                 ?? spec.defaultValue

@@ -75,4 +75,23 @@ struct CLISettingsTests {
             #expect(keys.contains("provider.\(id.rawValue).enabled"))
         }
     }
+
+    @Test("cli-theme default, case-fold, validation, garbage fallback")
+    func cliTheme() {
+        let (store, defaults) = make()
+        #expect(try! store.get("cli-theme").get().value == "compact")
+        #expect(store.storedCLITheme == nil)
+        #expect(try! store.set("cli-theme", value: "Classic").get().value == "classic")
+        #expect(defaults.string(forKey: AUBDefaultsKey.cliTheme) == "classic")
+        #expect(try! store.get("cli-theme").get().value == "classic")
+        #expect(store.storedCLITheme == .classic)
+        let bad = store.set("cli-theme", value: "fancy")
+        #expect(bad == .failure(.invalidValue(key: "cli-theme", value: "fancy", expected: "compact|classic")))
+        if case .failure(let err) = bad {
+            #expect(err.description == "invalid value 'fancy' for cli-theme; expected compact|classic")
+        }
+        defaults.set("garbage", forKey: AUBDefaultsKey.cliTheme)
+        #expect(try! store.get("cli-theme").get().value == "compact")
+        #expect(store.storedCLITheme == nil)
+    }
 }

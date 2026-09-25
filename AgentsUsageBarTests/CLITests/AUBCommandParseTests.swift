@@ -95,4 +95,33 @@ struct AUBCommandParseTests {
         #expect(AUBCommand.isSubcommand("claude"))
         #expect(AUBCommand.isSubcommand("--json"))
     }
+
+    @Test("--theme validated, case-folded, carried on usage/quota")
+    func themeFlag() {
+        #expect(try! AUBCommand.parse(["--theme", "classic"]).get() == .usage(.init(theme: .classic)))
+        #expect(try! AUBCommand.parse(["quota", "--theme", "Compact"]).get() == .quota(.init(theme: .compact)))
+        #expect(try! AUBCommand.parse(["claude", "--theme", "CLASSIC"]).get()
+                == .usage(.init(filter: .one(.claude), theme: .classic)))
+        #expect(AUBCommand.parse(["--theme", "fancy"]) == .failure(.unknownTheme("fancy")))
+        #expect(AUBCommand.parse(["--theme"]) == .failure(.missingValue("--theme")))
+        #expect(AUBCommand.parse(["--theme=classic"]) == .failure(.unknownCommand("--theme=classic")))
+        #expect(AUBParseError.unknownTheme("x").description == "unknown CLI theme 'x'; expected compact|classic")
+    }
+
+    @Test("--theme accepted but ignored on settings/install; still validated")
+    func themeElsewhere() {
+        #expect(try! AUBCommand.parse(["settings", "--theme", "classic"]).get() == .settings(.list, json: false))
+        #expect(try! AUBCommand.parse(["install", "--theme", "classic"]).get() == .install(prefix: nil))
+        #expect(AUBCommand.parse(["settings", "--theme", "nope"]) == .failure(.unknownTheme("nope")))
+    }
+
+    @Test("themes subcommand")
+    func themes() {
+        #expect(try! AUBCommand.parse(["themes"]).get() == .themes(json: false, theme: nil))
+        #expect(try! AUBCommand.parse(["themes", "--json", "--theme", "classic"]).get()
+                == .themes(json: true, theme: .classic))
+        #expect(AUBCommand.parse(["themes", "classic"]) == .failure(.unexpectedArgument("classic")))
+        #expect(AUBCommand.isSubcommand("themes"))
+        #expect(AUBCommand.isSubcommand("--theme"))
+    }
 }
