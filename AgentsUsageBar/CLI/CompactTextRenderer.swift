@@ -113,11 +113,12 @@ public enum CompactTextRenderer {
 
     static func headerTotals(_ report: UsageReport, timeZone: TimeZone) -> String {
         let totals = report.totals
-        let clock = DateFormatter()
-        clock.locale = Locale(identifier: "en_US_POSIX")
-        clock.timeZone = timeZone
-        clock.dateFormat = "HH:mm"
-        return "today \(CLIFormat.usd(totals.costUSD)) spent · \(siTokens(totals.tokens)) tok · \(clock.string(from: report.asOf))"
+        // Calendar math, not DateFormatter: the formatter's cold ICU load costs ~0.5 ms per `aub` run.
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let time = calendar.dateComponents([.hour, .minute], from: report.asOf)
+        let clock = String(format: "%02d:%02d", time.hour ?? 0, time.minute ?? 0)
+        return "today \(CLIFormat.usd(totals.costUSD)) spent · \(siTokens(totals.tokens)) tok · \(clock)"
     }
 
     static func severityLine(_ lines: [Line]) -> String {
@@ -454,7 +455,8 @@ public enum CompactTextRenderer {
                 if moneyWidth > 0, let money {
                     out += "  " + String(repeating: " ", count: max(0, moneyWidth - money.count)) + money
                 }
-                return out.replacingOccurrences(of: "\\s+$", with: "", options: .regularExpression)
+                while out.last == " " { out.removeLast() }
+                return out
             }
         }
 

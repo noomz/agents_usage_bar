@@ -77,6 +77,8 @@ V33|Same-session A/B: HEAD vs `main` Release builds, separate derived-data dirs,
 V34|Peak RSS (max of 5 `/usr/bin/time -l`) ≤ main + 2 MB, every matrix row.
 V35|In-process: `compact` render < 1 ms/iter (min-of-N, V5 fixture), `AUB_BENCH=1` Swift Testing test; skipped in CI + normal runs. Nothing bench-related ships in binary.
 V36|Matrix: `usage --cached`, `quota --cached`, `claude --cached`, `usage --cached --json` (piped), each `--theme classic` and `--theme compact` on HEAD vs main's plain command; `version` floor. Gate runs at T2, T3, T4 before merge and T6 final. One re-run for noise; second fail blocks merge unless PR records measured, user-approved exception. No silent threshold widening.
+V37|CLI text render path (compact, classic, `CLIFormat`) uses no `NSRegularExpression` / `.regularExpression` and no `DateFormatter`: cold ICU load ~0.5–0.9 ms per `aub` run, invisible to warm V35 bench. Clock = gregorian `Calendar` components; trim = char loop.
+V38|Gate runs once `compact` exists set `THEMES="classic compact"`; themeless run (HEAD plain command) not count as gate pass.
 
 ## §T
 
@@ -84,10 +86,11 @@ id|status|task|cites
 T1|x|Capture classic golden on `main` before refactor: Swift fixture builder + full-output `==` tests for `renderUsage`/`renderQuota`, colour on/off; also JSON golden for same fixture|V4,V5,V6,I1,I2,I6
 T2|x|Extract shared CLI primitives; add `CLITheme` enum with `classic` only routed through it; goldens green; add `scripts/bench-cli-themes.sh` + gate run vs main|V1,V2,V3,V4,V5,V6,V33,V34,V36,I9
 T3|x|Build `CompactTextRenderer` (usage, quota, single, empty views; width; labels; errors; local line) + provider changes (`QuotaWindow` duration, OpenRouter daily/weekly/monthly); compact goldens at 66 cols; `AUB_BENCH` render bench; gate run|V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23,V35,V33,V34,I1,I2,I8,I9
-T4|~|Selection plumbing: `--theme`, `AUB_THEME`, `cli-theme` setting, `aub themes` (+`--json`), help text, compact as default; parser + settings tests; gate run|V24,V25,V26,V27,V28,V29,V33,V34,V36,I3,I4,I5
+T4|x|Selection plumbing: `--theme`, `AUB_THEME`, `cli-theme` setting, `aub themes` (+`--json`), help text, compact as default; parser + settings tests; gate run|V24,V25,V26,V27,V28,V29,V33,V34,V36,I3,I4,I5
 T5|.|Provider order: shared ordering helper, `provider-order` setting + validation, compact + popover adopt helper; tests incl. classic/json order unchanged|V15,V30,V31,V32,V5,V6,I4,I7
-T6|.|Final full perf gate run on HEAD vs main; results in PR|V33,V34,V35,V36,I9
+T6|.|Final full perf gate run on HEAD vs main; results in PR|V33,V34,V35,V36,V37,V38,I9
 
 ## §B
 
 id|date|cause|fix
+B1|2026-09-25|T4 gate failed twice on compact rows (Δmin +2.1 ms, ΔRSS +2.1 MB): `CompactTextRenderer` per-row `\s+$` regex trim (cold ~0.85 ms) + header `DateFormatter` (cold ~0.5 ms); V35 warm min-of-N + T3 themeless gate hid it|V37,V38
