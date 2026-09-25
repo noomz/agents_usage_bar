@@ -363,6 +363,8 @@
 		AA070100000000000000004A /* AUBCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000004B /* AUBCommand.swift */; };
 		AA070100000000000000005A /* CLIUsageSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000005B /* CLIUsageSession.swift */; };
 		AA070100000000000000006A /* UsageTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000006B /* UsageTextRenderer.swift */; };
+		AA070100000000000000042A /* CLIFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000042B /* CLIFormat.swift */; };
+		AA070100000000000000043A /* CLITheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000043B /* CLITheme.swift */; };
 		AA070100000000000000007A /* UsageJSONRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000007B /* UsageJSONRenderer.swift */; };
 		AA070100000000000000008A /* CLISettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000008B /* CLISettings.swift */; };
 		AA070100000000000000009A /* CLIInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000009B /* CLIInstaller.swift */; };
@@ -768,6 +770,8 @@
 		AA070100000000000000004B /* AUBCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBCommand.swift; sourceTree = "<group>"; };
 		AA070100000000000000005B /* CLIUsageSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIUsageSession.swift; sourceTree = "<group>"; };
 		AA070100000000000000006B /* UsageTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTextRenderer.swift; sourceTree = "<group>"; };
+		AA070100000000000000042B /* CLIFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIFormat.swift; sourceTree = "<group>"; };
+		AA070100000000000000043B /* CLITheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLITheme.swift; sourceTree = "<group>"; };
 		AA070100000000000000007B /* UsageJSONRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageJSONRenderer.swift; sourceTree = "<group>"; };
 		AA070100000000000000008B /* CLISettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISettings.swift; sourceTree = "<group>"; };
 		AA070100000000000000009B /* CLIInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstaller.swift; sourceTree = "<group>"; };
@@ -1318,6 +1322,8 @@
 				AA07010000000000000000BB /* AUBCommandRun.swift */,
 				AA070100000000000000005B /* CLIUsageSession.swift */,
 				AA070100000000000000006B /* UsageTextRenderer.swift */,
+				AA070100000000000000042B /* CLIFormat.swift */,
+				AA070100000000000000043B /* CLITheme.swift */,
 				AA070100000000000000007B /* UsageJSONRenderer.swift */,
 				AA070100000000000000008B /* CLISettings.swift */,
 				AA070100000000000000009B /* CLIInstaller.swift */,
@@ -2000,6 +2006,8 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA07010000000000000000BA /* AUBCommandRun.swift in Sources */,
 				AA070100000000000000005A /* CLIUsageSession.swift in Sources */,
 				AA070100000000000000006A /* UsageTextRenderer.swift in Sources */,
+				AA070100000000000000042A /* CLIFormat.swift in Sources */,
+				AA070100000000000000043A /* CLITheme.swift in Sources */,
 				AA070100000000000000007A /* UsageJSONRenderer.swift in Sources */,
 				AA070100000000000000008A /* CLISettings.swift in Sources */,
 				AA070100000000000000009A /* CLIInstaller.swift in Sources */,

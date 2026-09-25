@@ -53,6 +53,17 @@ struct ClassicGoldenTests {
         try assertGolden(UsageJSONRenderer.renderQuota(CLIReportFixture.rich()), "json-quota.json")
     }
 
+    @Test("CLITheme.classic routes to the same goldens", arguments: [
+        (CLIView.usage, false, "classic-usage.txt"),
+        (CLIView.usage, true, "classic-usage-color.txt"),
+        (CLIView.quota, false, "classic-quota.txt"),
+        (CLIView.quota, true, "classic-quota-color.txt"),
+    ])
+    func themeClassic(view: CLIView, color: Bool, golden: String) throws {
+        guard !Self.record else { return }
+        try assertGolden(CLITheme.classic.render(CLIReportFixture.rich(), view: view, color: color), golden)
+    }
+
     private func assertGolden(_ actual: String, _ name: String) throws {
         let url = Self.goldenDir.appendingPathComponent(name)
         if Self.record {
