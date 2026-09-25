@@ -3,9 +3,17 @@ import Foundation
 /// Get/set the same UserDefaults knobs as Settings. Does not touch secrets or TOML.
 public struct CLISettings {
     public let defaults: UserDefaults
+    /// Configured `[engine.<slug>]` ids; read only when validating `provider-order`.
+    let customEngines: () -> [ProviderID]
 
-    public init(defaults: UserDefaults = .standard) {
+    public init(
+        defaults: UserDefaults = .standard,
+        customEngines: @escaping () -> [ProviderID] = {
+            ConfigStore().load().engines.map(\.id).filter { $0.rawValue.hasPrefix("engine.") }
+        }
+    ) {
         self.defaults = defaults
+        self.customEngines = customEngines
     }
 
     public enum SettingError: Error, Equatable, CustomStringConvertible, Sendable {
@@ -88,6 +96,23 @@ public struct CLISettings {
             }
             defaults.set(theme.rawValue, forKey: spec.defaultsKey)
             return .success(SetResult(key: spec.cli, value: theme.rawValue, warning: nil))
+        case .providerOrder:
+            if value.trimmingCharacters(in: .whitespaces).isEmpty {
+                defaults.removeObject(forKey: spec.defaultsKey)
+                return .success(SetResult(key: spec.cli, value: currentValue(spec), warning: nil))
+            }
+            let valid = (ProviderID.allKnown + customEngines()).map { $0.rawValue.lowercased() }
+            let ids = value.split(separator: ",", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            guard ids.allSatisfy(valid.contains), Set(ids).count == ids.count else {
+                return .failure(.invalidValue(
+                    key: key, value: value,
+                    expected: "comma list of distinct ids from " + valid.joined(separator: ", ")
+                ))
+            }
+            let stored = ids.joined(separator: ",")
+            defaults.set(stored, forKey: spec.defaultsKey)
+            return .success(SetResult(key: spec.cli, value: stored, warning: nil))
         }
     }
 
@@ -99,7 +124,7 @@ public struct CLISettings {
     // MARK: - Catalog
 
     fileprivate struct Spec {
-        enum Kind { case interval, threshold, theme, cliTheme, bool, claudeSource }
+        enum Kind { case interval, threshold, theme, cliTheme, providerOrder, bool, claudeSource }
         let cli: String
         let defaultsKey: String
         let defaultValue: String
@@ -112,6 +137,7 @@ public struct CLISettings {
             Spec(cli: "threshold", defaultsKey: AUBDefaultsKey.threshold, defaultValue: "0.80", kind: .threshold),
             Spec(cli: "theme", defaultsKey: AUBDefaultsKey.theme, defaultValue: "auto", kind: .theme),
             Spec(cli: "cli-theme", defaultsKey: AUBDefaultsKey.cliTheme, defaultValue: CLITheme.defaultTheme.rawValue, kind: .cliTheme),
+            Spec(cli: "provider-order", defaultsKey: AUBDefaultsKey.providerOrder, defaultValue: Self.defaultProviderOrder, kind: .providerOrder),
             Spec(cli: "pace-warnings", defaultsKey: AUBDefaultsKey.paceWarningsEnabled, defaultValue: "true", kind: .bool),
             Spec(cli: "reset-notifications", defaultsKey: AUBDefaultsKey.resetNotificationsEnabled, defaultValue: "true", kind: .bool),
             Spec(cli: "claude-source", defaultsKey: AUBDefaultsKey.claudeSource, defaultValue: "sessionReads", kind: .claudeSource),
@@ -148,6 +174,9 @@ public struct CLISettings {
                 ?? spec.defaultValue
         case .cliTheme:
             return storedCLITheme?.rawValue ?? spec.defaultValue
+        case .providerOrder:
+            let stored = defaults.string(forKey: spec.defaultsKey) ?? ""
+            return stored.isEmpty ? spec.defaultValue : stored
         case .claudeSource:
             return ClaudeUsageSource(rawValue: defaults.string(forKey: spec.defaultsKey) ?? "")?.rawValue
                 ?? spec.defaultValue
@@ -156,6 +185,8 @@ public struct CLISettings {
             return defaults.bool(forKey: spec.defaultsKey) ? "true" : "false"
         }
     }
+
+    private static let defaultProviderOrder = ProviderID.allKnown.map(\.rawValue).joined(separator: ",")
 
     private func formatThreshold(_ n: Double) -> String {
         String(format: "%.2f", n)

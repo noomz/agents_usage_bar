@@ -93,8 +93,9 @@ public enum AUBCommand: Equatable, Sendable {
       openrouter, claude, codex, gemini, grok, ollama, lmstudio, lms-llamacpp, llamacpp
 
     Settings keys:
-      refresh-interval, threshold, theme, cli-theme, pace-warnings,
-      reset-notifications, claude-source, open-at-login, provider.<id>.enabled
+      refresh-interval, threshold, theme, cli-theme, provider-order,
+      pace-warnings, reset-notifications, claude-source, open-at-login,
+      provider.<id>.enabled
 
     Examples:
       aub
