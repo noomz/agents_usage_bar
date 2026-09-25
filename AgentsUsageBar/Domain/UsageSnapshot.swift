@@ -54,6 +54,23 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
     /// `tooltipLabel`).
     public let accounts: [AccountUsage]?
 
+    /// Provider-reported spend per calendar period (OpenRouter `usage_daily`,
+    /// `usage_weekly`, `usage_monthly`). Periods are the provider's own — UTC
+    /// for OpenRouter — not local midnight, so never mix into today's total.
+    public let periodSpendUSD: PeriodSpend?
+
+    public struct PeriodSpend: Sendable, Equatable, Codable {
+        public let day: Decimal
+        public let week: Decimal
+        public let month: Decimal
+
+        public init(day: Decimal, week: Decimal, month: Decimal) {
+            self.day = day
+            self.week = week
+            self.month = month
+        }
+    }
+
     /// One account's slice of an aggregated provider row.
     public struct AccountUsage: Sendable, Equatable, Codable, Identifiable {
         /// Account key — "default" for `~/.claude`, else the ccs instance slug.
@@ -120,7 +137,8 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         raw: [String: String],
         quotaWindows: [QuotaWindow]? = nil,
         tooltipLabel: String? = nil,
-        accounts: [AccountUsage]? = nil
+        accounts: [AccountUsage]? = nil,
+        periodSpendUSD: PeriodSpend? = nil
     ) {
         self.providerID = providerID
         self.asOf = asOf
@@ -132,6 +150,7 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         self.quotaWindows = quotaWindows
         self.tooltipLabel = tooltipLabel
         self.accounts = accounts
+        self.periodSpendUSD = periodSpendUSD
     }
 
     /// Glance-bar quota: prefer the 5-hour session window so the fill matches the

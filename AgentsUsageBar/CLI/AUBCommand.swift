@@ -5,6 +5,7 @@ public enum AUBCommand: Equatable, Sendable {
     case usage(UsageOptions)
     case quota(UsageOptions)
     case settings(SettingsAction, json: Bool)
+    case themes(json: Bool, theme: CLITheme?)
     case install(prefix: String?)
     case uninstall
     case version
@@ -15,17 +16,21 @@ public enum AUBCommand: Equatable, Sendable {
         public var json: Bool
         public var noColor: Bool
         public var cached: Bool
+        /// `--theme` value, validated at parse; nil = fall through to env/setting.
+        public var theme: CLITheme?
 
         public init(
             filter: ProviderFilter = .enabled,
             json: Bool = false,
             noColor: Bool = false,
-            cached: Bool = false
+            cached: Bool = false,
+            theme: CLITheme? = nil
         ) {
             self.filter = filter
             self.json = json
             self.noColor = noColor
             self.cached = cached
+            self.theme = theme
         }
     }
 
@@ -50,10 +55,10 @@ public enum AUBCommand: Equatable, Sendable {
     }
 
     private static let knownTokens: Set<String> = [
-        "usage", "quota", "limits", "settings", "install", "uninstall",
+        "usage", "quota", "limits", "settings", "themes", "install", "uninstall",
         "version", "help",
         "--help", "-h", "--version", "-V",
-        "--json", "--cached", "--no-color", "--provider", "--prefix", "--cli",
+        "--json", "--cached", "--no-color", "--provider", "--prefix", "--theme", "--cli",
     ]
 
     public static let helpText = """
@@ -66,6 +71,7 @@ public enum AUBCommand: Equatable, Sendable {
       aub settings             List settings keys and values
       aub settings get <key>
       aub settings set <key> <value>
+      aub themes               List CLI themes and the active one
       aub install [--prefix PATH]   Default: ~/.local/bin
       aub uninstall
       aub version
@@ -76,14 +82,20 @@ public enum AUBCommand: Equatable, Sendable {
       --no-color      Disable ANSI bar colors
       --cached        Read the menu-bar cache (no live fetch)
       --provider ID   Restrict to one provider, or 'all'
+      --theme NAME    CLI theme: compact (default) | classic
       --prefix PATH   Install symlink into PATH (install only)
+
+    Environment:
+      AUB_THEME       CLI theme when --theme is absent (overrides the cli-theme setting)
+      NO_COLOR        Disable ANSI colors, like --no-color
 
     Providers:
       openrouter, claude, codex, gemini, grok, ollama, lmstudio, lms-llamacpp, llamacpp
 
     Settings keys:
-      refresh-interval, threshold, theme, pace-warnings, reset-notifications,
-      claude-source, open-at-login, provider.<id>.enabled
+      refresh-interval, threshold, theme, cli-theme, provider-order,
+      pace-warnings, reset-notifications, claude-source, open-at-login,
+      provider.<id>.enabled
 
     Examples:
       aub
@@ -101,6 +113,8 @@ public enum AUBParseError: Error, Equatable, CustomStringConvertible, Sendable {
     case unexpectedArgument(String)
     case missingSettingsKey
     case missingSettingsValue
+    case unknownTheme(String)
+    case unknownThemeEnv(String)
 
     public var description: String {
         switch self {
@@ -116,6 +130,10 @@ public enum AUBParseError: Error, Equatable, CustomStringConvertible, Sendable {
             return "missing settings key. Try `aub settings`."
         case .missingSettingsValue:
             return "missing settings value. Usage: aub settings set <key> <value>"
+        case .unknownTheme(let s):
+            return "unknown CLI theme '\(s)'; expected \(CLITheme.expectedNames)"
+        case .unknownThemeEnv(let s):
+            return "AUB_THEME: " + AUBParseError.unknownTheme(s).description
         }
     }
 }
@@ -128,6 +146,7 @@ extension AUBCommand {
         var cached = false
         var providerFlag: String?
         var prefix: String?
+        var theme: CLITheme?
         var positionals: [String] = []
 
         var i = 0
@@ -153,6 +172,11 @@ extension AUBCommand {
                 i += 1
                 guard i < tokens.count else { return .failure(.missingValue("--prefix")) }
                 prefix = tokens[i]
+            case "--theme":
+                i += 1
+                guard i < tokens.count else { return .failure(.missingValue("--theme")) }
+                guard let named = CLITheme.named(tokens[i]) else { return .failure(.unknownTheme(tokens[i])) }
+                theme = named
             default:
                 if t.hasPrefix("-") {
                     return .failure(.unknownCommand(t))
@@ -172,7 +196,7 @@ extension AUBCommand {
                 if rest.count > 1 {
                     return .failure(.unexpectedArgument(rest[1]))
                 }
-                return .success(UsageOptions(filter: filter, json: json, noColor: noColor, cached: cached))
+                return .success(UsageOptions(filter: filter, json: json, noColor: noColor, cached: cached, theme: theme))
             }
         }
 
@@ -183,12 +207,12 @@ extension AUBCommand {
                 case .failure(let e): return .failure(e)
                 case .success(let filter):
                     return .success(.usage(UsageOptions(
-                        filter: filter, json: json, noColor: noColor, cached: cached
+                        filter: filter, json: json, noColor: noColor, cached: cached, theme: theme
                     )))
                 }
             }
             return .success(.usage(UsageOptions(
-                filter: .enabled, json: json, noColor: noColor, cached: cached
+                filter: .enabled, json: json, noColor: noColor, cached: cached, theme: theme
             )))
         case "help":
             return .success(.help)
@@ -200,6 +224,9 @@ extension AUBCommand {
             return usageOptions().map { .quota($0) }
         case "settings":
             return parseSettings(rest, json: json)
+        case "themes":
+            if let extra = rest.first { return .failure(.unexpectedArgument(extra)) }
+            return .success(.themes(json: json, theme: theme))
         case "install":
             if let extra = rest.first { return .failure(.unexpectedArgument(extra)) }
             return .success(.install(prefix: prefix))
@@ -210,7 +237,7 @@ extension AUBCommand {
             if let id = parseKnownProvider(head!) {
                 if let extra = rest.first { return .failure(.unexpectedArgument(extra)) }
                 return .success(.usage(UsageOptions(
-                    filter: .one(id), json: json, noColor: noColor, cached: cached
+                    filter: .one(id), json: json, noColor: noColor, cached: cached, theme: theme
                 )))
             }
             return .failure(.unknownCommand(head!))

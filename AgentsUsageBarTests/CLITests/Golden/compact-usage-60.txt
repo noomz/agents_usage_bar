@@ -1,0 +1,11 @@
+today $273.93 spent · 233.6M tok · 05:20
+1 at ≥80% · 1 at 50–79% · 2 unavailable
+▲ Ope… ████▊  94% credits                   $9.40 left · $1.25 today
+  Cla…                                                 $273.86 spent
+    p… ▉░░░░  17% 7d             ↻ unknown              $53.63 spent
+    w… ██▍░░  47% 7d             ↻ 3d 8h               $220.23 spent
+△ Cod… ███▌░  69% 5h             ↻ 2h 50m                $0.07 spent
+  Gem… █░░░░  19% gemini-2.5-pro ↻ 1h
+! Gem… unavailable
+! Grok unauthenticated
+  local ○ Ollama stopped  ● llama.cpp Qwen3.5-4B

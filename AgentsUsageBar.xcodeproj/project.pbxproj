@@ -146,6 +146,7 @@
 		AA070700000000000000011A /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070700000000000000011B /* NotificationManagerTests.swift */; };
 		/* Plan 03-01 Task 1 — Codex ProviderID constant test */
 		AA030100000000000000001A /* ProviderIDCodexTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000001B /* ProviderIDCodexTests.swift */; };
+		AA070100000000000000047A /* ProviderOrderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000047B /* ProviderOrderTests.swift */; };
 		/* Plan 03-01 Task 2 — CodexRoots + CodexRolloutScanner (app target) + tests */
 		AA030100000000000000002A /* CodexRoots.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000002B /* CodexRoots.swift */; };
 		AA030100000000000000003A /* CodexRolloutScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000003B /* CodexRolloutScanner.swift */; };
@@ -363,6 +364,9 @@
 		AA070100000000000000004A /* AUBCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000004B /* AUBCommand.swift */; };
 		AA070100000000000000005A /* CLIUsageSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000005B /* CLIUsageSession.swift */; };
 		AA070100000000000000006A /* UsageTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000006B /* UsageTextRenderer.swift */; };
+		AA070100000000000000044A /* CompactTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000044B /* CompactTextRenderer.swift */; };
+		AA070100000000000000042A /* CLIFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000042B /* CLIFormat.swift */; };
+		AA070100000000000000043A /* CLITheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000043B /* CLITheme.swift */; };
 		AA070100000000000000007A /* UsageJSONRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000007B /* UsageJSONRenderer.swift */; };
 		AA070100000000000000008A /* CLISettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000008B /* CLISettings.swift */; };
 		AA070100000000000000009A /* CLIInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000009B /* CLIInstaller.swift */; };
@@ -376,6 +380,10 @@
 		AA070100000000000000012A /* CLISettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000012B /* CLISettingsTests.swift */; };
 		AA070100000000000000013A /* CLIInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000013B /* CLIInstallerTests.swift */; };
 		AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000014B /* UsageTextRendererTests.swift */; };
+		AA070100000000000000045A /* CompactTextRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000045B /* CompactTextRendererTests.swift */; };
+		AA070100000000000000046A /* CLIThemeSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000046B /* CLIThemeSelectionTests.swift */; };
+		AA070100000000000000040A /* CLIReportFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000040B /* CLIReportFixture.swift */; };
+		AA070100000000000000041A /* ClassicGoldenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000041B /* ClassicGoldenTests.swift */; };
 		AA070100000000000000015A /* CLIUsageSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000015B /* CLIUsageSessionTests.swift */; };
 		AA091400000000000000001A /* LocalEngineConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA091400000000000000001B /* LocalEngineConfig.swift */; };
 		AA091400000000000000002A /* ProcessCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA091400000000000000002B /* ProcessCatalog.swift */; };
@@ -533,6 +541,7 @@
 		AA070700000000000000011B /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
 		/* Plan 03-01 Task 1 — Codex ProviderID constant test file reference */
 		AA030100000000000000001B /* ProviderIDCodexTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderIDCodexTests.swift; sourceTree = "<group>"; };
+		AA070100000000000000047B /* ProviderOrderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderOrderTests.swift; sourceTree = "<group>"; };
 		/* Plan 03-01 Task 2 — CodexRoots + CodexRolloutScanner file references */
 		AA030100000000000000002B /* CodexRoots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRoots.swift; sourceTree = "<group>"; };
 		AA030100000000000000003B /* CodexRolloutScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRolloutScanner.swift; sourceTree = "<group>"; };
@@ -766,6 +775,9 @@
 		AA070100000000000000004B /* AUBCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AUBCommand.swift; sourceTree = "<group>"; };
 		AA070100000000000000005B /* CLIUsageSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIUsageSession.swift; sourceTree = "<group>"; };
 		AA070100000000000000006B /* UsageTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTextRenderer.swift; sourceTree = "<group>"; };
+		AA070100000000000000044B /* CompactTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTextRenderer.swift; sourceTree = "<group>"; };
+		AA070100000000000000042B /* CLIFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIFormat.swift; sourceTree = "<group>"; };
+		AA070100000000000000043B /* CLITheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLITheme.swift; sourceTree = "<group>"; };
 		AA070100000000000000007B /* UsageJSONRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageJSONRenderer.swift; sourceTree = "<group>"; };
 		AA070100000000000000008B /* CLISettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISettings.swift; sourceTree = "<group>"; };
 		AA070100000000000000009B /* CLIInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstaller.swift; sourceTree = "<group>"; };
@@ -779,6 +791,10 @@
 		AA070100000000000000012B /* CLISettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISettingsTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000013B /* CLIInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIInstallerTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000014B /* UsageTextRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTextRendererTests.swift; sourceTree = "<group>"; };
+		AA070100000000000000045B /* CompactTextRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTextRendererTests.swift; sourceTree = "<group>"; };
+		AA070100000000000000046B /* CLIThemeSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIThemeSelectionTests.swift; sourceTree = "<group>"; };
+		AA070100000000000000040B /* CLIReportFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIReportFixture.swift; sourceTree = "<group>"; };
+		AA070100000000000000041B /* ClassicGoldenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicGoldenTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000015B /* CLIUsageSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIUsageSessionTests.swift; sourceTree = "<group>"; };
 		AA091400000000000000001B /* LocalEngineConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEngineConfig.swift; sourceTree = "<group>"; };
 		AA091400000000000000002B /* ProcessCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessCatalog.swift; sourceTree = "<group>"; };
@@ -905,6 +921,7 @@
 				AA020700000000000000010B /* TodayHelperResetClockTests.swift */,
 				/* Plan 03-01 — Codex ProviderID constant */
 				AA030100000000000000001B /* ProviderIDCodexTests.swift */,
+				AA070100000000000000047B /* ProviderOrderTests.swift */,
 				/* Plan 03-04 Task 1 — UsageSnapshot.tooltipLabel extension */
 				AA030400000000000000010B /* UsageSnapshotTooltipLabelTests.swift */,
 				/* Plan 04-01 -- ProviderStatus.notRunning + ProviderID local constants + classifier */
@@ -1314,6 +1331,9 @@
 				AA07010000000000000000BB /* AUBCommandRun.swift */,
 				AA070100000000000000005B /* CLIUsageSession.swift */,
 				AA070100000000000000006B /* UsageTextRenderer.swift */,
+				AA070100000000000000044B /* CompactTextRenderer.swift */,
+				AA070100000000000000042B /* CLIFormat.swift */,
+				AA070100000000000000043B /* CLITheme.swift */,
 				AA070100000000000000007B /* UsageJSONRenderer.swift */,
 				AA070100000000000000008B /* CLISettings.swift */,
 				AA070100000000000000009B /* CLIInstaller.swift */,
@@ -1329,6 +1349,10 @@
 				AA070100000000000000012B /* CLISettingsTests.swift */,
 				AA070100000000000000013B /* CLIInstallerTests.swift */,
 				AA070100000000000000014B /* UsageTextRendererTests.swift */,
+				AA070100000000000000045B /* CompactTextRendererTests.swift */,
+				AA070100000000000000046B /* CLIThemeSelectionTests.swift */,
+				AA070100000000000000040B /* CLIReportFixture.swift */,
+				AA070100000000000000041B /* ClassicGoldenTests.swift */,
 				AA070100000000000000015B /* CLIUsageSessionTests.swift */,
 				AA070100000000000000017B /* CLIProcessTests.swift */,
 			);
@@ -1994,6 +2018,9 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA07010000000000000000BA /* AUBCommandRun.swift in Sources */,
 				AA070100000000000000005A /* CLIUsageSession.swift in Sources */,
 				AA070100000000000000006A /* UsageTextRenderer.swift in Sources */,
+				AA070100000000000000044A /* CompactTextRenderer.swift in Sources */,
+				AA070100000000000000042A /* CLIFormat.swift in Sources */,
+				AA070100000000000000043A /* CLITheme.swift in Sources */,
 				AA070100000000000000007A /* UsageJSONRenderer.swift in Sources */,
 				AA070100000000000000008A /* CLISettings.swift in Sources */,
 				AA070100000000000000009A /* CLIInstaller.swift in Sources */,
@@ -2068,6 +2095,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA020700000000000000014A /* MenuBarTintTests.swift in Sources */,
 				/* Plan 03-01 Task 1 — Codex ProviderID constant test */
 				AA030100000000000000001A /* ProviderIDCodexTests.swift in Sources */,
+				AA070100000000000000047A /* ProviderOrderTests.swift in Sources */,
 				/* Plan 03-01 Task 2 — CodexRolloutScanner tests */
 				AA030100000000000000010A /* CodexRolloutScannerTests.swift in Sources */,
 				/* Plan 03-01 Task 3 — CodexRolloutParser tests */
@@ -2172,6 +2200,10 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000012A /* CLISettingsTests.swift in Sources */,
 				AA070100000000000000013A /* CLIInstallerTests.swift in Sources */,
 				AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */,
+				AA070100000000000000045A /* CompactTextRendererTests.swift in Sources */,
+				AA070100000000000000046A /* CLIThemeSelectionTests.swift in Sources */,
+				AA070100000000000000040A /* CLIReportFixture.swift in Sources */,
+				AA070100000000000000041A /* ClassicGoldenTests.swift in Sources */,
 				AA070100000000000000015A /* CLIUsageSessionTests.swift in Sources */,
 				AA070100000000000000017A /* CLIProcessTests.swift in Sources */,
 				AA091400000000000000010A /* LocalEngineResolverTests.swift in Sources */,

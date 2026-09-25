@@ -27,10 +27,15 @@ public struct QuotaWindow: Sendable, Equatable, Codable {
     /// `nil` when the API omits the reset time.
     public let resetsAt: Date?
 
-    public init(name: String, utilization: Double?, resetsAt: Date?) {
+    /// Window length in seconds when the source reports it (Codex
+    /// `window_minutes` / `limit_window_seconds`); `nil` otherwise.
+    public let duration: TimeInterval?
+
+    public init(name: String, utilization: Double?, resetsAt: Date?, duration: TimeInterval? = nil) {
         self.name = name
         self.utilization = utilization
         self.resetsAt = resetsAt
+        self.duration = duration
     }
 
     /// Claude session window (`"5h"` or `"work 5h"`). Weekly is `"7d"` / `"7d-sonnet"`.

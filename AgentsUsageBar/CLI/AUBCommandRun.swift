@@ -12,6 +12,9 @@ extension AUBCommand {
         case .success(let command):
             do {
                 return try await execute(command)
+            } catch let err as AUBParseError {
+                fputs("error: \(err.description)\n", stderr)
+                return 2
             } catch let err as CLISettings.SettingError {
                 fputs("error: \(err.description)\n", stderr)
                 return 2
@@ -36,6 +39,10 @@ extension AUBCommand {
             return 0
         case .settings(let action, let json):
             return try runSettings(action, json: json)
+        case .themes(let json, let flag):
+            let active = try resolveTheme(flag: flag)
+            fputs(json ? try CLITheme.renderListJSON(active: active) : CLITheme.renderList(active: active), stdout)
+            return 0
         case .install(let prefix):
             let installer = CLIInstaller()
             let path = try installer.install(prefix: prefix)
@@ -107,20 +114,28 @@ extension AUBCommand {
 
     @MainActor
     private static func runUsage(_ opts: UsageOptions, quotaOnly: Bool) async throws -> Int32 {
-        let report = await makeSession().fetch(filter: opts.filter, cached: opts.cached)
-        let color = UsageTextRenderer.shouldColor(noColor: opts.noColor)
         if opts.json {
+            let report = await makeSession().fetch(filter: opts.filter, cached: opts.cached)
             let text = quotaOnly
                 ? try UsageJSONRenderer.renderQuota(report)
                 : try UsageJSONRenderer.renderUsage(report)
             fputs(text, stdout)
-        } else {
-            let text = quotaOnly
-                ? UsageTextRenderer.renderQuota(report, color: color)
-                : UsageTextRenderer.renderUsage(report, color: color)
-            fputs(text, stdout)
+            return 0
         }
+        // Resolve before fetching so a bad AUB_THEME fails fast; JSON never reads env/setting.
+        let theme = try resolveTheme(flag: opts.theme).theme
+        let report = await makeSession().fetch(filter: opts.filter, cached: opts.cached)
+        let color = CLIFormat.shouldColor(noColor: opts.noColor)
+        fputs(theme.render(report, view: quotaOnly ? .quota : .usage, color: color), stdout)
         return 0
+    }
+
+    private static func resolveTheme(flag: CLITheme?) throws -> CLITheme.Selection {
+        try CLITheme.resolve(
+            flag: flag,
+            env: { ProcessInfo.processInfo.environment["AUB_THEME"] },
+            setting: { CLISettings().storedCLITheme }
+        ).get()
     }
 
     @MainActor

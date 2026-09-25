@@ -1,0 +1,24 @@
+# 02 peak RSS (/usr/bin/time -l, 5 runs each) — prototype binary /Users/noomz/Projects/aub-proto-02/build/dd-proto/Build/Products/Release/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar
+## usage --cached
+            28426240  maximum resident set size
+            28377088  maximum resident set size
+            28393472  maximum resident set size
+            28426240  maximum resident set size
+            28409856  maximum resident set size
+## render < doc.json (4592 B)
+            14155776  maximum resident set size
+            14155776  maximum resident set size
+            14155776  maximum resident set size
+            14155776  maximum resident set size
+            14155776  maximum resident set size
+## pipeline: usage --cached --json | render (each side measured)
+render side:             14172160  maximum resident set size
+render side:             14172160  maximum resident set size
+render side:             14204928  maximum resident set size
+render side:             14172160  maximum resident set size
+render side:             14172160  maximum resident set size
+producer side (usage --cached --json): 28999680 maximum resident set size
+producer side (usage --cached --json): 27836416 maximum resident set size
+producer side (usage --cached --json): 27803648 maximum resident set size
+producer side (usage --cached --json): 27852800 maximum resident set size
+producer side (usage --cached --json): 27803648 maximum resident set size

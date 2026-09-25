@@ -1,5 +1,4 @@
 import Foundation
-import Darwin
 
 /// ASCII popover clone for `aub usage` / `aub quota`.
 public enum UsageTextRenderer {
@@ -8,31 +7,17 @@ public enum UsageTextRenderer {
 
     /// Consumed-fraction fill, width 20. `nil` quota → a full gray bar ("no limit").
     public static func bar(consumed: Double?, width: Int = barWidth) -> String {
-        guard let consumed else {
-            return String(repeating: "█", count: width)
-        }
-        let clamped = min(max(consumed, 0), 1)
-        var filled = Int((clamped * Double(width)).rounded(.toNearestOrAwayFromZero))
-        filled = min(width, max(0, filled))
-        return String(repeating: "█", count: filled) + String(repeating: "░", count: width - filled)
+        CLIFormat.blockBar(consumed: consumed, width: width)
     }
 
     public static func ansiCode(for band: QuotaBand) -> String {
-        switch band {
-        case .none:     return "\u{001B}[90m"
-        case .critical: return "\u{001B}[31m"
-        case .warning:  return "\u{001B}[33m"
-        case .healthy:  return "\u{001B}[32m"
-        }
+        CLIFormat.ansiCode(for: band)
     }
 
-    public static let ansiReset = "\u{001B}[0m"
+    public static let ansiReset = CLIFormat.ansiReset
 
     public static func shouldColor(noColor: Bool, isTTY: Bool? = nil) -> Bool {
-        if noColor { return false }
-        if ProcessInfo.processInfo.environment["NO_COLOR"] != nil { return false }
-        if ProcessInfo.processInfo.environment["TERM"] == "dumb" { return false }
-        return isTTY ?? (isatty(STDOUT_FILENO) != 0)
+        CLIFormat.shouldColor(noColor: noColor, isTTY: isTTY)
     }
 
     public static func renderUsage(_ report: UsageReport, color: Bool) -> String {
@@ -62,8 +47,8 @@ public enum UsageTextRenderer {
 
     private static func totalsLine(_ totals: DailyTotals, nameWidth: Int) -> String {
         let left = pad("Today total", to: nameWidth)
-        let tokens = "\(totals.tokens.formatted(.number)) tokens"
-        let usd = totals.costUSD.formatted(.currency(code: "USD"))
+        let tokens = "\(CLIFormat.tokens(totals.tokens)) tokens"
+        let usd = CLIFormat.usd(totals.costUSD)
         return "\(left)  \(pad(tokens, to: 22))  \(usd)"
     }
 
@@ -149,13 +134,10 @@ public enum UsageTextRenderer {
         let consumed = quota?.fraction
         let remaining: Double? = quota.map { 1.0 - $0.fraction }
         let band = QuotaBand.fromRemainingFraction(remaining)
-        var bar = Self.bar(consumed: consumed)
-        if color {
-            bar = ansiCode(for: band) + bar + ansiReset
-        }
+        let bar = CLIFormat.paint(Self.bar(consumed: consumed), band: band, color: color)
         let label: String
         if let quota {
-            label = "\(Int((quota.fraction * 100).rounded()))%"
+            label = CLIFormat.percent(quota.fraction)
         } else {
             label = "no limit"
         }
@@ -168,15 +150,15 @@ public enum UsageTextRenderer {
         }
         let tokens: String = {
             guard let n = p.snapshot?.tokensToday else { return "—" }
-            return "\(n.formatted(.number)) tokens"
+            return "\(CLIFormat.tokens(n)) tokens"
         }()
         let usd: String = {
             guard let c = p.snapshot?.costTodayUSD else { return "—" }
-            return c.formatted(.currency(code: "USD"))
+            return CLIFormat.usd(c)
         }()
         var parts = [tokens, usd]
         if let bal = p.snapshot?.balanceUSD {
-            parts.append("bal " + bal.formatted(.currency(code: "USD")))
+            parts.append("bal " + CLIFormat.usd(bal))
         }
         return parts.joined(separator: " · ")
     }
@@ -201,7 +183,7 @@ public enum UsageTextRenderer {
     }
 
     private static func windowCaption(_ w: QuotaWindow, labelWidth: Int, now: Date) -> String {
-        let pct = w.utilization.map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
+        let pct = w.utilization.map(CLIFormat.percent) ?? "—"
         let reset = w.resetsAt.map { resetsPhrase(until: $0, now: now) } ?? "—"
         return "\(pad(w.name, to: labelWidth))  \(pad(pct, to: 4))  \(reset)"
     }
@@ -215,7 +197,7 @@ public enum UsageTextRenderer {
         let indent = pad("", to: nameWidth)
         var head = "  \(account.name)"
         if let cost = account.costTodayUSD {
-            head += " · " + cost.formatted(.currency(code: "USD"))
+            head += " · " + CLIFormat.usd(cost)
         }
         let glance = account.quotaGlance
         return ["\(indent)  \(head)", "\(indent)  \(claudeDualBarLine(glance))"]
@@ -238,11 +220,10 @@ public enum UsageTextRenderer {
     }
 
     public static func resetsPhrase(until date: Date, now: Date) -> String {
-        ResetCountdown.phrase(until: date, now: now)
+        CLIFormat.resetsPhrase(until: date, now: now)
     }
 
     private static func pad(_ s: String, to n: Int) -> String {
-        if s.count >= n { return s }
-        return s + String(repeating: " ", count: n - s.count)
+        CLIFormat.pad(s, to: n)
     }
 }

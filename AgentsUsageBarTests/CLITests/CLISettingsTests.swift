@@ -9,7 +9,7 @@ struct CLISettingsTests {
         let suite = "test.aub.cli.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
-        return (CLISettings(defaults: defaults), defaults)
+        return (CLISettings(defaults: defaults, customEngines: { [ProviderID(rawValue: "engine.gpu-box")] }), defaults)
     }
 
     @Test("defaults when keys are absent")
@@ -74,5 +74,46 @@ struct CLISettingsTests {
         for id in ProviderID.allKnown {
             #expect(keys.contains("provider.\(id.rawValue).enabled"))
         }
+    }
+
+    @Test("cli-theme default, case-fold, validation, garbage fallback")
+    func cliTheme() {
+        let (store, defaults) = make()
+        #expect(try! store.get("cli-theme").get().value == "compact")
+        #expect(store.storedCLITheme == nil)
+        #expect(try! store.set("cli-theme", value: "Classic").get().value == "classic")
+        #expect(defaults.string(forKey: AUBDefaultsKey.cliTheme) == "classic")
+        #expect(try! store.get("cli-theme").get().value == "classic")
+        #expect(store.storedCLITheme == .classic)
+        let bad = store.set("cli-theme", value: "fancy")
+        #expect(bad == .failure(.invalidValue(key: "cli-theme", value: "fancy", expected: "compact|classic")))
+        if case .failure(let err) = bad {
+            #expect(err.description == "invalid value 'fancy' for cli-theme; expected compact|classic")
+        }
+        defaults.set("garbage", forKey: AUBDefaultsKey.cliTheme)
+        #expect(try! store.get("cli-theme").get().value == "compact")
+        #expect(store.storedCLITheme == nil)
+    }
+
+    @Test("provider-order default, validation, case-fold, reset")
+    func providerOrder() {
+        let (store, defaults) = make()
+        let all = ProviderID.allKnown.map(\.rawValue).joined(separator: ",")
+        #expect(try! store.get("provider-order").get().value == all)
+        #expect(try! store.set("provider-order", value: "Codex, engine.gpu-box,claude").get().value
+                == "codex,engine.gpu-box,claude")
+        #expect(defaults.aubProviderOrder == [.codex, ProviderID(rawValue: "engine.gpu-box"), .claude])
+        #expect(try! store.get("provider-order").get().value == "codex,engine.gpu-box,claude")
+        for bad in ["codex,nope", "codex,Codex", "engine.unknown", "codex,,claude"] {
+            switch store.set("provider-order", value: bad) {
+            case .failure(.invalidValue(key: "provider-order", value: bad, let expected)):
+                #expect(expected.contains("openrouter, claude"))
+                #expect(expected.contains("engine.gpu-box"))
+            default: Issue.record("expected invalidValue for \(bad)")
+            }
+        }
+        #expect(defaults.string(forKey: AUBDefaultsKey.providerOrder) == "codex,engine.gpu-box,claude")
+        #expect(try! store.set("provider-order", value: "").get().value == all)
+        #expect(defaults.object(forKey: AUBDefaultsKey.providerOrder) == nil)
     }
 }

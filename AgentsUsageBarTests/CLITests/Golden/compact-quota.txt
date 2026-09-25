@@ -1,0 +1,16 @@
+1 at ≥80% · 1 at 50–79% · 2 unavailable
+▲ OpenRouter   █████████▍  94% credits
+               $1.25 spent     day
+               $8.10 spent     week
+               $31.40 spent    month
+  Claude
+    personal   █▎░░░░░░░░  12% 5h               ↻ 4h 20m
+               █▊░░░░░░░░  17% 7d               ↻ unknown
+    work●      ███▏░░░░░░  31% 5h               ↻ 2h 50m
+               ████▊░░░░░  47% 7d               ↻ 3d 8h
+△ Codex        ██████▉░░░  69% 5h               ↻ 2h 50m
+               ██▎░░░░░░░  22% 7d               ↻ 5d
+  Gemini       █▉░░░░░░░░  19% gemini-2.5-pro   ↻ 1h
+               ▍░░░░░░░░░   4% gemini-2.5-flash ↻ 1h
+! Gemini       unavailable
+! Grok         unauthenticated
