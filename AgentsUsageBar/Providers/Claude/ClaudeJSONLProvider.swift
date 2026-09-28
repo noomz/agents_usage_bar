@@ -47,7 +47,9 @@ public actor ClaudeJSONLProvider: UsageProvider {
     private let oauth: (any ClaudeOAuthClientProtocol)?
     private let cache: any CacheStore
     private let clock: any Clock
-    private let roots: [URL]
+    /// Resolved on every fetch so roots created after launch (first `~/.claude/projects`,
+    /// a new ccs instance) are picked up without a restart.
+    private let roots: @Sendable () -> [URL]
 
     /// Plan 02.06 — Pitfall 5 (default decision #4):
     /// A dedicated 3-strike circuit breaker for the `/api/oauth/usage` endpoint that
@@ -87,7 +89,7 @@ public actor ClaudeJSONLProvider: UsageProvider {
     ///   - oauth: Optional OAuth client. Pass `nil` when credentials are absent (degrade-to-local-only).
     ///   - cache: `CacheStore` for persisting per-file `TranscriptOffset` cursors.
     ///   - clock: Clock abstraction (unused in fetch body but wired for future use / testing).
-    ///   - roots: Root directories to scan. Production uses `ClaudeRoots.defaultRoots`.
+    ///   - roots: Root directories to scan, re-read each fetch. Production uses `ClaudeRoots.defaultRoots`.
     ///     Tests inject a fresh temp directory.
     public init(
         reader: TranscriptReader,
@@ -96,7 +98,7 @@ public actor ClaudeJSONLProvider: UsageProvider {
         oauth: (any ClaudeOAuthClientProtocol)?,
         cache: any CacheStore,
         clock: any Clock,
-        roots: [URL] = ClaudeRoots.defaultRoots
+        roots: @escaping @Sendable () -> [URL] = { ClaudeRoots.defaultRoots }
     ) {
         self.reader = reader
         self.scanner = scanner
@@ -131,6 +133,7 @@ public actor ClaudeJSONLProvider: UsageProvider {
     public func fetch(now: Date) async throws -> UsageSnapshot {
         // No OAuth and no transcript root on disk: nothing to read. Report "not
         // configured" instead of a healthy $0 row; the next tick re-checks.
+        let roots = self.roots()
         if oauth == nil, !roots.contains(where: { FileManager.default.fileExists(atPath: $0.path) }) {
             lastStatus = .unauthenticated
             return UsageSnapshot(

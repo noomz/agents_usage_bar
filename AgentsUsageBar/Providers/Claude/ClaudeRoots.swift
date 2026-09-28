@@ -8,8 +8,8 @@ import Foundation
 ///   - `~/.ccs/instances/<instance>/projects/**/*.jsonl`
 ///
 /// `ClaudeJSONLProvider` is initialised with `ClaudeRoots.defaultRoots` in production and
-/// receives an injected `[tempDir]` in tests — no file-system access at init time except
-/// here, where we enumerate the user's home directory once at boot.
+/// receives an injected `{ [tempDir] }` in tests. The provider re-reads this on every
+/// fetch, so roots that appear after launch are scanned without a restart.
 public enum ClaudeRoots {
 
     /// Returns all transcript root URLs that currently exist on disk.
