@@ -113,17 +113,29 @@ private extension ClaudeModelPricing {
 @Suite("ClaudeJSONLProvider", .serialized)
 struct ClaudeJSONLProviderTests {
 
-    // MARK: Test 1 — empty roots + no OAuth returns zero snapshot
+    // MARK: Test 1 — no data source (no OAuth, no root on disk) reports not configured
 
-    @Test func fetch_emptyRoots_noOAuth_returnsZeroSnapshot() async throws {
-        let provider = makeProvider(roots: [])
+    @Test func fetch_noSource_noOAuth_returnsUnauthenticatedSentinel() async throws {
+        let missing = FileManager.default.temporaryDirectory.appendingPathComponent("missing-\(UUID().uuidString)")
+        for roots in [[], [missing]] {
+            let provider = makeProvider(roots: roots)
+            let snap = try await provider.fetch(now: .now)
+
+            #expect(snap.raw["providerStatus"] == "unauthenticated")
+            #expect(snap.quota == nil)
+            #expect(await provider.status() == .unauthenticated)
+        }
+    }
+
+    @Test func fetch_existingEmptyRoot_noOAuth_returnsZeroSnapshot() async throws {
+        let root = try makeTempRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let provider = makeProvider(roots: [root])
         let snap = try await provider.fetch(now: .now)
 
         #expect(snap.tokensToday == 0)
         #expect(snap.costTodayUSD == 0)
-        #expect(snap.quota == nil)
-        #expect(snap.quotaWindows == nil)
-
+        #expect(snap.raw["providerStatus"] == nil)
         let status = await provider.status()
         if case .ok = status { } else {
             Issue.record("Expected .ok status, got \(status)")

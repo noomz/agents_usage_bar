@@ -248,9 +248,8 @@ public final class AggregateStore {
 
     /// Enables or disables a provider at runtime per D-04 (CONTEXT.md).
     ///
-    /// - When disabled: cancels any in-flight fetch Task for the provider (via the per-provider
-    ///   circuit breaker — trips the breaker to "open" so `performRefresh` skips the next tick)
-    ///   and marks the provider as disabled in the visible row set so the popover hides the row.
+    /// - When disabled: records the id in `disabledProviderIDs` (so `performRefresh` and
+    ///   `apply` skip it) and removes the row so the popover hides it.
     /// - When enabled: re-includes the provider on the next scheduler tick.
     ///   No immediate re-fetch is triggered (Pitfall 5 — no fetch storm).
     ///
@@ -345,9 +344,9 @@ public final class AggregateStore {
         // Plan 02.06 — Pre-compute per-provider gating BEFORE fan-out:
         // 0. D-04: skip user-disabled providers entirely (no fetch, no row revive).
         // 1. POLL-05: skip providers whose 5-strike breaker is currently open.
-        // Registered providers are always fetched, whatever their current status: a
-        // registry entry means credentials exist, and `.unauthenticated` in the store is
-        // only ever a placeholder (cache restore or re-enable), never a fetch verdict.
+        // Registered providers are always fetched, whatever their current status:
+        // `.unauthenticated` in the store is a placeholder or a provider's "no data
+        // source" sentinel, never a terminal verdict (a rejected key is `.error(.auth)`).
         var gateDecisions: [(provider: any UsageProvider, allow: Bool, openBreaker: Bool)] = []
         for p in registry {
             // D-04 — user disabled in Settings; leave no task and keep row hidden.

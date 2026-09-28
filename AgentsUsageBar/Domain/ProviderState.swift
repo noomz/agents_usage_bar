@@ -129,7 +129,21 @@ public struct ProviderState: Sendable, Equatable, Codable {
     /// render "Idle — 0 models loaded" indistinguishable from a healthy probe. When the
     /// sentinel is present, set status `.notRunning` and DO NOT advance `lastSuccess` —
     /// the row never had a real success, just a classified outage.
+    ///
+    /// `raw["providerStatus"] == "unauthenticated"` works the same way for a registered
+    /// provider with no data source (Claude without OAuth or transcripts): the row stays
+    /// "not configured" but is re-probed each tick, so it goes live once data appears.
     public func applying(snapshot: UsageSnapshot, at now: Date) -> ProviderState {
+        if snapshot.raw["providerStatus"] == "unauthenticated" {
+            return ProviderState(
+                id: id,
+                displayName: displayName,
+                placeholderMessage: placeholderMessage,
+                snapshot: nil,
+                status: .unauthenticated,
+                lastSuccess: lastSuccess   // preserve — not a real success
+            )
+        }
         if snapshot.raw["providerStatus"] == "notRunning" {
             return ProviderState(
                 id: id,
