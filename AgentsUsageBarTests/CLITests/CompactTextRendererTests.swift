@@ -81,6 +81,28 @@ struct CompactTextRendererTests {
         #expect(CompactTextRenderer.shortGeminiModel(model) == expected)
     }
 
+    @Test("all providers disabled still says no providers enabled (V22)")
+    func allDisabled() {
+        var p = CLIReportFixture.codex()
+        p.status = .disabled
+        let report = UsageReport(asOf: CLIReportFixture.asOf, source: .live, providers: [p])
+        #expect(Self.render(report).split(separator: "\n").last == "no providers enabled")
+    }
+
+    @Test("quota view keeps a Claude account with no windows as a no-limit row")
+    func claudeAccountNoWindows() {
+        var p = CLIReportFixture.claude()
+        let snap = p.snapshot!
+        p.snapshot = UsageSnapshot(
+            providerID: .claude, asOf: snap.asOf, tokensToday: 0, costTodayUSD: nil,
+            balanceUSD: nil, quota: nil, raw: [:], quotaWindows: nil,
+            accounts: [.init(name: "solo", costTodayUSD: nil, quota: nil, quotaWindows: nil)]
+        )
+        let report = UsageReport(asOf: CLIReportFixture.asOf, source: .live, providers: [p])
+        let row = Self.render(report, view: .quota).split(separator: "\n").first { $0.contains("solo") }
+        #expect(row?.contains("no limit") == true)
+    }
+
     @Test("header counts each account row and every ! row")
     func headerCounts() {
         let lines = Self.render().split(separator: "\n").map(String.init)
@@ -128,8 +150,8 @@ struct CompactTextRendererTests {
     }
 
     @Test("severity edges: 80% critical, 50% warning", arguments: [
-        (0.80, CompactTextRenderer.Severity.critical), (0.7999, .warning),
-        (0.50, .warning), (0.4999, .normal),
+        (0.80, CompactTextRenderer.Severity.critical), (0.7996, .critical), (0.7949, .warning),
+        (0.50, .warning), (0.4996, .warning), (0.4949, .normal),
     ])
     func severity(fraction: Double, expected: CompactTextRenderer.Severity) {
         #expect(CompactTextRenderer.Severity(fraction) == expected)
@@ -137,6 +159,7 @@ struct CompactTextRendererTests {
 
     @Test("SI token abbreviation", arguments: [
         (0, "0"), (999, "999"), (1_500, "1.5K"), (232_400_512, "232.4M"), (1_260_000_000, "1.3B"),
+        (999_949, "999.9K"), (999_950, "1.0M"), (999_950_000, "1.0B"),
     ])
     func siTokens(n: Int, expected: String) {
         #expect(CompactTextRenderer.siTokens(n) == expected)
