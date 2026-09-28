@@ -214,6 +214,64 @@ struct AggregateStoreTests {
         }
     }
 
+    @Test("no-source sentinel keeps a registered provider not configured, re-probed each tick")
+    func noSourceSentinelStaysUnauthenticated() async {
+        let id = ProviderID(rawValue: "claude")
+        let t0 = Date()
+        let sentinel = UsageSnapshot(
+            providerID: id, asOf: t0, tokensToday: 0, costTodayUSD: 0,
+            balanceUSD: nil, quota: nil, raw: ["providerStatus": "unauthenticated"]
+        )
+        let provider = FakeProvider(id: id, displayName: "Claude", result: .success(sentinel))
+        let store = AggregateStore(
+            registry: [provider],
+            clock: VirtualClock(fixed: t0),
+            cache: AggFakeCacheStore(),
+            thresholds: ThresholdEngine(),
+            notifications: NoopNotificationManager()
+        )
+        store.seedPlaceholder(providerID: id, displayName: "Claude")
+
+        await store.refresh(now: t0)
+        #expect(store.providers[id]?.status == .unauthenticated)
+        #expect(store.providers[id]?.snapshot == nil)
+
+        await provider.setResult(.success(makeSnapshot(providerID: id, now: t0)))
+        await store.refresh(now: t0.addingTimeInterval(10))
+        #expect(await provider.callCount() == 2)
+        if case .ok = store.providers[id]?.status { } else {
+            Issue.record("Expected .ok once data appears, got \(String(describing: store.providers[id]?.status))")
+        }
+    }
+
+    @Test("rejected key is re-probed every tick without tripping the breaker (POLL-06)")
+    func authFailureReprobedBreakerClosed() async {
+        let id = ProviderID(rawValue: "openrouter")
+        let t0 = Date()
+        let provider = FakeProvider(
+            id: id, displayName: "OpenRouter",
+            result: .failure(ProviderError(kind: .auth, message: "401"))
+        )
+        let store = AggregateStore(
+            registry: [provider],
+            clock: VirtualClock(fixed: t0),
+            cache: AggFakeCacheStore(),
+            thresholds: ThresholdEngine(),
+            notifications: NoopNotificationManager()
+        )
+
+        for i in 0..<6 {
+            await store.refresh(now: t0.addingTimeInterval(Double(i) * 10))
+        }
+
+        #expect(await provider.callCount() == 6)
+        if case .error(let e) = store.providers[id]?.status {
+            #expect(e.kind == .auth)
+        } else {
+            Issue.record("Expected .error(.auth), got \(String(describing: store.providers[id]?.status))")
+        }
+    }
+
     // MARK: rollupTotals
 
     @Test("rollupTotals sums costTodayUSD and tokensToday, nil tokens treated as 0")

@@ -129,6 +129,15 @@ public actor ClaudeJSONLProvider: UsageProvider {
     /// JSONL fan-out errors propagate (rethrow) — plan 02.06 RetryPolicy handles degradation.
     /// OAuth errors are silently swallowed — `quotaWindows == nil` and local data still rendered.
     public func fetch(now: Date) async throws -> UsageSnapshot {
+        // No OAuth and no transcript root on disk: nothing to read. Report "not
+        // configured" instead of a healthy $0 row; the next tick re-checks.
+        if oauth == nil, !roots.contains(where: { FileManager.default.fileExists(atPath: $0.path) }) {
+            lastStatus = .unauthenticated
+            return UsageSnapshot(
+                providerID: id, asOf: now, tokensToday: 0, costTodayUSD: 0,
+                balanceUSD: nil, quota: nil, raw: ["providerStatus": "unauthenticated"]
+            )
+        }
         do {
             let today = TodayHelper.startOfDay(now, calendar: .current)
             let priorOffsets = cache.allTranscriptOffsets()
