@@ -64,4 +64,12 @@ struct ProviderOrderTests {
         #expect(PopoverRootView.ordered(states, preference: []).map(\.id) == [.openrouter, .claude, .codex])
         #expect(PopoverRootView.ordered(states, preference: [.codex]).map(\.id) == [.codex, .openrouter, .claude])
     }
+
+    @Test("engines differing only by case sort deterministically when both match")
+    func caseTwinsDeterministic() {
+        let upper = ProviderID(rawValue: "engine.GPU"), lower = ProviderID(rawValue: "engine.gpu")
+        let pref = [ProviderID(rawValue: "engine.gpu")]
+        #expect(ProviderID.ordered([lower, upper], id: { $0 }, preference: pref) == [upper, lower])
+        #expect(ProviderID.ordered([upper, lower], id: { $0 }, preference: pref) == [upper, lower])
+    }
 }
