@@ -163,6 +163,13 @@ jobs:
       # Ad-hoc sign order: nested code first, then the outer app, so the
       # outer signature seals over already-signed helpers (the same reason
       # Pitfall 2 bans a single recursive-deep pass over a real identity).
+      #
+      # NO `--options runtime` here: Hardened Runtime turns on library
+      # validation, which needs every framework to share the app's Team ID.
+      # Ad-hoc signatures have none, so dyld rejects Sparkle and the app dies
+      # at launch (v0.1.4–v0.1.17 all shipped broken this way). Runtime only
+      # matters for notarization, which this lane cannot do. Same recipe as
+      # scripts/build-local.sh.
       - name: Build + ad-hoc sign (unsigned lane)
         if: steps.gate.outputs.signed == 'false'
         run: |
@@ -183,11 +190,11 @@ jobs:
           # Sign nested helpers (deepest first), then the app bundle itself.
           # `find ... -depth` yields children before parents.
           while IFS= read -r item; do
-            codesign --force --options runtime --timestamp=none --sign - "$item"
+            codesign --force --timestamp=none --sign - "$item"
           done < <(find "$APP/Contents" \
                      \( -name '*.xpc' -o -name '*.app' -o -name '*.framework' \) \
                      -depth)
-          codesign --force --options runtime --timestamp=none --sign - "$APP"
+          codesign --force --timestamp=none --sign - "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
 
           mkdir -p build/export
