@@ -1,5 +1,6 @@
 import Foundation
 import os
+import UserNotifications
 
 /// Dependency bag returned by `AppDependencies.makeProduction()`.
 ///
@@ -34,7 +35,7 @@ public final class Dependencies {
     public let preferences: UserPreferencesStore
     /// Plan 05-05 — Welcome window host. Retained strongly for app lifetime so the
     /// NSWindow.willCloseNotification observer is not deallocated (Pitfall 4).
-    /// `showIfNeeded()` is called from AgentsUsageBarApp `.task` after the scheduler starts;
+    /// `showIfNeeded()` is called from `startBackgroundServices()` after the scheduler starts;
     /// it is a no-op when `preferences.hasSeenWelcome == true` (D-10).
     public let welcomeWindowController: WelcomeWindowController
 
@@ -56,6 +57,37 @@ public final class Dependencies {
         self.windowActivationObserver = windowActivationObserver
         self.preferences = preferences
         self.welcomeWindowController = welcomeWindowController
+    }
+
+    // MARK: - Issue #18 — launch-time startup
+
+    /// `true` once `startBackgroundServices()` has run; guards against a second start.
+    public private(set) var backgroundServicesStarted = false
+    /// Long-lived `observePreferences` loop (D-04 hot-reload), owned for the app lifetime.
+    public private(set) var preferencesObservation: Task<Void, Never>?
+
+    /// Starts everything that must be live from app launch, not from first popover open
+    /// (issue #18): notification delegate, preferences hot-reload, poll loop, Welcome window.
+    ///
+    /// Idempotent: the flag is set before the first suspension point, so a second call
+    /// (even a re-entrant one) returns without restarting the scheduler or observers.
+    /// `powerObserver` / `windowActivationObserver` are already live — they are constructed
+    /// and retained by `makeProduction()` before this runs (Pitfall 4).
+    public func startBackgroundServices() async {
+        guard !backgroundServicesStarted else { return }
+        backgroundServicesStarted = true
+
+        // Plan 02.05 — install snooze action handler BEFORE the poll loop starts
+        // so any notification fired by the first refresh has its action wired.
+        UNUserNotificationCenter.current().delegate = actionHandler
+        // Plan 05-03 — hot-reload observer alongside the poll loop.
+        preferencesObservation = Task { [preferences, scheduler, store] in
+            await AppDependencies.observePreferences(preferences, scheduler: scheduler, store: store)
+        }
+        await scheduler.start()
+        // Plan 05-05 — Welcome window on first launch (D-10); no-op once hasSeenWelcome.
+        // AFTER scheduler.start() so the poll loop is live before detection probes run.
+        welcomeWindowController.showIfNeeded()
     }
 }
 
@@ -175,11 +207,11 @@ public enum AppDependencies {
         // refresh; once the actor probes and returns a snapshot, apply(_:for:now:) replaces
         // the placeholder state with the live state (Phase 1 STATE #38).
 
-        // 10. Poll scheduler — wired to store; start() called from .task modifier in AgentsUsageBarApp
+        // 10. Poll scheduler — wired to store; start() called at launch from startBackgroundServices()
         let scheduler = PollScheduler(store: store, clock: clock, interval: config.refreshInterval)
 
         // 11. Plan 02.05 — Notification action handler. Installed as UNUserNotificationCenter
-        //     delegate inside AgentsUsageBarApp's `.task { ... }` modifier, AFTER
+        //     delegate by startBackgroundServices() at launch, AFTER
         //     registerCategories(on:) has run in init() (Pitfall 6).
         let actionHandler = NotificationActionHandler(store: store, clock: clock)
 
@@ -197,7 +229,7 @@ public enum AppDependencies {
         let windowActivationObserver = WindowActivationObserver()
 
         // 14. Plan 05-05 — WelcomeWindowController (CFG-03/CFG-04/D-09/D-10).
-        //     Constructed here; showIfNeeded() called from AgentsUsageBarApp .task after
+        //     Constructed here; showIfNeeded() called from startBackgroundServices() after
         //     the scheduler starts. Retained in Dependencies for app lifetime (Pitfall 4 —
         //     NSWindow.willCloseNotification observer must stay live until app exits).
         let welcomeWindowController = WelcomeWindowController(
@@ -220,8 +252,8 @@ public enum AppDependencies {
     // MARK: - Plan 05-03 — Hot-reload observer (D-04)
 
     /// Observes `UserPreferencesStore` property changes and propagates them to the running
-    /// subsystems (D-04). Runs for the app's lifetime inside a `.task` structured-concurrency
-    /// scope; cancelled automatically when the scene tears down.
+    /// subsystems (D-04). Runs for the app's lifetime in the `preferencesObservation` task
+    /// started by `Dependencies.startBackgroundServices()`.
     ///
     /// Hot-reload paths wired:
     /// - `refreshInterval` → `scheduler.updateInterval(_:)`

@@ -3,11 +3,33 @@ import AppKit
 import UserNotifications
 import Sparkle
 
-struct AgentsUsageBarApp: App {
+/// Issue #18 — owns the composition root and starts background services at launch.
+/// `MenuBarExtra(.window)` only builds its content on first popover open, so startup
+/// cannot live in a `.task` there.
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Composition root — holds the store, scheduler, and clock for the app lifetime.
-    /// `@State` is correct: `Dependencies` is a reference type whose `store` is `@Observable`,
-    /// so SwiftUI tracks mutations without `@StateObject`/`ObservableObject`.
-    @State private var dependencies: Dependencies = AppDependencies.makeProduction()
+    let dependencies: Dependencies
+
+    override init() {
+        dependencies = AppDependencies.makeProduction()
+        super.init()
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // The unit-test bundle is hosted in this app; don't start real polling,
+        // notification routing, or the Welcome window under the test runner.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+        Task { await dependencies.startBackgroundServices() }
+    }
+}
+
+struct AgentsUsageBarApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
+    /// `Dependencies` is a reference type whose `store` is `@Observable`, so SwiftUI
+    /// tracks mutations without `@StateObject`/`ObservableObject`.
+    private var dependencies: Dependencies { appDelegate.dependencies }
 
     /// Plan 06-02 (REL-06) — Sparkle auto-update controller. Started immediately at launch
     /// so the updater polls `SUFeedURL` (Info.plist) on its standard schedule and verifies any
@@ -45,33 +67,6 @@ struct AgentsUsageBarApp: App {
                 .environment(\.preferences, dependencies.preferences)  // Plan 05-02: preferences overlay (D-01/D-02)
                 // Plan 05-03 D-04: apply theme live at root so all windows flip in unison.
                 .preferredColorScheme(dependencies.preferences.theme.colorScheme)
-                .task {
-                    // Plan 02.05 — install snooze action handler BEFORE the poll loop starts
-                    // so any notification fired by the first refresh has its action wired.
-                    UNUserNotificationCenter.current().delegate = dependencies.actionHandler
-                    // Plan 02.06 — Pitfall 4: force-realize the PowerObserver strong reference
-                    // BEFORE scheduler.start() so the willSleep/didWake observers are live
-                    // before any wake event the polling loop could race with.
-                    _ = dependencies.powerObserver
-                    // Plan 05-01 — Pitfall 4: force-realize the WindowActivationObserver
-                    // strong reference so NSWindow didBecomeKey/willClose notifications
-                    // are live before Settings (Cmd-,) can be opened (D-06 / SHELL-05).
-                    _ = dependencies.windowActivationObserver
-                    // Plan 05-03 — Start the hot-reload observer alongside the poll loop.
-                    // Both tasks run concurrently; both cancelled when the scene tears down.
-                    async let _ = AppDependencies.observePreferences(
-                        dependencies.preferences,
-                        scheduler: dependencies.scheduler,
-                        store: dependencies.store
-                    )
-                    // Kick off the long-lived PollScheduler loop on first popover open.
-                    // Cancelled automatically when the scene tears down (structured concurrency).
-                    await dependencies.scheduler.start()
-                    // Plan 05-05 — Show Welcome window on first launch (D-10).
-                    // showIfNeeded() is a no-op when hasSeenWelcome == true (all subsequent launches).
-                    // Called AFTER scheduler.start() so the poll loop is live before detection probes run.
-                    await dependencies.welcomeWindowController.showIfNeeded()
-                }
         } label: {
             // Plan 02.07 (UI-09 + Pitfall 9): the menu bar icon tints to reflect the
             // highest quota fraction across all providers (green < 0.80, yellow 0.80–0.95,

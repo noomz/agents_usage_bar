@@ -13,7 +13,7 @@ import os
 /// **Pitfall 4 (wake-then-immediate-threshold race)**: PowerObserver must be instantiated and
 /// retained BEFORE the scheduler starts so the sleep/wake observers are live before any wake event.
 /// `AppDependencies.makeProduction()` constructs the observer after the scheduler for this reason,
-/// and `AgentsUsageBarApp` force-realizes it before calling `scheduler.start()`.
+/// and retains it in `Dependencies` before `startBackgroundServices()` calls `scheduler.start()`.
 ///
 /// Note: `@MainActor` ensures all stored properties and closures are accessed on the main actor,
 /// matching `AggregateStore`'s isolation (also `@MainActor`).
