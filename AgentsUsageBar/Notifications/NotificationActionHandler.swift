@@ -5,8 +5,8 @@ import UserNotifications
 ///
 /// ## Wiring (Plan 02.05)
 /// `AppDependencies.makeProduction()` constructs the handler and stores it on the
-/// `Dependencies` bag. `AgentsUsageBarApp` installs it as the
-/// `UNUserNotificationCenter.current().delegate` inside the popover scene's `.task` modifier
+/// `Dependencies` bag. `Dependencies.startBackgroundServices()` installs it as the
+/// `UNUserNotificationCenter.current().delegate` at app launch,
 /// AFTER `registerCategories(on:)` has been invoked in `init()` (Pitfall 6).
 ///
 /// ## Routing behavior

@@ -32,6 +32,18 @@ struct ProviderOrderTests {
         #expect(order(ids, preference: [ProviderID(rawValue: "engine.gone"), .codex]) == ["codex", "claude"])
     }
 
+    @Test("mixed-case engine id is honoured (issue #10)")
+    func mixedCaseEngine() {
+        // `provider-order` is always stored lowercase (V30), but a live
+        // `engine.<slug>` id preserves the exact case from config.toml
+        // (`[engine.GPU]` → `ProviderID(rawValue: "engine.GPU")`). The
+        // stored preference "engine.gpu" must still match it.
+        let liveGPU = ProviderID(rawValue: "engine.GPU")
+        let ids: [ProviderID] = [.claude, .codex, liveGPU]
+        #expect(order(ids, preference: [ProviderID(rawValue: "engine.gpu")])
+                == ["engine.GPU", "claude", "codex"])
+    }
+
     @Test("UserDefaults reader: comma list, trimmed, lowercased; empty when unset")
     func reader() {
         let suite = "test.aub.order.\(UUID().uuidString)"
@@ -51,5 +63,13 @@ struct ProviderOrderTests {
         ]
         #expect(PopoverRootView.ordered(states, preference: []).map(\.id) == [.openrouter, .claude, .codex])
         #expect(PopoverRootView.ordered(states, preference: [.codex]).map(\.id) == [.codex, .openrouter, .claude])
+    }
+
+    @Test("engines differing only by case sort deterministically when both match")
+    func caseTwinsDeterministic() {
+        let upper = ProviderID(rawValue: "engine.GPU"), lower = ProviderID(rawValue: "engine.gpu")
+        let pref = [ProviderID(rawValue: "engine.gpu")]
+        #expect(ProviderID.ordered([lower, upper], id: { $0 }, preference: pref) == [upper, lower])
+        #expect(ProviderID.ordered([upper, lower], id: { $0 }, preference: pref) == [upper, lower])
     }
 }

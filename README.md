@@ -12,7 +12,7 @@ A macOS menu bar app showing today's AI agent usage across providers — tokens,
 
 ![Menu bar popover — pending capture in Phase 6 Plan 06-05](docs/screenshots/menubar-popover.png)
 
-_Screenshot pending capture from a notarized DMG build (Phase 6 Plan 06-05 — human-gated)._
+_Screenshot pending capture from a release DMG build._
 
 ## Notifications
 
@@ -38,18 +38,22 @@ Native macOS banners when a provider crosses a quota threshold, is on pace to ex
 
 ## Status
 
-All v1 functionality (Claude, Codex, Gemini, OpenRouter, local LLMs, settings + welcome window) is complete; Phase 6 ships notarized DMG distribution, Sparkle auto-update, and OSS hygiene. See [`.planning/ROADMAP.md`](.planning/ROADMAP.md) for phase-by-phase status.
+All v1 functionality (Claude, Codex, Gemini, OpenRouter, local LLMs, settings + welcome window) is complete; Phase 6 ships ad-hoc-signed DMG distribution (notarization pending Apple Developer Program enrollment), Sparkle auto-update, and OSS hygiene. See [`.planning/ROADMAP.md`](.planning/ROADMAP.md) for phase-by-phase status.
 
 ## Install
 
-Once a signed and notarized release ships:
+Releases are currently **not notarized** by Apple: the project isn't enrolled in the paid Apple Developer Program, so builds are ad-hoc signed.
 
-1. Download the latest `AgentsUsageBar-<version>.dmg` from the [GitHub Releases page](https://github.com/lazym0m3nt/agents_usage_bar/releases).
-2. Open the DMG and drag **Agents Usage Bar** into `/Applications`.
-3. Launch it. Gatekeeper validates the Apple notarization stamp and opens the app on first launch with no warning (offline-OK thanks to stapling).
-4. The menu bar icon (`chart.bar.doc.horizontal`) appears in the top-right of the screen. Click it for the per-provider popover. First-launch Welcome window walks you through which providers are detected and what is still missing.
+1. Download the latest `AgentsUsageBar-<version>.dmg` from the [GitHub Releases page](https://github.com/noomz/agents_usage_bar/releases).
+2. Open the DMG and drag **AgentsUsageBar** into `/Applications`.
+3. Launch it. macOS blocks it the first time ("Not Opened" / "cannot be opened"). Click **Done**, not Move to Trash. Then open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway**. You only need to do this once. Alternatively, run `xattr -dr com.apple.quarantine /Applications/AgentsUsageBar.app`.
+4. The menu bar icon (`chart.bar.doc.horizontal`) appears in the top-right of the screen. Click it for the per-provider popover. On first launch, a Welcome window lists which providers were detected and what is still missing.
 
-Subsequent updates are delivered automatically via **Sparkle** — when a new EdDSA-signed release is published the app prompts to install it the next time it polls the appcast (Sparkle public key is pinned in `Info.plist`; see [`docs/entitlements.md`](docs/entitlements.md) for the trust model).
+After that, updates should arrive through **Sparkle**: when a new EdDSA-signed release is published, the app offers to install it the next time it checks the appcast. (v0.1.18 is the first ad-hoc build that launches, so an update from one ad-hoc build to the next has not been tested yet.) The Sparkle public key is pinned in `Info.plist`; see [`docs/entitlements.md`](docs/entitlements.md) for the trust model.
+
+> **Upgrading from v0.1.4–v0.1.17:** those DMGs crashed at launch ([#15](https://github.com/noomz/agents_usage_bar/issues/15)), so they can't auto-update. Download **v0.1.18 or later** by hand and replace the app.
+
+To build and install from source without an Apple certificate, run `scripts/build-local.sh` (it installs to `~/Applications`).
 
 **Requirements:** macOS 14 Sonoma or newer.
 
@@ -63,7 +67,7 @@ Subsequent updates are delivered automatically via **Sparkle** — when a new Ed
 - **Ollama Cloud** (`ollama.com/api/usage`, `/api/me`) is queried only when you have set `OLLAMA_API_KEY` / `[ollama] api_key`, or signed in with `ollama signin`. In the signed-in case the app reads `~/.ollama/id_ed25519` to sign those two requests the same way the `ollama` CLI does; the key is used in memory only — never logged, cached, or sent. From `/api/me` only the plan name is read. Turn it off with the Settings → Providers toggle (immediate) or `[ollama] cloud = false` (next launch); key and `billing_day` edits apply on the next poll.
 - **No Keychain UI in v1.** Credentials are read from environment variables and existing CLI config files (e.g. `~/.config/agents-usage-bar/config.toml`, which is created with `0600` permissions and warned about if found world-readable). See SEC-03 in [`.planning/REQUIREMENTS.md`](.planning/REQUIREMENTS.md).
 
-This promise is enforced by a deliberately minimal entitlement posture: the app declares **only** `com.apple.security.network.client` (no library-validation bypass, no JIT, no analytics frameworks) and runs under the Hardened Runtime. See [`docs/entitlements.md`](docs/entitlements.md) for the full why-unsandboxed + what-is-not-declared rationale, and [`SECURITY.md`](SECURITY.md) for the disclosure policy.
+This promise is enforced by a deliberately minimal entitlement posture: the app declares **only** `com.apple.security.network.client` (no library-validation bypass, no JIT, no analytics frameworks). Notarized builds run under the Hardened Runtime; the current ad-hoc releases are signed without it, because it would stop the bundled Sparkle framework from loading ([#15](https://github.com/noomz/agents_usage_bar/issues/15)). See [`docs/entitlements.md`](docs/entitlements.md) for the full why-unsandboxed + what-is-not-declared rationale, and [`SECURITY.md`](SECURITY.md) for the disclosure policy.
 
 (SEC-05 in [`.planning/REQUIREMENTS.md`](.planning/REQUIREMENTS.md).)
 

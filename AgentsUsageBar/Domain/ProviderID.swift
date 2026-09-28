@@ -89,9 +89,18 @@ extension ProviderID {
     /// `preference` first, in that order; then unlisted ids in `allKnown` order;
     /// then everything else (`engine.*`) alphabetically by raw value. Listed ids
     /// with no matching item are skipped.
+    ///
+    /// `preference` is matched case-insensitively: `provider-order` is always
+    /// stored lowercase (V30), but `engine.<slug>` ids preserve the exact
+    /// case configured in `config.toml` (`LocalEngineConfig.parse`), so a
+    /// case-sensitive lookup here would silently drop the user's ordering
+    /// for any mixed-case engine slug.
     public static func ordered<T>(_ items: [T], id: (T) -> ProviderID, preference: [ProviderID]) -> [T] {
+        let preferenceLower = preference.map { $0.rawValue.lowercased() }
         func key(_ pid: ProviderID) -> (Int, Int, String) {
-            if let i = preference.firstIndex(of: pid) { return (0, i, "") }
+            // Raw value breaks ties: two engines whose slugs differ only by case
+            // match the same entry, and must still sort deterministically.
+            if let i = preferenceLower.firstIndex(of: pid.rawValue.lowercased()) { return (0, i, pid.rawValue) }
             if let i = allKnown.firstIndex(of: pid) { return (1, i, "") }
             return (2, 0, pid.rawValue)
         }

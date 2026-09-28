@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import AppKit
+import UserNotifications
 @testable import AgentsUsageBar
 
 // MARK: - Test doubles
@@ -177,4 +178,68 @@ struct PollSchedulerSleepWakeTests {
 
         await scheduler.stop()
     }
+
+    // MARK: - Test 4: Issue #18 — launch-time startup is idempotent
+
+    @Test("startBackgroundServices_is_idempotent")
+    func startBackgroundServices_is_idempotent() async throws {
+        let provider = SleepWakeProvider()
+        // Advance 10s per call so a restarted loop would bypass POLL-03's 5s debounce
+        // and fetch again — making a second start observable.
+        nonisolated(unsafe) var callIndex = 0
+        let t0 = Date()
+        let clock = VirtualClock {
+            callIndex += 1
+            return t0.addingTimeInterval(Double(callIndex) * 10)
+        }
+        let store = makeStore(provider: provider, clock: clock)
+        let scheduler = PollScheduler(store: store, clock: clock, interval: .m5)
+        let defaults = UserDefaults(suiteName: "test-startup-\(UUID().uuidString)")!
+        defaults.set(true, forKey: "aub.hasSeenWelcome")  // keep the Welcome window closed
+        let preferences = UserPreferencesStore(defaults: defaults)
+        let deps = Dependencies(
+            store: store,
+            scheduler: scheduler,
+            clock: clock,
+            actionHandler: NotificationActionHandler(store: store, clock: clock),
+            powerObserver: PowerObserver(
+                store: store, scheduler: scheduler, clock: clock,
+                notificationCenter: NotificationCenter()
+            ),
+            windowActivationObserver: WindowActivationObserver(notificationCenter: NotificationCenter()),
+            preferences: preferences,
+            welcomeWindowController: WelcomeWindowController(
+                preferences: preferences,
+                config: ConfigStore(env: DictionaryEnvReader([:]), tomlPath: nil).load()
+            )
+        )
+
+        await deps.startBackgroundServices()
+        try await Task.sleep(for: .milliseconds(150))
+        let observation = try #require(deps.preferencesObservation)
+        #expect(deps.backgroundServicesStarted)
+        #expect(await scheduler.isRunning())
+        let countAfterFirst = await provider.count()
+        #expect(countAfterFirst == 1)
+
+        await deps.startBackgroundServices()
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(deps.preferencesObservation == observation, "second call must not replace the observer")
+        #expect(await provider.count() == countAfterFirst, "second call must not restart the scheduler")
+
+        observation.cancel()
+        await scheduler.stop()
+        UNUserNotificationCenter.current().delegate = nil
+    }
+
+// Guards #18's launch hook: the test bundle runs inside the app, so if no marker
+// were detected, every test run would start real polling and the Welcome window.
+@Suite("AppDelegate test-host guard")
+struct AppDelegateTestHostGuardTests {
+    @Test("the test runner process is recognised as a test host")
+    @MainActor
+    func detectsTestHost() {
+        #expect(AppDelegate.isHostingTests(ProcessInfo.processInfo.environment))
+    }
+}
 }
