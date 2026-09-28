@@ -69,7 +69,7 @@ T1|x|Domain + config: `ProviderID.ollamaCloud` in `allKnown` after `ollama`; `[o
 T2|x|Device-key signer: OpenSSH ed25519 parser, challenge builder, header; test helper generating synthetic OpenSSH key; golden header test; malformed/encrypted key tests|V3,V4,V21,V23,I3,I6
 T3|x|Credential resolver (env > toml > device) + `OllamaCloudProvider` (usage fetch, `/api/me` per launch, mapping, billing-day reset, tooltip/raw, status on 401/5xx/decode), response types; registration in `ProviderRegistryFactory` gated by V2; provider tests incl. recovery-after-fix|V1,V2,V5,V6,V7,V8,V9,V10,V11,V13,V14,V17,V18,V19,V20,I1,I2,I6
 T4|x|Surfaces: dashboard URL, detection probe, compact short label, classic/compact/quota/json golden updates for new row (classic change limited to added row), popover row check|V12,V13,V14,V15,V16,V24,C6,I7,I8
-T5|.|Hygiene + docs: check-secrets patterns (script + ci.yml), log privacy audit, README Privacy (ollama.com traffic, device-key read) + Configuration (`[ollama]` keys)|V20,V22,C3,C7,I9
+T5|x|Hygiene + docs: check-secrets patterns (script + ci.yml), log privacy audit, README Privacy (ollama.com traffic, device-key read) + Configuration (`[ollama]` keys)|V20,V22,C3,C7,I9
 T6|.|Live verification on dev machine: build, run app + `aub` with env key, config key, device key; screenshot/row check; no real values in PR text|V1,V5,V12,V13,C3
 
 ## §B

@@ -48,7 +48,7 @@ public actor OllamaCloudProvider: UsageProvider {
         } catch {
             let providerError = classify(error)
             lastStatus = .error(providerError)
-            logger.error("usage fetch failed: \(providerError.kind.rawValue, privacy: .public) \(providerError.message, privacy: .public)")
+            logger.error("usage fetch failed (\(self.client.credential.sourceKey, privacy: .public)): \(providerError.kind.rawValue, privacy: .public) \(providerError.message, privacy: .private)")
             throw providerError
         }
 

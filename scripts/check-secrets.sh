@@ -14,11 +14,13 @@
 # (the PATTERNS variable in ci.yml contains the forbidden prefixes as its definition).
 set -euo pipefail
 
-PATTERNS='sk-proj-|sk-admin-|sk-or-|AIzaSy|sk-[A-Za-z0-9]{20,}'
+# Keep identical to PATTERNS in .github/workflows/ci.yml (length-gated so short
+# fixtures such as `sk-or-v1-test` pass; see the comment block there).
+PATTERNS='sk-or-v1-[A-Za-z0-9]{40,}|AIzaSy[A-Za-z0-9_-]{30,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-admin-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|BEGIN OPENSSH PRIVATE KEY|Authorization: Bearer [A-Za-z0-9._~+/=-]{20,}|OLLAMA_API_KEY["'\'' :=]+[A-Za-z0-9._-]{24,}'
 
 FOUND=0
 
-if grep -RIEn --include='*.swift' --include='*.plist' --include='*.yml' \
+if grep -RIEn --include='*.swift' --include='*.plist' --include='*.yml' --include='*.json' \
            --exclude='ci.yml' \
            "$PATTERNS" \
            AgentsUsageBar/ AgentsUsageBarTests/ .github/ 2>/dev/null; then
