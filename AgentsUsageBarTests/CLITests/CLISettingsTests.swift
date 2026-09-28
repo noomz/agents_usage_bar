@@ -116,4 +116,12 @@ struct CLISettingsTests {
         #expect(try! store.set("provider-order", value: "").get().value == all)
         #expect(defaults.object(forKey: AUBDefaultsKey.providerOrder) == nil)
     }
+
+    @Test("provider-order accepts ollama-cloud (SPEC V15)")
+    func providerOrderAcceptsOllamaCloud() {
+        let (store, defaults) = make()
+        #expect(try! store.set("provider-order", value: "Ollama-Cloud,ollama").get().value == "ollama-cloud,ollama")
+        #expect(defaults.aubProviderOrder == [.ollamaCloud, .ollama])
+        #expect(try! store.get("provider.ollama-cloud.enabled").get().value == "true")
+    }
 }

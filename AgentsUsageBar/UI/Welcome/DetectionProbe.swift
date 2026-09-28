@@ -70,6 +70,7 @@ public enum DetectionProbe {
         let codexResult = probeCodexFS(fileManager: fileManager)
         let geminiResult = probeGeminiFS(fileManager: fileManager)
         let grokResult = probeGrok(config: config, fileManager: fileManager)
+        let ollamaCloudResult = probeOllamaCloud(config: config, fileManager: fileManager)
 
         // Per-provider port/URL values (Sendable: Int, URL, Optional<Int>)
         let lmstudioPort = config.lmstudio.port
@@ -104,6 +105,8 @@ public enum DetectionProbe {
             group.addTask { (.gemini, geminiResult) }
 
             group.addTask { (.grok, grokResult) }
+
+            group.addTask { (.ollamaCloud, ollamaCloudResult) }
 
             // 5. Ollama — HTTP probe (2s timeout via localhostHTTP)
             group.addTask {
@@ -201,6 +204,13 @@ public enum DetectionProbe {
             return .detected
         }
         return .notDetected
+    }
+
+    /// Ollama Cloud: an explicit key (env/TOML) or the `ollama signin` device key file.
+    private static func probeOllamaCloud(config: AppConfig, fileManager: FileManager) -> DetectionResult {
+        if config.ollamaCloud.apiKey != nil { return .detected }
+        let deviceKey = fileManager.homeDirectoryForCurrentUser.appending(path: ".ollama/id_ed25519")
+        return fileManager.fileExists(atPath: deviceKey.path) ? .detected : .notConfigured
     }
 
     // MARK: - HTTP probe helper (async)

@@ -37,6 +37,10 @@ extension ProviderID {
     /// for this rawValue (Phase 1 declaration).
     public static let ollama = ProviderID(rawValue: "ollama")
 
+    /// Ollama Cloud — monthly included usage from `ollama.com/api/usage` for
+    /// `:cloud` models. Remote quota row, separate from the local `ollama` row.
+    public static let ollamaCloud = ProviderID(rawValue: "ollama-cloud")
+
     /// LM Studio — http://localhost:1234 by default, port overridable via
     /// `[lmstudio].port` in config.toml (LOCAL-02). Plan 04-05 introduces
     /// this constant for `LMStudioProvider`. `displayHint` already returns
@@ -78,7 +82,7 @@ extension ProviderID {
     /// Plan 05-02 — Ordered array of all known providers in display order.
     /// Used by `UserPreferencesStore.loadAll()` and `SettingsProvidersTab` row enumeration.
     public static let allKnown: [ProviderID] = [
-        .openrouter, .claude, .codex, .gemini, .grok, .ollama, .lmstudio, .lmstudioLlamaCpp, .llamacpp
+        .openrouter, .claude, .codex, .gemini, .grok, .ollama, .ollamaCloud, .lmstudio, .lmstudioLlamaCpp, .llamacpp
     ]
 
     /// User-set provider order (`provider-order`, SPEC V31): ids listed in
@@ -109,6 +113,7 @@ extension ProviderID {
         case "gemini":     return "Gemini"
         case "grok":       return "Grok"
         case "ollama":     return "Ollama"
+        case "ollama-cloud": return "Ollama Cloud"
         case "lmstudio":   return "LM Studio"
         case "lms-llamacpp": return "LM Studio llama.cpp"
         case "llamacpp":   return "llama.cpp"

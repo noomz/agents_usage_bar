@@ -205,6 +205,7 @@
 		AA071000000000000000013A /* GrokBillingProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000013B /* GrokBillingProviderTests.swift */; };
 		AA071000000000000000014A /* AppConfigGrokTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000014B /* AppConfigGrokTests.swift */; };
 		AA071000000000000000015A /* ConfigStoreGrokTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000015B /* ConfigStoreGrokTests.swift */; };
+		AA120E57DC44B1F7A6998313 /* ConfigStoreOllamaCloudTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA125A056E3E64FD3ED4E2D9 /* ConfigStoreOllamaCloudTests.swift */; };
 		/* Plan 03-08 Task 2 — ThresholdEngine D-11 suppression + Gemini degraded integration tests */
 		AA030800000000000000012A /* AggregateStoreGeminiDegradedSuppressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030800000000000000012B /* AggregateStoreGeminiDegradedSuppressionTests.swift */; };
 		/* Plan 03-08 Task 3 — AppDependencies registration tests */
@@ -605,6 +606,7 @@
 		AA071000000000000000013B /* GrokBillingProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokBillingProviderTests.swift; sourceTree = "<group>"; };
 		AA071000000000000000014B /* AppConfigGrokTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigGrokTests.swift; sourceTree = "<group>"; };
 		AA071000000000000000015B /* ConfigStoreGrokTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStoreGrokTests.swift; sourceTree = "<group>"; };
+		AA125A056E3E64FD3ED4E2D9 /* ConfigStoreOllamaCloudTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStoreOllamaCloudTests.swift; sourceTree = "<group>"; };
 		AA030600000000000000012B /* GeminiOAuthProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiOAuthProviderTests.swift; sourceTree = "<group>"; };
 		AA030600000000000000013B /* GeminiOAuthProviderDegradedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiOAuthProviderDegradedTests.swift; sourceTree = "<group>"; };
 		AA030600000000000000020B /* gemini-quota-response-fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gemini-quota-response-fixture.json"; sourceTree = "<group>"; };
@@ -1199,6 +1201,7 @@
 				AA030800000000000000011B /* ConfigStoreCodexGeminiTests.swift */,
 				AA071000000000000000014B /* AppConfigGrokTests.swift */,
 				AA071000000000000000015B /* ConfigStoreGrokTests.swift */,
+				AA125A056E3E64FD3ED4E2D9 /* ConfigStoreOllamaCloudTests.swift */,
 				/* Plan 04-02 — AppConfig + ConfigStore local provider tests */
 				AA040200000000000000010B /* AppConfigLocalProvidersTests.swift */,
 				AA040200000000000000011B /* ConfigStoreLocalSectionsTests.swift */,
@@ -2133,6 +2136,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA071000000000000000013A /* GrokBillingProviderTests.swift in Sources */,
 				AA071000000000000000014A /* AppConfigGrokTests.swift in Sources */,
 				AA071000000000000000015A /* ConfigStoreGrokTests.swift in Sources */,
+				AA120E57DC44B1F7A6998313 /* ConfigStoreOllamaCloudTests.swift in Sources */,
 				/* Plan 04-02 — AppConfig + ConfigStore local provider tests */
 				AA040200000000000000010A /* AppConfigLocalProvidersTests.swift in Sources */,
 				AA040200000000000000011A /* ConfigStoreLocalSectionsTests.swift in Sources */,

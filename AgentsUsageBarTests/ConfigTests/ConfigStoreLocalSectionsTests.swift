@@ -9,7 +9,8 @@ import Foundation
 // additions"). No env override paths exist for local configs — they are config
 // knobs (port + enable), not secrets.
 //
-// Negative invariant: no OLLAMA_* / LMSTUDIO_* / LLAMACPP_* env reads.
+// Negative invariant: no OLLAMA_* / LMSTUDIO_* / LLAMACPP_* env reads for local
+// runtimes. (`OLLAMA_API_KEY` feeds the separate Ollama Cloud row — SPEC V1.)
 //
 // Mirrors helper patterns from ConfigStoreCodexGeminiTests (Plan 03-08).
 // Each test uses DictionaryEnvReader([:]) — never ProcessInfoEnvReader.

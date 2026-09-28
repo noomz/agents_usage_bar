@@ -191,6 +191,35 @@ struct DetectionProbeTests {
         }
     }
 
+    // MARK: - Ollama Cloud (explicit key → detected)
+
+    @Test func probeAll_ollamaCloudKeyConfigured_isDetected() async {
+        let base = makeConfig(openrouterKey: nil)
+        let config = AppConfig(
+            refreshInterval: base.refreshInterval,
+            threshold: base.threshold,
+            openrouter: base.openrouter,
+            codex: base.codex,
+            gemini: base.gemini,
+            grok: base.grok,
+            ollama: base.ollama,
+            ollamaCloud: OllamaCloudConfig(
+                enabled: true,
+                apiKey: Secret("fake-ollama-key"),
+                apiKeySource: .env,
+                billingDay: nil
+            ),
+            lmstudio: base.lmstudio,
+            llamacpp: base.llamacpp
+        )
+        let results = await DetectionProbe.probeAll(
+            config: config,
+            localhostHTTP: makeStubHTTP(status: 200),
+            processCatalog: StaticProcessCatalog()
+        )
+        #expect(results[.ollamaCloud] == .detected)
+    }
+
     // MARK: - CFG-06 source walk
 
     @Test func cfg06_noShellRcReferences_inDetectionProbe() throws {

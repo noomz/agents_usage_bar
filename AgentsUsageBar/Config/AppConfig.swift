@@ -21,6 +21,8 @@ public struct AppConfig: Sendable, Equatable {
     public let grok: GrokConfig
     /// Per-provider configuration for Ollama localhost runtime (Plan 04-02 — LOCAL-01).
     public let ollama: OllamaConfig
+    /// Ollama Cloud usage row (`ollama-cloud`), keyed from the `[ollama]` TOML section.
+    public let ollamaCloud: OllamaCloudConfig
     /// Per-provider configuration for LM Studio localhost runtime (Plan 04-02 — LOCAL-02).
     public let lmstudio: LMStudioConfig
     /// Per-provider configuration for llama.cpp / llamafile localhost runtime (Plan 04-02 — LOCAL-03).
@@ -36,6 +38,7 @@ public struct AppConfig: Sendable, Equatable {
         gemini: GeminiConfig,
         grok: GrokConfig,
         ollama: OllamaConfig,
+        ollamaCloud: OllamaCloudConfig = .defaults,
         lmstudio: LMStudioConfig,
         llamacpp: LlamaCppConfig,
         engines: [LocalEngineConfig] = LocalEngineConfig.builtIns
@@ -47,6 +50,7 @@ public struct AppConfig: Sendable, Equatable {
         self.gemini = gemini
         self.grok = grok
         self.ollama = ollama
+        self.ollamaCloud = ollamaCloud
         self.lmstudio = lmstudio
         self.llamacpp = llamacpp
         self.engines = engines
@@ -80,6 +84,7 @@ public struct AppConfig: Sendable, Equatable {
             apiURL: URL(string: "https://cli-chat-proxy.grok.com/v1")!
         ),
         ollama: OllamaConfig(enabled: true),
+        ollamaCloud: .defaults,
         lmstudio: LMStudioConfig(enabled: true, port: 1234),
         llamacpp: LlamaCppConfig(enabled: true, port: nil),
         engines: LocalEngineConfig.builtIns
@@ -268,6 +273,44 @@ public struct OllamaConfig: Sendable, Equatable {
 
     public init(enabled: Bool) {
         self.enabled = enabled
+    }
+}
+
+// MARK: - OllamaCloudConfig
+
+/// Configuration for the Ollama Cloud usage row (`ollama-cloud`, SPEC V1/V2/V8).
+///
+/// Keys live in the `[ollama]` TOML section: `cloud` (enable), `api_key`,
+/// `billing_day`. `apiKey` resolves `OLLAMA_API_KEY` env > `[ollama] api_key`;
+/// when both are absent the provider falls back to the `ollama signin` device key.
+public struct OllamaCloudConfig: Sendable, Equatable {
+    /// Whether the cloud row may register. Default `true`; `[ollama] cloud = false` opts out.
+    public let enabled: Bool
+
+    /// Explicit API key (env or TOML). `nil` → device-key signing. Wrapped in `Secret` (SEC-01).
+    public let apiKey: Secret?
+
+    /// Where `apiKey` came from; `nil` when `apiKey` is `nil`.
+    public let apiKeySource: CredentialSource?
+
+    /// Day of month (1…31) the monthly included usage resets; `nil` → reset unknown.
+    public let billingDay: Int?
+
+    public enum CredentialSource: String, Sendable, Equatable {
+        case env, config
+    }
+
+    public init(enabled: Bool, apiKey: Secret?, apiKeySource: CredentialSource?, billingDay: Int?) {
+        self.enabled = enabled
+        self.apiKey = apiKey
+        self.apiKeySource = apiKey == nil ? nil : apiKeySource
+        self.billingDay = billingDay
+    }
+
+    public static let defaults = OllamaCloudConfig(enabled: true, apiKey: nil, apiKeySource: nil, billingDay: nil)
+
+    func withEnabled(_ enabled: Bool) -> OllamaCloudConfig {
+        OllamaCloudConfig(enabled: enabled, apiKey: apiKey, apiKeySource: apiKeySource, billingDay: billingDay)
     }
 }
 
