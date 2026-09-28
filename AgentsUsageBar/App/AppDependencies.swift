@@ -113,7 +113,7 @@ public enum AppDependencies {
 
     /// Builds the full production dependency graph.
     ///
-    /// Called once from `AgentsUsageBarApp` via `@State private var dependencies = AppDependencies.makeProduction()`.
+    /// Called once from `AppDelegate.init()`; `AgentsUsageBarApp` reads it via the delegate.
     public static func makeProduction() -> Dependencies {
         // 1. Wall clock (shared across all subsystems)
         let clock: any Clock = SystemClock()

@@ -231,4 +231,15 @@ struct PollSchedulerSleepWakeTests {
         await scheduler.stop()
         UNUserNotificationCenter.current().delegate = nil
     }
+
+// Guards #18's launch hook: the test bundle runs inside the app, so if no marker
+// were detected, every test run would start real polling and the Welcome window.
+@Suite("AppDelegate test-host guard")
+struct AppDelegateTestHostGuardTests {
+    @Test("the test runner process is recognised as a test host")
+    @MainActor
+    func detectsTestHost() {
+        #expect(AppDelegate.isHostingTests(ProcessInfo.processInfo.environment))
+    }
+}
 }
