@@ -218,7 +218,16 @@ public enum CompactTextRenderer {
         if p.id == .grok, let period = snap.raw["period"], !period.isEmpty, period.count <= 10 {
             return period
         }
+        if p.id == .gemini { return shortGeminiModel(w.name) }
         return w.name
+    }
+
+    /// `gemini-2.5-flash-lite` → `2.5-lite` (V11). Prefix/suffix only, no regex (V37).
+    static func shortGeminiModel(_ model: String) -> String {
+        var s = Substring(model)
+        if s.hasPrefix("gemini-") { s = s.dropFirst("gemini-".count) }
+        if s.hasSuffix("-flash-lite") { s = s.dropLast("-flash-lite".count) + "-lite" }
+        return s.isEmpty ? model : String(s)
     }
 
     static func money(_ p: ProviderReport, _ snap: UsageSnapshot) -> String? {
@@ -226,10 +235,7 @@ public enum CompactTextRenderer {
         case .grok:
             return "no cost data"
         case .openrouter:
-            var parts: [String] = []
-            if let balance = snap.balanceUSD { parts.append("\(CLIFormat.usd(balance)) left") }
-            if let day = snap.periodSpendUSD?.day { parts.append("\(CLIFormat.usd(day)) today") }
-            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+            return snap.balanceUSD.map { "\(CLIFormat.usd($0)) left" }
         default:
             return spent(snap.costTodayUSD)
         }

@@ -70,6 +70,17 @@ struct CompactTextRendererTests {
         ])
     }
 
+    @Test("Gemini model window labels are shortened (V11)", arguments: [
+        ("gemini-2.5-pro", "2.5-pro"),
+        ("gemini-2.5-flash", "2.5-flash"),
+        ("gemini-2.5-flash-lite", "2.5-lite"),
+        ("custom-model", "custom-model"),
+        ("gemini-", "gemini-"),
+    ])
+    func geminiShortLabel(model: String, expected: String) {
+        #expect(CompactTextRenderer.shortGeminiModel(model) == expected)
+    }
+
     @Test("header counts each account row and every ! row")
     func headerCounts() {
         let lines = Self.render().split(separator: "\n").map(String.init)
