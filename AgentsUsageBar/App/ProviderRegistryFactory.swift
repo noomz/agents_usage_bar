@@ -38,7 +38,8 @@ public enum ProviderRegistryFactory {
         localhostHTTP: any HTTPClient,
         cache: any CacheStore,
         clock: any Clock,
-        processCatalog: any ProcessCatalog = ProcProcessCatalog()
+        processCatalog: any ProcessCatalog = ProcProcessCatalog(),
+        loadOllamaDeviceKey: () -> OllamaDeviceSigner? = { OllamaDeviceSigner.load() }
     ) -> ProviderRegistry {
         var registry: [any UsageProvider] = []
         var placeholders: [PlaceholderSeed] = []
@@ -222,6 +223,15 @@ public enum ProviderRegistryFactory {
                 providerID: .ollama,
                 displayName: "Ollama",
                 status: .notRunning
+            ))
+        }
+
+        // SPEC V2: register only when a credential resolves; no placeholder row otherwise.
+        if config.ollamaCloud.enabled,
+           let credential = OllamaCloudCredential.resolve(config: config.ollamaCloud, loadDevice: loadOllamaDeviceKey) {
+            registry.append(OllamaCloudProvider(
+                client: OllamaCloudClient(http: http, credential: credential),
+                billingDay: config.ollamaCloud.billingDay
             ))
         }
 

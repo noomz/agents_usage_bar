@@ -246,11 +246,15 @@
 		/* Plan 04-04 — OllamaProvider + response models (app target) */
 		AA040404000000000000001A /* OllamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000001B /* OllamaProvider.swift */; };
 		AA12965169CCCF1CE893AFE7 /* OllamaDeviceSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1299DD93976A929BE77DD2 /* OllamaDeviceSigner.swift */; };
+		AA129AD699FFB1A06729DCF7 /* OllamaCloudProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA121A2EB21A1B183EB4CA38 /* OllamaCloudProvider.swift */; };
+		AA1227493D15AE9308F444EA /* OllamaCloudClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA12FBD85586BE66021CA804 /* OllamaCloudClient.swift */; };
+		AA12A42560D115E6EF0C0FDF /* OllamaCloudResponses.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1244AACDF4A7FC158E2882 /* OllamaCloudResponses.swift */; };
 		AA040404000000000000002A /* OllamaPsResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000002B /* OllamaPsResponse.swift */; };
 		AA040404000000000000003A /* OllamaTagsResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000003B /* OllamaTagsResponse.swift */; };
 		/* Plan 04-04 — OllamaProvider test sources (test target) */
 		AA040404000000000000010A /* OllamaProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000010B /* OllamaProviderTests.swift */; };
 		AA126F00F9B3D94A90C934F7 /* OllamaDeviceSignerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA120D4A9F713FFA846C873C /* OllamaDeviceSignerTests.swift */; };
+		AA121C5423DFC3C9611DBD20 /* OllamaCloudProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1290CCC119B86E7ECA1F5A /* OllamaCloudProviderTests.swift */; };
 		AA040404000000000000011A /* OllamaResponsesCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040404000000000000011B /* OllamaResponsesCodableTests.swift */; };
 		/* Plan 04-05 — LMStudioProvider + response models (app target) */
 		AA040500000000000000001A /* LMStudioProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA040500000000000000001B /* LMStudioProvider.swift */; };
@@ -648,11 +652,15 @@
 		/* Plan 04-04 — OllamaProvider + response models file references */
 		AA040404000000000000001B /* OllamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaProvider.swift; sourceTree = "<group>"; };
 		AA1299DD93976A929BE77DD2 /* OllamaDeviceSigner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaDeviceSigner.swift; sourceTree = "<group>"; };
+		AA121A2EB21A1B183EB4CA38 /* OllamaCloudProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaCloudProvider.swift; sourceTree = "<group>"; };
+		AA12FBD85586BE66021CA804 /* OllamaCloudClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaCloudClient.swift; sourceTree = "<group>"; };
+		AA1244AACDF4A7FC158E2882 /* OllamaCloudResponses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaCloudResponses.swift; sourceTree = "<group>"; };
 		AA040404000000000000002B /* OllamaPsResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaPsResponse.swift; sourceTree = "<group>"; };
 		AA040404000000000000003B /* OllamaTagsResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaTagsResponse.swift; sourceTree = "<group>"; };
 		/* Plan 04-04 — test file references */
 		AA040404000000000000010B /* OllamaProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaProviderTests.swift; sourceTree = "<group>"; };
 		AA120D4A9F713FFA846C873C /* OllamaDeviceSignerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaDeviceSignerTests.swift; sourceTree = "<group>"; };
+		AA1290CCC119B86E7ECA1F5A /* OllamaCloudProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaCloudProviderTests.swift; sourceTree = "<group>"; };
 		AA040404000000000000011B /* OllamaResponsesCodableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaResponsesCodableTests.swift; sourceTree = "<group>"; };
 		/* Plan 04-04 — fixture file references (loaded via #filePath, not bundle) */
 		AA040404000000000000020B /* ollama-ps-single-model.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ollama-ps-single-model.json"; sourceTree = "<group>"; };
@@ -984,6 +992,9 @@
 		AA125A65D0FF0CF34BCA3A6A /* OllamaCloud */ = {
 			isa = PBXGroup;
 			children = (
+				AA121A2EB21A1B183EB4CA38 /* OllamaCloudProvider.swift */,
+				AA12FBD85586BE66021CA804 /* OllamaCloudClient.swift */,
+				AA1244AACDF4A7FC158E2882 /* OllamaCloudResponses.swift */,
 				AA1299DD93976A929BE77DD2 /* OllamaDeviceSigner.swift */,
 			);
 			path = OllamaCloud;
@@ -1540,6 +1551,7 @@
 		AA1258D4A0AD2D17BF93C4D9 /* ProvidersOllamaCloudTests */ = {
 			isa = PBXGroup;
 			children = (
+				AA1290CCC119B86E7ECA1F5A /* OllamaCloudProviderTests.swift */,
 				AA120D4A9F713FFA846C873C /* OllamaDeviceSignerTests.swift */,
 			);
 			path = ProvidersOllamaCloudTests;
@@ -2003,6 +2015,9 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				/* Plan 04-04 — OllamaProvider actor + response models */
 				AA040404000000000000001A /* OllamaProvider.swift in Sources */,
 				AA12965169CCCF1CE893AFE7 /* OllamaDeviceSigner.swift in Sources */,
+				AA129AD699FFB1A06729DCF7 /* OllamaCloudProvider.swift in Sources */,
+				AA1227493D15AE9308F444EA /* OllamaCloudClient.swift in Sources */,
+				AA12A42560D115E6EF0C0FDF /* OllamaCloudResponses.swift in Sources */,
 				AA040404000000000000002A /* OllamaPsResponse.swift in Sources */,
 				AA040404000000000000003A /* OllamaTagsResponse.swift in Sources */,
 				/* Plan 04-05 — LMStudioProvider actor + response models */
@@ -2183,6 +2198,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				/* Plan 04-04 — OllamaProvider tests */
 				AA040404000000000000010A /* OllamaProviderTests.swift in Sources */,
 				AA126F00F9B3D94A90C934F7 /* OllamaDeviceSignerTests.swift in Sources */,
+				AA121C5423DFC3C9611DBD20 /* OllamaCloudProviderTests.swift in Sources */,
 				AA040404000000000000011A /* OllamaResponsesCodableTests.swift in Sources */,
 				/* Plan 04-05 — LMStudioProvider tests */
 				AA040500000000000000010A /* LMStudioProviderTests.swift in Sources */,
