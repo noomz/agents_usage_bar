@@ -107,8 +107,8 @@ struct CompactTextRendererTests {
     func headerCounts() {
         let lines = Self.render().split(separator: "\n").map(String.init)
         #expect(lines[0] == "today $273.93 spent · 233.6M tok · 05:20")
-        // ≥80: OpenRouter 94. 50–79: Codex 69. !: Gemini (degraded, under its bar) + Grok.
-        #expect(lines[1] == "1 at ≥80% · 1 at 50–79% · 2 unavailable")
+        // ≥80: OpenRouter 94. 50–79: Codex 69, Ollama Cloud 62. !: Gemini (degraded, under its bar) + Grok.
+        #expect(lines[1] == "1 at ≥80% · 2 at 50–79% · 2 unavailable")
     }
 
     @Test("rows follow known-provider order, never severity")
@@ -193,7 +193,14 @@ struct CompactTextRendererTests {
     @Test("CLITheme.compact renders the same rows as the renderer")
     func themeRoutes() {
         let viaTheme = CLITheme.compact.render(CLIReportFixture.rich(), view: .quota, color: false)
-        #expect(viaTheme.hasPrefix("1 at ≥80% · 1 at 50–79% · 2 unavailable\n"))
+        #expect(viaTheme.hasPrefix("1 at ≥80% · 2 at 50–79% · 2 unavailable\n"))
+    }
+
+    @Test("Ollama Cloud row is labelled mo, never 30d (SPEC V24)")
+    func ollamaCloudMonthlyLabel() throws {
+        let row = try #require(Self.render().split(separator: "\n").first { $0.contains("Ollama Cloud") })
+        #expect(row.contains(" mo "))
+        #expect(!row.contains("30d"))
     }
 
     /// V35 perf budget, run by hand: `TEST_RUNNER_AUB_BENCH=1 xcodebuild test …

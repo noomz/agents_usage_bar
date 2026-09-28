@@ -105,7 +105,7 @@ struct OllamaCloudProviderTests {
         #expect(snap.quotaWindows?.count == 1)          // weekly ignored (C4)
         #expect(window.name == "mo")
         #expect(window.utilization == 0.25)
-        #expect(window.duration == TimeInterval(30 * 24 * 3600))
+        #expect(window.duration == nil)                  // V24: compact labels it `mo`
         #expect(window.resetsAt == nil)                  // no billing_day → ↻ unknown
         #expect(snap.quota == Quota(used: 0.25, limit: 1, remaining: 0.75))
         #expect(snap.costTodayUSD == nil)

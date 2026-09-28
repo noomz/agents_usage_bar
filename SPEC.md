@@ -39,7 +39,7 @@ V5|Explicit key (env/toml) 401 → status `unauthenticated`, hint `check OLLAMA_
 V6|After credential fix, row leaves `unauthenticated` on the next poll (no stuck state via cache seed / POLL-06 skip). Test required.
 
 ### Mapping (ticket 04)
-V7|`limits.monthly.usage` → one `QuotaWindow(name: "mo", utilization: clamp 0…1, resetsAt: V8, duration: 30 d)`. Missing `limits.monthly` or `usage` → no window, row shows `no limit`-style empty state, status not error. Other `limits.*` keys ignored.
+V7|`limits.monthly.usage` → one `QuotaWindow(name: "mo", utilization: clamp 0…1, resetsAt: V8, duration: nil)` (V24). Missing `limits.monthly` or `usage` → no window, row shows `no limit`-style empty state, status not error. Other `limits.*` keys ignored.
 V8|`resetsAt`: `billing_day` N set → next local midnight on day N strictly after `now`, N clamped to last day of month when month shorter; `Calendar(identifier: .gregorian)` + current time zone (Buddhist-calendar gotcha). Unset/invalid → `nil` → `↻ unknown`. Invalid (∉1…31) logged once, treated as unset.
 V9|`hasQuota: true`, `hasCost: false`, `hasTokens: false`, `isLocal: false`. Never contributes to today cost/token totals or rollups.
 V10|`activity.cost` parsed as `Decimal` from string; exposed only as tooltip text + `--json` raw; never cost column/totals. Unparseable → omitted.
@@ -59,6 +59,7 @@ V19|Only `Plan` decoded from `/api/me` (Codable struct has one optional field); 
 V20|Logs: status codes + credential source public; everything else `privacy: .private`; no header values ever.
 V21|Tests use synthetic data only: ed25519 key generated in-test and serialised to OpenSSH format by test helper; made-up usage values. Signer header format pinned by golden test per V23.
 V22|`check-secrets.sh` (+ ci.yml `PATTERNS`) blocks `BEGIN OPENSSH PRIVATE KEY` and a literal `Authorization: Bearer ` followed by a long token in source/fixtures; patterns never derived from a real key.
+V24|Ollama Cloud window has no `duration` (API reports none; calendar months not fixed-length). Compact `windowLabel` derives label from duration first, so non-nil duration would print `30d`; row must print `mo`. Test on compact render.
 V23|CryptoKit Ed25519 signatures randomized → never golden full header/signature. Golden pins deterministic parts (fixed key + fixed `ts`): pubkey field, challenge string, signed URL; signature part checked by `publicKey.isValidSignature` over challenge + format `<pubkey field>:<base64 64-byte sig>`.
 
 ## §T
@@ -67,7 +68,7 @@ id|status|task|cites
 T1|x|Domain + config: `ProviderID.ollamaCloud` in `allKnown` after `ollama`; `[ollama] api_key`/`cloud`/`billing_day` + `OLLAMA_API_KEY` in AppConfig/ConfigStore; provider-order accepts id; config tests|V1,V2,V8,V15,I4,I5,I8
 T2|x|Device-key signer: OpenSSH ed25519 parser, challenge builder, header; test helper generating synthetic OpenSSH key; golden header test; malformed/encrypted key tests|V3,V4,V21,V23,I3,I6
 T3|x|Credential resolver (env > toml > device) + `OllamaCloudProvider` (usage fetch, `/api/me` per launch, mapping, billing-day reset, tooltip/raw, status on 401/5xx/decode), response types; registration in `ProviderRegistryFactory` gated by V2; provider tests incl. recovery-after-fix|V1,V2,V5,V6,V7,V8,V9,V10,V11,V13,V14,V17,V18,V19,V20,I1,I2,I6
-T4|.|Surfaces: dashboard URL, detection probe, compact short label, classic/compact/quota/json golden updates for new row (classic change limited to added row), popover row check|V12,V13,V14,V15,V16,C6,I7,I8
+T4|x|Surfaces: dashboard URL, detection probe, compact short label, classic/compact/quota/json golden updates for new row (classic change limited to added row), popover row check|V12,V13,V14,V15,V16,V24,C6,I7,I8
 T5|.|Hygiene + docs: check-secrets patterns (script + ci.yml), log privacy audit, README Privacy (ollama.com traffic, device-key read) + Configuration (`[ollama]` keys)|V20,V22,C3,C7,I9
 T6|.|Live verification on dev machine: build, run app + `aub` with env key, config key, device key; screenshot/row check; no real values in PR text|V1,V5,V12,V13,C3
 
@@ -75,3 +76,4 @@ T6|.|Live verification on dev machine: build, run app + `aub` with env key, conf
 
 id|date|cause|fix
 B1|2026-09-28|V21 assumed deterministic Ed25519 signing ("exact header" golden); CryptoKit `Curve25519.Signing` randomizes signatures — same message signs differently, both verify|V23
+B2|2026-09-28|V7 gave window `duration: 30 d`; `CompactTextRenderer.windowLabel` prefers duration → row label `30d`, not `mo`, misleading for billing-day monthly reset|V24

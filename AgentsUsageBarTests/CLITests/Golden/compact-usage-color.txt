@@ -1,5 +1,5 @@
 today $273.93 spent · 233.6M tok · 05:20
-1 at ≥80% · 1 at 50–79% · 2 unavailable
+1 at ≥80% · 2 at 50–79% · 2 unavailable
 [31m▲[0m OpenRouter   [31m█████████▍[0m  94% credits               $9.40 left
   Claude                                          $273.86 spent
     personal   [32m█▊[0m[90m░░░░░░░░[0m  17% 7d      ↻ unknown   $53.63 spent
@@ -8,4 +8,5 @@ today $273.93 spent · 233.6M tok · 05:20
   Gemini       [32m█▉[0m[90m░░░░░░░░[0m  19% 2.5-pro ↻ 1h
 [31m! Gemini       unavailable[0m
 [31m! Grok         unauthenticated[0m
+[33m△[0m Ollama Cloud [33m██████▎[0m[90m░░░[0m  62% mo      ↻ 13d 18h
   local ○ Ollama stopped  ● llama.cpp Qwen3.5-4B

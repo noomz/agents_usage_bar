@@ -171,6 +171,29 @@
       "status" : "notRunning"
     },
     {
+      "displayName" : "Ollama Cloud",
+      "id" : "ollama-cloud",
+      "quota" : {
+        "fraction" : 0.62,
+        "limit" : 1,
+        "remaining" : 0.38,
+        "used" : 0.62
+      },
+      "quotaWindows" : [
+        {
+          "name" : "mo",
+          "resetsAt" : "2026-10-08T00:00:00Z",
+          "utilization" : 0.62
+        }
+      ],
+      "raw" : {
+        "credentialSource" : "env",
+        "ownSpendLast4WeeksUSD" : "4.5",
+        "plan" : "pro"
+      },
+      "status" : "ok"
+    },
+    {
       "displayName" : "LM Studio llama.cpp",
       "id" : "lms-llamacpp",
       "raw" : {

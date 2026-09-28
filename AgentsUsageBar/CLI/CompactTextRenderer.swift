@@ -363,7 +363,7 @@ public enum CompactTextRenderer {
 
     static let shortLabels: [ProviderID: String] = [
         .openrouter: "OpenRouter", .claude: "Claude", .codex: "Codex", .gemini: "Gemini",
-        .grok: "Grok", .ollama: "Ollama", .lmstudio: "LM Studio", .llamacpp: "llama.cpp",
+        .grok: "Grok", .ollama: "Ollama", .ollamaCloud: "Ollama Cloud", .lmstudio: "LM Studio", .llamacpp: "llama.cpp",
     ]
 
     static func label(for p: ProviderReport) -> String {

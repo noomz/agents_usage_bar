@@ -206,11 +206,14 @@ public enum DetectionProbe {
         return .notDetected
     }
 
-    /// Ollama Cloud: an explicit key (env/TOML) or the `ollama signin` device key file.
+    /// Ollama Cloud: detected iff a credential resolves (SPEC V2/V16) — an explicit
+    /// key, or an `ollama signin` device key that actually parses.
     private static func probeOllamaCloud(config: AppConfig, fileManager: FileManager) -> DetectionResult {
-        if config.ollamaCloud.apiKey != nil { return .detected }
-        let deviceKey = fileManager.homeDirectoryForCurrentUser.appending(path: ".ollama/id_ed25519")
-        return fileManager.fileExists(atPath: deviceKey.path) ? .detected : .notConfigured
+        let keyURL = OllamaDeviceSigner.defaultKeyURL(home: fileManager.homeDirectoryForCurrentUser)
+        let credential = OllamaCloudCredential.resolve(config: config.ollamaCloud) {
+            OllamaDeviceSigner.load(from: keyURL)
+        }
+        return credential != nil ? .detected : .notConfigured
     }
 
     // MARK: - HTTP probe helper (async)

@@ -94,6 +94,23 @@
     "status" : "notRunning"
   },
   {
+    "id" : "ollama-cloud",
+    "quota" : {
+      "fraction" : 0.62,
+      "limit" : 1,
+      "remaining" : 0.38,
+      "used" : 0.62
+    },
+    "quotaWindows" : [
+      {
+        "name" : "mo",
+        "resetsAt" : "2026-10-08T00:00:00Z",
+        "utilization" : 0.62
+      }
+    ],
+    "status" : "ok"
+  },
+  {
     "id" : "lms-llamacpp",
     "status" : "notRunning"
   },

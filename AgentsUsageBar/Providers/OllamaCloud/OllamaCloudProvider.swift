@@ -20,8 +20,9 @@ public actor OllamaCloudProvider: UsageProvider {
         isLocal: false
     )
 
+    /// No `duration`: the API reports none and calendar months are not fixed-length;
+    /// compact would otherwise label the row `30d` instead of `mo` (SPEC V24).
     static let windowName = "mo"
-    static let windowDuration: TimeInterval = 30 * 24 * 3600
 
     private let client: OllamaCloudClient
     private let billingDay: Int?
@@ -89,8 +90,7 @@ public actor OllamaCloudProvider: UsageProvider {
             QuotaWindow(
                 name: windowName,
                 utilization: min(max(fraction, 0), 1),
-                resetsAt: nextReset(billingDay: billingDay, after: now, timeZone: timeZone),
-                duration: windowDuration
+                resetsAt: nextReset(billingDay: billingDay, after: now, timeZone: timeZone)
             )
         }
         let ownSpend = usage.activity?.cost.flatMap { Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX")) }
