@@ -7,8 +7,7 @@ import Foundation
 ///
 /// **Phase 4 addition — `.notRunning` (Plan 04-01 / D-01):**
 /// Localhost-specific muted-gray state — the server process is not listening at the
-/// well-known port. MUST remain NON-terminal so the next 5-min poll re-probes; deliberately
-/// omitted from the POLL-06 skip match in `AggregateStore.performRefresh` so that the row
+/// well-known port. MUST remain NON-terminal so the next 5-min poll re-probes and the row
 /// flips to `.ok(...)` the moment the user runs `ollama serve`.
 public enum ProviderStatus: Sendable, Equatable, Codable {
 
@@ -20,17 +19,16 @@ public enum ProviderStatus: Sendable, Equatable, Codable {
 
     /// No API key configured or the key was rejected (HTTP 401/403).
     ///
-    /// **POLL-06 (Plan 02.06):** This status is TERMINAL until provider config changes —
-    /// the AggregateStore skips refreshing any provider in `.unauthenticated` state until
-    /// the composition root is rebuilt (typically requires app restart). 4xx responses
-    /// other than 429 (e.g. 401/402/403) map to this case via `ProviderError.from(_:)`.
+    /// In `AggregateStore` this is only a placeholder status (unconfigured provider,
+    /// cache restore, re-enable). It never stops a registered provider from being
+    /// fetched; a rejected key surfaces as `.error(.auth)` and is re-probed each tick
+    /// without tripping the breaker (POLL-06).
     case unauthenticated
 
     /// Localhost-runtime-specific muted state: the server process is not listening at the
     /// well-known port (ECONNREFUSED / NXDOMAIN / TCP RST / 2s-timeout on the localhost tier).
     ///
-    /// **NON-terminal (D-01 / LOCAL-04):** deliberately absent from the POLL-06 terminal-skip
-    /// block in `AggregateStore.performRefresh` — every 5-min tick re-probes the port so the
+    /// **NON-terminal (D-01 / LOCAL-04):** every 5-min tick re-probes the port so the
     /// row flips to `.ok(...)` as soon as the user starts the runtime.
     /// Maps to `.gray` via `StatusDot.dotColor` (LOCAL-04 muted-never-red).
     case notRunning
