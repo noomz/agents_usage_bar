@@ -94,7 +94,9 @@ extension ProviderID {
     public static func ordered<T>(_ items: [T], id: (T) -> ProviderID, preference: [ProviderID]) -> [T] {
         let preferenceLower = preference.map { $0.rawValue.lowercased() }
         func key(_ pid: ProviderID) -> (Int, Int, String) {
-            if let i = preferenceLower.firstIndex(of: pid.rawValue.lowercased()) { return (0, i, "") }
+            // Raw value breaks ties: two engines whose slugs differ only by case
+            // match the same entry, and must still sort deterministically.
+            if let i = preferenceLower.firstIndex(of: pid.rawValue.lowercased()) { return (0, i, pid.rawValue) }
             if let i = allKnown.firstIndex(of: pid) { return (1, i, "") }
             return (2, 0, pid.rawValue)
         }
