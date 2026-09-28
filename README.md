@@ -42,14 +42,18 @@ All v1 functionality (Claude, Codex, Gemini, OpenRouter, local LLMs, settings + 
 
 ## Install
 
-Once a signed and notarized release ships:
+Releases are currently **not notarized** by Apple: the project isn't enrolled in the paid Apple Developer Program, so builds are ad-hoc signed.
 
-1. Download the latest `AgentsUsageBar-<version>.dmg` from the [GitHub Releases page](https://github.com/lazym0m3nt/agents_usage_bar/releases).
+1. Download the latest `AgentsUsageBar-<version>.dmg` from the [GitHub Releases page](https://github.com/noomz/agents_usage_bar/releases).
 2. Open the DMG and drag **Agents Usage Bar** into `/Applications`.
-3. Launch it. Gatekeeper validates the Apple notarization stamp and opens the app on first launch with no warning (offline-OK thanks to stapling).
-4. The menu bar icon (`chart.bar.doc.horizontal`) appears in the top-right of the screen. Click it for the per-provider popover. First-launch Welcome window walks you through which providers are detected and what is still missing.
+3. Launch it. macOS will say it "cannot be opened". Open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway**. You only need to do this once. Alternatively, run `xattr -dr com.apple.quarantine /Applications/AgentsUsageBar.app`.
+4. The menu bar icon (`chart.bar.doc.horizontal`) appears in the top-right of the screen. Click it for the per-provider popover. On first launch, a Welcome window lists which providers were detected and what is still missing.
 
-Subsequent updates are delivered automatically via **Sparkle** — when a new EdDSA-signed release is published the app prompts to install it the next time it polls the appcast (Sparkle public key is pinned in `Info.plist`; see [`docs/entitlements.md`](docs/entitlements.md) for the trust model).
+After that, updates arrive automatically through **Sparkle**. When a new EdDSA-signed release is published, the app offers to install it the next time it checks the appcast. The Sparkle public key is pinned in `Info.plist`; see [`docs/entitlements.md`](docs/entitlements.md) for the trust model.
+
+> **Upgrading from v0.1.4–v0.1.17:** those DMGs crashed at launch ([#15](https://github.com/noomz/agents_usage_bar/issues/15)), so they can't auto-update. Download **v0.1.18 or later** by hand and replace the app.
+
+To build and install from source without an Apple certificate, run `scripts/build-local.sh`.
 
 **Requirements:** macOS 14 Sonoma or newer.
 
