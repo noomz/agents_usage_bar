@@ -61,7 +61,7 @@ public enum CompactTextRenderer {
             out.append(headerTotals(report, timeZone: timeZone))
         }
         out.append(severityLine(lines))
-        if report.providers.isEmpty {
+        if providers.isEmpty {
             let message = report.source == .cached
                 ? "no cached data yet — run aub without --cached"
                 : "no providers enabled"
@@ -79,9 +79,11 @@ public enum CompactTextRenderer {
     enum Severity: Equatable, Sendable {
         case normal, warning, critical
 
+        /// Banded on the displayed whole percent so glyph, colour and number agree (V9).
         init(_ fraction: Double?) {
             guard let f = fraction else { self = .normal; return }
-            if f >= 0.80 { self = .critical } else if f >= 0.50 { self = .warning } else { self = .normal }
+            let pct = Int((f * 100).rounded())
+            if pct >= 80 { self = .critical } else if pct >= 50 { self = .warning } else { self = .normal }
         }
 
         var glyph: Character {
@@ -144,13 +146,13 @@ public enum CompactTextRenderer {
 
     /// `232.4M`; below 1000 the plain count.
     static func siTokens(_ n: Int) -> String {
-        let v = Double(n)
-        switch v {
-        case ..<1_000: return "\(n)"
-        case ..<1_000_000: return String(format: "%.1fK", v / 1_000)
-        case ..<1_000_000_000: return String(format: "%.1fM", v / 1_000_000)
-        default: return String(format: "%.1fB", v / 1_000_000_000)
+        if n < 1_000 { return "\(n)" }
+        // Round before picking the unit so 999_950 is `1.0M`, not `1000.0K`.
+        for (scale, unit) in [(1e3, "K"), (1e6, "M")] {
+            let x = (Double(n) / scale * 10).rounded() / 10
+            if x < 1_000 { return String(format: "%.1f", x) + unit }
         }
+        return String(format: "%.1fB", Double(n) / 1e9)
     }
 
     // MARK: - Usage view rows
@@ -277,7 +279,12 @@ public enum CompactTextRenderer {
             rows.append((name, .text(""), "", nil))
             for account in accountsInOrder(snap) {
                 let glance = account.value.quotaGlance
-                for (i, window) in [glance.fiveHours, glance.sevenDays].compactMap({ $0 }).enumerated() {
+                let windows = [glance.fiveHours, glance.sevenDays].compactMap { $0 }
+                guard !windows.isEmpty else {
+                    rows.append((account.name, .text("no limit"), "", nil))
+                    continue
+                }
+                for (i, window) in windows.enumerated() {
                     let (gauge, windowLabel, reset) = claudeWindow(window, now: now)
                     rows.append((i == 0 ? account.name : "", gauge, windowLabel, reset))
                 }
