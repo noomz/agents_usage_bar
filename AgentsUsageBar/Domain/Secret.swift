@@ -11,7 +11,7 @@ import Foundation
 ///
 /// `Secret` is intentionally NOT `Codable` — credentials must never be auto-serialised to disk
 /// or network. Reconstruct from `String` at the call site (e.g., from env var or TOML config).
-public struct Secret: Sendable, Hashable, CustomStringConvertible, CustomDebugStringConvertible {
+public struct Secret: Sendable, Hashable, CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     private let value: String
 
     public init(_ value: String) {
@@ -32,4 +32,7 @@ public struct Secret: Sendable, Hashable, CustomStringConvertible, CustomDebugSt
 
     /// Always returns `"<redacted>"` — safe for `String(reflecting:)` and LLDB po output.
     public var debugDescription: String { "<redacted>" }
+
+    /// Empty mirror so `dump`, LLDB and SwiftUI reflection never walk `value`.
+    public var customMirror: Mirror { Mirror(self, children: [:]) }
 }

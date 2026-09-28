@@ -36,8 +36,9 @@ public actor OllamaCloudProvider: UsageProvider {
     private var lastStatus: ProviderStatus = .error(ProviderError.notYetFetched)
     private var plan: String?
     private var planFetched = false
-    /// Credential source the cached plan belongs to; a change re-fetches the plan.
-    private var planSource: String?
+    /// Fingerprint of the credential the cached plan belongs to; any change
+    /// (another account, not just another source) re-fetches the plan.
+    private var planOwner: OllamaCloudCredential.Fingerprint?
 
     public init(
         http: any HTTPClient,
@@ -62,10 +63,11 @@ public actor OllamaCloudProvider: UsageProvider {
         guard let credential = OllamaCloudCredential.resolve(config: config, loadDevice: loadDevice) else {
             throw fail(ProviderError(kind: .auth, message: Self.noCredentialHint), source: "none")
         }
-        if credential.sourceKey != planSource {
+        let owner = credential.fingerprint
+        if owner != planOwner {
             plan = nil
             planFetched = false
-            planSource = credential.sourceKey
+            planOwner = owner
         }
         let client = OllamaCloudClient(http: http, credential: credential, baseURL: baseURL)
 
@@ -76,7 +78,9 @@ public actor OllamaCloudProvider: UsageProvider {
             throw fail(classify(error, credential: credential), source: credential.sourceKey)
         }
         // After usage succeeds, so a rejected credential never sends a second request.
-        if case .success(let fetched)? = await Self.fetchPlan(client, now: now, needed: !planFetched) {
+        // Store only if no interleaved fetch switched credentials across the awaits.
+        if case .success(let fetched)? = await Self.fetchPlan(client, now: now, needed: !planFetched),
+           planOwner == owner {
             plan = fetched
             planFetched = true
         }

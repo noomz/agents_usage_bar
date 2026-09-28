@@ -327,6 +327,28 @@ struct OllamaCloudProviderTests {
         #expect(snap.raw["credentialSource"] == "device")
     }
 
+    @Test func sameSourceKeySwap_refetchesPlan() async throws {
+        let box = Locked(OllamaCloudProviderTests.sources(.apiKey(Secret("fake-account-a"), source: .config)).0)
+        let http = FakeOllamaCloudHTTPClient()
+        http.script("GET", "/api/usage", .success(Self.usageJSON))
+        http.script("POST", "/api/me", .success(Self.meJSON), .success(Data(#"{"Plan":"max"}"#.utf8)))
+        let provider = OllamaCloudProvider(http: http, loadConfig: { box.value }, loadDevice: { nil })
+
+        #expect(try await provider.fetch(now: Self.now).raw["plan"] == "pro")
+        #expect(try await provider.fetch(now: Self.now).raw["plan"] == "pro")
+        box.value = OllamaCloudConfig(enabled: true, apiKey: Secret("fake-account-b"), apiKeySource: .config, billingDay: nil)
+        let swapped = try await provider.fetch(now: Self.now)
+
+        #expect(swapped.raw["plan"] == "max")
+        #expect(http.calls.filter { $0.url.path == "/api/me" }.map(\.bearer) == ["fake-account-a", "fake-account-b"])
+    }
+
+    @Test func apiKeyCredential_dumpRedacted() {
+        var dumped = ""
+        dump(OllamaCloudCredential.apiKey(Secret("fake-ollama-dump-check"), source: .env), to: &dumped)
+        #expect(!dumped.contains("fake-ollama-dump-check"))
+    }
+
     @Test func noCredentialAtFetch_throwsAuthHint() async {
         let http = FakeOllamaCloudHTTPClient()
         let provider = OllamaCloudProvider(http: http, loadConfig: { .defaults }, loadDevice: { nil })
@@ -336,8 +358,12 @@ struct OllamaCloudProviderTests {
         #expect(http.calls.isEmpty)
     }
 
-    @Test func httpClient_hasNoURLCache() {
-        #expect(URLSessionHTTPClient.makeConfiguration(timeoutSeconds: 8).urlCache == nil)
+    @Test func httpClient_persistsNothing() {
+        let cfg = URLSessionHTTPClient.makeConfiguration(timeoutSeconds: 8)
+        #expect(cfg.urlCache == nil)
+        #expect(cfg.httpCookieStorage == nil)
+        #expect(cfg.httpShouldSetCookies == false)
+        #expect(cfg.urlCredentialStorage == nil)
     }
 
     // MARK: - Reset (V8)

@@ -21,7 +21,9 @@ struct LocalEngineRegistrationTests {
             localhostHTTP: URLSessionHTTPClient(timeoutSeconds: 2),
             cache: NoopCacheStore(),
             clock: SystemClock(),
-            processCatalog: catalog
+            processCatalog: catalog,
+            loadOllamaDeviceKey: { nil },  // hermetic: never read the real ~/.ollama key
+            loadOllamaCloudConfig: { .defaults }
         )
         #expect(built.providers.contains(where: { $0.id == .lmstudioLlamaCpp }))
         #expect(built.providers.contains(where: { $0.id == .llamacpp }) == false)
@@ -36,7 +38,9 @@ struct LocalEngineRegistrationTests {
             localhostHTTP: URLSessionHTTPClient(timeoutSeconds: 2),
             cache: NoopCacheStore(),
             clock: SystemClock(),
-            processCatalog: StaticProcessCatalog()
+            processCatalog: StaticProcessCatalog(),
+            loadOllamaDeviceKey: { nil },  // hermetic: never read the real ~/.ollama key
+            loadOllamaCloudConfig: { .defaults }
         )
         #expect(built.providers.contains(where: { $0.id == .lmstudioLlamaCpp }) == false)
         let seed = built.placeholders.first { $0.providerID == .lmstudioLlamaCpp }
@@ -76,7 +80,9 @@ struct LocalEngineRegistrationTests {
             localhostHTTP: URLSessionHTTPClient(timeoutSeconds: 2),
             cache: NoopCacheStore(),
             clock: SystemClock(),
-            processCatalog: StaticProcessCatalog()
+            processCatalog: StaticProcessCatalog(),
+            loadOllamaDeviceKey: { nil },  // hermetic: never read the real ~/.ollama key
+            loadOllamaCloudConfig: { .defaults }
         )
         #expect(built.providers.contains(where: { $0.id.rawValue == "engine.classifier" }))
         #expect(built.providers.first(where: { $0.id.rawValue == "engine.classifier" })?.displayName

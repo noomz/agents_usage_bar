@@ -26,6 +26,21 @@ public enum OllamaCloudCredential: Sendable {
         }
     }
 
+    /// Identifies *which* credential (not just its source), so switching accounts
+    /// re-fetches the plan. Compares the `Secret` itself (never revealed) or the
+    /// device key's public field; memory only.
+    enum Fingerprint: Hashable, Sendable {
+        case apiKey(Secret)
+        case device(publicKeyField: String)
+    }
+
+    var fingerprint: Fingerprint {
+        switch self {
+        case .apiKey(let key, _): return .apiKey(key)
+        case .device(let signer): return .device(publicKeyField: signer.publicKeyField)
+        }
+    }
+
     /// Tooltip line (V13). Names the source, never key material.
     public var sourceLabel: String {
         switch self {

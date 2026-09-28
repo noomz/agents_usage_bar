@@ -34,7 +34,7 @@ I9|Hygiene|`scripts/check-secrets.sh` `PATTERNS` (+ ci.yml copy); README Privacy
 V1|Resolution order: `OLLAMA_API_KEY` env (non-empty) > `[ollama] api_key` toml > device key file. First hit wins; env/toml key held as `Secret`. Same `env > toml` rule as OpenRouter/Grok (D-03).
 V2|Row registered iff a credential resolves AND `[ollama] cloud` ≠ `false`. No credential → no row (not placeholder, not error).
 V3|Device key: parse unencrypted OpenSSH container only (`openssh-key-v1`, cipher `none`, one key, type `ssh-ed25519`, check ints equal); seed = first 32 bytes of private field → `Curve25519.Signing.PrivateKey`. Any mismatch/unreadable → "no device credential" (V2), one debug log line with no path content or bytes.
-V4|Key bytes + signatures live in memory for the request only: never logged, cached, persisted, or put in snapshot/raw/tooltip.
+V4|Key bytes + signatures live in memory for the fetch only: never logged, cached, persisted, or put in snapshot/raw/tooltip. `OllamaDeviceSigner` and `Secret` redact `description` and have empty mirrors (`dump` never prints key material).
 V5|Explicit key (env/toml) 401/403 → status `.error(ProviderError(kind: .auth))` (store convention: `.unauthenticated` = placeholder only), message `check OLLAMA_API_KEY` / `check [ollama] api_key`; no fallback to device key. Device-key 401 → same kind, message `run ollama signin`. No credential at fetch time → same kind, `run ollama signin or set OLLAMA_API_KEY`.
 V6|After credential fix (edited toml key, new `ollama signin` key, server recovery), row leaves auth error on next poll — no restart, no stuck state via cache seed / POLL-06 skip (V25). Tests required: server recovery + changed credential.
 
@@ -53,16 +53,16 @@ V15|`allKnown` places `ollama-cloud` immediately after `ollama`; `provider-order
 V16|Welcome detection probe: detected iff V2 holds, incl. `[ollama] cloud = false` → not detected (else Welcome seeds `providerEnabled = true` and re-enables row); detected badge names credential source (`DetectionProbe.detail`).
 
 ### Polling + failure (ticket 06)
-V17|`/api/usage` on shared poll interval + on-open refresh. `/api/me` after a successful usage call (never after a rejected one) until one 2xx for current credential source (2xx without `Plan` counts); failure → plan omitted, retried next poll; credential source change → re-fetch. Usage unaffected either way.
+V17|`/api/usage` on shared poll interval + on-open refresh. `/api/me` after a successful usage call (never after a rejected one) until one 2xx per credential (2xx without `Plan` counts). Credential identity = fingerprint (`Secret` equality or device `publicKeyField`, never revealed); any change — other source, other key, other account — drops cached plan and re-fetches; plan stored only if fingerprint unchanged across the awaits. Failure → plan omitted, retried next poll; usage unaffected.
 V18|5xx / timeout / decode failure → stale with last snapshot (degraded note), same as other remote providers; local `ollama` row never affected. `URLSession` shared instance, 8 s timeout.
 V19|Only `Plan` decoded from `/api/me` (Codable struct has one optional field); personal fields never decoded.
 V20|Logs: status codes + credential source public; everything else `privacy: .private`; no header values ever.
 V21|Tests use synthetic data only: ed25519 key generated in-test and serialised to OpenSSH format by test helper; made-up usage values. Signer header format pinned by golden test per V23.
-V22|`check-secrets.sh` (+ ci.yml `PATTERNS`) blocks `BEGIN OPENSSH PRIVATE KEY` and a literal `Authorization: Bearer ` followed by a long token in source/fixtures; patterns never derived from a real key.
-V25|Provider re-reads `[ollama]` config (key, `billing_day`) + device key every fetch and resolves credential fresh; registration check at launch only decides row existence. Device key bytes held for that fetch only.
-V26|`URLSessionHTTPClient` has no `URLCache` (`urlCache = nil`): authenticated responses and their requests never written to `~/Library/Caches`.
-V24|Ollama Cloud window has no `duration` (API reports none; calendar months not fixed-length). Compact `windowLabel` derives label from duration first, so non-nil duration would print `30d`; row must print `mo`. Test on compact render.
+V22|`check-secrets.sh` + ci.yml share one length-gated `PATTERNS`: provider key prefixes, `BEGIN OPENSSH PRIVATE KEY`, literal `Authorization: Bearer <20+ chars>`, `OLLAMA_API_KEY` assigned a 24+ char literal. Scans `*.swift/plist/yml/json/md` under `AgentsUsageBar/ AgentsUsageBarTests/ .github/ .scratch/ docs/` + `README.md`. Patterns never derived from a real key.
 V23|CryptoKit Ed25519 signatures randomized → never golden full header/signature. Golden pins deterministic parts (fixed key + fixed `ts`): pubkey field, challenge string, signed URL; signature part checked by `publicKey.isValidSignature` over challenge + format `<pubkey field>:<base64 64-byte sig>`.
+V24|Ollama Cloud window has no `duration` (API reports none; calendar months not fixed-length). Compact `windowLabel` derives label from duration first, so non-nil duration would print `30d`; row must print `mo`. Test on compact render.
+V25|Provider re-reads `[ollama]` config (`api_key`, `billing_day`) + device key every fetch and resolves credential fresh; key bytes held for that fetch only. `[ollama] cloud` read at launch only (decides row existence; per-fetch reload ignores it, since enforcing it would override a Settings "on" preference); Settings → Providers toggle applies live.
+V26|`URLSessionHTTPClient` persists nothing: `urlCache = nil`, `httpCookieStorage = nil`, `httpShouldSetCookies = false`, `urlCredentialStorage = nil`. Pinned by `makeConfiguration` test.
 
 ## §T
 
@@ -80,3 +80,4 @@ id|date|cause|fix
 B1|2026-09-28|V21 assumed deterministic Ed25519 signing ("exact header" golden); CryptoKit `Curve25519.Signing` randomizes signatures — same message signs differently, both verify|V23
 B2|2026-09-28|V7 gave window `duration: 30 d`; `CompactTextRenderer.windowLabel` prefers duration → row label `30d`, not `mo`, misleading for billing-day monthly reset|V24
 B3|2026-09-28|Review of branch: V5 said status `unauthenticated` (store uses `.error(.auth)`); credential resolved once at launch so toml fix / re-signin needed restart despite "next poll" copy; default shared URLCache wrote authenticated responses to disk; Welcome probe ignored `cloud = false`; `/api/me` re-POSTed every tick when `Plan` absent|V5,V6,V16,V17,V25,V26
+B4|2026-09-28|Second review of PR #17: plan cache keyed on credential *source*, so another valid key/account in same source kept old plan; `Secret` had no empty mirror (`dump` printed API key); cookies/credential storage still on; `cloud = false` runtime semantics unstated|V4,V17,V22,V25,V26

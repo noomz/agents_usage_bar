@@ -56,6 +56,12 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
         // default shared URLCache would still write authenticated responses (and
         // their requests) to disk under ~/Library/Caches.
         cfg.urlCache = nil
+        // Nor cookies or stored credentials: a provider's Set-Cookie on an
+        // authenticated response must not persist to ~/Library/Cookies or ride
+        // along on later requests after the credential changes.
+        cfg.httpCookieStorage = nil
+        cfg.httpShouldSetCookies = false
+        cfg.urlCredentialStorage = nil
         return cfg
     }
 
