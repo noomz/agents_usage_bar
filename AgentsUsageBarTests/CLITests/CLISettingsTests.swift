@@ -116,4 +116,25 @@ struct CLISettingsTests {
         #expect(try! store.set("provider-order", value: "").get().value == all)
         #expect(defaults.object(forKey: AUBDefaultsKey.providerOrder) == nil)
     }
+
+    @Test("mixed-case configured engine id is accepted, stored lowercase, and honoured (issue #10)")
+    func providerOrderMixedCaseEngine() {
+        let suite = "test.aub.cli.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        // `[engine.GPU]` in config.toml preserves case on the live id
+        // (`LocalEngineConfig.parse` does not lowercase the slug).
+        let liveEngine = ProviderID(rawValue: "engine.GPU")
+        let store = CLISettings(defaults: defaults, customEngines: { [liveEngine] })
+
+        // `set` still case-folds and validates against the lowercased catalog.
+        #expect(try! store.set("provider-order", value: "engine.GPU,claude").get().value
+                == "engine.gpu,claude")
+        #expect(defaults.aubProviderOrder == [ProviderID(rawValue: "engine.gpu"), .claude])
+
+        // The stored (lowercase) preference must still match the live,
+        // case-preserved engine id when actually ordering providers.
+        let ordered = ProviderID.ordered([liveEngine, .claude, .codex], id: { $0 }, preference: defaults.aubProviderOrder)
+        #expect(ordered.map(\.rawValue) == ["engine.GPU", "claude", "codex"])
+    }
 }
