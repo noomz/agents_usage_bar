@@ -25,15 +25,15 @@ jobs:
           #   generic sk-<48 alnum> (OpenAI)    -> require >=32 contiguous alnum
           #   OpenSSH private key header, literal Bearer header, OLLAMA_API_KEY = long literal
           #   (Ollama Cloud, SPEC V22; shapes are generic, never derived from a real key)
-          PATTERNS='sk-or-v1-[A-Za-z0-9]{40,}|AIzaSy[A-Za-z0-9_-]{30,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-admin-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|BEGIN OPENSSH PRIVATE KEY|Authorization: Bearer [A-Za-z0-9._~+/=-]{20,}|OLLAMA_API_KEY["'\'' :=]+[A-Za-z0-9._-]{24,}'
+          PATTERNS='sk-or-v1-[A-Za-z0-9]{40,}|AIzaSy[A-Za-z0-9_-]{30,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-admin-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|BEGIN OPENSSH PRIVATE KEY|Authorization: Bearer [A-Za-z0-9._~+/=-]{20,}|OLLAMA_API_KEY["'\'' :=]+[A-Za-z0-9._+/-]{24,}'
           # GeminiOAuthClient.swift no longer carries gemini-cli client_id /
           # client_secret literals — those are injected via environment
           # variables resolved by AppDependencies (see docs/gemini-setup.md).
           # The file participates in the SEC-04 grep like everything else.
-          if grep -RIEn --include='*.swift' --include='*.plist' --include='*.yml' --include='*.json' \
+          if grep -RIEn --include='*.swift' --include='*.plist' --include='*.yml' --include='*.json' --include='*.md' \
                      --exclude='ci.yml' \
                      "$PATTERNS" \
-                     AgentsUsageBar/ AgentsUsageBarTests/ .github/ ; then
+                     AgentsUsageBar/ AgentsUsageBarTests/ .github/ .scratch/ docs/ README.md ; then
             echo "ERROR: Source contains literal API key prefixes. See SEC-04."
             exit 1
           fi

@@ -3,11 +3,13 @@ import os
 
 /// Ollama Cloud monthly included usage (`ollama-cloud` row, SPEC G1).
 ///
-/// Polls `GET ollama.com/api/usage` every tick and `POST /api/me` until the plan
-/// is known. Maps `limits.monthly.usage` to one `mo` quota window; everything else
-/// is optional context (tooltip + `raw`). Failures throw so `AggregateStore`
-/// applies the shared stale/error handling (V18); a rejected credential throws
-/// `.auth` with a fix-it hint and never falls back to another credential (V5).
+/// Every fetch re-reads the `[ollama]` config and the `ollama signin` device key, so
+/// a fixed key, a new `billing_day` or a rotated device key applies on the next
+/// poll, and key bytes live only for the fetch (V4, V6). Polls `GET /api/usage`
+/// every tick and, after a successful usage call, `POST /api/me` until one call
+/// succeeds for the current credential (V17). Failures throw so `AggregateStore` applies the shared
+/// stale/error handling (V18); a rejected credential throws `.auth` with a fix-it
+/// hint and never falls back to another credential (V5).
 public actor OllamaCloudProvider: UsageProvider {
 
     public nonisolated let id = ProviderID.ollamaCloud
@@ -23,17 +25,31 @@ public actor OllamaCloudProvider: UsageProvider {
     /// No `duration`: the API reports none and calendar months are not fixed-length;
     /// compact would otherwise label the row `30d` instead of `mo` (SPEC V24).
     static let windowName = "mo"
+    static let noCredentialHint = "run ollama signin or set OLLAMA_API_KEY"
 
-    private let client: OllamaCloudClient
-    private let billingDay: Int?
+    private let http: any HTTPClient
+    private let loadConfig: @Sendable () -> OllamaCloudConfig
+    private let loadDevice: @Sendable () -> OllamaDeviceSigner?
+    private let baseURL: URL
     private let timeZone: TimeZone
     private let logger = AppLogger.logger(category: "ollama-cloud")
     private var lastStatus: ProviderStatus = .error(ProviderError.notYetFetched)
     private var plan: String?
+    private var planFetched = false
+    /// Credential source the cached plan belongs to; a change re-fetches the plan.
+    private var planSource: String?
 
-    public init(client: OllamaCloudClient, billingDay: Int?, timeZone: TimeZone = .current) {
-        self.client = client
-        self.billingDay = billingDay
+    public init(
+        http: any HTTPClient,
+        loadConfig: @escaping @Sendable () -> OllamaCloudConfig,
+        loadDevice: @escaping @Sendable () -> OllamaDeviceSigner? = { OllamaDeviceSigner.load() },
+        baseURL: URL = OllamaCloudClient.defaultBaseURL,
+        timeZone: TimeZone = .autoupdatingCurrent
+    ) {
+        self.http = http
+        self.loadConfig = loadConfig
+        self.loadDevice = loadDevice
+        self.baseURL = baseURL
         self.timeZone = timeZone
     }
 
@@ -42,26 +58,34 @@ public actor OllamaCloudProvider: UsageProvider {
     }
 
     public func fetch(now: Date) async throws -> UsageSnapshot {
+        let config = loadConfig()
+        guard let credential = OllamaCloudCredential.resolve(config: config, loadDevice: loadDevice) else {
+            throw fail(ProviderError(kind: .auth, message: Self.noCredentialHint), source: "none")
+        }
+        if credential.sourceKey != planSource {
+            plan = nil
+            planFetched = false
+            planSource = credential.sourceKey
+        }
+        let client = OllamaCloudClient(http: http, credential: credential, baseURL: baseURL)
+
         let usage: OllamaUsageResponse
         do {
             usage = try await client.usage(now: now)
         } catch {
-            let providerError = classify(error)
-            lastStatus = .error(providerError)
-            logger.error("usage fetch failed (\(self.client.credential.sourceKey, privacy: .public)): \(providerError.kind.rawValue, privacy: .public) \(providerError.message, privacy: .private)")
-            throw providerError
+            throw fail(classify(error, credential: credential), source: credential.sourceKey)
         }
-
-        // V17: plan once per launch; best-effort, retried next tick until it lands.
-        if plan == nil {
-            plan = try? await client.plan(now: now)
+        // After usage succeeds, so a rejected credential never sends a second request.
+        if case .success(let fetched)? = await Self.fetchPlan(client, now: now, needed: !planFetched) {
+            plan = fetched
+            planFetched = true
         }
 
         let snap = Self.snapshot(
             usage: usage,
             plan: plan,
-            credential: client.credential,
-            billingDay: billingDay,
+            credential: credential,
+            billingDay: config.billingDay,
             now: now,
             timeZone: timeZone
         )
@@ -69,9 +93,26 @@ public actor OllamaCloudProvider: UsageProvider {
         return snap
     }
 
-    private func classify(_ error: Error) -> ProviderError {
+    /// `nil` when the plan is already known; otherwise the `/api/me` outcome. A 2xx
+    /// without `Plan` still counts as fetched (no re-POST every tick).
+    private static func fetchPlan(_ client: OllamaCloudClient, now: Date, needed: Bool) async -> Result<String?, Error>? {
+        guard needed else { return nil }
+        do {
+            return .success(try await client.plan(now: now))
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    private func fail(_ error: ProviderError, source: String) -> ProviderError {
+        lastStatus = .error(error)
+        logger.error("usage fetch failed (\(source, privacy: .public)): \(error.kind.rawValue, privacy: .public) \(error.message, privacy: .private)")
+        return error
+    }
+
+    private func classify(_ error: Error, credential: OllamaCloudCredential) -> ProviderError {
         if let http = error as? HTTPError, http.status == 401 || http.status == 403 {
-            return ProviderError(kind: .auth, message: client.credential.rejectedHint)
+            return ProviderError(kind: .auth, message: credential.rejectedHint)
         }
         return ProviderError.from(error)
     }
@@ -93,7 +134,11 @@ public actor OllamaCloudProvider: UsageProvider {
                 resetsAt: nextReset(billingDay: billingDay, after: now, timeZone: timeZone)
             )
         }
-        let ownSpend = usage.activity?.cost.flatMap { Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX")) }
+        // `Decimal(string:)` accepts a numeric prefix ("1.5abc" → 1.5); require the whole
+        // string to be a number so garbage is omitted, not misread (V10).
+        let ownSpend = usage.activity?.cost.flatMap { cost in
+            Double(cost) == nil ? nil : Decimal(string: cost, locale: Locale(identifier: "en_US_POSIX"))
+        }
 
         var raw = ["credentialSource": credential.sourceKey]
         var tooltip: [String] = []

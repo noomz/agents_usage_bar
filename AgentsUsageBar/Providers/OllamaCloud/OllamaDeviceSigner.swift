@@ -8,7 +8,7 @@ import Foundation
 /// SPEC V3/V4/I3: only the unencrypted OpenSSH ed25519 container is accepted.
 /// Key bytes stay in memory for signing; nothing here logs, caches or writes them,
 /// and `description` is redacted.
-public struct OllamaDeviceSigner: Sendable, CustomStringConvertible {
+public struct OllamaDeviceSigner: Sendable, CustomStringConvertible, CustomReflectable {
 
     public enum KeyError: Error, Equatable {
         case malformed
@@ -21,6 +21,8 @@ public struct OllamaDeviceSigner: Sendable, CustomStringConvertible {
     private let seed: Data
 
     public var description: String { "OllamaDeviceSigner(<redacted>)" }
+    /// Empty mirror so `dump`, debuggers and SwiftUI reflection never walk the seed.
+    public var customMirror: Mirror { Mirror(self, children: [:]) }
 
     public static func defaultKeyURL(
         home: URL = FileManager.default.homeDirectoryForCurrentUser
@@ -64,6 +66,11 @@ public struct OllamaDeviceSigner: Sendable, CustomStringConvertible {
         guard publicKey.count == 32, secret.count == 64,
               Array(secret[32...]) == publicKey else { throw KeyError.malformed }
 
+        // The header's public blob must name the same key as the private section, or
+        // the signature would be sent under the wrong public key.
+        let expectedBlob = Self.sshString(Array("ssh-ed25519".utf8)) + Self.sshString(publicKey)
+        guard publicBlob == expectedBlob else { throw KeyError.malformed }
+
         let seed = Data(secret[..<32])
         let derived = try Curve25519.Signing.PrivateKey(rawRepresentation: seed)
         guard Array(derived.publicKey.rawRepresentation) == publicKey else { throw KeyError.malformed }
@@ -80,9 +87,15 @@ public struct OllamaDeviceSigner: Sendable, CustomStringConvertible {
               var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw URLError(.badURL)
         }
-        var items = (components.queryItems ?? []).filter { $0.name != "ts" }
+        // Parse like Go's `URL.Query()`: `+` is a space, then percent-decode.
+        func formDecode(_ s: String) -> String {
+            s.replacingOccurrences(of: "+", with: " ").removingPercentEncoding ?? s
+        }
+        var items = (components.percentEncodedQueryItems ?? [])
+            .map { URLQueryItem(name: formDecode($0.name), value: $0.value.map(formDecode)) }
+            .filter { $0.name != "ts" }
         items.append(URLQueryItem(name: "ts", value: String(Int(now.timeIntervalSince1970))))
-        components.queryItems = items
+        components.percentEncodedQuery = Self.goQueryEncode(items)
         guard let signedURL = components.url else { throw URLError(.badURL) }
 
         let challenge = Self.challenge(method: request.httpMethod ?? "GET", url: signedURL)
@@ -101,6 +114,37 @@ public struct OllamaDeviceSigner: Sendable, CustomStringConvertible {
         let path = components?.percentEncodedPath.isEmpty == false ? components!.percentEncodedPath : "/"
         guard let query = components?.percentEncodedQuery, !query.isEmpty else { return "\(method),\(path)" }
         return "\(method),\(path)?\(query)"
+    }
+
+    /// Go `url.Values.Encode()`: keys sorted (stable, so repeated keys keep their
+    /// order), each part `QueryEscape`d — unreserved bytes kept, space → `+`,
+    /// everything else `%XX`. The server rebuilds the challenge from this form.
+    static func goQueryEncode(_ items: [URLQueryItem]) -> String {
+        func escape(_ s: String) -> String {
+            var out = ""
+            for byte in s.utf8 {
+                switch byte {
+                case UInt8(ascii: "A")...UInt8(ascii: "Z"), UInt8(ascii: "a")...UInt8(ascii: "z"),
+                     UInt8(ascii: "0")...UInt8(ascii: "9"),
+                     UInt8(ascii: "-"), UInt8(ascii: "_"), UInt8(ascii: "."), UInt8(ascii: "~"):
+                    out.unicodeScalars.append(Unicode.Scalar(byte))
+                case UInt8(ascii: " "):
+                    out += "+"
+                default:
+                    out += "%" + String(byte, radix: 16, uppercase: true).leftPadded(to: 2)
+                }
+            }
+            return out
+        }
+        return items.enumerated()
+            .sorted { ($0.element.name, $0.offset) < ($1.element.name, $1.offset) }
+            .map { escape($0.element.name) + "=" + escape($0.element.value ?? "") }
+            .joined(separator: "&")
+    }
+
+    private static func sshString(_ bytes: [UInt8]) -> [UInt8] {
+        let n = UInt32(bytes.count)
+        return [UInt8(n >> 24 & 0xFF), UInt8(n >> 16 & 0xFF), UInt8(n >> 8 & 0xFF), UInt8(n & 0xFF)] + bytes
     }
 
     private static let magic = Array("openssh-key-v1\0".utf8)
@@ -125,5 +169,11 @@ public struct OllamaDeviceSigner: Sendable, CustomStringConvertible {
         mutating func string() throws -> [UInt8] {
             try bytes(uint32())
         }
+    }
+}
+
+private extension String {
+    func leftPadded(to width: Int) -> String {
+        count >= width ? self : String(repeating: "0", count: width - count) + self
     }
 }

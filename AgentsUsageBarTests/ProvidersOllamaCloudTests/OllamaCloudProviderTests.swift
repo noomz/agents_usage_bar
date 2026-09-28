@@ -85,8 +85,20 @@ struct OllamaCloudProviderTests {
     static func provider(_ http: FakeOllamaCloudHTTPClient,
                          credential: OllamaCloudCredential = envKey,
                          billingDay: Int? = nil) -> OllamaCloudProvider {
-        OllamaCloudProvider(client: OllamaCloudClient(http: http, credential: credential),
-                            billingDay: billingDay, timeZone: TimeZone(identifier: "Asia/Bangkok")!)
+        let (config, device) = Self.sources(credential, billingDay: billingDay)
+        return OllamaCloudProvider(http: http, loadConfig: { config }, loadDevice: { device },
+                                   timeZone: TimeZone(identifier: "Asia/Bangkok")!)
+    }
+
+    /// Config + device key that make `resolve` yield `credential`.
+    static func sources(_ credential: OllamaCloudCredential, billingDay: Int? = nil)
+        -> (OllamaCloudConfig, OllamaDeviceSigner?) {
+        switch credential {
+        case .apiKey(let key, let source):
+            return (OllamaCloudConfig(enabled: true, apiKey: key, apiKeySource: source, billingDay: billingDay), nil)
+        case .device(let signer):
+            return (OllamaCloudConfig(enabled: true, apiKey: nil, apiKeySource: nil, billingDay: billingDay), signer)
+        }
     }
 
     static func happyHTTP() -> FakeOllamaCloudHTTPClient {
@@ -261,6 +273,73 @@ struct OllamaCloudProviderTests {
         }
     }
 
+    @Test func plan_2xxWithoutPlan_notRePosted() async throws {
+        let http = FakeOllamaCloudHTTPClient()
+        http.script("GET", "/api/usage", .success(Self.usageJSON))
+        http.script("POST", "/api/me", .success(Data(#"{"Email":"user@example.invalid"}"#.utf8)))
+        let provider = Self.provider(http)
+        _ = try await provider.fetch(now: Self.now)
+        let second = try await provider.fetch(now: Self.now)
+        #expect(http.count("POST", "/api/me") == 1)
+        #expect(second.raw["plan"] == nil)
+    }
+
+    @Test func fetch_cost_numericPrefixGarbage_omitted() async throws {
+        let http = FakeOllamaCloudHTTPClient()
+        http.script("GET", "/api/usage", .success(Data(#"{"activity":{"cost":"1.5abc"},"limits":{"monthly":{"usage":0.5}}}"#.utf8)))
+        let snap = try await Self.provider(http).fetch(now: Self.now)
+        #expect(snap.raw["ownSpendLast4WeeksUSD"] == nil)
+    }
+
+    // MARK: - Per-fetch credential (V6, V25)
+
+    @Test func changedCredential_appliesNextPoll_andRefetchesPlan() async throws {
+        let box = Locked(OllamaCloudProviderTests.sources(.apiKey(Secret("fake-bad-key"), source: .config)).0)
+        let http = FakeOllamaCloudHTTPClient()
+        http.script("GET", "/api/usage", .failure(HTTPError(status: 401)), .success(Self.usageJSON))
+        http.script("POST", "/api/me", .success(Self.meJSON))
+        let provider = OllamaCloudProvider(http: http, loadConfig: { box.value }, loadDevice: { nil })
+
+        await #expect(throws: ProviderError(kind: .auth, message: "check [ollama] api_key")) {
+            try await provider.fetch(now: Self.now)
+        }
+        box.value = OllamaCloudConfig(enabled: true, apiKey: Secret("fake-good-key"), apiKeySource: .config, billingDay: 3)
+        let snap = try await provider.fetch(now: Self.now)
+
+        let usageCalls = http.calls.filter { $0.url.path == "/api/usage" }
+        #expect(usageCalls.map(\.bearer) == ["fake-bad-key", "fake-good-key"])
+        if case .ok = await provider.status() {} else { Issue.record("expected .ok after fix") }
+        #expect(snap.quotaWindows?.first?.resetsAt != nil)       // billing_day re-read too
+        #expect(snap.raw["plan"] == "pro")
+    }
+
+    @Test func credentialSourceChange_refetchesPlan() async throws {
+        let signer = try OllamaDeviceSigner(openSSH: TestOpenSSHKey.encode(seed: OllamaDeviceSignerTests.fixedSeed))
+        let box = Locked(OllamaCloudProviderTests.sources(Self.envKey).0)
+        let http = Self.happyHTTP()
+        let provider = OllamaCloudProvider(http: http, loadConfig: { box.value }, loadDevice: { signer })
+        _ = try await provider.fetch(now: Self.now)
+        _ = try await provider.fetch(now: Self.now)
+        #expect(http.count("POST", "/api/me") == 1)
+        box.value = .defaults                                    // key removed → device key
+        let snap = try await provider.fetch(now: Self.now)
+        #expect(http.count("POST", "/api/me") == 2)
+        #expect(snap.raw["credentialSource"] == "device")
+    }
+
+    @Test func noCredentialAtFetch_throwsAuthHint() async {
+        let http = FakeOllamaCloudHTTPClient()
+        let provider = OllamaCloudProvider(http: http, loadConfig: { .defaults }, loadDevice: { nil })
+        await #expect(throws: ProviderError(kind: .auth, message: "run ollama signin or set OLLAMA_API_KEY")) {
+            try await provider.fetch(now: Self.now)
+        }
+        #expect(http.calls.isEmpty)
+    }
+
+    @Test func httpClient_hasNoURLCache() {
+        #expect(URLSessionHTTPClient.makeConfiguration(timeoutSeconds: 8).urlCache == nil)
+    }
+
     // MARK: - Reset (V8)
 
     static let bangkok = TimeZone(identifier: "Asia/Bangkok")!
@@ -298,6 +377,20 @@ struct OllamaCloudProviderTests {
     @Test func nextReset_yearRollover() {
         #expect(OllamaCloudProvider.nextReset(billingDay: 5, after: Self.local(2026, 12, 20), timeZone: Self.bangkok)
                 == Self.local(2027, 1, 5))
+    }
+
+    @Test func nextReset_localMidnightAcrossDST() {
+        let ny = TimeZone(identifier: "America/New_York")!
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = ny
+        func nyDate(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0) -> Date {
+            cal.date(from: DateComponents(year: y, month: m, day: d, hour: h))!
+        }
+        // DST ends 2026-11-01, starts 2027-03-14: resets stay at local midnight.
+        #expect(OllamaCloudProvider.nextReset(billingDay: 5, after: nyDate(2026, 10, 20), timeZone: ny)
+                == nyDate(2026, 11, 5))
+        #expect(OllamaCloudProvider.nextReset(billingDay: 15, after: nyDate(2027, 3, 1), timeZone: ny)
+                == nyDate(2027, 3, 15))
     }
 
     @Test(arguments: [nil, 0, 32, -1] as [Int?])
@@ -343,7 +436,8 @@ struct OllamaCloudRegistrationTests {
             cache: NoopCacheStore(),
             clock: SystemClock(),
             processCatalog: StaticProcessCatalog(),
-            loadOllamaDeviceKey: { device }
+            loadOllamaDeviceKey: { device },
+            loadOllamaCloudConfig: { cloud }
         )
     }
 
@@ -392,5 +486,16 @@ struct OllamaCloudRegistrationTests {
             Issue.record("expected .ok after credential fixed, got \(String(describing: store.providers[.ollamaCloud]?.status))")
         }
         #expect(http.count("GET", "/api/usage") == 2)
+    }
+}
+
+/// Mutable box for closures that must see changes between fetches.
+final class Locked<Value: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Value
+    init(_ value: Value) { stored = value }
+    var value: Value {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
     }
 }

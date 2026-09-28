@@ -42,13 +42,21 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
     ///   Phase 1 resource ceiling for the default 8s case (32s) and bounds cold-socket overhead for
     ///   the 2s localhost case (30s).
     public init(timeoutSeconds: TimeInterval = 8) {
+        self.session = URLSession(configuration: Self.makeConfiguration(timeoutSeconds: timeoutSeconds))
+    }
+
+    static func makeConfiguration(timeoutSeconds: TimeInterval) -> URLSessionConfiguration {
         let cfg = URLSessionConfiguration.default
         cfg.timeoutIntervalForRequest = timeoutSeconds
         cfg.timeoutIntervalForResource = max(timeoutSeconds * 4, 30)
         cfg.waitsForConnectivity = false
         cfg.httpMaximumConnectionsPerHost = 6
         cfg.requestCachePolicy = .reloadIgnoringLocalCacheData
-        self.session = URLSession(configuration: cfg)
+        // No response cache at all: the policy above only skips cache *reads*; the
+        // default shared URLCache would still write authenticated responses (and
+        // their requests) to disk under ~/Library/Caches.
+        cfg.urlCache = nil
+        return cfg
     }
 
     // MARK: - Test seam initializer

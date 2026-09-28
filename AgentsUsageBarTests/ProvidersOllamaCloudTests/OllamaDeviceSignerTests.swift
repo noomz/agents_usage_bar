@@ -117,10 +117,32 @@ struct OllamaDeviceSignerTests {
         try Self.expectValidHeader(signed, challenge: "GET,/api/usage?a=1&ts=1700000000")
     }
 
-    @Test func description_redacted() throws {
+    @Test func description_and_dump_redacted() throws {
         let signer = try OllamaDeviceSigner(openSSH: TestOpenSSHKey.encode(seed: Self.fixedSeed))
         #expect(String(describing: signer) == "OllamaDeviceSigner(<redacted>)")
         #expect(!String(reflecting: signer).contains(Self.fixedSeed.base64EncodedString()))
+        var dumped = ""
+        dump(OllamaCloudCredential.device(signer), to: &dumped)
+        #expect(!dumped.contains("bytes"))                       // no Data child walked
+        #expect(Mirror(reflecting: signer).children.isEmpty)
+    }
+
+    @Test func parse_outerPublicBlobMismatch_throwsMalformed() {
+        let pem = TestOpenSSHKey.encode(seed: Self.fixedSeed, outerSeed: Data(repeating: 2, count: 32))
+        #expect(throws: OllamaDeviceSigner.KeyError.malformed) { try OllamaDeviceSigner(openSSH: pem) }
+    }
+
+    @Test func sign_queryMatchesGoEncode_sortedAndFormEscaped() throws {
+        let signer = try OllamaDeviceSigner(openSSH: TestOpenSSHKey.encode(seed: Self.fixedSeed))
+        let url = URL(string: "https://ollama.com/api/usage?z=1&a=b%2Bc+d")!
+        let signed = try signer.sign(URLRequest(url: url), now: Self.fixedNow)
+        #expect(signed.url?.absoluteString == "https://ollama.com/api/usage?a=b%2Bc+d&ts=1700000000&z=1")
+        try Self.expectValidHeader(signed, challenge: "GET,/api/usage?a=b%2Bc+d&ts=1700000000&z=1")
+    }
+
+    @Test func goQueryEncode_escapesLikeGo() {
+        let items = [URLQueryItem(name: "q", value: "a b/c?é"), URLQueryItem(name: "k", value: "x~y-z_1.2")]
+        #expect(OllamaDeviceSigner.goQueryEncode(items) == "k=x~y-z_1.2&q=a+b%2Fc%3F%C3%A9")
     }
 
     private static func expectValidHeader(_ request: URLRequest, challenge: String) throws {
@@ -148,7 +170,8 @@ enum TestOpenSSHKey {
         cipher: String = "none",
         keyType: String = "ssh-ed25519",
         checkInts: (UInt32, UInt32) = (0x5EED_5EED, 0x5EED_5EED),
-        corruptPublicHalf: Bool = false
+        corruptPublicHalf: Bool = false,
+        outerSeed: Data? = nil
     ) -> String {
         let key = try! Curve25519.Signing.PrivateKey(rawRepresentation: seed)
         let pub = Array(key.publicKey.rawRepresentation)
@@ -162,7 +185,8 @@ enum TestOpenSSHKey {
 
         var out = Array("openssh-key-v1\0".utf8)
         out += string(cipher) + string("none") + string([UInt8]()) + u32(1)
-        out += string(Array(publicBlob(key.publicKey))) + string(priv)
+        let outerKey = outerSeed.map { try! Curve25519.Signing.PrivateKey(rawRepresentation: $0).publicKey } ?? key.publicKey
+        out += string(Array(publicBlob(outerKey))) + string(priv)
 
         let b64 = Data(out).base64EncodedString()
         let lines = stride(from: 0, to: b64.count, by: 70).map { i -> String in

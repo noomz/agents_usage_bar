@@ -223,7 +223,10 @@ public enum DetectionProbe {
         ollamaCloudCredential(config: config, fileManager: fileManager) != nil ? .detected : .notConfigured
     }
 
+    /// `nil` when `[ollama] cloud = false`: a disabled row is never "detected", so the
+    /// Welcome screen cannot re-enable it through the providerEnabled seed.
     private static func ollamaCloudCredential(config: AppConfig, fileManager: FileManager) -> OllamaCloudCredential? {
+        guard config.ollamaCloud.enabled else { return nil }
         let keyURL = OllamaDeviceSigner.defaultKeyURL(home: fileManager.homeDirectoryForCurrentUser)
         return OllamaCloudCredential.resolve(config: config.ollamaCloud) {
             OllamaDeviceSigner.load(from: keyURL)
