@@ -64,8 +64,8 @@ public actor GrokBillingProvider: UsageProvider {
     }
 
     /// Never apply an empty/"logged out" snapshot over a previously good row.
-    /// Returning the last good snapshot as success keeps POLL-06 from freezing
-    /// the provider (401-as-unauthenticated would skip all future polls).
+    /// Returning the last good snapshot as success keeps the row's data instead
+    /// of blanking it on a transient logged-out read.
     private func retainLastGoodOrMute(now: Date, error: Error) -> UsageSnapshot {
         if let last = lastGoodSnapshot {
             lastStatus = .ok(lastSuccess: last.asOf)

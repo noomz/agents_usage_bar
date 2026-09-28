@@ -151,6 +151,69 @@ struct AggregateStoreTests {
         #expect(store.providers[idB] != nil)
     }
 
+    // MARK: POLL-06 cached unauthenticated (restart must re-probe)
+
+    @Test("cached .unauthenticated for a registered provider is re-probed after restart (POLL-06)")
+    func cachedUnauthenticatedRegisteredIsReprobed() async {
+        let id = ProviderID(rawValue: "openrouter")
+        let now = Date()
+        let cached = ProviderState.placeholder(providerID: id, displayName: "OpenRouter", status: .unauthenticated)
+        let provider = FakeProvider(id: id, displayName: "OpenRouter", result: .success(makeSnapshot(providerID: id, now: now)))
+
+        let store = AggregateStore(
+            registry: [provider],
+            clock: VirtualClock(fixed: now),
+            cache: AggFakeCacheStore(providers: [id: cached]),
+            thresholds: ThresholdEngine(),
+            notifications: NoopNotificationManager()
+        )
+        await store.refresh(now: now)
+
+        #expect(await provider.callCount() == 1)
+        if case .ok = store.providers[id]?.status { } else {
+            Issue.record("Expected .ok after re-probe, got \(String(describing: store.providers[id]?.status))")
+        }
+    }
+
+    @Test("cached .unauthenticated for an unregistered provider is kept as-is")
+    func cachedUnauthenticatedUnregisteredKept() {
+        let id = ProviderID(rawValue: "openrouter")
+        let cached = ProviderState.placeholder(providerID: id, displayName: "OpenRouter", status: .unauthenticated)
+
+        let store = AggregateStore(
+            registry: [],
+            clock: VirtualClock(fixed: Date()),
+            cache: AggFakeCacheStore(providers: [id: cached]),
+            thresholds: ThresholdEngine(),
+            notifications: NoopNotificationManager()
+        )
+
+        #expect(store.providers[id]?.status == .unauthenticated)
+    }
+
+    @Test("re-enabled registered provider is fetched on the next tick")
+    func reenabledProviderIsFetched() async {
+        let id = ProviderID(rawValue: "openrouter")
+        let now = Date()
+        let provider = FakeProvider(id: id, displayName: "OpenRouter", result: .success(makeSnapshot(providerID: id, now: now)))
+        let store = AggregateStore(
+            registry: [provider],
+            clock: VirtualClock(fixed: now),
+            cache: AggFakeCacheStore(),
+            thresholds: ThresholdEngine(),
+            notifications: NoopNotificationManager()
+        )
+
+        store.setProviderEnabled(id, enabled: false)
+        store.setProviderEnabled(id, enabled: true)
+        await store.refresh(now: now)
+
+        #expect(await provider.callCount() == 1)
+        if case .ok = store.providers[id]?.status { } else {
+            Issue.record("Expected .ok after re-enable, got \(String(describing: store.providers[id]?.status))")
+        }
+    }
+
     // MARK: rollupTotals
 
     @Test("rollupTotals sums costTodayUSD and tokensToday, nil tokens treated as 0")

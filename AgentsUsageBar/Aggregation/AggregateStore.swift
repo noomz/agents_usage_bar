@@ -76,7 +76,7 @@ public final class AggregateStore {
 
     private var currentInterval: RefreshInterval = .m5
 
-    // MARK: - Plan 02.06 — Per-provider circuit breakers (POLL-05) + POLL-06 terminal skip
+    // MARK: - Plan 02.06 — Per-provider circuit breakers (POLL-05)
 
     /// Lazy per-provider 5-strike circuit breakers (POLL-05) — separate from any
     /// provider-internal breaker (e.g. Claude's `/api/oauth/usage` 3-strike OAuth-usage
@@ -344,18 +344,14 @@ public final class AggregateStore {
     private func performRefresh(now: Date) async {
         // Plan 02.06 — Pre-compute per-provider gating BEFORE fan-out:
         // 0. D-04: skip user-disabled providers entirely (no fetch, no row revive).
-        // 1. POLL-06: skip providers whose lastStatus is `.unauthenticated` (terminal until
-        //    composition changes, which typically requires an app restart).
-        // 2. POLL-05: skip providers whose 5-strike breaker is currently open.
+        // 1. POLL-05: skip providers whose 5-strike breaker is currently open.
+        // Registered providers are always fetched, whatever their current status: a
+        // registry entry means credentials exist, and `.unauthenticated` in the store is
+        // only ever a placeholder (cache restore or re-enable), never a fetch verdict.
         var gateDecisions: [(provider: any UsageProvider, allow: Bool, openBreaker: Bool)] = []
         for p in registry {
             // D-04 — user disabled in Settings; leave no task and keep row hidden.
             if disabledProviderIDs.contains(p.id) {
-                continue
-            }
-            // POLL-06 — terminal unauthenticated; do not even consult the breaker.
-            if let existing = providers[p.id], case .unauthenticated = existing.status {
-                gateDecisions.append((p, false, false))
                 continue
             }
             let cb = breaker(for: p.id)
@@ -373,7 +369,6 @@ public final class AggregateStore {
                         let openErr = ProviderError(kind: .http, message: "circuit-open")
                         group.addTask { (p.id, .failure(openErr)) }
                     }
-                    // (POLL-06 terminal-unauth providers contribute no task — preserve last state.)
                     continue
                 }
                 group.addTask {
@@ -392,8 +387,8 @@ public final class AggregateStore {
                 case .failure(let err):
                     let pe = ProviderError.from(err)
                     if pe.kind == .auth || pe.kind == .paymentRequired {
-                        // POLL-06: 4xx (non-429) — terminal unauthenticated; do NOT increment
-                        // the breaker (config-change required, not endpoint flakiness).
+                        // POLL-06: 4xx (non-429) — do NOT increment the breaker
+                        // (config-change required, not endpoint flakiness).
                     } else if pe.message == "circuit-open" {
                         // Already-open breaker — don't double-count.
                     } else {
