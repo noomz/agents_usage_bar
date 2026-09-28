@@ -57,14 +57,15 @@ V17|`/api/usage` on shared poll interval + on-open refresh. `/api/me` once per l
 V18|5xx / timeout / decode failure → stale with last snapshot (degraded note), same as other remote providers; local `ollama` row never affected. `URLSession` shared instance, 8 s timeout.
 V19|Only `Plan` decoded from `/api/me` (Codable struct has one optional field); personal fields never decoded.
 V20|Logs: status codes + credential source public; everything else `privacy: .private`; no header values ever.
-V21|Tests use synthetic data only: ed25519 key generated in-test and serialised to OpenSSH format by test helper; made-up usage values. Signer header format pinned by golden test (fixed key + fixed `ts` → exact header).
+V21|Tests use synthetic data only: ed25519 key generated in-test and serialised to OpenSSH format by test helper; made-up usage values. Signer header format pinned by golden test per V23.
 V22|`check-secrets.sh` (+ ci.yml `PATTERNS`) blocks `BEGIN OPENSSH PRIVATE KEY` and a literal `Authorization: Bearer ` followed by a long token in source/fixtures; patterns never derived from a real key.
+V23|CryptoKit Ed25519 signatures randomized → never golden full header/signature. Golden pins deterministic parts (fixed key + fixed `ts`): pubkey field, challenge string, signed URL; signature part checked by `publicKey.isValidSignature` over challenge + format `<pubkey field>:<base64 64-byte sig>`.
 
 ## §T
 
 id|status|task|cites
 T1|x|Domain + config: `ProviderID.ollamaCloud` in `allKnown` after `ollama`; `[ollama] api_key`/`cloud`/`billing_day` + `OLLAMA_API_KEY` in AppConfig/ConfigStore; provider-order accepts id; config tests|V1,V2,V8,V15,I4,I5,I8
-T2|.|Device-key signer: OpenSSH ed25519 parser, challenge builder, header; test helper generating synthetic OpenSSH key; golden header test; malformed/encrypted key tests|V3,V4,V21,I3,I6
+T2|x|Device-key signer: OpenSSH ed25519 parser, challenge builder, header; test helper generating synthetic OpenSSH key; golden header test; malformed/encrypted key tests|V3,V4,V21,V23,I3,I6
 T3|.|Credential resolver (env > toml > device) + `OllamaCloudProvider` (usage fetch, `/api/me` per launch, mapping, billing-day reset, tooltip/raw, status on 401/5xx/decode), response types; registration in `ProviderRegistryFactory` gated by V2; provider tests incl. recovery-after-fix|V1,V2,V5,V6,V7,V8,V9,V10,V11,V13,V14,V17,V18,V19,V20,I1,I2,I6
 T4|.|Surfaces: dashboard URL, detection probe, compact short label, classic/compact/quota/json golden updates for new row (classic change limited to added row), popover row check|V12,V13,V14,V15,V16,C6,I7,I8
 T5|.|Hygiene + docs: check-secrets patterns (script + ci.yml), log privacy audit, README Privacy (ollama.com traffic, device-key read) + Configuration (`[ollama]` keys)|V20,V22,C3,C7,I9
@@ -73,3 +74,4 @@ T6|.|Live verification on dev machine: build, run app + `aub` with env key, conf
 ## §B
 
 id|date|cause|fix
+B1|2026-09-28|V21 assumed deterministic Ed25519 signing ("exact header" golden); CryptoKit `Curve25519.Signing` randomizes signatures — same message signs differently, both verify|V23
