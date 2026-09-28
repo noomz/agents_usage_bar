@@ -19,8 +19,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // The unit-test bundle is hosted in this app; don't start real polling,
         // notification routing, or the Welcome window under the test runner.
-        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+        guard !Self.isHostingTests(ProcessInfo.processInfo.environment) else { return }
         Task { await dependencies.startBackgroundServices() }
+    }
+
+    /// True when launched as the host of a test bundle. Checks several markers:
+    /// which ones are set differs between XCTest and Swift Testing runs.
+    static func isHostingTests(_ env: [String: String]) -> Bool {
+        env["XCTestConfigurationFilePath"] != nil
+            || env["XCTestSessionIdentifier"] != nil
+            || env["XCTestBundlePath"] != nil
+            || NSClassFromString("XCTestCase") != nil
     }
 }
 
