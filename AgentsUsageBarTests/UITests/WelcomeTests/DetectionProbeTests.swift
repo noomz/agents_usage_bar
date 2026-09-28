@@ -220,6 +220,21 @@ struct DetectionProbeTests {
         #expect(results[.ollamaCloud] == .detected)
     }
 
+    @Test func detail_ollamaCloud_namesCredentialSource() {
+        for (source, label) in [(OllamaCloudConfig.CredentialSource.env, "via OLLAMA_API_KEY"), (.config, "via config")] {
+            let base = makeConfig(openrouterKey: nil)
+            let config = AppConfig(
+                refreshInterval: base.refreshInterval, threshold: base.threshold, openrouter: base.openrouter,
+                codex: base.codex, gemini: base.gemini, grok: base.grok, ollama: base.ollama,
+                ollamaCloud: OllamaCloudConfig(enabled: true, apiKey: Secret("fake-ollama-key"),
+                                               apiKeySource: source, billingDay: nil),
+                lmstudio: base.lmstudio, llamacpp: base.llamacpp
+            )
+            #expect(DetectionProbe.detail(for: .ollamaCloud, config: config) == label)
+            #expect(DetectionProbe.detail(for: .openrouter, config: config) == nil)
+        }
+    }
+
     // MARK: - CFG-06 source walk
 
     @Test func cfg06_noShellRcReferences_inDetectionProbe() throws {

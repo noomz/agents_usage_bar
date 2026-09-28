@@ -206,14 +206,28 @@ public enum DetectionProbe {
         return .notDetected
     }
 
+    /// Extra text for a `.detected` badge: which credential the provider will use
+    /// (SPEC V16). Only Ollama Cloud has more than one source today; `nil` otherwise.
+    public static func detail(
+        for providerID: ProviderID,
+        config: AppConfig,
+        fileManager: FileManager = .default
+    ) -> String? {
+        guard providerID == .ollamaCloud else { return nil }
+        return ollamaCloudCredential(config: config, fileManager: fileManager)?.sourceLabel
+    }
+
     /// Ollama Cloud: detected iff a credential resolves (SPEC V2/V16) — an explicit
     /// key, or an `ollama signin` device key that actually parses.
     private static func probeOllamaCloud(config: AppConfig, fileManager: FileManager) -> DetectionResult {
+        ollamaCloudCredential(config: config, fileManager: fileManager) != nil ? .detected : .notConfigured
+    }
+
+    private static func ollamaCloudCredential(config: AppConfig, fileManager: FileManager) -> OllamaCloudCredential? {
         let keyURL = OllamaDeviceSigner.defaultKeyURL(home: fileManager.homeDirectoryForCurrentUser)
-        let credential = OllamaCloudCredential.resolve(config: config.ollamaCloud) {
+        return OllamaCloudCredential.resolve(config: config.ollamaCloud) {
             OllamaDeviceSigner.load(from: keyURL)
         }
-        return credential != nil ? .detected : .notConfigured
     }
 
     // MARK: - HTTP probe helper (async)
