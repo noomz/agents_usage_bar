@@ -196,6 +196,10 @@ jobs:
                      -depth)
           codesign --force --timestamp=none --sign - "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
+          # Launch smoke test: `version` loads every linked framework (Sparkle)
+          # through dyld and exits, so a library-validation failure fails the
+          # release here instead of shipping a DMG that dies at launch (#15).
+          "$APP/Contents/MacOS/AgentsUsageBar" version
 
           mkdir -p build/export
           cp -R "$APP" build/export/AgentsUsageBar.app
