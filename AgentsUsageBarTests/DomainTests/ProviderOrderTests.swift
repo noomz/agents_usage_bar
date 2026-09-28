@@ -32,6 +32,18 @@ struct ProviderOrderTests {
         #expect(order(ids, preference: [ProviderID(rawValue: "engine.gone"), .codex]) == ["codex", "claude"])
     }
 
+    @Test("mixed-case engine id is honoured (issue #10)")
+    func mixedCaseEngine() {
+        // `provider-order` is always stored lowercase (V30), but a live
+        // `engine.<slug>` id preserves the exact case from config.toml
+        // (`[engine.GPU]` → `ProviderID(rawValue: "engine.GPU")`). The
+        // stored preference "engine.gpu" must still match it.
+        let liveGPU = ProviderID(rawValue: "engine.GPU")
+        let ids: [ProviderID] = [.claude, .codex, liveGPU]
+        #expect(order(ids, preference: [ProviderID(rawValue: "engine.gpu")])
+                == ["engine.GPU", "claude", "codex"])
+    }
+
     @Test("UserDefaults reader: comma list, trimmed, lowercased; empty when unset")
     func reader() {
         let suite = "test.aub.order.\(UUID().uuidString)"
