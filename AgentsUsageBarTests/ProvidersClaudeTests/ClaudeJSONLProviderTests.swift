@@ -88,7 +88,7 @@ private func makeProvider(
         oauth: oauth,
         cache: cache,
         clock: SystemClock(),
-        roots: roots
+        roots: { roots }
     )
 }
 
@@ -124,6 +124,28 @@ struct ClaudeJSONLProviderTests {
             #expect(snap.raw["providerStatus"] == "unauthenticated")
             #expect(snap.quota == nil)
             #expect(await provider.status() == .unauthenticated)
+        }
+    }
+
+    @Test func fetch_rootCreatedAfterLaunch_isPickedUpWithoutRestart() async throws {
+        let parent = try makeTempRoot()
+        defer { try? FileManager.default.removeItem(at: parent) }
+        let dir = parent.appendingPathComponent("projects", isDirectory: true)
+        // Mirrors ClaudeRoots.defaultRoots: only roots that exist right now.
+        let provider = ClaudeJSONLProvider(
+            reader: TranscriptReader(), scanner: TranscriptDirectoryScanner(), pricing: .testPricing,
+            oauth: nil, cache: FakeCacheStore(), clock: SystemClock(),
+            roots: { FileManager.default.fileExists(atPath: dir.path) ? [dir] : [] }
+        )
+
+        let before = try await provider.fetch(now: .now)
+        #expect(before.raw["providerStatus"] == "unauthenticated")
+
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let after = try await provider.fetch(now: .now)
+        #expect(after.raw["providerStatus"] == nil)
+        if case .ok = await provider.status() { } else {
+            Issue.record("Expected .ok once a root exists")
         }
     }
 

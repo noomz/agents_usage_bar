@@ -70,7 +70,7 @@ private func makeCBProvider(
         oauth: oauth,
         cache: FakeCacheStore(),
         clock: clock,
-        roots: roots
+        roots: { roots }
     )
 }
 

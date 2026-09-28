@@ -50,7 +50,7 @@ struct ClaudeSwitchableProviderTests {
             oauth: nil,
             cache: NoopCacheStore(),
             clock: SystemClock(),
-            roots: [rootsEmptyDir]
+            roots: { [rootsEmptyDir] }
         )
     }
 
