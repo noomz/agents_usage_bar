@@ -11,8 +11,9 @@
 #   no Team ID, so the bundled Sparkle.framework gets rejected at launch with
 #   "different Team IDs" and the app dies in dyld. Dropping the runtime flag
 #   disables library validation and the ad-hoc Sparkle helpers load fine.
-#   (The CI release workflow keeps `--options runtime` because its SIGNED lane
-#   uses a real Developer ID cert, where library validation is satisfied.)
+#   (The CI release workflow's unsigned lane signs the same way; only its SIGNED
+#   lane uses `--options runtime`, where a Developer ID cert satisfies library
+#   validation.)
 #
 # Usage:  ./scripts/build-local.sh
 #
