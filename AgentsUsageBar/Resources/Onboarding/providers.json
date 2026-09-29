@@ -61,6 +61,16 @@
       "docsURL": "https://ollama.ai"
     },
     {
+      "providerID": "ollama-cloud",
+      "displayName": "Ollama Cloud",
+      "detectionDescription": "Run `ollama signin`, or set OLLAMA_API_KEY / add [ollama].api_key to config.toml. Shows monthly included usage for :cloud models.",
+      "envSnippet": "# Optional: without a key the app signs with your `ollama signin` device key.\nexport OLLAMA_API_KEY=<your-ollama-key>",
+      "envNote": "Restart Agents Usage Bar to apply environment variable changes.",
+      "tomlSnippet": "[ollama]\n# api_key = \"<your-ollama-key>\"\n# billing_day = 15   # day of month your included usage resets\n# cloud = false      # hide the Ollama Cloud row",
+      "tomlNote": "Save the file — api_key and billing_day apply on next poll; cloud = false on next launch.",
+      "docsURL": "https://ollama.com/settings/keys"
+    },
+    {
       "providerID": "lmstudio",
       "displayName": "LM Studio",
       "detectionDescription": "Start LM Studio server — detected via HTTP probe on localhost:1234 (default port).",

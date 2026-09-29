@@ -38,6 +38,9 @@ public enum ProviderDashboardURL {
     /// Grok / SuperGrok usage dashboard (CLI `/usage` destination).
     public static let grok = URL(string: "https://grok.com/?_s=usage")!
 
+    /// Ollama Cloud settings page (monthly usage, plan, reset date).
+    public static let ollamaCloud = URL(string: "https://ollama.com/settings")!
+
     /// Returns the dashboard URL for `providerID`, or `nil` when no mapping
     /// exists (out-of-scope providers — local LLMs, unknown future IDs).
     ///
@@ -51,6 +54,7 @@ public enum ProviderDashboardURL {
         case "codex":      return codex
         case "gemini":     return gemini
         case "grok":       return grok
+        case "ollama-cloud": return ollamaCloud
         default:           return nil
         }
     }

@@ -38,7 +38,9 @@ public enum ProviderRegistryFactory {
         localhostHTTP: any HTTPClient,
         cache: any CacheStore,
         clock: any Clock,
-        processCatalog: any ProcessCatalog = ProcProcessCatalog()
+        processCatalog: any ProcessCatalog = ProcProcessCatalog(),
+        loadOllamaDeviceKey: @escaping @Sendable () -> OllamaDeviceSigner? = { OllamaDeviceSigner.load() },
+        loadOllamaCloudConfig: @escaping @Sendable () -> OllamaCloudConfig = { ConfigStore().load().ollamaCloud }
     ) -> ProviderRegistry {
         var registry: [any UsageProvider] = []
         var placeholders: [PlaceholderSeed] = []
@@ -222,6 +224,17 @@ public enum ProviderRegistryFactory {
                 providerID: .ollama,
                 displayName: "Ollama",
                 status: .notRunning
+            ))
+        }
+
+        // SPEC V2: register only when a credential resolves; no placeholder row otherwise.
+        // The provider re-resolves per fetch; this check only decides whether the row exists.
+        if config.ollamaCloud.enabled,
+           OllamaCloudCredential.resolve(config: config.ollamaCloud, loadDevice: loadOllamaDeviceKey) != nil {
+            registry.append(OllamaCloudProvider(
+                http: http,
+                loadConfig: loadOllamaCloudConfig,
+                loadDevice: loadOllamaDeviceKey
             ))
         }
 

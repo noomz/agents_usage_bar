@@ -1,4 +1,4 @@
-1 at ≥80% · 1 at 50–79% · 2 unavailable
+1 at ≥80% · 2 at 50–79% · 2 unavailable
 ▲ OpenRouter   █████████▍  94% credits
                $1.25 spent     day
                $8.10 spent     week
@@ -14,3 +14,4 @@
                ▍░░░░░░░░░   4% 2.5-flash ↻ 1h
 ! Gemini       unavailable
 ! Grok         unauthenticated
+△ Ollama Cloud ██████▎░░░  62% mo        ↻ 13d 18h

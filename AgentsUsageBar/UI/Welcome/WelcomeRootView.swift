@@ -14,6 +14,7 @@ struct WelcomeRootView: View {
     let onDismiss: (_ openSettings: Bool) -> Void
 
     @State private var detectionResults: [ProviderID: DetectionResult] = [:]
+    @State private var detectionDetails: [ProviderID: String] = [:]
     @State private var isProbing: Bool = true
     @State private var onboardingCopy: OnboardingCopy? = nil
 
@@ -47,6 +48,7 @@ struct WelcomeRootView: View {
                         WelcomeProviderRow(
                             providerID: id,
                             detectionResult: detectionResults[id],
+                            detectionDetail: detectionDetails[id],
                             isProbing: isProbing,
                             onboardingInfo: onboardingCopy?.providers.first { $0.providerID == id.rawValue }
                         )
@@ -101,6 +103,9 @@ struct WelcomeRootView: View {
             localhostHTTP: http
         )
         detectionResults = results
+        detectionDetails = Dictionary(uniqueKeysWithValues: results.compactMap { id, result in
+            result == .detected ? DetectionProbe.detail(for: id, config: config).map { (id, $0) } : nil
+        })
         isProbing = false
 
         // CFG-03 + D-11: seed detected providers as enabled in UserDefaults (first-run only).

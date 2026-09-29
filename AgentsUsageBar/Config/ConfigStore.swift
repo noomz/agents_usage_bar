@@ -232,6 +232,39 @@ public final class ConfigStore: @unchecked Sendable {
             ollamaEnabled = defaults.ollama.enabled
         }
 
+        // --- ollama cloud (SPEC V1/V2/V8): keys in [ollama]; api key env > toml ---
+
+        let ollamaCloudEnabled: Bool
+        if case .bool(let b) = ollamaSection["cloud"] {
+            ollamaCloudEnabled = b
+        } else {
+            ollamaCloudEnabled = defaults.ollamaCloud.enabled
+        }
+
+        let ollamaCloudKey: Secret?
+        let ollamaCloudKeySource: OllamaCloudConfig.CredentialSource?
+        if let envKey = env.value(forKey: "OLLAMA_API_KEY") {
+            ollamaCloudKey = Secret(envKey)
+            ollamaCloudKeySource = .env
+        } else if case .string(let s) = ollamaSection["api_key"], !s.isEmpty {
+            ollamaCloudKey = Secret(s)
+            ollamaCloudKeySource = .config
+        } else {
+            ollamaCloudKey = nil
+            ollamaCloudKeySource = nil
+        }
+
+        // billing_day outside 1…31 (or not an int) → unset, reset shown as unknown.
+        let ollamaBillingDay: Int?
+        if case .int(let d) = ollamaSection["billing_day"], (1...31).contains(d) {
+            ollamaBillingDay = d
+        } else {
+            if ollamaSection["billing_day"] != nil {
+                logger.warning("config: [ollama] billing_day must be an integer 1–31 — ignoring")
+            }
+            ollamaBillingDay = nil
+        }
+
         // --- Plan 04-02 — lmstudio section (toml > defaults; NO env override) ---
 
         // lmstudio.enabled: TOML only.
@@ -295,6 +328,12 @@ public final class ConfigStore: @unchecked Sendable {
                 apiURL: grokAPIURL
             ),
             ollama: OllamaConfig(enabled: ollamaEnabled),
+            ollamaCloud: OllamaCloudConfig(
+                enabled: ollamaCloudEnabled,
+                apiKey: ollamaCloudKey,
+                apiKeySource: ollamaCloudKeySource,
+                billingDay: ollamaBillingDay
+            ),
             lmstudio: LMStudioConfig(enabled: lmstudioEnabled, port: lmstudioPort),
             llamacpp: LlamaCppConfig(enabled: llamacppEnabled, port: llamacppPort),
             engines: LocalEngineConfig.parse(from: toml)
@@ -340,6 +379,9 @@ public final class ConfigStore: @unchecked Sendable {
             ),
             ollama: config.ollama.withEnabled(
                 prefs.providerEnabled[.ollama] ?? config.ollama.enabled
+            ),
+            ollamaCloud: config.ollamaCloud.withEnabled(
+                prefs.providerEnabled[.ollamaCloud] ?? config.ollamaCloud.enabled
             ),
             lmstudio: config.lmstudio.withEnabled(
                 prefs.providerEnabled[.lmstudio] ?? config.lmstudio.enabled

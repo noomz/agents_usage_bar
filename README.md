@@ -63,7 +63,8 @@ To build and install from source without an Apple certificate, run `scripts/buil
 
 - **No telemetry. No analytics. No crash-reporter uploads. All data stays on your machine.**
 - Crashes are written only to the local macOS crash reporter.
-- The only network traffic the app makes is **outbound HTTPS to the AI provider APIs you have configured** (Anthropic, OpenAI / Codex, OpenRouter, Google Gemini) plus **outbound HTTP to localhost** for the local LLM runtimes you have enabled (Ollama, LM Studio, llama.cpp). Nothing else.
+- The only network traffic the app makes is **outbound HTTPS to the AI provider APIs you have configured** (Anthropic, OpenAI / Codex, OpenRouter, Google Gemini, Ollama Cloud) plus **outbound HTTP to localhost** for the local LLM runtimes you have enabled (Ollama, LM Studio, llama.cpp). Nothing else.
+- **Ollama Cloud** (`ollama.com/api/usage`, `/api/me`) is queried only when you have set `OLLAMA_API_KEY` / `[ollama] api_key`, or signed in with `ollama signin`. In the signed-in case the app reads `~/.ollama/id_ed25519` to sign those two requests the same way the `ollama` CLI does; the key is used in memory only — never logged, cached, or sent. From `/api/me` only the plan name is read. Turn it off with the Settings → Providers toggle (immediate) or `[ollama] cloud = false` (next launch); key and `billing_day` edits apply on the next poll.
 - **No Keychain UI in v1.** Credentials are read from environment variables and existing CLI config files (e.g. `~/.config/agents-usage-bar/config.toml`, which is created with `0600` permissions and warned about if found world-readable). See SEC-03 in [`.planning/REQUIREMENTS.md`](.planning/REQUIREMENTS.md).
 
 This promise is enforced by a deliberately minimal entitlement posture: the app declares **only** `com.apple.security.network.client` (no library-validation bypass, no JIT, no analytics frameworks). Notarized builds run under the Hardened Runtime; the current ad-hoc releases are signed without it, because it would stop the bundled Sparkle framework from loading ([#15](https://github.com/noomz/agents_usage_bar/issues/15)). See [`docs/entitlements.md`](docs/entitlements.md) for the full why-unsandboxed + what-is-not-declared rationale, and [`SECURITY.md`](SECURITY.md) for the disclosure policy.
@@ -99,6 +100,12 @@ threshold = 0.80           # 0.0–1.0 — quota fraction that triggers a warnin
 
 [openrouter]
 api_key   = "<your-openrouter-key>"  # overridden by OPENROUTER_API_KEY env var
+
+[ollama]
+# Ollama Cloud usage row — on automatically after `ollama signin` or with a key.
+# api_key     = "<your-ollama-key>"  # overridden by OLLAMA_API_KEY env var
+# billing_day = 15                   # day of month your included usage resets (shows a countdown)
+# cloud       = false                # hide the Ollama Cloud row
 
 [llamacpp]
 port = 8080                          # Homebrew / vanilla llama-server only

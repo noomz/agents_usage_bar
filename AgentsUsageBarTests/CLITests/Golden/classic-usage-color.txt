@@ -23,6 +23,9 @@ Gemini               [32m████░░░░░░░░░░░░░░
 Grok                 [90m████████████████████[0m  no limit
                      — · —
 Ollama               Not running
+Ollama Cloud         [33m████████████░░░░░░░░[0m  62%
+                     62% used
+                     mo  62%   Resets 13d 18h
 LM Studio llama.cpp  Start LM Studio's llama.cpp server
 llama.cpp            Qwen3.5-4B · 3.0 GB VRAM
 gpu-box              Set [engine.gpu-box] port or match_path in config.toml

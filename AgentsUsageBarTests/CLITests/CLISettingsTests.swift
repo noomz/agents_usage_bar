@@ -117,6 +117,14 @@ struct CLISettingsTests {
         #expect(defaults.object(forKey: AUBDefaultsKey.providerOrder) == nil)
     }
 
+    @Test("provider-order accepts ollama-cloud (SPEC V15)")
+    func providerOrderAcceptsOllamaCloud() {
+        let (store, defaults) = make()
+        #expect(try! store.set("provider-order", value: "Ollama-Cloud,ollama").get().value == "ollama-cloud,ollama")
+        #expect(defaults.aubProviderOrder == [.ollamaCloud, .ollama])
+        #expect(try! store.get("provider.ollama-cloud.enabled").get().value == "true")
+    }
+
     @Test("mixed-case configured engine id is accepted, stored lowercase, and honoured (issue #10)")
     func providerOrderMixedCaseEngine() {
         let suite = "test.aub.cli.\(UUID().uuidString)"

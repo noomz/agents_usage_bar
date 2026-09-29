@@ -70,6 +70,7 @@ public enum DetectionProbe {
         let codexResult = probeCodexFS(fileManager: fileManager)
         let geminiResult = probeGeminiFS(fileManager: fileManager)
         let grokResult = probeGrok(config: config, fileManager: fileManager)
+        let ollamaCloudResult = probeOllamaCloud(config: config, fileManager: fileManager)
 
         // Per-provider port/URL values (Sendable: Int, URL, Optional<Int>)
         let lmstudioPort = config.lmstudio.port
@@ -104,6 +105,8 @@ public enum DetectionProbe {
             group.addTask { (.gemini, geminiResult) }
 
             group.addTask { (.grok, grokResult) }
+
+            group.addTask { (.ollamaCloud, ollamaCloudResult) }
 
             // 5. Ollama — HTTP probe (2s timeout via localhostHTTP)
             group.addTask {
@@ -201,6 +204,33 @@ public enum DetectionProbe {
             return .detected
         }
         return .notDetected
+    }
+
+    /// Extra text for a `.detected` badge: which credential the provider will use
+    /// (SPEC V16). Only Ollama Cloud has more than one source today; `nil` otherwise.
+    public static func detail(
+        for providerID: ProviderID,
+        config: AppConfig,
+        fileManager: FileManager = .default
+    ) -> String? {
+        guard providerID == .ollamaCloud else { return nil }
+        return ollamaCloudCredential(config: config, fileManager: fileManager)?.sourceLabel
+    }
+
+    /// Ollama Cloud: detected iff a credential resolves (SPEC V2/V16) — an explicit
+    /// key, or an `ollama signin` device key that actually parses.
+    private static func probeOllamaCloud(config: AppConfig, fileManager: FileManager) -> DetectionResult {
+        ollamaCloudCredential(config: config, fileManager: fileManager) != nil ? .detected : .notConfigured
+    }
+
+    /// `nil` when `[ollama] cloud = false`: a disabled row is never "detected", so the
+    /// Welcome screen cannot re-enable it through the providerEnabled seed.
+    private static func ollamaCloudCredential(config: AppConfig, fileManager: FileManager) -> OllamaCloudCredential? {
+        guard config.ollamaCloud.enabled else { return nil }
+        let keyURL = OllamaDeviceSigner.defaultKeyURL(home: fileManager.homeDirectoryForCurrentUser)
+        return OllamaCloudCredential.resolve(config: config.ollamaCloud) {
+            OllamaDeviceSigner.load(from: keyURL)
+        }
     }
 
     // MARK: - HTTP probe helper (async)

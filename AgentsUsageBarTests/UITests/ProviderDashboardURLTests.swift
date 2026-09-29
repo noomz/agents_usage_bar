@@ -47,6 +47,11 @@ struct ProviderDashboardURLTests {
         #expect(url?.absoluteString == "https://grok.com/?_s=usage")
     }
 
+    @Test("ollama-cloud -> https://ollama.com/settings (SPEC V12)")
+    func ollamaCloud_mapsToSettings() {
+        #expect(ProviderDashboardURL.lookup(.ollamaCloud)?.absoluteString == "https://ollama.com/settings")
+    }
+
     // MARK: - Unknown providers — return nil
 
     @Test("ollama -> nil (local LLM, out of Phase 3 scope)")
@@ -77,7 +82,7 @@ struct ProviderDashboardURLTests {
 
     @Test("every mapped URL uses scheme = https (Hardened Runtime + ATS)")
     func allURLs_areHTTPS() {
-        let providers: [ProviderID] = [.openrouter, .claude, .codex, .gemini, .grok]
+        let providers: [ProviderID] = [.openrouter, .claude, .codex, .gemini, .grok, .ollamaCloud]
         for p in providers {
             let url = ProviderDashboardURL.lookup(p)
             #expect(url?.scheme == "https", "\(p.rawValue) must be https-only")
@@ -86,7 +91,7 @@ struct ProviderDashboardURLTests {
 
     @Test("every mapped URL has a non-empty host")
     func allURLs_haveNonEmptyHost() {
-        let providers: [ProviderID] = [.openrouter, .claude, .codex, .gemini, .grok]
+        let providers: [ProviderID] = [.openrouter, .claude, .codex, .gemini, .grok, .ollamaCloud]
         for p in providers {
             let url = ProviderDashboardURL.lookup(p)
             #expect((url?.host ?? "").isEmpty == false, "\(p.rawValue) must have a host")

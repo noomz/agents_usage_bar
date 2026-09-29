@@ -1,98 +1,83 @@
-# SPEC — aub CLI themes
+# SPEC — Ollama Cloud usage row
 
-Source: wayfinder map `.scratch/aub-cli-themes/map.md`, tickets `.scratch/aub-cli-themes/issues/01–09` (detail lives there; this spec is the contract). Prior spec archived: `docs/specs/claude-dual-limit-glance.md`.
+Source: wayfinder map `.scratch/ollama-cloud-usage/map.md`, tickets `.scratch/ollama-cloud-usage/issues/01–06`, research `.scratch/ollama-cloud-usage/research/01-ollama-cloud-usage-api.md` (detail lives there; this spec is the contract). Issue #12. Prior spec archived: `docs/specs/aub-cli-themes.md`.
 
 ## §G
 
-G1|`aub` text output gets two built-in CLI themes: `compact` (new default, canvas "Compact v2") and `classic` (today's output, byte-identical), with zero measurable perf cost.
-G2|User-set provider order shared by `compact` and menu-bar popover.
+G1|New remote provider row `ollama-cloud` shows Ollama Cloud monthly included-usage fraction (popover + `aub` CLI), for `:cloud` model users. Local `ollama` row unchanged.
 
 ## §C
 
-C1|Themes compiled in; `enum CLITheme { compact, classic }`, static switch. No loadable themes, no `aub render`, no reflection.
-C2|`--json` untouched by this effort: schema, fields, array order.
-C3|Colour stays orthogonal: `--no-color` / `NO_COLOR` / `TERM=dumb` / TTY decide colour for every theme.
-C4|Menu-bar popover does not follow CLI theme; its only change is provider order (V30–V32).
-C5|No App theme changes. No Settings-window controls for CLI theme or provider order in v1.
-C6|No perf timing tests in CI (Debug + coverage, hosted runners, #4 flake history). Gate is manual A/B (V33–V36).
-C7|Claude accounts not orderable; stay alphabetical.
-C8|Cache decode of `today.json` (~38 ms) out of scope.
+C1|Endpoints undocumented upstream (`ollama.com/api/usage`, `/api/me`): every field optional, unknown keys ignored, shape change degrades cloud row only.
+C2|Credential sources = env var, `config.toml`, existing CLI key file (`~/.ollama/id_ed25519`). No Keychain, no browser cookies, no settings-page HTML scraping.
+C3|Repo public: no real keys, signatures, pubkeys, payloads, emails, names, ids, plan of any real account in code, tests, fixtures, logs, commits.
+C4|Monthly window only. Legacy 5h session / 7d weekly windows out of scope.
+C5|Percent only: no dollar figures, no plan-allowance table, no allowance config.
+C6|Archived-spec CLI invariants stay in force for any CLI render change (esp. `docs/specs/aub-cli-themes.md` V5 classic golden, V14 short labels, V31 ordering helper, V37 no regex/`DateFormatter` in render path).
+C7|No new entitlements; app stays unsandboxed + `network.client` only.
 
 ## §I
 
-I1|CLI usage|`aub`, `aub usage`, `aub <provider>` text output (`AgentsUsageBar/CLI/UsageTextRenderer.swift` = classic, new `CompactTextRenderer.swift`).
-I2|CLI quota|`aub quota`, `aub limits` text output.
-I3|CLI flag/env|`--theme NAME`, `AUB_THEME` (`AUBCommand.swift`, `AUBCommandRun.swift`).
-I4|CLI settings|`aub settings get/set/list` keys `cli-theme`, `provider-order` (`CLISettings.swift`).
-I5|CLI themes cmd|`aub themes`, `aub themes --json`.
-I6|JSON CLI|`aub --json` (`UsageJSONRenderer.swift`) — unchanged.
-I7|Popover|Provider row order in `UI/PopoverRootView.swift`.
-I8|Domain|`QuotaWindow` optional duration; OpenRouter snapshot `usage_daily/weekly/monthly`.
-I9|Bench|`scripts/bench-cli-themes.sh`; `AUB_BENCH=1`-gated Swift Testing render bench.
+I1|Usage API|`GET https://ollama.com/api/usage` → `{activity:{cost:"<decimal str>", models:[], period:{type, starting_at, ending_at}}, limits:{monthly:{usage:<0–1>, models:[]}}}`. 401 body `{"error":"invalid credentials"}`.
+I2|Account API|`POST https://ollama.com/api/me` (body `{}`) → PascalCase object; only `Plan` (lowercase slug, open-ended) consumed.
+I3|Auth|Bearer: `Authorization: Bearer <OLLAMA_API_KEY>`. Device: add query `ts=<unix s>`; challenge `"<METHOD>,<path>?<query>"`; header `Authorization: <authorized_keys pubkey field>:<base64 raw ed25519 sig>` (Ollama `auth/auth.go` `Sign`, `server/cloud_proxy.go`).
+I4|Config|`OLLAMA_API_KEY` env; `config.toml` `[ollama]` keys `api_key`, `cloud` (bool), `billing_day` (1–31) (`Config/AppConfig.swift`, `Config/ConfigStore.swift`).
+I5|Domain|`ProviderID.ollamaCloud` = `"ollama-cloud"` (`Domain/ProviderID.swift`, `allKnown`); `QuotaWindow` (`Domain/QuotaWindow.swift`); `ProviderStatus.unauthenticated`.
+I6|Provider|new `Providers/OllamaCloud/` (provider actor, response types, signer); registration in `App/ProviderRegistryFactory.swift`.
+I7|UI|`UI/ProviderRowView.swift` (standard remote row), `UI/ProviderDashboardURL.swift`, `UI/Welcome/DetectionProbe.swift`.
+I8|CLI|`CLI/CompactTextRenderer.swift` short-label table, classic `UsageTextRenderer.swift`, `UsageJSONRenderer.swift`, `provider-order` validation (`CLISettings.swift`).
+I9|Hygiene|`scripts/check-secrets.sh` `PATTERNS` (+ ci.yml copy); README Privacy + Configuration sections.
 
 ## §V
 
-### Renderer model (ticket 03)
-V1|Themes render from `UsageReport`, never `UsageJSONDocument`. API: `CLITheme.render(_ report: UsageReport, view: .usage | .quota, color: Bool) -> String`.
-V2|Renderer never calls `Date()`; `now` = `report.asOf`.
-V3|Shared CLI primitives (bar glyphs, token/USD/percent text, reset phrase, ANSI band) extracted once, called by both themes; row layout owned per theme.
-V4|`UsageTextRenderer` is `classic`: not renamed; existing `UsageTextRendererTests` unchanged and green.
-V5|`classic` output byte-identical to `main` @ 8f18d6c: full-output golden test (`==`), `renderUsage` + `renderQuota`, colour on and off, rich Swift fixture (Claude multi-account, Codex windows, degraded Gemini, local placeholder, quota-only provider). Golden captured on `main` before any refactor. Fixture builder reused by compact tests.
-V6|`--json` output byte-identical to `main` for the same report.
+### Credentials (ticket 02)
+V1|Resolution order: `OLLAMA_API_KEY` env (non-empty) > `[ollama] api_key` toml > device key file. First hit wins; env/toml key held as `Secret`. Same `env > toml` rule as OpenRouter/Grok (D-03).
+V2|Row registered iff a credential resolves AND `[ollama] cloud` ≠ `false`. No credential → no row (not placeholder, not error).
+V3|Device key: parse unencrypted OpenSSH container only (`openssh-key-v1`, cipher `none`, one key, type `ssh-ed25519`, check ints equal); seed = first 32 bytes of private field → `Curve25519.Signing.PrivateKey`. Any mismatch/unreadable → "no device credential" (V2), one debug log line with no path content or bytes.
+V4|Key bytes + signatures live in memory for the fetch only: never logged, cached, persisted, or put in snapshot/raw/tooltip. `OllamaDeviceSigner` and `Secret` redact `description` and have empty mirrors (`dump` never prints key material).
+V5|Explicit key (env/toml) 401/403 → status `.error(ProviderError(kind: .auth))` (store convention: `.unauthenticated` = placeholder only), message `check OLLAMA_API_KEY` / `check [ollama] api_key`; no fallback to device key. Device-key 401 → same kind, message `run ollama signin`. No credential at fetch time → same kind, `run ollama signin or set OLLAMA_API_KEY`.
+V6|After credential fix (edited toml key, new `ollama signin` key, server recovery), row leaves auth error on next poll — no restart, no stuck state via cache seed / POLL-06 skip (V25). Tests required: server recovery + changed credential.
 
-### Compact layout (ticket 05; mock `.scratch/aub-cli-themes/compact-v2-mock.txt`)
-V7|Header 1: `today $<cost> spent · <tok> tok · HH:mm`; cost/tokens = providers with `contributesToTodayTotal` (Claude + Codex); tokens SI-abbreviated; time = `report.asOf` local; no cached marker.
-V8|Header 2 always printed, zeros included: `N at ≥80% · N at 50–79% · N unavailable`; counts every printed bar row (each Claude account) and every `!` row.
-V9|Row grammar: `<glyph> <name> <bar> <pct> <window> ↻ <reset> <money>`. Glyph `▲` ≥80 %, `△` 50–79 %, blank <50 %, `!` unavailable. Colour red/yellow/green by same bands; glyph carries severity with colour off. Cut-offs are compact's own, on displayed whole percent of consumed fraction (shown `80%` = `▲` red, so 0.7996 → `▲`); popover `QuotaBand` untouched.
-V10|Bar: 10 cells base, eighth blocks `▏▎▍▌▋▊▉█`, dim `░` track. Nothing capped → text `no limit`, no bar.
-V11|Window per row = highest-utilisation window, labelled `5h`/`7d`/`weekly`/`credits`; Codex label from `QuotaWindow` duration, fallback raw name (`primary`/`secondary`). Gemini model label short: drop `gemini-` prefix, `-flash-lite` → `-lite` (`2.5-pro`, `2.5-flash`, `2.5-lite`); prefix/suffix ops only (V37).
-V12|Reset = shared countdown phrase without `Resets ` prefix (`2h 50m`, `3d 8h`, `now`, `<1m`); nil → `↻ unknown`.
-V13|Money: Claude/Codex `$X spent`; Grok `no cost data`; OpenRouter `$<balance> left` only (daily spend in `aub quota` `day` row). OpenRouter % = consumed: used ÷ key limit, else spent ÷ prepaid credits; label `credits`; neither → `no limit`.
-V14|Compact owns short-label table per provider id (OpenRouter, Claude, Codex, Gemini, Grok, Ollama, LM Studio, llama.cpp); `engine.*`/unknown → `displayName`. Live and cached labels identical.
-V15|Row order: never by severity; compact sorts rows itself via shared provider-order helper (V31); session sort untouched.
-V16|Claude accounts: one row per account, alphabetical, `●` on the active-constraint account (`quotaGlance.active.accountName`, classic's `Active:`); `Claude` header row first (combined cost, no bar/%, not counted in severity line), then every account row indented the same; quota view: header row, then per account its 5h/7d rows; no accounts → single `Claude` row.
-V17|Error rows: no snapshot → `!` row replaces bar row; snapshot degraded/stale → bar row + `!` line under it. Words: `unauthenticated`, `unavailable`, `stale`. `.disabled` hidden.
-V18|Local line: one `local` line — `● name model` (`+N` more loaded), `◐ name loading`, `○ name idle`, `○ name stopped`; unconfigured/placeholder/disabled hidden; custom engines by name; wraps to indented continuation lines.
-V19|Width: `TIOCGWINSZ` on TTY, else `$COLUMNS`, else nil = unfitted natural width (pipes/tests deterministic; user 2026-09-28, was 66). Extra width widens name column to longest label, then bar up to 20 cells. Narrow: bar shrinks to 5-cell floor, then labels truncate with `…`. Base width recomputed from widest row. Label/reset/money never shrink; narrow overflow accepted (user 2026-09-28).
-V20|`aub quota` compact: header = severity line only; one row per window, same grammar, no money (Claude 5h + 7d per account; Codex both; OpenRouter `credits` + `day`/`week`/`month` rows showing `$X spent` in the bar's place (no bar, no %, not counted in severity line); Gemini per model; Grok billing).
-V21|Single provider (`aub claude`): filtered usage view; header totals + severity counts cover shown provider only.
-V22|Empty: zero headers + one dim line `no providers enabled` or `no cached data yet — run aub without --cached`; exit 0.
-V23|`QuotaWindow` gains optional duration; Codex providers keep parsed `window_minutes`/`limit_window_seconds`. OpenRouter snapshot surfaces `usage_daily/weekly/monthly`; spec note: `usage_daily` is UTC day, header total is local-midnight.
+### Mapping (ticket 04)
+V7|`limits.monthly.usage` → one `QuotaWindow(name: "mo", utilization: clamp 0…1, resetsAt: V8, duration: nil)` (V24). Missing `limits.monthly` or `usage` → no window, row shows `no limit`-style empty state, status not error. Other `limits.*` keys ignored.
+V8|`resetsAt`: `billing_day` N set → next local midnight on day N strictly after `now`, N clamped to last day of month when month shorter; `Calendar(identifier: .gregorian)` + current time zone (Buddhist-calendar gotcha). Unset/invalid → `nil` → `↻ unknown`. Invalid (∉1…31) logged once, treated as unset.
+V9|`hasQuota: true`, `hasCost: false`, `hasTokens: false`, `isLocal: false`. Never contributes to today cost/token totals or rollups.
+V10|`activity.cost` parsed as `Decimal` from string; exposed only as tooltip text + `--json` raw; never cost column/totals. Unparseable → omitted.
+V11|Window feeds existing threshold engine (default 80 % crossing notification) like any quota window.
 
-### Selection (ticket 06)
-V24|Precedence: `--theme` > `AUB_THEME` > `cli-theme` setting > `compact`. Names case-insensitive; canonical lowercase.
-V25|`--theme NAME` only (no `=`, no short form); in `AUBCommand.knownTokens`; accepted on any command, ignored where irrelevant; value validated at parse. Unknown → `AUBParseError.unknownTheme`: `error: unknown CLI theme 'x'; expected compact|classic`, exit 2.
-V26|`AUB_THEME=""` = unset; invalid → same error prefixed `AUB_THEME:`, exit 2. Env + setting read lazily, text path only: `--json`, `settings`, `install` never read them.
-V27|`cli-theme` setting: default `compact`; bad `set` → `invalid value 'x' for cli-theme; expected compact|classic`, exit 2; `set` stores + echoes lowercase; `get` = stored value only; garbage in UserDefaults → silent fallback `compact`.
-V28|`aub themes`: row per theme — `●` on active, name, one-liner, `(default)` on compact — then `active: <name> (from flag|AUB_THEME|setting|default)`; full resolution runs (flag/env honoured, invalid env errors). `--json` → `{"themes":[{"name","description","default"}],"active","source":"flag|env|setting|default"}`. Extra arg → unexpected-argument, exit 2. Listed in help + `isSubcommand`.
-V29|Help text: `--theme NAME    CLI theme: compact (default) | classic` + env line naming `AUB_THEME` and `NO_COLOR`.
+### Surfaces (ticket 05)
+V12|Display name `Ollama Cloud`; compact short label `Ollama Cloud`; dashboard URL `https://ollama.com/settings`.
+V13|`tooltipLabel` lines, each only when known: plan (capitalised `Plan`), `your last 4 weeks: $X`, `via OLLAMA_API_KEY` | `via config` | `via ollama signin`.
+V14|`--json` raw keys: `plan`, `ownSpendLast4WeeksUSD` (decimal string), `credentialSource` (`env`|`config`|`device`). No other `/api/me` field anywhere.
+V15|`allKnown` places `ollama-cloud` immediately after `ollama`; `provider-order` accepts it; compact/classic/quota/single-provider views render it through existing remote-row paths (no new render branches).
+V16|Welcome detection probe: detected iff V2 holds, incl. `[ollama] cloud = false` → not detected (else Welcome seeds `providerEnabled = true` and re-enables row); detected badge names credential source (`DetectionProbe.detail`).
 
-### Provider order (ticket 09)
-V30|UserDefaults key `provider-order`: comma list of `ProviderID.rawValue` (incl. `engine.<slug>`). `set` rejects id not in `allKnown` nor configured `engine.*`, and duplicates → exit 2 listing valid ids; case-insensitive, stored + echoed lowercase. `set provider-order ""` removes key. `get` = stored list, or full `allKnown` when unset.
-V31|One shared ordering helper: listed ids first in given order; then unlisted in `allKnown` order; then `engine.*` alphabetical by slug. Stale ids skipped silently at read.
-V32|Order honoured by compact (V15) + popover only. Popover drops alphabetical `displayName` sort, uses helper (unset → `allKnown`); change visible on next popover open. `classic`, `--json` array, Settings Providers tab, Welcome keep `allKnown`.
-
-### Perf gate (ticket 07; baseline ticket 01)
-V33|Same-session A/B: HEAD vs `main` Release builds, separate derived-data dirs, one hyperfine run (`-N`, warmup 5, 60 runs). Pass: HEAD mean ≤ main mean + 2 ms AND HEAD min ≤ main min + 1 ms, every matrix row.
-V34|Peak RSS (max of 5 `/usr/bin/time -l`) ≤ main + 2 MB, every matrix row.
-V35|In-process: `compact` render < 1 ms/iter (min-of-N, V5 fixture), `AUB_BENCH=1` Swift Testing test; skipped in CI + normal runs. Nothing bench-related ships in binary.
-V36|Matrix: `usage --cached`, `quota --cached`, `claude --cached`, `usage --cached --json` (piped), each `--theme classic` and `--theme compact` on HEAD vs main's plain command; `version` floor. Gate runs at T2, T3, T4 before merge and T6 final. One re-run for noise; second fail blocks merge unless PR records measured, user-approved exception. No silent threshold widening.
-V37|CLI text render path (compact, classic, `CLIFormat`) uses no `NSRegularExpression` / `.regularExpression` and no `DateFormatter`: cold ICU load ~0.5–0.9 ms per `aub` run, invisible to warm V35 bench. Clock = gregorian `Calendar` components; trim = char loop.
-V38|Gate runs once `compact` exists set `THEMES="classic compact"`; themeless run (HEAD plain command) not count as gate pass.
+### Polling + failure (ticket 06)
+V17|`/api/usage` on shared poll interval + on-open refresh. `/api/me` after a successful usage call (never after a rejected one) until one 2xx per credential (2xx without `Plan` counts). Credential identity = fingerprint (`Secret` equality or device `publicKeyField`, never revealed); any change — other source, other key, other account — drops cached plan and re-fetches; plan stored only if fingerprint unchanged across the awaits. Failure → plan omitted, retried next poll; usage unaffected.
+V18|5xx / timeout / decode failure → stale with last snapshot (degraded note), same as other remote providers; local `ollama` row never affected. `URLSession` shared instance, 8 s timeout.
+V19|Only `Plan` decoded from `/api/me` (Codable struct has one optional field); personal fields never decoded.
+V20|Logs: status codes + credential source public; everything else `privacy: .private`; no header values ever.
+V21|Tests use synthetic data only: ed25519 key generated in-test and serialised to OpenSSH format by test helper; made-up usage values. Signer header format pinned by golden test per V23.
+V22|`check-secrets.sh` + ci.yml share one length-gated `PATTERNS`: provider key prefixes, `BEGIN OPENSSH PRIVATE KEY`, literal `Authorization: Bearer <20+ chars>`, `OLLAMA_API_KEY` assigned a 24+ char literal. Scans `*.swift/plist/yml/json/md` under `AgentsUsageBar/ AgentsUsageBarTests/ .github/ .scratch/ docs/` + `README.md`. Patterns never derived from a real key.
+V23|CryptoKit Ed25519 signatures randomized → never golden full header/signature. Golden pins deterministic parts (fixed key + fixed `ts`): pubkey field, challenge string, signed URL; signature part checked by `publicKey.isValidSignature` over challenge + format `<pubkey field>:<base64 64-byte sig>`.
+V24|Ollama Cloud window has no `duration` (API reports none; calendar months not fixed-length). Compact `windowLabel` derives label from duration first, so non-nil duration would print `30d`; row must print `mo`. Test on compact render.
+V25|Provider re-reads `[ollama]` config (`api_key`, `billing_day`) + device key every fetch and resolves credential fresh; key bytes held for that fetch only. `[ollama] cloud` read at launch only (decides row existence; per-fetch reload ignores it, since enforcing it would override a Settings "on" preference); Settings → Providers toggle applies live.
+V26|`URLSessionHTTPClient` persists nothing: `urlCache = nil`, `httpCookieStorage = nil`, `httpShouldSetCookies = false`, `urlCredentialStorage = nil`. Pinned by `makeConfiguration` test.
 
 ## §T
 
 id|status|task|cites
-T1|x|Capture classic golden on `main` before refactor: Swift fixture builder + full-output `==` tests for `renderUsage`/`renderQuota`, colour on/off; also JSON golden for same fixture|V4,V5,V6,I1,I2,I6
-T2|x|Extract shared CLI primitives; add `CLITheme` enum with `classic` only routed through it; goldens green; add `scripts/bench-cli-themes.sh` + gate run vs main|V1,V2,V3,V4,V5,V6,V33,V34,V36,I9
-T3|x|Build `CompactTextRenderer` (usage, quota, single, empty views; width; labels; errors; local line) + provider changes (`QuotaWindow` duration, OpenRouter daily/weekly/monthly); compact goldens at 66 cols; `AUB_BENCH` render bench; gate run|V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23,V35,V33,V34,I1,I2,I8,I9
-T4|x|Selection plumbing: `--theme`, `AUB_THEME`, `cli-theme` setting, `aub themes` (+`--json`), help text, compact as default; parser + settings tests; gate run|V24,V25,V26,V27,V28,V29,V33,V34,V36,I3,I4,I5
-T5|x|Provider order: shared ordering helper, `provider-order` setting + validation, compact + popover adopt helper; tests incl. classic/json order unchanged|V15,V30,V31,V32,V5,V6,I4,I7
-T6|x|Final full perf gate run on HEAD vs main; results in PR|V33,V34,V35,V36,V37,V38,I9
-T7|x|Compact layout amend (PR #9 open Qs, user 2026-09-28): Gemini short window label, OpenRouter money drop `today`, regenerate compact goldens, tests, gate run|V11,V13,V19,V36,V38
-T8|x|PR #9 review fixes: all-disabled empty message, severity on rounded %, `siTokens` rounding rollover, quota view Claude account w/o windows → `no limit`; V19 nil width = natural|V9,V16,V19,V22
+T1|x|Domain + config: `ProviderID.ollamaCloud` in `allKnown` after `ollama`; `[ollama] api_key`/`cloud`/`billing_day` + `OLLAMA_API_KEY` in AppConfig/ConfigStore; provider-order accepts id; config tests|V1,V2,V8,V15,I4,I5,I8
+T2|x|Device-key signer: OpenSSH ed25519 parser, challenge builder, header; test helper generating synthetic OpenSSH key; golden header test; malformed/encrypted key tests|V3,V4,V21,V23,I3,I6
+T3|x|Credential resolver (env > toml > device) + `OllamaCloudProvider` (usage fetch, `/api/me` per launch, mapping, billing-day reset, tooltip/raw, status on 401/5xx/decode), response types; registration in `ProviderRegistryFactory` gated by V2; provider tests incl. recovery-after-fix|V1,V2,V5,V6,V7,V8,V9,V10,V11,V13,V14,V17,V18,V19,V20,I1,I2,I6
+T4|x|Surfaces: dashboard URL, detection probe, compact short label, classic/compact/quota/json golden updates for new row (classic change limited to added row), popover row check|V12,V13,V14,V15,V16,V24,C6,I7,I8
+T5|x|Hygiene + docs: check-secrets patterns (script + ci.yml), log privacy audit, README Privacy (ollama.com traffic, device-key read) + Configuration (`[ollama]` keys)|V20,V22,C3,C7,I9
+T6|x|Live verification on dev machine: build, run app + `aub` with env key, config key, device key; screenshot/row check; no real values in PR text|V1,V5,V12,V13,C3
 
 ## §B
 
 id|date|cause|fix
-B1|2026-09-25|T4 gate failed twice on compact rows (Δmin +2.1 ms, ΔRSS +2.1 MB): `CompactTextRenderer` per-row `\s+$` regex trim (cold ~0.85 ms) + header `DateFormatter` (cold ~0.5 ms); V35 warm min-of-N + T3 themeless gate hid it|V37,V38
+B1|2026-09-28|V21 assumed deterministic Ed25519 signing ("exact header" golden); CryptoKit `Curve25519.Signing` randomizes signatures — same message signs differently, both verify|V23
+B2|2026-09-28|V7 gave window `duration: 30 d`; `CompactTextRenderer.windowLabel` prefers duration → row label `30d`, not `mo`, misleading for billing-day monthly reset|V24
+B3|2026-09-28|Review of branch: V5 said status `unauthenticated` (store uses `.error(.auth)`); credential resolved once at launch so toml fix / re-signin needed restart despite "next poll" copy; default shared URLCache wrote authenticated responses to disk; Welcome probe ignored `cloud = false`; `/api/me` re-POSTed every tick when `Plan` absent|V5,V6,V16,V17,V25,V26
+B4|2026-09-28|Second review of PR #17: plan cache keyed on credential *source*, so another valid key/account in same source kept old plan; `Secret` had no empty mirror (`dump` printed API key); cookies/credential storage still on; `cloud = false` runtime semantics unstated|V4,V17,V22,V25,V26

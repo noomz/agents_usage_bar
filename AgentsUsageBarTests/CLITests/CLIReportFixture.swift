@@ -16,7 +16,7 @@ enum CLIReportFixture {
     static func rich() -> UsageReport {
         UsageReport(asOf: asOf, source: .cached, providers: [
             openrouter(), claude(), codex(), gemini(), grok(),
-            ollama(), lmStudioLlamaCpp(), llamacpp(), customEngine(),
+            ollama(), ollamaCloud(), lmStudioLlamaCpp(), llamacpp(), customEngine(),
         ])
     }
 
@@ -121,6 +121,23 @@ enum CLIReportFixture {
 
     static func ollama() -> ProviderReport {
         report(.ollama, "Ollama", status: .notRunning, snapshot: nil, isLocal: true)
+    }
+
+    /// Built through the real mapper so goldens show the app's actual row (SPEC V24:
+    /// label `mo`, not `30d`). Synthetic values; billing day 8 (UTC) → fixed reset.
+    static func ollamaCloud() -> ProviderReport {
+        let usage = try! JSONDecoder().decode(OllamaUsageResponse.self, from: Data(#"""
+        {"activity":{"cost":"4.50000"},"limits":{"monthly":{"usage":0.62}}}
+        """#.utf8))
+        let snap = OllamaCloudProvider.snapshot(
+            usage: usage,
+            plan: "pro",
+            credential: .apiKey(Secret("fake-ollama-key"), source: .env),
+            billingDay: 8,
+            now: asOf,
+            timeZone: TimeZone(identifier: "UTC")!
+        )
+        return report(.ollamaCloud, "Ollama Cloud", status: .ok(lastSuccess: asOf), snapshot: snap)
     }
 
     static func lmStudioLlamaCpp() -> ProviderReport {

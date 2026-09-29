@@ -10,6 +10,8 @@ struct WelcomeProviderRow: View {
 
     let providerID: ProviderID
     let detectionResult: DetectionResult?
+    /// Which credential a detected provider will use, e.g. "via ollama signin" (SPEC V16).
+    var detectionDetail: String? = nil
     let isProbing: Bool
     let onboardingInfo: ProviderOnboardingInfo?
 
@@ -108,7 +110,7 @@ struct WelcomeProviderRow: View {
         } else {
             switch detectionResult {
             case .detected:
-                Label("Detected", systemImage: "checkmark.circle.fill")
+                Label(detectionDetail.map { "Detected \u{00B7} \($0)" } ?? "Detected", systemImage: "checkmark.circle.fill")
                     .font(.caption)
                     .foregroundStyle(.green)
             case .notRunning:

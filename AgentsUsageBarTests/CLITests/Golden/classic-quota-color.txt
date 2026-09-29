@@ -13,6 +13,8 @@ Gemini               [32m████░░░░░░░░░░░░░░
                      usage temporarily unavailable
 Grok                 [90m████████████████████[0m  no limit
 Ollama               [90m████████████████████[0m  no limit
+Ollama Cloud         [33m████████████░░░░░░░░[0m  62%
+                     mo  62%   Resets 13d 18h
 LM Studio llama.cpp  [90m████████████████████[0m  no limit
 llama.cpp            [90m████████████████████[0m  no limit
 gpu-box              [90m████████████████████[0m  no limit

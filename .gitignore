@@ -34,3 +34,6 @@ ExportOptions-local.plist
 
 # Coverage / profiling artifacts
 *.profraw
+
+# Local secrets (API keys for probes/dev) — never commit
+.secrets/
