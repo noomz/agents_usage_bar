@@ -13,19 +13,12 @@ final class FakeKeychain: KeychainProtocol, @unchecked Sendable {
     }
 
     var readBehavior: Behavior = .throwError(.itemNotFound)
-    var writtenData: Data?
-    var writtenService: String?
 
     func readGenericPassword(service: String, account: String?) throws -> Data {
         switch readBehavior {
         case .returnData(let data): return data
         case .throwError(let err): throw err
         }
-    }
-
-    func writeGenericPassword(_ data: Data, service: String, account: String?) throws {
-        writtenData = data
-        writtenService = service
     }
 }
 
@@ -320,10 +313,10 @@ struct ClaudeCredentialLoaderTests {
         #expect(blob["subscriptionType"] as? String == "claude_max")
     }
 
-    @Test func saveCredentials_toKeychain_invokesWriteGenericPassword() throws {
-        let fakeKeychain = FakeKeychain()
+    @Test func saveCredentials_toKeychain_isNoOp() throws {
+        // The Keychain item is owned by Claude Code — the loader never writes to it.
         let loader = ClaudeCredentialLoader(
-            keychain: fakeKeychain,
+            keychain: FakeKeychain(),
             env: [:],
             credentialsPath: nil
         )
@@ -333,16 +326,8 @@ struct ClaudeCredentialLoaderTests {
             expiresAt: nil,
             subscriptionType: nil
         )
+        // Must not throw
         try loader.saveCredentials(oauth, to: .keychain)
-
-        #expect(fakeKeychain.writtenService == "Claude Code-credentials")
-        let data = try #require(fakeKeychain.writtenData)
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            Issue.record("Keychain data is not valid JSON")
-            return
-        }
-        let blob = try #require(json["claudeAiOauth"] as? [String: Any])
-        #expect(blob["accessToken"] as? String == "test-access")
     }
 
     @Test func saveCredentials_toEnvironment_isNoOp() throws {
@@ -360,8 +345,17 @@ struct ClaudeCredentialLoaderTests {
         )
         // Must not throw
         try loader.saveCredentials(oauth, to: .environment)
-        // No keychain write occurred
-        #expect(fakeKeychain.writtenData == nil)
+    }
+
+    // MARK: - KeychainReader (real /usr/bin/security)
+
+    @Test func keychainReader_missingItem_throwsItemNotFound() {
+        #expect(throws: KeychainReaderError.itemNotFound) {
+            try KeychainReader().readGenericPassword(
+                service: "agents-usage-bar-test-nonexistent-\(UUID().uuidString)",
+                account: nil
+            )
+        }
     }
 
     // MARK: - UsageSnapshot backwards-compat regression

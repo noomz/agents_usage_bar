@@ -35,7 +35,8 @@ extension ClaudeCredentialLoader: ClaudeCredentialResolver {}
 
 /// Performs the Anthropic OAuth lifecycle:
 /// 1. Load credentials (file → Keychain → env).
-/// 2. If token is near-expiry AND a refresh token exists, POST to the refresh endpoint.
+/// 2. If token is near-expiry AND a refresh token exists, POST to the refresh endpoint
+///    (file source only — Keychain tokens are owned and refreshed by Claude Code).
 /// 3. Write back the rotated tokens (SEC-NOTE — default decision #1).
 /// 4. GET the usage endpoint with the fresh access token.
 ///
@@ -102,8 +103,12 @@ public actor ClaudeOAuthClient {
         }
 
         // Step 2: Refresh if near-expiry AND refresh token exists.
+        // Keychain-sourced tokens are skipped: Claude Code owns that item and refreshes
+        // it itself (re-read every poll). Refreshing here would rotate the refresh token
+        // out from under Claude Code, and writing it back would trigger a Keychain prompt.
         let now = clock.now()
-        if credentials.needsRefresh(credResult.oauth, now: now, refreshBufferMs: 5 * 60 * 1000),
+        if credResult.source != .keychain,
+           credentials.needsRefresh(credResult.oauth, now: now, refreshBufferMs: 5 * 60 * 1000),
            let refreshToken = credResult.oauth.refreshToken
         {
             do {

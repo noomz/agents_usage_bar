@@ -3,16 +3,14 @@ import os.log
 
 // MARK: - KeychainProtocol
 
-/// Narrow seam for Keychain read/write operations.
+/// Narrow seam for Keychain reads.
 ///
-/// Scoped tightly to the two operations `ClaudeCredentialLoader` needs,
-/// so the test fake is trivially small.
+/// Read-only: the `"Claude Code-credentials"` item is owned by Claude Code.
 ///
 /// `KeychainReader` conforms to this protocol in the production path.
 /// Tests inject a `FakeKeychain` conformance.
 public protocol KeychainProtocol: Sendable {
     func readGenericPassword(service: String, account: String?) throws -> Data
-    func writeGenericPassword(_ data: Data, service: String, account: String?) throws
 }
 
 // MARK: - ClaudeCredentialLoader
@@ -146,6 +144,8 @@ public struct ClaudeCredentialLoader: Sendable {
 
     /// Persists rotated tokens back to `source`.
     ///
+    /// `.keychain` and `.environment` are no-ops: those tokens are never refreshed here.
+    ///
     /// // SEC-NOTE: We write back rotated tokens to the same source we read them from.
     /// // This mutates state owned by Claude Code itself. The alternative — burning a
     /// // refresh round-trip on every poll — is worse for both us and Anthropic's servers.
@@ -167,10 +167,10 @@ public struct ClaudeCredentialLoader: Sendable {
             logger.notice("oauth: wrote rotated credentials to file (SEC-NOTE write-back)")
 
         case .keychain:
-            let envelope = buildEnvelope(oauth)
-            let data = try JSONSerialization.data(withJSONObject: envelope, options: [])
-            try keychain.writeGenericPassword(data, service: Self.keychainService, account: nil)
-            logger.notice("oauth: wrote rotated credentials to Keychain (SEC-NOTE write-back)")
+            // The Keychain item belongs to Claude Code, which refreshes it itself.
+            // `ClaudeOAuthClient` never refreshes Keychain-sourced tokens, so there is
+            // nothing to write back — writing would also trigger a Keychain prompt.
+            logger.notice("oauth: Keychain-source credential — write-back is a no-op (owned by Claude Code)")
 
         case .environment:
             // SEC-NOTE: env-source tokens are set externally (shell rc / CI).

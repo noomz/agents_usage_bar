@@ -409,13 +409,11 @@ struct ClaudeOAuthClientTests {
         }
     }
 
-    // MARK: - Test 12: keychain source — save to keychain
+    // MARK: - Test 12: keychain source — never refreshed or written back
 
-    @Test func getUsage_after_refresh_persistsRotatedTokens_to_keychainSource() async throws {
+    @Test func getUsage_keychainSource_skipsRefresh_andWriteBack() async throws {
         let http = FakeHTTPClient()
-        let refreshData = try loadFixtureData(named: "oauth-refresh-success.json")
         let usageData = try loadFixtureData(named: "oauth-usage-success.json")
-        http.postResponses = [.success(refreshData)]
         http.getResponses = [.success(usageData)]
 
         let creds = FakeCredentialResolver()
@@ -425,8 +423,9 @@ struct ClaudeOAuthClientTests {
         let client = ClaudeOAuthClient(http: http, credentials: creds)
         _ = try await client.getUsage()
 
-        #expect(creds.savedCalls.count == 1)
-        #expect(creds.savedCalls[0].1 == .keychain)
-        #expect(creds.savedCalls[0].0.accessToken == "fake-rotated-access-token-XXXX")
+        // Only the GET — Claude Code owns and refreshes Keychain tokens.
+        #expect(http.calls.count == 1)
+        #expect(http.calls[0].method == "GET")
+        #expect(creds.savedCalls.isEmpty)
     }
 }

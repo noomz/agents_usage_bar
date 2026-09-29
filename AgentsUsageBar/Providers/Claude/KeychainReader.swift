@@ -1,5 +1,4 @@
 import Foundation
-import Security
 
 /// Error types surfaced by `KeychainReader`.
 ///
@@ -11,24 +10,30 @@ public enum KeychainReaderError: Error, Sendable, Equatable {
     case itemNotFound
     /// The Keychain item exists but access was denied (ACL mismatch or locked Keychain).
     case authFailed
-    /// An unexpected `OSStatus` was returned — check the raw code for debugging.
-    case unexpectedStatus(OSStatus)
-    /// The Keychain returned success but the result was not `Data`.
+    /// `security` exited with an unexpected status — check the raw code for debugging.
+    case unexpectedStatus(Int32)
+    /// `security` succeeded but its output could not be read.
     case dataNotData
 }
 
-/// A thin synchronous wrapper around `SecItem` APIs for reading and writing
-/// generic-password Keychain items.
+/// Reads generic-password Keychain items by running `/usr/bin/security`.
 ///
-/// `KeychainReader` is a `struct` (NOT an `actor`) because `SecItem` APIs are
-/// synchronous C functions — no async coordination is needed.
+/// Why not `SecItemCopyMatching`: Claude Code creates `"Claude Code-credentials"`
+/// with the `security` CLI, so the item's ACL trusts `com.apple.security`
+/// (Apple-anchored, stable across OS updates). Calling `SecItem` directly makes
+/// macOS check *this app's* identity instead — for ad-hoc builds that is a
+/// cdhash that changes on every build, so "Always Allow" never sticks and the
+/// user is prompted after each rebuild/update. Reading via `security` is covered
+/// by the existing ACL entry and never prompts.
 ///
-/// `Sendable` is safe: the struct carries no mutable state; all state is managed
-/// by the Keychain service itself.
-///
-/// Reuse note: Plan 02.03 introduces this type; Plan 03.x (Codex provider) will
-/// reuse it for `com.openai.codex.credentials` lookups.
+/// Read-only by design: the Keychain item is owned by Claude Code; this app
+/// never writes to it.
 public struct KeychainReader: Sendable, KeychainProtocol {
+
+    /// `security` exit status for `errSecItemNotFound`.
+    private static let itemNotFoundExitStatus: Int32 = 44
+    /// `security` exit status for `errSecAuthFailed` (user denied / locked keychain).
+    private static let authFailedExitStatus: Int32 = 51
 
     public init() {}
 
@@ -37,77 +42,44 @@ public struct KeychainReader: Sendable, KeychainProtocol {
     /// - Parameters:
     ///   - service: The `kSecAttrService` value (e.g. `"Claude Code-credentials"`).
     ///   - account: Optional `kSecAttrAccount` filter. Pass `nil` to match any account.
-    /// - Returns: The raw `Data` stored in the item.
+    /// - Returns: The raw password `Data` stored in the item.
     /// - Throws: `KeychainReaderError` on failure.
     public func readGenericPassword(service: String, account: String?) throws -> Data {
-        var query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecReturnData as String:  true,
-            kSecMatchLimit as String:  kSecMatchLimitOne,
-        ]
+        var arguments = ["find-generic-password", "-s", service]
         if let account {
-            query[kSecAttrAccount as String] = account
+            arguments += ["-a", account]
         }
+        arguments.append("-w")
 
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        process.arguments = arguments
+        let stdout = Pipe()
+        process.standardOutput = stdout
+        process.standardError = FileHandle.nullDevice
 
-        switch status {
-        case errSecSuccess:
-            guard let data = item as? Data else {
-                throw KeychainReaderError.dataNotData
-            }
+        do {
+            try process.run()
+        } catch {
+            throw KeychainReaderError.unexpectedStatus(-1)
+        }
+        // Read before waiting so a large payload cannot fill the pipe and deadlock.
+        let output = stdout.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+
+        switch process.terminationStatus {
+        case 0:
+            // `-w` prints the password followed by a single newline.
+            var data = output
+            if data.last == UInt8(ascii: "\n") { data.removeLast() }
+            guard !data.isEmpty else { throw KeychainReaderError.dataNotData }
             return data
-        case errSecItemNotFound:
+        case Self.itemNotFoundExitStatus:
             throw KeychainReaderError.itemNotFound
-        case errSecAuthFailed:
+        case Self.authFailedExitStatus:
             throw KeychainReaderError.authFailed
-        default:
+        case let status:
             throw KeychainReaderError.unexpectedStatus(status)
-        }
-    }
-
-    /// Writes (or updates) a generic-password item in the Keychain.
-    ///
-    /// Attempts `SecItemUpdate` first; if `errSecItemNotFound` is returned,
-    /// falls back to `SecItemAdd`.
-    ///
-    /// - Parameters:
-    ///   - data: The data payload to store.
-    ///   - service: The `kSecAttrService` value.
-    ///   - account: Optional `kSecAttrAccount`. Pass `nil` for account-less items.
-    /// - Throws: `KeychainReaderError` on failure.
-    public func writeGenericPassword(_ data: Data, service: String, account: String?) throws {
-        var query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
-            kSecAttrService as String: service,
-        ]
-        if let account {
-            query[kSecAttrAccount as String] = account
-        }
-
-        let updateDict: [String: Any] = [kSecValueData as String: data]
-        let updateStatus = SecItemUpdate(query as CFDictionary, updateDict as CFDictionary)
-
-        switch updateStatus {
-        case errSecSuccess:
-            return
-        case errSecItemNotFound:
-            // Item doesn't exist yet — add it
-            var addQuery = query
-            addQuery[kSecValueData as String] = data
-            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
-            guard addStatus == errSecSuccess else {
-                switch addStatus {
-                case errSecAuthFailed: throw KeychainReaderError.authFailed
-                default: throw KeychainReaderError.unexpectedStatus(addStatus)
-                }
-            }
-        case errSecAuthFailed:
-            throw KeychainReaderError.authFailed
-        default:
-            throw KeychainReaderError.unexpectedStatus(updateStatus)
         }
     }
 }
