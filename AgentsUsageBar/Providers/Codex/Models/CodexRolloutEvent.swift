@@ -117,6 +117,15 @@ public struct CodexRolloutEvent: Decodable, Sendable, Equatable {
         /// `null` (limit_id flips to `"premium"`) — that is not "no limit".
         var hasWindows: Bool { primary != nil || secondary != nil }
 
+        /// Null windows that mean "the cap was hit", not "this session did not
+        /// report a quota". Official Codex flips `limit_id` to `"premium"` or
+        /// sets `rate_limit_reached_type`. A custom `model_provider` (CLIProxy)
+        /// writes `limit_id: "codex"` with both windows null and no plan — those
+        /// must not inherit an older account window.
+        var isPostLimitNulling: Bool {
+            !hasWindows && (limitId == "premium" || rateLimitReachedType != nil)
+        }
+
         /// Fills null primary/secondary from an earlier event, keeping this
         /// event's credits / plan / limit-id when they are present.
         func fillingEmptyWindows(from earlier: RateLimits) -> RateLimits {
@@ -128,6 +137,26 @@ public struct CodexRolloutEvent: Decodable, Sendable, Equatable {
                 credits: credits ?? earlier.credits,
                 planType: planType ?? earlier.planType,
                 rateLimitReachedType: rateLimitReachedType ?? earlier.rateLimitReachedType
+            )
+        }
+
+        /// Drops windows whose reset is at or before `instant`. A copied 100%
+        /// window from an earlier session is stale once that reset has passed
+        /// (the bar would show 100% and "reset now").
+        func droppingWindowsReset(atOrBefore instant: Date) -> RateLimits {
+            func keep(_ window: Window?) -> Window? {
+                guard let window else { return nil }
+                guard let reset = window.resetsAtDate(now: instant) else { return window }
+                return reset > instant ? window : nil
+            }
+            return RateLimits(
+                limitId: limitId,
+                limitName: limitName,
+                primary: keep(primary),
+                secondary: keep(secondary),
+                credits: credits,
+                planType: planType,
+                rateLimitReachedType: rateLimitReachedType
             )
         }
     }

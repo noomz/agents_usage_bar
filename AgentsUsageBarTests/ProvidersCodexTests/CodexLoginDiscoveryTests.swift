@@ -8,6 +8,13 @@ struct CodexLoginDiscoveryTests {
     private let teamToken = "test-token-team"
     private let authToken = "test-token-auth"
 
+    @Test func registrationRequiresCredentialsSessionsOrALogin() {
+        #expect(CodexLoginDiscovery.shouldRegister(hasCredentials: false, sessionsExist: false, loginCount: 0) == false)
+        #expect(CodexLoginDiscovery.shouldRegister(hasCredentials: true, sessionsExist: false, loginCount: 0))
+        #expect(CodexLoginDiscovery.shouldRegister(hasCredentials: false, sessionsExist: true, loginCount: 0))
+        #expect(CodexLoginDiscovery.shouldRegister(hasCredentials: false, sessionsExist: false, loginCount: 1))
+    }
+
     @Test func missingDirectoryAndMissingAuthReturnNoLogins() {
         let missingDir = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("codex-missing-\(UUID().uuidString)", isDirectory: true)

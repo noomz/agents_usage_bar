@@ -71,6 +71,10 @@ public enum CodexRolloutParser {
         // often in the same file and sometimes only in a newer session file.
         // Fold the latest windows independently of the latest token event so
         // file-scan order cannot drop quota to nil ("no limit" gray bar).
+        // Inherit only onto that post-limit shape. A custom model provider
+        // (CLIProxy) also writes null windows, with `limit_id` still `"codex"`;
+        // copying the previous 100% window onto those sessions sticks the bar
+        // at 100% / "reset now" after the window has rolled.
         var lastWindows: (limits: CodexRolloutEvent.RateLimits, timestamp: Date)?
 
         for url in fileURLs {
@@ -122,15 +126,19 @@ public enum CodexRolloutParser {
         guard let best else { return nil }
 
         if best.event.payload.rateLimits?.hasWindows != true,
+           best.event.payload.rateLimits?.isPostLimitNulling == true,
            let lastWindows,
            lastWindows.timestamp <= best.parsedTimestamp {
+            let filled: CodexRolloutEvent.RateLimits
             if let current = best.event.payload.rateLimits {
-                return (
-                    best.event.withRateLimits(current.fillingEmptyWindows(from: lastWindows.limits)),
-                    best.fileURL
-                )
+                filled = current.fillingEmptyWindows(from: lastWindows.limits)
+            } else {
+                filled = lastWindows.limits
             }
-            return (best.event.withRateLimits(lastWindows.limits), best.fileURL)
+            let live = filled.droppingWindowsReset(atOrBefore: best.parsedTimestamp)
+            if live.hasWindows {
+                return (best.event.withRateLimits(live), best.fileURL)
+            }
         }
 
         return (best.event, best.fileURL)

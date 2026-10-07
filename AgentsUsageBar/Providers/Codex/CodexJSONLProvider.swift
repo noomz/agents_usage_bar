@@ -10,6 +10,8 @@ import os
 
 public protocol CodexOAuthClientProtocol: Actor {
     func fetchUsage() async throws -> CodexUsageResponse
+    /// Quota for a discovered login. `accountId` nil omits `ChatGPT-Account-Id`.
+    func fetchUsage(token: Secret, accountId: String?) async throws -> CodexUsageResponse
 }
 
 extension CodexOAuthClient: CodexOAuthClientProtocol {}
@@ -41,9 +43,12 @@ public typealias CodexRolloutScannerFactory = @Sendable (Date) -> CodexRolloutSc
 //         CodexRolloutParser fold instead.
 //      b. Fold across all files via CodexRolloutParser.lastTokenCount(in:).
 //      c. Single batched cache.setTranscriptOffsets(...) write (STATE #43).
-//      d. If parser returned a token_count event → buildSnapshot(fromRollout:);
-//         else fall through to step 3 (OAuth fallback).
-//   3. OAuth fallback (D-02 — fires ONLY when rollout yielded no event):
+//      d. If parser returned a token_count event → buildSnapshot(fromRollout:).
+//         When that event has no live quota windows (CLIProxy and other custom
+//         model providers write null primary/secondary), overlay quota from
+//         wham/usage and keep the rollout's tokens and cost.
+//         Else fall through to step 3 (OAuth fallback).
+//   3. OAuth fallback (D-02 — full snapshot fires ONLY when rollout yielded no event):
 //      a. If oauth == nil → mutedNoData (D-03).
 //      b. fetch wham/usage:
 //         - .noCredentials / .unauthorized → mutedNoData (terminal, neutral UX)
@@ -81,6 +86,9 @@ public actor CodexJSONLProvider: UsageProvider {
     private let oauth: (any CodexOAuthClientProtocol)?
     private let cache: any CacheStore
     private let clock: any Clock
+    /// Subscription logins. Default is empty so tests do not read the real home directory.
+    /// Production passes a closure that reads disk on every fetch.
+    private let logins: @Sendable () -> [CodexDiscoveredLogin]
 
     private let logger = AppLogger.logger(category: "codex")
     private var lastStatus: ProviderStatus = .error(ProviderError.notYetFetched)
@@ -106,13 +114,16 @@ public actor CodexJSONLProvider: UsageProvider {
     ///     map (`allTranscriptOffsets` / `setTranscriptOffsets`).
     ///   - clock: Injected for parity with Phase 2 providers; not used in the
     ///     fetch body (fetch's `now` parameter is authoritative).
-    public init(
+    ///   - logins: Enabled subscription logins. Empty keeps today's single path,
+    ///     including an API-key `auth.json` that is not itself a login.
+    init(
         scannerFactory: @escaping CodexRolloutScannerFactory,
         reader: TranscriptReader,
         pricing: CodexModelPricing?,
         oauth: (any CodexOAuthClientProtocol)?,
         cache: any CacheStore,
-        clock: any Clock
+        clock: any Clock,
+        logins: @escaping @Sendable () -> [CodexDiscoveredLogin] = { [] }
     ) {
         self.scannerFactory = scannerFactory
         self.reader = reader
@@ -120,6 +131,7 @@ public actor CodexJSONLProvider: UsageProvider {
         self.oauth = oauth
         self.cache = cache
         self.clock = clock
+        self.logins = logins
     }
 
     // MARK: - UsageProvider
@@ -129,6 +141,12 @@ public actor CodexJSONLProvider: UsageProvider {
     }
 
     public func fetch(now: Date) async throws -> UsageSnapshot {
+        // One subscription login stays a single row. Its token is what wham/usage
+        // uses for a windowless overlay and for the no-rollout fallback. Live
+        // rollout windows still win, below. Zero logins keep today's path.
+        let discovered = logins()
+        let singleLogin = discovered.count == 1 ? discovered[0] : nil
+
         // STEP 1 — Scan rollout files (today + yesterday).
         let scanner = scannerFactory(now)
         let rolloutFiles = scanner.rolloutFiles()
@@ -182,6 +200,11 @@ public actor CodexJSONLProvider: UsageProvider {
             // 2b/2d. Parser fold — find the latest valid token_count event.
             if let pick = CodexRolloutParser.lastTokenCount(in: rolloutFiles) {
                 let snap = buildSnapshot(fromRollout: pick.event, fileURL: pick.fileURL, now: now)
+                if snap.quotaWindows == nil || snap.quotaWindows?.isEmpty == true,
+                   let overlaid = await overlayQuotaFromOAuth(onto: snap, now: now, login: singleLogin) {
+                    lastStatus = .ok(lastSuccess: now)
+                    return overlaid
+                }
                 lastStatus = .ok(lastSuccess: now)
                 return snap
             }
@@ -197,7 +220,15 @@ public actor CodexJSONLProvider: UsageProvider {
         }
 
         do {
-            let response = try await oauth.fetchUsage()
+            let response: CodexUsageResponse
+            if let singleLogin {
+                response = try await oauth.fetchUsage(
+                    token: singleLogin.accessToken,
+                    accountId: singleLogin.accountId
+                )
+            } else {
+                response = try await oauth.fetchUsage()
+            }
             let snap = buildSnapshot(fromOAuth: response, now: now)
             lastStatus = .ok(lastSuccess: now)
             return snap
@@ -223,6 +254,51 @@ public actor CodexJSONLProvider: UsageProvider {
         // expected from the loader's nil-on-fail contract; the catch-by-case
         // shape above is intentionally exhaustive over the CodexOAuthError enum
         // we care about.
+    }
+
+    /// Quota for a rollout that recorded tokens but no live windows.
+    ///
+    /// CLIProxy (`model_provider = "cliproxy"`, `requires_openai_auth = false`)
+    /// writes `token_count` events whose `primary` and `secondary` are JSON
+    /// null. Keeping yesterday's exhausted window shows 100% after the reset.
+    /// wham/usage is the live account quota; tokens and cost stay on the rollout.
+    /// A fetch failure leaves the rollout row in place (spend still renders).
+    private func overlayQuotaFromOAuth(
+        onto rollout: UsageSnapshot,
+        now: Date,
+        login: CodexDiscoveredLogin?
+    ) async -> UsageSnapshot? {
+        guard let oauth else { return nil }
+        let quotaSnap: UsageSnapshot
+        do {
+            let response: CodexUsageResponse
+            if let login {
+                response = try await oauth.fetchUsage(token: login.accessToken, accountId: login.accountId)
+            } else {
+                response = try await oauth.fetchUsage()
+            }
+            quotaSnap = buildSnapshot(fromOAuth: response, now: now)
+        } catch {
+            logger.notice("windowless rollout — wham/usage overlay failed")
+            return nil
+        }
+        guard quotaSnap.quota != nil || quotaSnap.quotaWindows?.isEmpty == false else {
+            return nil
+        }
+        return UsageSnapshot(
+            providerID: id,
+            asOf: now,
+            tokensToday: rollout.tokensToday,
+            costTodayUSD: rollout.costTodayUSD,
+            balanceUSD: quotaSnap.balanceUSD ?? rollout.balanceUSD,
+            quota: quotaSnap.quota,
+            raw: [
+                "source": "rollout+wham-usage",
+                "fileURL": rollout.raw["fileURL"] ?? "",
+            ],
+            quotaWindows: quotaSnap.quotaWindows,
+            tooltipLabel: quotaSnap.tooltipLabel ?? rollout.tooltipLabel
+        )
     }
 
     // MARK: - Snapshot builders

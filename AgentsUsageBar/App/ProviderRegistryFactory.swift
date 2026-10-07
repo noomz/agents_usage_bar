@@ -122,7 +122,16 @@ public enum ProviderRegistryFactory {
             let codexSessionsExists = FileManager.default.fileExists(
                 atPath: NSHomeDirectory() + "/.codex/sessions"
             )
-            if codexCreds != nil || codexSessionsExists {
+            let cliproxyDirectory = URL(fileURLWithPath: NSHomeDirectory() + "/.ccs/cliproxy/auth")
+            let codexAuthPath = URL(fileURLWithPath: NSHomeDirectory() + "/.codex/auth.json")
+            let discoverLogins: @Sendable () -> [CodexDiscoveredLogin] = {
+                CodexLoginDiscovery.discover(directory: cliproxyDirectory, authPath: codexAuthPath)
+            }
+            if CodexLoginDiscovery.shouldRegister(
+                hasCredentials: codexCreds != nil,
+                sessionsExist: codexSessionsExists,
+                loginCount: discoverLogins().count
+            ) {
                 let codexPricing: CodexModelPricing?
                 do {
                     codexPricing = try CodexModelPricing.loadBundled()
@@ -130,23 +139,21 @@ public enum ProviderRegistryFactory {
                     logger.error("Codex pricing load failed: \(error.localizedDescription, privacy: .public)")
                     codexPricing = nil
                 }
-                let codexOAuth: (any CodexOAuthClientProtocol)?
-                if codexCreds != nil {
-                    codexOAuth = CodexOAuthClient(
-                        http: http,
-                        credentialLoader: codexCredsLoader,
-                        clock: clock
-                    )
-                } else {
-                    codexOAuth = nil
-                }
+                // Always construct the client. A lone CLIProxy file has no
+                // ~/.codex/auth.json; the provider calls wham with that file's token.
+                let codexOAuth = CodexOAuthClient(
+                    http: http,
+                    credentialLoader: codexCredsLoader,
+                    clock: clock
+                )
                 registry.append(CodexJSONLProvider(
                     scannerFactory: { now in CodexRolloutScanner(now: now) },
                     reader: TranscriptReader(),
                     pricing: codexPricing,
                     oauth: codexOAuth,
                     cache: cache,
-                    clock: clock
+                    clock: clock,
+                    logins: discoverLogins
                 ))
                 codexRegistered = true
             } else {

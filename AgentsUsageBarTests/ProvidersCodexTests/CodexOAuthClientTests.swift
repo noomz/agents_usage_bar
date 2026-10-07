@@ -185,6 +185,22 @@ struct CodexOAuthClientTests {
         #expect(call.extraHeaders.keys.contains("Accept"))
     }
 
+    @Test func explicitToken_withNilAccountId_omitsChatGPTAccountIdHeader() async throws {
+        let http = FakeCodexHTTPClient()
+        let body = try loadFixtureData(named: "codex-wham-usage-fixture.json")
+        http.getResponses = [.success(body)]
+        let client = CodexOAuthClient(
+            http: http,
+            credentialLoader: CodexCredentialLoader(authPath: URL(fileURLWithPath: "/tmp/unused-codex-auth.json"))
+        )
+        _ = try await client.fetchUsage(token: Secret("test-token-noid"), accountId: nil)
+        let call = try #require(http.calls.first)
+        let bearer = try #require(call.bearer)
+        #expect(call.extraHeaders["ChatGPT-Account-Id"] == nil)
+        #expect(String(describing: bearer) == "<redacted>")
+        #expect(bearer.revealForRequest() == "test-token-noid")
+    }
+
     // MARK: - 3. 401 → unauthorized(status: 401)
 
     @Test func http401_throwsUnauthorized401() async throws {

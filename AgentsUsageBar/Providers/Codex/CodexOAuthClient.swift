@@ -72,12 +72,28 @@ public actor CodexOAuthClient {
         guard let creds = credentialLoader.loadCredentials() else {
             throw CodexOAuthError.noCredentials
         }
+        return try await performFetch(
+            token: creds.bearer.token,
+            accountId: creds.bearer.accountId,
+            source: creds.source
+        )
+    }
 
+    /// Fetches quota with an explicit bearer. A nil `accountId` omits `ChatGPT-Account-Id`.
+    public func fetchUsage(token: Secret, accountId: String?) async throws -> CodexUsageResponse {
+        try await performFetch(token: token, accountId: accountId, source: nil)
+    }
+
+    private func performFetch(
+        token: Secret,
+        accountId: String?,
+        source: CodexCredentialLoader.Source?
+    ) async throws -> CodexUsageResponse {
         var extraHeaders: [String: String] = [
             "Accept": "application/json",
             "User-Agent": "Agents-Usage-Bar/1.0",
         ]
-        if let accountId = creds.bearer.accountId {
+        if let accountId {
             extraHeaders["ChatGPT-Account-Id"] = accountId
         }
 
@@ -89,7 +105,7 @@ public actor CodexOAuthClient {
             // `rateLimit == nil` despite a 200 OK body (G-02 root cause).
             return try await http.get(
                 Self.endpoint,
-                bearer: creds.bearer.token,
+                bearer: token,
                 extraHeaders: extraHeaders,
                 useSnakeCaseConversion: false,
                 as: CodexUsageResponse.self
@@ -98,7 +114,8 @@ public actor CodexOAuthClient {
             switch httpErr.status {
             case 401, 403:
                 // SEC-02: log the resolved source label only — never the bearer.
-                logger.notice("wham/usage \(httpErr.status, privacy: .public) — unauthorized (source=\(String(describing: creds.source), privacy: .public))")
+                let sourceLabel = source.map { String(describing: $0) } ?? "login"
+                logger.notice("wham/usage \(httpErr.status, privacy: .public) — unauthorized (source=\(sourceLabel, privacy: .public))")
                 throw CodexOAuthError.unauthorized(status: httpErr.status)
             default:
                 logger.notice("wham/usage \(httpErr.status, privacy: .public) — endpoint failed")

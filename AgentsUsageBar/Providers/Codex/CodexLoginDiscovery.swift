@@ -25,6 +25,12 @@ struct CodexDiscoveredLogin: Sendable, Equatable, CustomStringConvertible {
 
 /// Finds Codex subscription logins and assigns each a unique display label.
 enum CodexLoginDiscovery {
+    /// True when Codex should be registered: saved credentials, a sessions
+    /// directory, or at least one discovered subscription login.
+    static func shouldRegister(hasCredentials: Bool, sessionsExist: Bool, loginCount: Int) -> Bool {
+        hasCredentials || sessionsExist || loginCount > 0
+    }
+
     static let planSlugs: Set<String> = [
         "plus", "pro", "team", "business", "enterprise", "edu", "free", "guest",
     ]

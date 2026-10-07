@@ -27,11 +27,23 @@ private actor StubFallbackOAuthClient: CodexOAuthClientProtocol {
     }
 
     private(set) var fetchCallCount: Int = 0
+    private(set) var explicitTokens: [String] = []
+    private(set) var explicitAccountIDs: [String?] = []
     private var mode: Mode
 
     init(mode: Mode) { self.mode = mode }
 
     func fetchUsage() async throws -> CodexUsageResponse {
+        try await nextResponse()
+    }
+
+    func fetchUsage(token: Secret, accountId: String?) async throws -> CodexUsageResponse {
+        explicitTokens.append(token.revealForRequest())
+        explicitAccountIDs.append(accountId)
+        return try await nextResponse()
+    }
+
+    private func nextResponse() async throws -> CodexUsageResponse {
         fetchCallCount += 1
         switch mode {
         case .success(let r): return r
@@ -323,8 +335,249 @@ struct CodexJSONLProviderFallbackTests {
         // Rollout populated the row.
         #expect(snap.tokensToday == 556469)
         #expect(snap.raw["source"] == "rollout")
-        // D-02 invariant: oauth.fetchUsage NEVER called when rollout has data.
+        // D-02 invariant: oauth.fetchUsage NEVER called when the rollout event
+        // already carries quota windows.
         let calls = await oauth.fetchCallCount
         #expect(calls == 0)
     }
+
+    // MARK: - CLIProxy: tokens from rollout, quota from wham/usage
+
+    @Test func cliproxy_null_windows_overlay_wham_usage_and_keep_rollout_tokens() async throws {
+        let root = try makeEmptyRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let isoFractional = ISO8601DateFormatter()
+        isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let now = try #require(isoFractional.date(from: "2026-10-07T02:40:00.000Z"))
+
+        let yesterday = """
+        {"timestamp":"2026-10-06T04:45:10.369Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1,"cached_input_tokens":0,"output_tokens":1,"reasoning_output_tokens":0,"total_tokens":2}},"rate_limits":{"limit_id":"codex","primary":{"used_percent":100.0,"window_minutes":300,"resets_at":1791276293},"secondary":{"used_percent":42.0,"window_minutes":10080,"resets_at":1791774648},"plan_type":"team"}}}
+        """
+        let today = """
+        {"timestamp":"2026-10-07T02:34:31.992Z","type":"session_meta","payload":{"model_provider":"cliproxy"}}
+        {"timestamp":"2026-10-07T02:34:31.992Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":18000,"cached_input_tokens":0,"output_tokens":404,"reasoning_output_tokens":0,"total_tokens":18404}},"rate_limits":{"limit_id":"codex","primary":null,"secondary":null,"plan_type":null}}}
+        """
+        let yesterdayDir = try dateDir(under: root, year: 2026, month: 10, day: 6)
+        let todayDir = try dateDir(under: root, year: 2026, month: 10, day: 7)
+        try yesterday.write(to: yesterdayDir.appendingPathComponent("old.jsonl"), atomically: true, encoding: .utf8)
+        try today.write(to: todayDir.appendingPathComponent("cliproxy.jsonl"), atomically: true, encoding: .utf8)
+
+        let oauth = StubFallbackOAuthClient(mode: .success(try decodeFixtureUsage()))
+        let provider = CodexJSONLProvider(
+            scannerFactory: scannerFactory(root: root),
+            reader: TranscriptReader(),
+            pricing: .testPricing,
+            oauth: oauth,
+            cache: StubFallbackCacheStore(),
+            clock: SystemClock()
+        )
+
+        let snap = try await provider.fetch(now: now)
+
+        #expect(snap.tokensToday == 18404)
+        #expect(snap.costTodayUSD != nil)
+        #expect(snap.raw["source"] == "rollout+wham-usage")
+        #expect(snap.tooltipLabel == "plus")
+        let quota = try #require(snap.quota)
+        #expect(abs(quota.fraction - 0.48) < 0.0001)
+        let windows = try #require(snap.quotaWindows)
+        #expect(windows.contains { $0.name == "primary" && abs(($0.utilization ?? -1) - 0.48) < 0.0001 })
+        #expect(await oauth.fetchCallCount == 1)
+        #expect(await oauth.explicitTokens.isEmpty)
+        #expect(snap.accounts == nil)
+    }
+
+    @Test func cliproxy_null_windows_keep_rollout_row_when_wham_usage_fails() async throws {
+        let root = try makeEmptyRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let isoFractional = ISO8601DateFormatter()
+        isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let now = try #require(isoFractional.date(from: "2026-10-07T02:40:00.000Z"))
+
+        let today = """
+        {"timestamp":"2026-10-07T02:34:31.992Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":18000,"cached_input_tokens":0,"output_tokens":404,"reasoning_output_tokens":0,"total_tokens":18404}},"rate_limits":{"limit_id":"codex","primary":null,"secondary":null}}}
+        """
+        let todayDir = try dateDir(under: root, year: 2026, month: 10, day: 7)
+        try today.write(to: todayDir.appendingPathComponent("cliproxy.jsonl"), atomically: true, encoding: .utf8)
+
+        let oauth = StubFallbackOAuthClient(mode: .failure(CodexOAuthError.unauthorized(status: 401)))
+        let provider = CodexJSONLProvider(
+            scannerFactory: scannerFactory(root: root),
+            reader: TranscriptReader(),
+            pricing: .testPricing,
+            oauth: oauth,
+            cache: StubFallbackCacheStore(),
+            clock: SystemClock()
+        )
+
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.tokensToday == 18404)
+        #expect(snap.quota == nil)
+        #expect(snap.raw["source"] == "rollout")
+        let status = await provider.status()
+        if case .ok = status {} else {
+            Issue.record("Expected .ok, got \(status)")
+        }
+    }
+
+    // MARK: - One subscription login
+
+    @Test func oneLogin_windowlessOverlay_usesThatToken_andKeepsAccountsNil() async throws {
+        let root = try makeEmptyRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let now = try pin("2026-10-07T02:40:00.000Z")
+        try writeWindowlessToday(under: root)
+
+        let oauth = StubFallbackOAuthClient(mode: .success(try decodeFixtureUsage()))
+        let login = makeLogin(accountId: "aaaaaaaa-1111", token: "test-token-plus")
+        let provider = CodexJSONLProvider(
+            scannerFactory: scannerFactory(root: root),
+            reader: TranscriptReader(),
+            pricing: .testPricing,
+            oauth: oauth,
+            cache: StubFallbackCacheStore(),
+            clock: SystemClock(),
+            logins: { [login] }
+        )
+
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.accounts == nil)
+        #expect(snap.tokensToday == 18404)
+        #expect(snap.costTodayUSD != nil)
+        #expect(snap.raw["source"] == "rollout+wham-usage")
+        #expect(!String(describing: snap.raw).contains("test-token-plus"))
+        let quota = try #require(snap.quota)
+        #expect(abs(quota.fraction - 0.48) < 0.0001)
+        #expect(await oauth.explicitTokens == ["test-token-plus"])
+        #expect(await oauth.explicitAccountIDs == ["aaaaaaaa-1111"])
+        #expect(await oauth.fetchCallCount == 1)
+    }
+
+    @Test func oneLogin_liveRolloutWindows_win_andDoNotCallWham() async throws {
+        let root = try makeEmptyRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let now = try pin("2026-04-24T12:00:00.000Z")
+        let here = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures")
+            .appendingPathComponent("codex-rollout-2026-fixture.jsonl")
+        let raw = try String(contentsOf: here, encoding: .utf8)
+        let lines = raw.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
+        let firstThree = lines.prefix(3).joined(separator: "\n") + "\n"
+        let todayDir = try dateDir(under: root, year: 2026, month: 4, day: 24)
+        try firstThree.write(to: todayDir.appendingPathComponent("rollout-A.jsonl"), atomically: true, encoding: .utf8)
+
+        let oauth = StubFallbackOAuthClient(mode: .shouldNeverBeCalled)
+        let provider = CodexJSONLProvider(
+            scannerFactory: scannerFactory(root: root),
+            reader: TranscriptReader(),
+            pricing: .testPricing,
+            oauth: oauth,
+            cache: StubFallbackCacheStore(),
+            clock: SystemClock(),
+            logins: { [makeLogin(accountId: "aaaaaaaa-1111", token: "test-token-plus")] }
+        )
+
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.accounts == nil)
+        #expect(snap.tokensToday == 556469)
+        #expect(snap.raw["source"] == "rollout")
+        #expect(snap.quota != nil)
+        #expect(await oauth.fetchCallCount == 0)
+    }
+
+    @Test func oneLogin_noRollout_fallbackUsesThatToken_andOmitsAccountHeaderWhenIdIsNil() async throws {
+        let root = try makeEmptyRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let oauth = StubFallbackOAuthClient(mode: .success(try decodeFixtureUsage()))
+        let provider = CodexJSONLProvider(
+            scannerFactory: scannerFactory(root: root),
+            reader: TranscriptReader(),
+            pricing: .testPricing,
+            oauth: oauth,
+            cache: StubFallbackCacheStore(),
+            clock: SystemClock(),
+            logins: { [makeLogin(accountId: nil, token: "test-token-noid")] }
+        )
+
+        let snap = try await provider.fetch(now: Date())
+        #expect(snap.accounts == nil)
+        #expect(snap.tokensToday == nil)
+        #expect(snap.raw["source"] == "oauth-wham-usage")
+        let quota = try #require(snap.quota)
+        #expect(abs(quota.fraction - 0.48) < 0.0001)
+        #expect(await oauth.explicitTokens == ["test-token-noid"])
+        #expect(await oauth.explicitAccountIDs == [nil])
+    }
+
+    @Test func oneLogin_failedOverlay_leavesRolloutRowWithNoQuotaBar() async throws {
+        let root = try makeEmptyRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let now = try pin("2026-10-07T02:40:00.000Z")
+        try writeWindowlessToday(under: root)
+        let oauth = StubFallbackOAuthClient(mode: .failure(CodexOAuthError.unauthorized(status: 401)))
+        let provider = CodexJSONLProvider(
+            scannerFactory: scannerFactory(root: root),
+            reader: TranscriptReader(),
+            pricing: .testPricing,
+            oauth: oauth,
+            cache: StubFallbackCacheStore(),
+            clock: SystemClock(),
+            logins: { [makeLogin(accountId: "aaaaaaaa-1111", token: "test-token-plus")] }
+        )
+
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.accounts == nil)
+        #expect(snap.tokensToday == 18404)
+        #expect(snap.quota == nil)
+        #expect(snap.raw["source"] == "rollout")
+        let status = await provider.status()
+        if case .ok = status {} else {
+            Issue.record("Expected .ok, got \(status)")
+        }
+    }
+
+    @Test func oneLogin_noRollout_endpointFailureStillThrows() async throws {
+        let root = try makeEmptyRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let oauth = StubFallbackOAuthClient(mode: .failure(CodexOAuthError.usageEndpointFailed(status: 429)))
+        let provider = CodexJSONLProvider(
+            scannerFactory: scannerFactory(root: root),
+            reader: TranscriptReader(),
+            pricing: .testPricing,
+            oauth: oauth,
+            cache: StubFallbackCacheStore(),
+            clock: SystemClock(),
+            logins: { [makeLogin(accountId: "aaaaaaaa-1111", token: "test-token-plus")] }
+        )
+        await #expect(throws: CodexOAuthError.usageEndpointFailed(status: 429)) {
+            _ = try await provider.fetch(now: Date())
+        }
+    }
+}
+
+private func pin(_ iso: String) throws -> Date {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return try #require(formatter.date(from: iso))
+}
+
+private func writeWindowlessToday(under root: URL) throws {
+    let today = """
+    {"timestamp":"2026-10-07T02:34:31.992Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":18000,"cached_input_tokens":0,"output_tokens":404,"reasoning_output_tokens":0,"total_tokens":18404}},"rate_limits":{"limit_id":"codex","primary":null,"secondary":null}}}
+    """
+    let todayDir = try dateDir(under: root, year: 2026, month: 10, day: 7)
+    try today.write(to: todayDir.appendingPathComponent("cliproxy.jsonl"), atomically: true, encoding: .utf8)
+}
+
+private func makeLogin(accountId: String?, token: String) -> CodexDiscoveredLogin {
+    CodexDiscoveredLogin(
+        accountId: accountId,
+        accessToken: Secret(token),
+        email: nil,
+        planSuffix: "plus",
+        source: .cliproxy(filename: "codex-aaaaaaaa-a@example.com-plus.json")
+    )
 }

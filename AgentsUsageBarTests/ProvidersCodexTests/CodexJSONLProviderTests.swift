@@ -60,6 +60,14 @@ actor FakeCodexOAuthClient: CodexOAuthClientProtocol {
     }
 
     func fetchUsage() async throws -> CodexUsageResponse {
+        try await nextResponse()
+    }
+
+    func fetchUsage(token: Secret, accountId: String?) async throws -> CodexUsageResponse {
+        try await nextResponse()
+    }
+
+    private func nextResponse() async throws -> CodexUsageResponse {
         fetchCallCount += 1
         switch mode {
         case .success(let r): return r

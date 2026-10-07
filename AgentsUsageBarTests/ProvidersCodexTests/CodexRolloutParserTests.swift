@@ -240,4 +240,52 @@ struct CodexRolloutParserTests {
         #expect(result.event.payload.rateLimits?.secondary?.usedPercent == 15.0)
         #expect(result.event.payload.rateLimits?.limitId == "premium")
     }
+
+    @Test func cliproxy_null_windows_do_not_inherit_expired_quota() throws {
+        // CLIProxy sessions (`model_provider = cliproxy`) emit token_count with
+        // limit_id still "codex" and both windows JSON null. That is not the
+        // post-limit `premium` shape, so yesterday's 100% window must not stick.
+        let older = """
+        {"timestamp":"2026-10-06T04:45:10.369Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1,"cached_input_tokens":0,"output_tokens":1,"total_tokens":2}},"rate_limits":{"limit_id":"codex","primary":{"used_percent":100.0,"window_minutes":300,"resets_at":1791276293},"secondary":{"used_percent":42.0,"window_minutes":10080,"resets_at":1791774648},"plan_type":"team"}}}
+        """
+        let newer = """
+        {"timestamp":"2026-10-07T02:34:31.992Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":18000,"cached_input_tokens":0,"output_tokens":404,"total_tokens":18404}},"rate_limits":{"limit_id":"codex","primary":null,"secondary":null,"plan_type":null,"rate_limit_reached_type":null}}}
+        """
+        let urlOlder = try makeTempJsonl(named: "cliproxy-older.jsonl", contents: older)
+        let urlNewer = try makeTempJsonl(named: "cliproxy-newer.jsonl", contents: newer)
+        defer {
+            try? FileManager.default.removeItem(at: urlOlder.deletingLastPathComponent())
+            try? FileManager.default.removeItem(at: urlNewer.deletingLastPathComponent())
+        }
+
+        let result = try #require(CodexRolloutParser.lastTokenCount(in: [urlNewer, urlOlder]))
+        #expect(result.event.timestamp == "2026-10-07T02:34:31.992Z")
+        #expect(result.event.payload.info?.totalTokenUsage?.totalTokens == 18404)
+        #expect(result.event.payload.rateLimits?.primary == nil)
+        #expect(result.event.payload.rateLimits?.secondary == nil)
+        #expect(result.event.payload.rateLimits?.limitId == "codex")
+    }
+
+    @Test func post_limit_does_not_inherit_a_window_that_already_reset() throws {
+        // `resets_at` 1791276293 is 2026-10-06T08:44:53Z, before this event.
+        // The copied 100% is no longer the live window.
+        let older = """
+        {"timestamp":"2026-10-06T04:45:10.369Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1,"cached_input_tokens":0,"output_tokens":1,"total_tokens":2}},"rate_limits":{"limit_id":"codex","primary":{"used_percent":100.0,"window_minutes":300,"resets_at":1791276293},"secondary":{"used_percent":42.0,"window_minutes":10080,"resets_at":1791774648},"plan_type":"team"}}}
+        """
+        let newer = """
+        {"timestamp":"2026-10-06T09:00:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":10,"cached_input_tokens":0,"output_tokens":1,"total_tokens":11}},"rate_limits":{"limit_id":"premium","primary":null,"secondary":null,"plan_type":"team"}}}
+        """
+        let urlOlder = try makeTempJsonl(named: "expired-older.jsonl", contents: older)
+        let urlNewer = try makeTempJsonl(named: "expired-newer.jsonl", contents: newer)
+        defer {
+            try? FileManager.default.removeItem(at: urlOlder.deletingLastPathComponent())
+            try? FileManager.default.removeItem(at: urlNewer.deletingLastPathComponent())
+        }
+
+        let result = try #require(CodexRolloutParser.lastTokenCount(in: [urlNewer, urlOlder]))
+        #expect(result.event.payload.rateLimits?.primary == nil)
+        // Weekly window still resets 2026-10-12, so it stays.
+        #expect(result.event.payload.rateLimits?.secondary?.usedPercent == 42.0)
+        #expect(result.event.payload.rateLimits?.limitId == "premium")
+    }
 }
