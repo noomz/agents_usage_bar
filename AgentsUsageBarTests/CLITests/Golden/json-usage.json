@@ -101,6 +101,7 @@
       "tokensToday" : 232400512
     },
     {
+      "accounts" : null,
       "costTodayUSD" : "0.07",
       "displayName" : "Codex",
       "id" : "codex",

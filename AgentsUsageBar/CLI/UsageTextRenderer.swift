@@ -79,7 +79,11 @@ public enum UsageTextRenderer {
         if let glance, glance.hasAnyWindow {
             lines.append(contentsOf: claudeUsageLines(glance, nameWidth: nameWidth, now: now))
         }
-        if let accounts, accounts.count >= 2 {
+        if p.id == .codex, let accounts, accounts.count >= 2 {
+            for account in accounts {
+                lines.append(contentsOf: codexUsageAccountLines(account, nameWidth: nameWidth, color: color, now: now))
+            }
+        } else if let accounts, accounts.count >= 2 {
             for account in accounts {
                 lines.append(contentsOf: accountLines(account, nameWidth: nameWidth, color: color, now: now))
             }
@@ -102,7 +106,11 @@ public enum UsageTextRenderer {
         let name = pad(p.displayName, to: nameWidth)
         let (barLine, _) = quotaBarLine(p.snapshot?.displayedQuota, color: color)
         lines.append("\(name)  \(barLine)")
-        if let windows = p.snapshot?.quotaWindows, !windows.isEmpty {
+        if p.id == .codex, let accounts = p.snapshot?.accounts, accounts.count >= 2 {
+            for account in accounts {
+                lines.append(contentsOf: codexQuotaAccountLines(account, nameWidth: nameWidth, now: now))
+            }
+        } else if let windows = p.snapshot?.quotaWindows, !windows.isEmpty {
             lines.append(contentsOf: windowLines(windows, nameWidth: nameWidth, now: now))
         }
         if isDegraded(p) {
@@ -186,6 +194,46 @@ public enum UsageTextRenderer {
         let pct = w.utilization.map(CLIFormat.percent) ?? "—"
         let reset = w.resetsAt.map { resetsPhrase(until: $0, now: now) } ?? "—"
         return "\(pad(w.name, to: labelWidth))  \(pad(pct, to: 4))  \(reset)"
+    }
+
+    /// Multi-login Codex usage: label, one primary bar, primary reset. No cost.
+    /// A missing primary fraction is `unavailable`, not the nil-quota "no limit" bar.
+    private static func codexUsageAccountLines(
+        _ account: UsageSnapshot.AccountUsage,
+        nameWidth: Int,
+        color: Bool,
+        now: Date
+    ) -> [String] {
+        let indent = pad("", to: nameWidth)
+        var lines = ["\(indent)    \(account.name)"]
+        guard
+            let primary = account.quotaWindows?.first(where: { $0.name == "primary" }),
+            let used = primary.utilization
+        else {
+            lines.append("\(indent)  unavailable")
+            return lines
+        }
+        let quota = Quota(used: used, limit: 1, remaining: max(0, 1 - used))
+        lines.append("\(indent)  \(quotaBarLine(quota, color: color).0)")
+        let reset = primary.resetsAt.map { resetsPhrase(until: $0, now: now) } ?? "Resets —"
+        lines.append("\(indent)  \(reset)")
+        return lines
+    }
+
+    /// Multi-login Codex quota: each login's primary and secondary windows under its label.
+    private static func codexQuotaAccountLines(
+        _ account: UsageSnapshot.AccountUsage,
+        nameWidth: Int,
+        now: Date
+    ) -> [String] {
+        let indent = pad("", to: nameWidth)
+        var lines = ["\(indent)    \(account.name)"]
+        if let windows = account.quotaWindows, !windows.isEmpty {
+            lines.append(contentsOf: windowLines(windows, nameWidth: nameWidth, now: now))
+        } else {
+            lines.append("\(indent)  unavailable")
+        }
+        return lines
     }
 
     private static func accountLines(

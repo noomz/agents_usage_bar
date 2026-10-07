@@ -73,7 +73,7 @@ T2|x|One login keeps `accounts == nil`. Windowless overlay and the no-rollout fa
 T3|x|Two or more logins build one snapshot. Independent `wham/usage` calls. Header tokens and cost from the rollout. Child cost nil. Isolate a failed login. Set header `quota` to the max primary and header `quotaWindows` to nil.|V11,V12,V13,V14,V15,I3,I4,I5,I9
 T4|x|Compact usage and quota render the Codex header and children. Severity ignores the header. `●` marks the highest primary. Failed child counts as unavailable.|V15,V16,V18,V20,I7
 T5|x|Popover children use a single primary `QuotaBar`. No child cost. No Claude glance. Header reset stays hidden at two or more accounts.|V14,V17,V20,I6
-T6|.|Classic usage and quota follow V18. Usage JSON and quota JSON follow V19, including `accounts` on quota JSON when two or more logins exist. Update goldens only for the Codex account branch.|V18,V19,V20,C7,I8
+T6|x|Classic usage and quota follow V18. Usage JSON and quota JSON follow V19, including `accounts` on quota JSON when two or more logins exist. Update goldens only for the Codex account branch.|V18,V19,V20,C7,I8
 T7|.|Regression tests for dedupe, disabled file, one login, two logins, one failed `wham/usage`, equal primary percents, and the parser inherit rules.|V1,V2,V4,V5,V6,V7,V8,V12,V15,C4
 T8|.|Replace `~/Applications/AgentsUsageBar.app` from this tree and confirm `~/.local/bin/aub` points at the new binary before calling the rows done.|C8
 

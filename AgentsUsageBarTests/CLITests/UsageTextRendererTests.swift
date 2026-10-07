@@ -336,4 +336,165 @@ struct UsageTextRendererTests {
         #expect(UsageTextRenderer.shouldColor(noColor: true, isTTY: true) == false)
         #expect(UsageTextRenderer.shouldColor(noColor: false, isTTY: false) == false)
     }
+
+    @Test("codex classic usage is one primary bar per login, with no child cost")
+    func codexClassicUsageAccounts() throws {
+        let report = multiCodexClassicReport()
+        let text = UsageTextRenderer.renderUsage(report, color: false)
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let codexHeader = try #require(lines.first { $0.hasPrefix("Codex") })
+
+        #expect(codexHeader.contains("80%"))
+        #expect(!codexHeader.contains("90%"))
+        #expect(text.contains("18,404 tokens"))
+        #expect(text.contains("$0.07"))
+        #expect(text.contains("████░░░░░░░░░░░░░░░░  20%"))
+        #expect(text.contains("Resets 2h 50m"))
+        #expect(text.contains("Resets —"))
+        #expect(text.contains("unavailable"))
+        #expect(!text.contains("no limit"))
+        let childLines = lines.filter { $0.contains("plus") || $0.contains("team") || $0.contains("guest") }
+        #expect(childLines.allSatisfy { !$0.contains("$") })
+        #expect(!text.contains("5h "))
+        #expect(!text.contains("7d"))
+        #expect(!text.contains("●"))
+        #expect(!text.contains("▀"))
+        #expect(!text.contains("▄"))
+    }
+
+    @Test("codex classic quota lists primary and secondary under each login")
+    func codexClassicQuotaAccounts() {
+        let report = multiCodexClassicReport()
+        let text = UsageTextRenderer.renderQuota(report, color: false)
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+
+        #expect(lines[0].contains("80%"))
+        #expect(!lines[0].contains("90%"))
+        #expect(text.contains("plus"))
+        #expect(text.contains("team"))
+        #expect(text.contains("guest"))
+        #expect(text.contains("primary"))
+        #expect(text.contains("secondary"))
+        #expect(text.contains("90%"))
+        #expect(text.contains("unavailable"))
+        let childLines = lines.filter { $0.contains("plus") || $0.contains("team") || $0.contains("guest") }
+        #expect(childLines.allSatisfy { !$0.contains("$") })
+        #expect(!text.contains("$0.07"))
+        #expect(!text.contains("5h "))
+        #expect(!text.contains("●"))
+    }
+
+    @Test("codex usage JSON accounts are null below two logins and carry a null cost at two or more")
+    func codexUsageJSONAccounts() throws {
+        let one = try UsageJSONRenderer.renderUsage(singleCodexClassicReport())
+        #expect(one.contains("\"accounts\" : null"))
+        #expect(!one.contains("\"name\" : \"plus\""))
+
+        let rich = try UsageJSONRenderer.renderUsage(CLIReportFixture.rich())
+        #expect(rich.components(separatedBy: "\"accounts\" : null").count - 1 == 1)
+
+        let json = try UsageJSONRenderer.renderUsage(multiCodexClassicReport())
+        let provider = try codexProviderObject(json)
+        let accounts = try #require(provider["accounts"] as? [[String: Any]])
+        #expect(accounts.map { $0["name"] as? String } == ["plus", "team", "guest"])
+        #expect(accounts.allSatisfy { $0["costTodayUSD"] is NSNull })
+        let plus = try #require(accounts.first { $0["name"] as? String == "plus" })
+        let plusQuota = try #require(plus["quota"] as? [String: Any])
+        #expect(plusQuota["fraction"] as? Double == 0.20)
+        let plusWindows = try #require(plus["quotaWindows"] as? [[String: Any]])
+        #expect(plusWindows.map { $0["name"] as? String } == ["primary", "secondary"])
+        #expect(provider["quotaWindows"] == nil)
+        #expect(provider["tokensToday"] as? Int == 18_404)
+        #expect(provider["costTodayUSD"] as? String == "0.07")
+        let guest = try #require(accounts.first { $0["name"] as? String == "guest" })
+        #expect(guest["quota"] == nil)
+        #expect(guest["quotaWindows"] == nil)
+    }
+
+    @Test("codex quota JSON carries accounts without cost only at two or more logins")
+    func codexQuotaJSONAccounts() throws {
+        let rich = try UsageJSONRenderer.renderQuota(CLIReportFixture.rich())
+        #expect(!rich.contains("\"accounts\""))
+
+        let one = try UsageJSONRenderer.renderQuota(singleCodexClassicReport())
+        #expect(!one.contains("\"accounts\""))
+
+        let json = try UsageJSONRenderer.renderQuota(multiCodexClassicReport())
+        let row = try #require((try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [[String: Any]])?.first)
+        #expect(row["quotaWindows"] == nil)
+        let accounts = try #require(row["accounts"] as? [[String: Any]])
+        #expect(accounts.map { $0["name"] as? String } == ["plus", "team", "guest"])
+        #expect(accounts.allSatisfy { $0["costTodayUSD"] == nil })
+        let plus = try #require(accounts.first { $0["name"] as? String == "plus" })
+        let windows = try #require(plus["quotaWindows"] as? [[String: Any]])
+        #expect(windows.map { $0["name"] as? String } == ["primary", "secondary"])
+        let secondary = try #require(windows.first { $0["name"] as? String == "secondary" })
+        #expect(secondary["utilization"] as? Double == 0.90)
+        let header = try #require(row["quota"] as? [String: Any])
+        #expect(header["fraction"] as? Double == 0.80)
+    }
+}
+
+private func multiCodexClassicReport() -> UsageReport {
+    let now = CLIReportFixture.asOf
+    let plusReset = now.addingTimeInterval(2 * 3_600 + 50 * 60)
+    let plus = UsageSnapshot.AccountUsage(
+        name: "plus",
+        costTodayUSD: nil,
+        quota: Quota(used: 0.20, limit: 1, remaining: 0.80),
+        quotaWindows: [
+            QuotaWindow(name: "primary", utilization: 0.20, resetsAt: plusReset, duration: 18_000),
+            QuotaWindow(name: "secondary", utilization: 0.90, resetsAt: now.addingTimeInterval(6 * 86_400), duration: 604_800),
+        ]
+    )
+    let team = UsageSnapshot.AccountUsage(
+        name: "team",
+        costTodayUSD: nil,
+        quota: Quota(used: 0.80, limit: 1, remaining: 0.20),
+        quotaWindows: [
+            QuotaWindow(name: "primary", utilization: 0.80, resetsAt: nil, duration: 18_000)
+        ]
+    )
+    let guest = UsageSnapshot.AccountUsage(
+        name: "guest",
+        costTodayUSD: nil,
+        quota: nil,
+        quotaWindows: nil
+    )
+    let snapshot = UsageSnapshot(
+        providerID: .codex,
+        asOf: now,
+        tokensToday: 18_404,
+        costTodayUSD: Decimal(string: "0.07"),
+        balanceUSD: nil,
+        quota: Quota(used: 0.80, limit: 1, remaining: 0.20),
+        raw: ["source": "codex-accounts"],
+        quotaWindows: nil,
+        accounts: [plus, team, guest]
+    )
+    return UsageReport(
+        asOf: now,
+        source: .live,
+        providers: [
+            ProviderReport(
+                id: .codex, displayName: "Codex", status: .ok(lastSuccess: now),
+                snapshot: snapshot, placeholderMessage: nil, errorDescription: nil,
+                isLocal: false, hasTokens: true
+            )
+        ]
+    )
+}
+
+private func singleCodexClassicReport() -> UsageReport {
+    UsageReport(
+        asOf: CLIReportFixture.asOf,
+        source: .cached,
+        providers: [CLIReportFixture.codex()]
+    )
+}
+
+private func codexProviderObject(_ json: String) throws -> [String: Any] {
+    let root = try #require(try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+    let providers = try #require(root["providers"] as? [[String: Any]])
+    return try #require(providers.first { $0["id"] as? String == "codex" })
 }
