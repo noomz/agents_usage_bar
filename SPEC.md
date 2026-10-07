@@ -70,7 +70,7 @@ V20|Claude's own header, dual-lane glance, and account rows stay on `p.id == .cl
 id|status|task|cites
 T1|x|Discover CLIProxy files and the optional `~/.codex/auth.json` login. Dedupe, skip, and label per V6-V10. Injectable directory and auth path. Synthetic fixtures only.|V6,V7,V8,V9,V10,C2,C4,I1,I2
 T2|x|One login keeps `accounts == nil`. Windowless overlay and the no-rollout fallback call `wham/usage` with that login's token. Live rollout windows still win. Existing parser tests stay green.|V1,V2,V3,V4,V5,C5,C6,I3,I4
-T3|.|Two or more logins build one snapshot. Independent `wham/usage` calls. Header tokens and cost from the rollout. Child cost nil. Isolate a failed login. Set header `quota` to the max primary and header `quotaWindows` to nil.|V11,V12,V13,V14,V15,I3,I4,I5,I9
+T3|x|Two or more logins build one snapshot. Independent `wham/usage` calls. Header tokens and cost from the rollout. Child cost nil. Isolate a failed login. Set header `quota` to the max primary and header `quotaWindows` to nil.|V11,V12,V13,V14,V15,I3,I4,I5,I9
 T4|.|Compact usage and quota render the Codex header and children. Severity ignores the header. `●` marks the highest primary. Failed child counts as unavailable.|V15,V16,V18,V20,I7
 T5|.|Popover children use a single primary `QuotaBar`. No child cost. No Claude glance. Header reset stays hidden at two or more accounts.|V14,V17,V20,I6
 T6|.|Classic usage and quota follow V18. Usage JSON and quota JSON follow V19, including `accounts` on quota JSON when two or more logins exist. Update goldens only for the Codex account branch.|V18,V19,V20,C7,I8

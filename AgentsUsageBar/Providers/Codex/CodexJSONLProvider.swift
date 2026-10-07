@@ -35,6 +35,8 @@ public typealias CodexRolloutScannerFactory = @Sendable (Date) -> CodexRolloutSc
 // batched setTranscriptOffsets API — commit 378c553 / STATE #43).
 //
 // Algorithm (RESEARCH §"Codex OAuth Fallback State Machine"):
+//   0. Two or more subscription logins: rollout tokens and cost only, then one
+//      independent wham/usage call per login. One failure does not throw.
 //   1. Scan rollouts (today + yesterday) via CodexRolloutScanner.
 //   2. If rollout files exist:
 //      a. Read deltas via TranscriptReader (fan-out via withThrowingTaskGroup)
@@ -141,76 +143,30 @@ public actor CodexJSONLProvider: UsageProvider {
     }
 
     public func fetch(now: Date) async throws -> UsageSnapshot {
+        let discovered = logins()
+        let rollout = await readRollout(now: now)
+
+        // Two or more subscription logins share one row. Rollout tokens and
+        // cost stay on the header. Each login's quota is its own wham/usage.
+        if discovered.count >= 2 {
+            let snap = await multiLoginSnapshot(logins: discovered, rollout: rollout, now: now)
+            lastStatus = .ok(lastSuccess: now)
+            return snap
+        }
+
         // One subscription login stays a single row. Its token is what wham/usage
         // uses for a windowless overlay and for the no-rollout fallback. Live
         // rollout windows still win, below. Zero logins keep today's path.
-        let discovered = logins()
         let singleLogin = discovered.count == 1 ? discovered[0] : nil
 
-        // STEP 1 — Scan rollout files (today + yesterday).
-        let scanner = scannerFactory(now)
-        let rolloutFiles = scanner.rolloutFiles()
-
-        // STEP 2 — If rollout files exist, attempt the local-first path.
-        if !rolloutFiles.isEmpty {
-            // 2a. Reader delta pass — for the byte-offset cache invariant.
-            //     We do NOT consume `result.records` (those are Claude-shaped).
-            //     We use readDelta solely for its offset bookkeeping.
-            let priorOffsets = cache.allTranscriptOffsets()
-            var newOffsets: [String: TranscriptOffset] = [:]
-
-            do {
-                try await withThrowingTaskGroup(
-                    of: (URL, TranscriptReader.ReadResult).self
-                ) { group in
-                    for fileURL in rolloutFiles {
-                        let key = fileURL.absoluteString
-                        let priorOffset = priorOffsets[key]?.byteOffset ?? 0
-                        let priorMTime = priorOffsets[key]?.lastModified
-                        group.addTask { [reader] in
-                            let result = try await reader.readDelta(
-                                from: fileURL,
-                                startOffset: priorOffset,
-                                previousLastModified: priorMTime
-                            )
-                            return (fileURL, result)
-                        }
-                    }
-
-                    for try await (fileURL, result) in group {
-                        newOffsets[fileURL.absoluteString] = TranscriptOffset(
-                            url: fileURL.absoluteString,
-                            byteOffset: result.newOffset,
-                            lastModified: result.lastModified
-                        )
-                    }
-                }
-            } catch {
-                // A reader failure on one rollout file should not zero the row —
-                // log and continue with whatever offsets we collected, then let
-                // the parser still attempt to fold across the original file set.
-                // (Pitfall 5 tolerance is already inside the parser.)
-                logger.notice("reader pass partial-failure: \(error.localizedDescription, privacy: .public)")
-            }
-
-            // 2c. Single batched offset-cache write — STATE #43 / commit 378c553.
-            //     One write per fetch, regardless of fan-out size.
-            cache.setTranscriptOffsets(Array(newOffsets.values))
-
-            // 2b/2d. Parser fold — find the latest valid token_count event.
-            if let pick = CodexRolloutParser.lastTokenCount(in: rolloutFiles) {
-                let snap = buildSnapshot(fromRollout: pick.event, fileURL: pick.fileURL, now: now)
-                if snap.quotaWindows == nil || snap.quotaWindows?.isEmpty == true,
-                   let overlaid = await overlayQuotaFromOAuth(onto: snap, now: now, login: singleLogin) {
-                    lastStatus = .ok(lastSuccess: now)
-                    return overlaid
-                }
+        if let snap = rollout {
+            if snap.quotaWindows == nil || snap.quotaWindows?.isEmpty == true,
+               let overlaid = await overlayQuotaFromOAuth(onto: snap, now: now, login: singleLogin) {
                 lastStatus = .ok(lastSuccess: now)
-                return snap
+                return overlaid
             }
-            // else: files exist but no usable token_count event — fall through
-            //       to OAuth fallback. Common for sessions that have only
-            //       emitted session_meta / response_item events so far.
+            lastStatus = .ok(lastSuccess: now)
+            return snap
         }
 
         // STEP 3 — OAuth fallback (D-02 — only when rollout yielded nothing).
@@ -254,6 +210,172 @@ public actor CodexJSONLProvider: UsageProvider {
         // expected from the loader's nil-on-fail contract; the catch-by-case
         // shape above is intentionally exhaustive over the CodexOAuthError enum
         // we care about.
+    }
+
+    /// Today's rollout snapshot, or nil when no `token_count` event exists.
+    ///
+    /// Still advances the transcript-offset cache when files are present.
+    /// Callers with two or more logins keep tokens and cost and ignore windows.
+    private func readRollout(now: Date) async -> UsageSnapshot? {
+        let scanner = scannerFactory(now)
+        let rolloutFiles = scanner.rolloutFiles()
+        guard !rolloutFiles.isEmpty else { return nil }
+
+        let priorOffsets = cache.allTranscriptOffsets()
+        var newOffsets: [String: TranscriptOffset] = [:]
+
+        do {
+            try await withThrowingTaskGroup(
+                of: (URL, TranscriptReader.ReadResult).self
+            ) { group in
+                for fileURL in rolloutFiles {
+                    let key = fileURL.absoluteString
+                    let priorOffset = priorOffsets[key]?.byteOffset ?? 0
+                    let priorMTime = priorOffsets[key]?.lastModified
+                    group.addTask { [reader] in
+                        let result = try await reader.readDelta(
+                            from: fileURL,
+                            startOffset: priorOffset,
+                            previousLastModified: priorMTime
+                        )
+                        return (fileURL, result)
+                    }
+                }
+
+                for try await (fileURL, result) in group {
+                    newOffsets[fileURL.absoluteString] = TranscriptOffset(
+                        url: fileURL.absoluteString,
+                        byteOffset: result.newOffset,
+                        lastModified: result.lastModified
+                    )
+                }
+            }
+        } catch {
+            logger.notice("reader pass partial-failure: \(error.localizedDescription, privacy: .public)")
+        }
+
+        cache.setTranscriptOffsets(Array(newOffsets.values))
+
+        guard let pick = CodexRolloutParser.lastTokenCount(in: rolloutFiles) else {
+            return nil
+        }
+        return buildSnapshot(fromRollout: pick.event, fileURL: pick.fileURL, now: now)
+    }
+
+    /// One snapshot for every enabled login. A failed `wham/usage` leaves that
+    /// child unavailable and does not cancel the others.
+    private func multiLoginSnapshot(
+        logins discovered: [CodexDiscoveredLogin],
+        rollout: UsageSnapshot?,
+        now: Date
+    ) async -> UsageSnapshot {
+        let responses = await quotas(for: discovered)
+        let failed = discovered.count - responses.count
+        if failed > 0 {
+            logger.notice("codex accounts: \(failed, privacy: .public) wham/usage call(s) failed")
+        }
+
+        var planTypes: [String: String] = [:]
+        for (index, login) in discovered.enumerated() {
+            if let plan = responses[index]?.planType {
+                planTypes[login.accountId ?? ""] = plan
+            }
+        }
+        let labeled = CodexLoginDiscovery.labeled(discovered, planTypes: planTypes)
+        let accounts = labeled.map { item in
+            let response = discovered.firstIndex(of: item.login).flatMap { responses[$0] }
+            return accountUsage(name: item.label, response: response)
+        }
+        let maxPrimary = accounts.compactMap { account in
+            account.quotaWindows?.first { $0.name == "primary" }?.utilization
+        }.max()
+        let headerQuota = maxPrimary.map { fraction in
+            Quota(used: fraction, limit: 1.0, remaining: max(0.0, 1.0 - fraction))
+        }
+        return UsageSnapshot(
+            providerID: id,
+            asOf: now,
+            tokensToday: rollout?.tokensToday,
+            costTodayUSD: rollout?.costTodayUSD,
+            balanceUSD: nil,
+            quota: headerQuota,
+            raw: ["source": "codex-accounts"],
+            quotaWindows: nil,
+            tooltipLabel: nil,
+            accounts: accounts
+        )
+    }
+
+    private func quotas(for discovered: [CodexDiscoveredLogin]) async -> [Int: CodexUsageResponse] {
+        guard let client = oauth else { return [:] }
+        return await withTaskGroup(
+            of: (Int, CodexUsageResponse?).self,
+            returning: [Int: CodexUsageResponse].self
+        ) { group in
+            for (index, login) in discovered.enumerated() {
+                let token = login.accessToken
+                let accountId = login.accountId
+                group.addTask {
+                    do {
+                        let response = try await client.fetchUsage(token: token, accountId: accountId)
+                        return (index, response)
+                    } catch {
+                        return (index, nil)
+                    }
+                }
+            }
+            var found: [Int: CodexUsageResponse] = [:]
+            for await (index, response) in group {
+                if let response {
+                    found[index] = response
+                }
+            }
+            return found
+        }
+    }
+
+    /// Primary fraction only. A missing primary window leaves `quota` nil even
+    /// when a secondary window is present.
+    private func accountUsage(
+        name: String,
+        response: CodexUsageResponse?
+    ) -> UsageSnapshot.AccountUsage {
+        guard let response else {
+            return UsageSnapshot.AccountUsage(
+                name: name,
+                costTodayUSD: nil,
+                quota: nil,
+                quotaWindows: nil
+            )
+        }
+        var windows: [QuotaWindow] = []
+        let primary = response.rateLimit?.primaryWindow
+        let primaryFraction = primary?.usedPercent.map { Double($0) / 100.0 }
+        if let primary {
+            windows.append(QuotaWindow(
+                name: "primary",
+                utilization: primaryFraction,
+                resetsAt: primary.resetDate(),
+                duration: primary.limitWindowSeconds.map(TimeInterval.init)
+            ))
+        }
+        if let secondary = response.rateLimit?.secondaryWindow {
+            windows.append(QuotaWindow(
+                name: "secondary",
+                utilization: secondary.usedPercent.map { Double($0) / 100.0 },
+                resetsAt: secondary.resetDate(),
+                duration: secondary.limitWindowSeconds.map(TimeInterval.init)
+            ))
+        }
+        let quota = primaryFraction.map { fraction in
+            Quota(used: fraction, limit: 1.0, remaining: max(0.0, 1.0 - fraction))
+        }
+        return UsageSnapshot.AccountUsage(
+            name: name,
+            costTodayUSD: nil,
+            quota: quota,
+            quotaWindows: windows.isEmpty ? nil : windows
+        )
     }
 
     /// Quota for a rollout that recorded tokens but no live windows.

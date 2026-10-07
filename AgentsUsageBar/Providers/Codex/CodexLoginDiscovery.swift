@@ -93,6 +93,35 @@ enum CodexLoginDiscovery {
         }.sorted { $0.label < $1.label }
     }
 
+    /// Login name that compact usage marks with `●`.
+    ///
+    /// Highest primary fraction wins. An equal fraction uses the sooner primary
+    /// reset. A nil reset is later than any known reset. A remaining tie uses
+    /// the alphabetically first label. A login with no primary fraction, including
+    /// a failed `wham/usage`, is not eligible.
+    static func markedAccountName(_ accounts: [UsageSnapshot.AccountUsage]) -> String? {
+        struct Candidate {
+            let name: String
+            let fraction: Double
+            let reset: Date
+        }
+        let candidates: [Candidate] = accounts.compactMap { account in
+            guard let primary = account.quotaWindows?.first(where: { $0.name == "primary" }),
+                  let fraction = primary.utilization
+            else { return nil }
+            return Candidate(
+                name: account.name,
+                fraction: fraction,
+                reset: primary.resetsAt ?? .distantFuture
+            )
+        }
+        return candidates.min { lhs, rhs in
+            if lhs.fraction != rhs.fraction { return lhs.fraction > rhs.fraction }
+            if lhs.reset != rhs.reset { return lhs.reset < rhs.reset }
+            return lhs.name < rhs.name
+        }?.name
+    }
+
     // MARK: - Parsing
 
     private static func isCLIProxyFilename(_ name: String) -> Bool {
