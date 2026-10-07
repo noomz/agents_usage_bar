@@ -144,13 +144,14 @@ ln -sf "/Applications/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar" ~/.local
 ```
 
 ```
-aub                         # today's usage with quota bars (same layout as the popover)
-aub usage --json            # machine-readable snapshot
-aub quota claude            # limits + reset windows
+aub                         # menu-bar cache (same layout as the popover; fast)
+aub --live                  # fetch providers now
+aub usage --json            # cached snapshot, machine-readable
+aub quota claude            # limits + reset windows (cache)
 aub settings                # list keys
 aub settings get threshold
 aub settings set threshold 0.70
-aub usage --cached          # read the menu-bar cache (no live fetch)
+aub usage --cached          # same as default; explicit cache read
 ```
 
 Settings writes go to the same `aub.*` UserDefaults keys as the GUI. API keys are still env / `config.toml` only.

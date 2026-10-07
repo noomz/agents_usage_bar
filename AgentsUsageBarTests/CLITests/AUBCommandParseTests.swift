@@ -16,6 +16,18 @@ struct AUBCommandParseTests {
         #expect(cmd == .usage(.init(filter: .enabled, json: true, noColor: true, cached: true)))
     }
 
+    @Test("bare aub reads cache; --live fetches")
+    func cacheIsDefault() {
+        #expect(try! AUBCommand.parse([]).get() == .usage(.init(cached: true)))
+        #expect(try! AUBCommand.parse(["--cached"]).get() == .usage(.init(cached: true)))
+        #expect(try! AUBCommand.parse(["--live"]).get() == .usage(.init(cached: false)))
+        #expect(try! AUBCommand.parse(["quota", "claude", "--live"]).get()
+                == .quota(.init(filter: .one(.claude), cached: false)))
+        #expect(try! AUBCommand.parse(["--live", "--cached"]).get() == .usage(.init(cached: true)))
+        #expect(try! AUBCommand.parse(["--cached", "--live"]).get() == .usage(.init(cached: false)))
+        #expect(AUBCommand.isSubcommand("--live"))
+    }
+
     @Test("positional provider")
     func positionalProvider() {
         let cmd = try! AUBCommand.parse(["usage", "claude"]).get()

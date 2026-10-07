@@ -23,7 +23,7 @@ public enum AUBCommand: Equatable, Sendable {
             filter: ProviderFilter = .enabled,
             json: Bool = false,
             noColor: Bool = false,
-            cached: Bool = false,
+            cached: Bool = true,
             theme: CLITheme? = nil
         ) {
             self.filter = filter
@@ -58,7 +58,7 @@ public enum AUBCommand: Equatable, Sendable {
         "usage", "quota", "limits", "settings", "themes", "install", "uninstall",
         "version", "help",
         "--help", "-h", "--version", "-V",
-        "--json", "--cached", "--no-color", "--provider", "--prefix", "--theme", "--cli",
+        "--json", "--cached", "--live", "--no-color", "--provider", "--prefix", "--theme", "--cli",
     ]
 
     public static let helpText = """
@@ -80,7 +80,8 @@ public enum AUBCommand: Equatable, Sendable {
     Flags:
       --json          Machine-readable JSON
       --no-color      Disable ANSI bar colors
-      --cached        Read the menu-bar cache (no live fetch)
+      --cached        Read the menu-bar cache (default; no live fetch)
+      --live          Fetch providers now (slow; ignores the cache)
       --provider ID   Restrict to one provider, or 'all'
       --theme NAME    CLI theme: compact (default) | classic
       --prefix PATH   Install symlink into PATH (install only)
@@ -99,6 +100,7 @@ public enum AUBCommand: Equatable, Sendable {
 
     Examples:
       aub
+      aub --live
       aub usage --json
       aub quota claude
       aub settings get refresh-interval
@@ -143,7 +145,7 @@ extension AUBCommand {
     public static func parse(_ args: [String]) -> Result<AUBCommand, AUBParseError> {
         var json = false
         var noColor = false
-        var cached = false
+        var cached = true
         var providerFlag: String?
         var prefix: String?
         var theme: CLITheme?
@@ -164,6 +166,8 @@ extension AUBCommand {
                 noColor = true
             case "--cached":
                 cached = true
+            case "--live":
+                cached = false
             case "--provider":
                 i += 1
                 guard i < tokens.count else { return .failure(.missingValue("--provider")) }

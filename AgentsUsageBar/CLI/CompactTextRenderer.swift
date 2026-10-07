@@ -63,7 +63,7 @@ public enum CompactTextRenderer {
         out.append(severityLine(lines))
         if providers.isEmpty {
             let message = report.source == .cached
-                ? "no cached data yet — run aub without --cached"
+                ? "no cached data yet — run aub --live"
                 : "no providers enabled"
             out.append(dim(message, color: color))
         }

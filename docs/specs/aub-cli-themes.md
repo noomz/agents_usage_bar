@@ -56,7 +56,7 @@ V18|Local line: one `local` line — `● name model` (`+N` more loaded), `◐ n
 V19|Width: `TIOCGWINSZ` on TTY, else `$COLUMNS`, else nil = unfitted natural width (pipes/tests deterministic; user 2026-09-28, was 66). Extra width widens name column to longest label, then bar up to 20 cells. Narrow: bar shrinks to 5-cell floor, then labels truncate with `…`. Base width recomputed from widest row. Label/reset/money never shrink; narrow overflow accepted (user 2026-09-28).
 V20|`aub quota` compact: header = severity line only; one row per window, same grammar, no money (Claude 5h + 7d per account; Codex both; OpenRouter `credits` + `day`/`week`/`month` rows showing `$X spent` in the bar's place (no bar, no %, not counted in severity line); Gemini per model; Grok billing).
 V21|Single provider (`aub claude`): filtered usage view; header totals + severity counts cover shown provider only.
-V22|Empty: zero headers + one dim line `no providers enabled` or `no cached data yet — run aub without --cached`; exit 0.
+V22|Empty: zero headers + one dim line `no providers enabled` or `no cached data yet — run aub --live`; exit 0.
 V23|`QuotaWindow` gains optional duration; Codex providers keep parsed `window_minutes`/`limit_window_seconds`. OpenRouter snapshot surfaces `usage_daily/weekly/monthly`; spec note: `usage_daily` is UTC day, header total is local-midnight.
 
 ### Selection (ticket 06)
