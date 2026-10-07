@@ -178,3 +178,137 @@ struct ProviderRowViewLocalRowTests {
                 "LocalRowSecondaryView must not use NSAlert — pure SwiftUI only")
     }
 }
+
+@Suite("Codex popover children")
+struct CodexChildRowTests {
+    private let now = Date(timeIntervalSince1970: 1_790_227_200)
+
+    @Test("primary fraction and primary reset win over a higher secondary")
+    func primaryWindowSuppliesBarAndReset() {
+        let primaryReset = now.addingTimeInterval(2 * 3_600 + 50 * 60)
+        let secondaryReset = now.addingTimeInterval(6 * 86_400)
+        let account = UsageSnapshot.AccountUsage(
+            name: "plus",
+            costTodayUSD: Decimal(string: "9.99"),
+            quota: Quota(used: 0.90, limit: 1, remaining: 0.10),
+            quotaWindows: [
+                QuotaWindow(name: "secondary", utilization: 0.90, resetsAt: secondaryReset, duration: 604_800),
+                QuotaWindow(name: "primary", utilization: 0.20, resetsAt: primaryReset, duration: 18_000),
+            ]
+        )
+
+        let content = CodexChildRow.content(for: account, now: now)
+
+        #expect(content.quota?.used == 0.20)
+        #expect(content.reset == "Resets 2h 50m")
+    }
+
+    @Test("a nil primary reset still has a bar and a dash countdown")
+    func nilPrimaryResetUsesDash() {
+        let account = UsageSnapshot.AccountUsage(
+            name: "team",
+            costTodayUSD: nil,
+            quota: Quota(used: 0.40, limit: 1, remaining: 0.60),
+            quotaWindows: [
+                QuotaWindow(name: "primary", utilization: 0.40, resetsAt: nil, duration: 18_000)
+            ]
+        )
+
+        let content = CodexChildRow.content(for: account, now: now)
+
+        #expect(content.quota?.used == 0.40)
+        #expect(content.reset == "Resets —")
+    }
+
+    @Test("secondary-only and a missing primary fraction are unavailable")
+    func missingPrimaryIsUnavailable() {
+        let secondaryOnly = UsageSnapshot.AccountUsage(
+            name: "plus",
+            costTodayUSD: 1,
+            quota: Quota(used: 0.90, limit: 1, remaining: 0.10),
+            quotaWindows: [
+                QuotaWindow(name: "secondary", utilization: 0.90, resetsAt: now.addingTimeInterval(86_400), duration: 604_800)
+            ]
+        )
+        let nilPrimary = UsageSnapshot.AccountUsage(
+            name: "team",
+            costTodayUSD: nil,
+            quota: nil,
+            quotaWindows: [
+                QuotaWindow(name: "primary", utilization: nil, resetsAt: now.addingTimeInterval(3_600), duration: 18_000)
+            ]
+        )
+        let empty = UsageSnapshot.AccountUsage(
+            name: "guest",
+            costTodayUSD: nil,
+            quota: nil,
+            quotaWindows: nil
+        )
+
+        for account in [secondaryOnly, nilPrimary, empty] {
+            let content = CodexChildRow.content(for: account, now: now)
+            #expect(content.quota == nil)
+            #expect(content.reset == nil)
+        }
+    }
+
+    @Test("header bar input is the max primary while header windows stay nil")
+    func headerDisplayedQuotaIsMaxPrimary() {
+        let plus = UsageSnapshot.AccountUsage(
+            name: "plus",
+            costTodayUSD: nil,
+            quota: Quota(used: 0.20, limit: 1, remaining: 0.80),
+            quotaWindows: [
+                QuotaWindow(name: "primary", utilization: 0.20, resetsAt: now.addingTimeInterval(3_600), duration: 18_000),
+                QuotaWindow(name: "secondary", utilization: 0.90, resetsAt: now.addingTimeInterval(86_400), duration: 604_800),
+            ]
+        )
+        let team = UsageSnapshot.AccountUsage(
+            name: "team",
+            costTodayUSD: nil,
+            quota: nil,
+            quotaWindows: nil
+        )
+        let snapshot = UsageSnapshot(
+            providerID: .codex,
+            asOf: now,
+            tokensToday: 18_404,
+            costTodayUSD: Decimal(string: "0.07"),
+            balanceUSD: nil,
+            quota: Quota(used: 0.20, limit: 1, remaining: 0.80),
+            raw: ["source": "codex-accounts"],
+            quotaWindows: nil,
+            accounts: [plus, team]
+        )
+
+        #expect(snapshot.quotaWindows == nil)
+        #expect(snapshot.displayedQuota?.used == 0.20)
+        #expect(snapshot.accounts?.count == 2)
+    }
+
+    @Test("Codex children branch off the Claude glance and the nil-quota bar")
+    func sourceBranchesCodexAwayFromClaudeGlance() throws {
+        let src = try ProviderRowViewLocalRowTests.providerRowViewSource()
+        #expect(src.contains("AccountChildRow(account: account, providerID: state.id, now: ctx.date)"))
+        #expect(src.contains("QuotaBar(quota: state.snapshot?.displayedQuota)"))
+        #expect(src.contains("if (state.snapshot?.accounts?.count ?? 0) < 2 {"))
+        #expect(src.contains("Text(cost.formatted(.currency(code: \"USD\")))\n                        .font(.caption2)"))
+        #expect(src.contains("ClaudeQuotaGlanceView(glance: account.quotaGlance, now: now)"))
+
+        guard let start = src.range(of: "private var codexBody"),
+              let end = src.range(of: "private var claudeBody"),
+              start.lowerBound < end.lowerBound
+        else {
+            Issue.record("Codex child body must stay separate from the Claude glance body")
+            return
+        }
+        let codexBranch = String(src[start.lowerBound..<end.lowerBound])
+        #expect(codexBranch.contains("QuotaBar(quota: quota)"))
+        #expect(codexBranch.contains("Text(\"unavailable\")"))
+        #expect(!codexBranch.contains("QuotaBar(quota: nil)"))
+        #expect(!codexBranch.contains("no limit"))
+        #expect(!codexBranch.contains("cost.formatted"))
+        #expect(!codexBranch.contains("ClaudeQuotaGlanceView"))
+        #expect(!codexBranch.contains("●"))
+    }
+}

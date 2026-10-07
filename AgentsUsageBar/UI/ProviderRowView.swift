@@ -121,14 +121,12 @@ public struct ProviderRowView: View {
                             .opacity(isStale || isDegraded ? 0.6 : 1.0)
                     }
 
-                    // Per-account child rows (Claude hook mode aggregating ≥2 ccs
-                    // accounts): one indented sub-row per account with its own cost,
-                    // quota bar, and reset countdown. snapshot.accounts is nil for every
-                    // other provider and for single-account feeds, so nothing changes there.
+                    // Per-account child rows when two or more accounts exist.
+                    // Claude keeps its dual glance and cost. Codex uses one primary bar.
                     if let accountRows = state.snapshot?.accounts, accountRows.count >= 2 {
                         VStack(alignment: .leading, spacing: 6) {
                             ForEach(accountRows) { account in
-                                AccountChildRow(account: account, now: ctx.date)
+                                AccountChildRow(account: account, providerID: state.id, now: ctx.date)
                             }
                         }
                         .padding(.leading, 14)
@@ -227,14 +225,79 @@ public struct ProviderRowView: View {
     }
 }
 
+// MARK: - Codex child
+
+/// Popover content for one Codex login under a multi-login header.
+///
+/// The bar and the reset come from the window named `primary`. A missing
+/// primary fraction is unavailable: no bar, including the nil-quota "no limit" bar.
+struct CodexChildContent: Equatable, Sendable {
+    let quota: Quota?
+    let reset: String?
+}
+
+enum CodexChildRow {
+    nonisolated static func content(
+        for account: UsageSnapshot.AccountUsage,
+        now: Date
+    ) -> CodexChildContent {
+        guard
+            let primary = account.quotaWindows?.first(where: { $0.name == "primary" }),
+            let used = primary.utilization
+        else {
+            return CodexChildContent(quota: nil, reset: nil)
+        }
+        let quota = Quota(used: used, limit: 1, remaining: max(0, 1 - used))
+        let reset: String
+        if let resetsAt = primary.resetsAt {
+            reset = ResetCountdown.phrase(until: resetsAt, now: now)
+        } else {
+            reset = "Resets —"
+        }
+        return CodexChildContent(quota: quota, reset: reset)
+    }
+}
+
 // MARK: - AccountChildRow
 
-/// One indented per-account text row under aggregated Claude usage. Child rows never add bars.
+/// One indented account row. Claude keeps its cost and dual glance. Codex uses one primary bar.
 struct AccountChildRow: View {
     let account: UsageSnapshot.AccountUsage
+    var providerID: ProviderID = .claude
     let now: Date
 
     var body: some View {
+        if providerID == .codex {
+            codexBody
+        } else {
+            claudeBody
+        }
+    }
+
+    private var codexBody: some View {
+        let content = CodexChildRow.content(for: account, now: now)
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(account.name)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            if let quota = content.quota {
+                QuotaBar(quota: quota)
+                    .frame(maxWidth: .infinity)
+                if let reset = content.reset {
+                    Text(reset)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+            } else {
+                Text("unavailable")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var claudeBody: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
                 Text(account.name)
