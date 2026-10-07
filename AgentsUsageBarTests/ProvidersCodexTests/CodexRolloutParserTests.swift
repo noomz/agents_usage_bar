@@ -288,4 +288,29 @@ struct CodexRolloutParserTests {
         #expect(result.event.payload.rateLimits?.secondary?.usedPercent == 42.0)
         #expect(result.event.payload.rateLimits?.limitId == "premium")
     }
+
+    @Test func reached_type_inherits_even_when_limit_id_stays_codex() throws {
+        // V1: post-limit nulling is either limit_id "premium" or a set
+        // rate_limit_reached_type. limit_id can stay "codex" in the second case.
+        // Resets are still after this event, so V2 keeps the copied windows.
+        let older = """
+        {"timestamp":"2026-09-08T04:00:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1,"cached_input_tokens":0,"output_tokens":1,"total_tokens":2}},"rate_limits":{"limit_id":"codex","primary":{"used_percent":40.0,"window_minutes":300,"resets_at":1788858959},"secondary":{"used_percent":11.0,"window_minutes":10080,"resets_at":1789445759},"plan_type":"plus"}}}
+        """
+        let newer = """
+        {"timestamp":"2026-09-08T04:30:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":20,"cached_input_tokens":0,"output_tokens":2,"total_tokens":22}},"rate_limits":{"limit_id":"codex","primary":null,"secondary":null,"plan_type":"plus","rate_limit_reached_type":"primary"}}}
+        """
+        let urlOlder = try makeTempJsonl(named: "reached-older.jsonl", contents: older)
+        let urlNewer = try makeTempJsonl(named: "reached-newer.jsonl", contents: newer)
+        defer {
+            try? FileManager.default.removeItem(at: urlOlder.deletingLastPathComponent())
+            try? FileManager.default.removeItem(at: urlNewer.deletingLastPathComponent())
+        }
+
+        let result = try #require(CodexRolloutParser.lastTokenCount(in: [urlNewer, urlOlder]))
+        #expect(result.event.payload.info?.totalTokenUsage?.totalTokens == 22)
+        #expect(result.event.payload.rateLimits?.limitId == "codex")
+        #expect(result.event.payload.rateLimits?.rateLimitReachedType == "primary")
+        #expect(result.event.payload.rateLimits?.primary?.usedPercent == 40.0)
+        #expect(result.event.payload.rateLimits?.secondary?.usedPercent == 11.0)
+    }
 }
