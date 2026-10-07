@@ -119,6 +119,106 @@ struct CompactTextRendererTests {
         #expect(positions == positions.sorted())
     }
 
+    @Test("codex: header spend, primary bars, ● on the highest, failed child unavailable")
+    func codexMultiLoginRows() throws {
+        let now = CLIReportFixture.asOf
+        let plusReset = now.addingTimeInterval(2 * 3600 + 50 * 60)
+        let teamReset = now.addingTimeInterval(4 * 3600)
+        let report = UsageReport(asOf: now, source: .live, providers: [
+            multiCodexReport(
+                cost: "0.07",
+                accounts: [
+                    codexAccount("team", primary: 0.80, primaryReset: teamReset, secondary: 0.10),
+                    codexAccount("plus", primary: 0.20, primaryReset: plusReset, secondary: 0.90),
+                    codexAccount("guest", primary: nil, primaryReset: nil, secondary: nil),
+                ]
+            ),
+        ])
+
+        let usage = Self.render(report).split(separator: "\n").map(String.init)
+        #expect(usage[1] == "1 at ≥80% · 0 at 50–79% · 1 unavailable")
+        let header = try #require(usage.first { $0.contains("Codex") && !$0.contains("plus") && !$0.contains("team") })
+        #expect(header.hasSuffix("$0.07 spent"))
+        #expect(!header.contains("%"))
+        let plus = try #require(usage.first { $0.contains("plus") })
+        #expect(plus.hasPrefix("    plus "))
+        #expect(plus.contains("20%"))
+        #expect(plus.contains("5h"))
+        #expect(plus.contains("↻ 2h 50m"))
+        #expect(!plus.contains("90%"))
+        #expect(!plus.contains("spent"))
+        #expect(!plus.contains("●"))
+        let team = try #require(usage.first { $0.contains("team") })
+        #expect(team.hasPrefix("▲   team● "))
+        #expect(team.contains("80%"))
+        #expect(team.contains("5h"))
+        #expect(team.contains("↻ 4h"))
+        #expect(!team.contains("spent"))
+        let guest = try #require(usage.first { $0.contains("guest") })
+        #expect(guest.hasPrefix("!   guest"))
+        #expect(guest.hasSuffix("unavailable"))
+        #expect(!guest.contains("no limit"))
+        #expect(!usage.contains { $0.contains("●") && !$0.contains("team") })
+
+        let quota = Self.render(report, view: .quota).split(separator: "\n").map(String.init)
+        #expect(quota[0] == "2 at ≥80% · 0 at 50–79% · 1 unavailable")
+        let quotaHeader = try #require(quota.first { $0.contains("Codex") })
+        #expect(!quotaHeader.contains("%"))
+        #expect(quota.contains { $0.contains("plus") && $0.contains("20%") && $0.contains("5h") })
+        #expect(quota.contains { $0.contains("90%") && $0.contains("7d") && !$0.contains("plus") })
+        #expect(quota.contains { $0.contains("team●") && $0.contains("80%") && $0.contains("5h") })
+        #expect(quota.contains { $0.contains("10%") && $0.contains("7d") })
+        let quotaGuest = try #require(quota.first { $0.contains("guest") })
+        #expect(quotaGuest.hasSuffix("unavailable"))
+        #expect(!quotaGuest.contains("no limit"))
+    }
+
+    @Test("codex: equal primary uses the sooner reset; a nil reset marks nobody only when none have a fraction")
+    func codexAccountMark() {
+        let now = CLIReportFixture.asOf
+        let sooner = now.addingTimeInterval(3600)
+        let later = now.addingTimeInterval(7200)
+        let equal = multiCodexReport(cost: nil, accounts: [
+            codexAccount("team", primary: 0.40, primaryReset: later, secondary: nil),
+            codexAccount("plus", primary: 0.40, primaryReset: sooner, secondary: nil),
+        ])
+        let equalNames = CompactTextRenderer.usageLines(equal, now: now).map(lineName)
+        #expect(equalNames.contains("  plus●"))
+        #expect(equalNames.contains("  team"))
+        #expect(!equalNames.contains("  team●"))
+
+        let nilReset = multiCodexReport(cost: nil, accounts: [
+            codexAccount("plus", primary: 0.50, primaryReset: nil, secondary: nil),
+            codexAccount("team", primary: 0.50, primaryReset: sooner, secondary: nil),
+        ])
+        let nilNames = CompactTextRenderer.usageLines(nilReset, now: now).map(lineName)
+        #expect(nilNames.contains("  team●"))
+        #expect(!nilNames.contains("  plus●"))
+
+        let nobody = multiCodexReport(cost: nil, accounts: [
+            codexAccount("plus", primary: nil, primaryReset: nil, secondary: 0.80),
+            codexAccount("team", primary: nil, primaryReset: nil, secondary: nil),
+        ])
+        let nobodyLines = CompactTextRenderer.usageLines(nobody, now: now)
+        #expect(nobodyLines.map(lineName).allSatisfy { !$0.contains("●") })
+        #expect(CompactTextRenderer.severityLine(nobodyLines) == "0 at ≥80% · 0 at 50–79% · 2 unavailable")
+        let quotaLines = CompactTextRenderer.quotaLines(nobody, now: now)
+        #expect(quotaLines.map(lineName).contains("  plus"))
+        #expect(quotaLines.contains { line in
+            if case .row(_, .bar(let fraction), let label, _, _) = line {
+                return abs(fraction - 0.80) < 0.000_1 && label == "7d"
+            }
+            return false
+        })
+    }
+
+    @Test("codex: one login stays a single compact row")
+    func codexOneLoginStaysOneRow() {
+        let lines = CompactTextRenderer.usageLines(CLIReportFixture.codex(), now: CLIReportFixture.asOf)
+        #expect(lines.count == 1)
+        #expect(lineName(lines[0]) == "Codex")
+    }
+
     @Test("claude: header row with total, accounts indented alphabetically, ● on the active constraint")
     func claudeAccounts() {
         let lines = Self.render().split(separator: "\n").map(String.init)
@@ -265,4 +365,63 @@ struct CompactTextRendererTests {
             }
         }
     }
+}
+
+private func lineName(_ line: CompactTextRenderer.Line) -> String {
+    switch line {
+    case let .row(name, _, _, _, _): return name
+    case let .problem(name, _): return name
+    }
+}
+
+private func multiCodexReport(
+    cost: String?,
+    accounts: [UsageSnapshot.AccountUsage]
+) -> ProviderReport {
+    var report = CLIReportFixture.codex()
+    let maxPrimary = accounts.compactMap { $0.quota?.fraction }.max()
+    report.snapshot = UsageSnapshot(
+        providerID: .codex,
+        asOf: CLIReportFixture.asOf,
+        tokensToday: 18_404,
+        costTodayUSD: cost.flatMap { Decimal(string: $0) },
+        balanceUSD: nil,
+        quota: maxPrimary.map { Quota(used: $0, limit: 1, remaining: max(0, 1 - $0)) },
+        raw: ["source": "codex-accounts"],
+        quotaWindows: nil,
+        accounts: accounts
+    )
+    return report
+}
+
+private func codexAccount(
+    _ name: String,
+    primary: Double?,
+    primaryReset: Date?,
+    secondary: Double?
+) -> UsageSnapshot.AccountUsage {
+    var windows: [QuotaWindow] = []
+    if primary != nil || primaryReset != nil {
+        windows.append(QuotaWindow(
+            name: "primary",
+            utilization: primary,
+            resetsAt: primaryReset,
+            duration: 5 * 3600
+        ))
+    }
+    if let secondary {
+        windows.append(QuotaWindow(
+            name: "secondary",
+            utilization: secondary,
+            resetsAt: CLIReportFixture.asOf.addingTimeInterval(6 * 86400),
+            duration: 7 * 86400
+        ))
+    }
+    let quota = primary.map { Quota(used: $0, limit: 1, remaining: max(0, 1 - $0)) }
+    return UsageSnapshot.AccountUsage(
+        name: name,
+        costTodayUSD: nil,
+        quota: quota,
+        quotaWindows: windows.isEmpty ? nil : windows
+    )
 }

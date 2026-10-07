@@ -170,6 +170,12 @@ public enum CompactTextRenderer {
                 let (gauge, windowLabel, reset) = claudeWindow(account.value.quotaGlance.active, now: now)
                 lines.append(.row(name: account.name, gauge: gauge, label: windowLabel, reset: reset, money: spent(account.value.costTodayUSD)))
             }
+        } else if p.id == .codex, let accounts = snap.accounts, accounts.count >= 2 {
+            // Header spend only. Each child is its 5-hour primary, not max(primary, secondary).
+            lines = [.row(name: name, gauge: .text(""), label: "", reset: nil, money: spent(snap.costTodayUSD))]
+            for account in codexAccountsInOrder(snap) {
+                lines.append(codexUsageLine(account, p, snap, now: now))
+            }
         } else {
             let (gauge, windowLabel, reset) = worstWindow(p, snap, now: now)
             lines = [.row(name: name, gauge: gauge, label: windowLabel, reset: reset, money: money(p, snap))]
@@ -258,6 +264,41 @@ public enum CompactTextRenderer {
         }
     }
 
+    /// Codex logins alphabetically, each named `  <account>`, with `●` on the
+    /// highest primary. A login with no primary fraction gets no mark.
+    static func codexAccountsInOrder(_ snap: UsageSnapshot) -> [(name: String, value: UsageSnapshot.AccountUsage)] {
+        let marked = CodexLoginDiscovery.markedAccountName(snap.accounts ?? [])
+        return (snap.accounts ?? []).sorted { $0.name < $1.name }.map { account in
+            ("  " + account.name + (account.name == marked ? "●" : ""), account)
+        }
+    }
+
+    /// Primary bar, or a problem line when that login has no primary fraction.
+    static func codexUsageLine(
+        _ account: (name: String, value: UsageSnapshot.AccountUsage),
+        _ p: ProviderReport,
+        _ snap: UsageSnapshot,
+        now: Date
+    ) -> Line {
+        guard let primary = account.value.quotaWindows?.first(where: { $0.name == "primary" }),
+              let fraction = primary.utilization
+        else {
+            return .problem(name: account.name, word: "unavailable")
+        }
+        return .row(
+            name: account.name,
+            gauge: .bar(fraction),
+            label: windowLabel(primary, p, snap),
+            reset: resetColumn(primary.resetsAt, now: now),
+            money: nil
+        )
+    }
+
+    static func codexQuotaWindows(_ account: UsageSnapshot.AccountUsage) -> [QuotaWindow] {
+        let windows = account.quotaWindows ?? []
+        return ["primary", "secondary"].compactMap { name in windows.first { $0.name == name } }
+    }
+
     /// Claude accounts alphabetically, each named `  <account>` with `●` on the
     /// active-constraint account (V16).
     static func accountsInOrder(_ snap: UsageSnapshot) -> [(name: String, value: UsageSnapshot.AccountUsage)] {
@@ -273,6 +314,30 @@ public enum CompactTextRenderer {
         let name = label(for: p)
         guard let snap = p.snapshot else {
             return [.problem(name: name, word: problemWord(p) ?? "unavailable")]
+        }
+        if p.id == .codex, let accounts = snap.accounts, accounts.count >= 2 {
+            var lines: [Line] = [.row(name: name, gauge: .text(""), label: "", reset: nil, money: nil)]
+            for account in codexAccountsInOrder(snap) {
+                let windows = codexQuotaWindows(account.value)
+                if windows.isEmpty {
+                    lines.append(.problem(name: account.name, word: "unavailable"))
+                    continue
+                }
+                for (index, window) in windows.enumerated() {
+                    let gauge: Gauge = window.utilization.map { .bar($0) } ?? .text("no limit")
+                    lines.append(.row(
+                        name: index == 0 ? account.name : "",
+                        gauge: gauge,
+                        label: windowLabel(window, p, snap),
+                        reset: resetColumn(window.resetsAt, now: now),
+                        money: nil
+                    ))
+                }
+            }
+            if let word = problemWord(p) {
+                lines.append(.problem(name: name, word: word))
+            }
+            return lines
         }
         var rows: [(name: String, gauge: Gauge, label: String, reset: String?)] = []
         if p.id == .claude, let accounts = snap.accounts, !accounts.isEmpty {
