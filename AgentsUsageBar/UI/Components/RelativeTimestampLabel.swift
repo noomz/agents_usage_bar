@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A `TimelineView`-driven label that shows "Updated Xs ago" and ticks every second
-/// while the popover is open (Phase Success Criterion #3).
+/// A label that shows "Updated Xs ago" relative to `now`. The popover advances `now`
+/// every second while it is open (Phase Success Criterion #3).
 ///
 /// - Renders "Never updated" when `date == nil` (cold-launch / unauthenticated state, D-03).
 /// - Uses `relativeString(from:to:)` which is exposed as `internal static` for unit testing (W2).
@@ -16,14 +16,16 @@ import SwiftUI
 /// the colour intensity differs so the user notices the data is stale.
 public struct RelativeTimestampLabel: View {
     public let date: Date?
+    public let now: Date
     public let prefix: String
     public let isStale: Bool
 
     /// Plan 02.07 — additive overload accepting `isStale` from
     /// `AggregateStore.isStale(_:now:)`. The default `false` preserves Phase 1
     /// call-site compatibility.
-    public init(date: Date?, prefix: String = "Updated", isStale: Bool = false) {
+    public init(date: Date?, now: Date, prefix: String = "Updated", isStale: Bool = false) {
         self.date = date
+        self.now = now
         self.prefix = prefix
         self.isStale = isStale
     }
@@ -31,19 +33,16 @@ public struct RelativeTimestampLabel: View {
     // MARK: - View body
 
     public var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { ctx in
-            let now = ctx.date
-            if let date {
-                Text("\(prefix) \(Self.relativeString(from: date, to: now)) ago")
-                    .font(.caption2)
-                    .foregroundStyle(isStale ? AnyShapeStyle(HierarchicalShapeStyle.tertiary)
-                                             : AnyShapeStyle(HierarchicalShapeStyle.secondary))
-            } else {
-                Text("Never updated")
-                    .font(.caption2)
-                    .foregroundStyle(isStale ? AnyShapeStyle(HierarchicalShapeStyle.tertiary)
-                                             : AnyShapeStyle(HierarchicalShapeStyle.secondary))
-            }
+        if let date {
+            Text("\(prefix) \(Self.relativeString(from: date, to: now)) ago")
+                .font(.caption2)
+                .foregroundStyle(isStale ? AnyShapeStyle(HierarchicalShapeStyle.tertiary)
+                                         : AnyShapeStyle(HierarchicalShapeStyle.secondary))
+        } else {
+            Text("Never updated")
+                .font(.caption2)
+                .foregroundStyle(isStale ? AnyShapeStyle(HierarchicalShapeStyle.tertiary)
+                                         : AnyShapeStyle(HierarchicalShapeStyle.secondary))
         }
     }
 
@@ -68,16 +67,16 @@ public struct RelativeTimestampLabel: View {
 // MARK: - Previews
 
 #Preview("RelativeTimestampLabel — seconds ago") {
-    RelativeTimestampLabel(date: .now.addingTimeInterval(-30))
+    RelativeTimestampLabel(date: .now.addingTimeInterval(-30), now: .now)
         .padding()
 }
 
 #Preview("RelativeTimestampLabel — minutes ago") {
-    RelativeTimestampLabel(date: .now.addingTimeInterval(-180))
+    RelativeTimestampLabel(date: .now.addingTimeInterval(-180), now: .now)
         .padding()
 }
 
 #Preview("RelativeTimestampLabel — nil (never updated)") {
-    RelativeTimestampLabel(date: nil)
+    RelativeTimestampLabel(date: nil, now: .now)
         .padding()
 }

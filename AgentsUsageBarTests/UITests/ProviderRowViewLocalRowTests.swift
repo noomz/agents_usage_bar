@@ -289,7 +289,7 @@ struct CodexChildRowTests {
     @Test("Codex children branch off the Claude glance and the nil-quota bar")
     func sourceBranchesCodexAwayFromClaudeGlance() throws {
         let src = try ProviderRowViewLocalRowTests.providerRowViewSource()
-        #expect(src.contains("AccountChildRow(account: account, providerID: state.id, now: ctx.date)"))
+        #expect(src.contains("AccountChildRow(account: account, providerID: state.id, now: now)"))
         #expect(src.contains("QuotaBar(quota: state.snapshot?.displayedQuota)"))
         #expect(src.contains("if (state.snapshot?.accounts?.count ?? 0) < 2 {"))
         #expect(src.contains("Text(cost.formatted(.currency(code: \"USD\")))\n                        .font(.caption2)"))

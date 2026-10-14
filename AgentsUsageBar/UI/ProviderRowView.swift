@@ -12,7 +12,7 @@ import SwiftUI
 /// - Account balance (omitted when nil)
 /// - Color-coded quota bar (QuotaBar) per UI-02 authoritative thresholds (B4)
 /// - "Resets —" countdown (OpenRouter has no reset countdown — RESEARCH Open Question #4)
-/// - "Updated Xs ago" relative timestamp label (ticks via TimelineView every 1s)
+/// - "Updated Xs ago" relative timestamp label (ticks with the popover's `now`)
 /// - D-11 "Updated Xm ago — usage temporarily unavailable" subtitle when the
 ///   snapshot carries `raw["note"] == ThresholdEngine.degradedTag`
 /// - Trailing "Open dashboard" button (UI-11 / D-13 / D-14) invoking the
@@ -22,18 +22,20 @@ import SwiftUI
 /// No `@StateObject`, `ObservableObject`, `@Published`, or Combine — pure value render from `ProviderState`.
 public struct ProviderRowView: View {
     public let state: ProviderState
-    /// Plan 02.07 — environment-injected store + clock for `isStale(_:now:)`.
-    /// Available since Plan 01.08 wires both into the SwiftUI environment.
+    /// The popover's shared clock tick. `ProviderListView` advances it once per
+    /// second only while the popover window is visible.
+    public let now: Date
+    /// Plan 02.07 — environment-injected store for `isStale(_:now:)`.
     @Environment(AggregateStore.self) private var store
-    @Environment(\.clockService) private var clock
     /// Plan 03-07 — environment-injected dashboard-launch closure. The
     /// production default (declared in `OpenDashboardURLEnvironmentKey.swift`)
     /// opens the URL via AppKit; tests inject a recording closure. Keeping
     /// AppKit out of this view body satisfies the testability seam from D-13.
     @Environment(\.openDashboardURL) private var openDashboardURL
 
-    public init(state: ProviderState) {
+    public init(state: ProviderState, now: Date) {
         self.state = state
+        self.now = now
     }
 
     /// Plan 03-07 / D-14 — looked-up dashboard URL for this row. `nil` for
@@ -53,138 +55,135 @@ public struct ProviderRowView: View {
     }
 
     public var body: some View {
-        // Plan 02.07 (UI-08): wrap the row in a TimelineView so the staleness predicate
-        // re-evaluates as time crosses the 2 × interval threshold. Body recomputation is
-        // a single-row, integer-math cost — acceptable per RESEARCH §H.2.
-        TimelineView(.periodic(from: .now, by: 1)) { ctx in
-            let isStale = store.isStale(state.id, now: ctx.date)
-            HStack(alignment: .top, spacing: 10) {
-                // Status dot aligned to top of content — Plan 03-07 wires the
-                // amber override for the D-11 degraded state.
-                StatusDot(status: state.status, isStale: isStale, forceAmber: isDegraded)
-                    .padding(.top, 3)
+        // Plan 02.07 (UI-08): the staleness predicate re-evaluates on each `now` tick
+        // as time crosses the 2 × interval threshold.
+        let isStale = store.isStale(state.id, now: now)
+        HStack(alignment: .top, spacing: 10) {
+            // Status dot aligned to top of content — Plan 03-07 wires the
+            // amber override for the D-11 degraded state.
+            StatusDot(status: state.status, isStale: isStale, forceAmber: isDegraded)
+                .padding(.top, 3)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    // Provider name with D-15 / GEMINI-03 tooltip. Passing ""
-                    // for the absent case yields no tooltip (SwiftUI suppresses
-                    // .help when the argument is empty).
-                    Text(state.displayName)
-                        .font(.subheadline.weight(.semibold))
-                        .help(state.snapshot?.tooltipLabel ?? "")
+            VStack(alignment: .leading, spacing: 4) {
+                // Provider name with D-15 / GEMINI-03 tooltip. Passing ""
+                // for the absent case yields no tooltip (SwiftUI suppresses
+                // .help when the argument is empty).
+                Text(state.displayName)
+                    .font(.subheadline.weight(.semibold))
+                    .help(state.snapshot?.tooltipLabel ?? "")
 
-                    // Plan 04-07 — local rows (Ollama / LM Studio / llama.cpp) render
-                    // a model-presence secondary line instead of the tokens · USD ·
-                    // balance HStack (LOCAL-06 anti-feature: no token tracking for locals).
-                    if isLocal {
-                        LocalRowSecondaryView(state: state)
-                            .opacity(isStale || isDegraded ? 0.6 : 1.0)
-                    } else if let quotaCaption = state.snapshot?.quotaUsageCaption {
-                        Text(quotaCaption)
+                // Plan 04-07 — local rows (Ollama / LM Studio / llama.cpp) render
+                // a model-presence secondary line instead of the tokens · USD ·
+                // balance HStack (LOCAL-06 anti-feature: no token tracking for locals).
+                if isLocal {
+                    LocalRowSecondaryView(state: state)
+                        .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                } else if let quotaCaption = state.snapshot?.quotaUsageCaption {
+                    Text(quotaCaption)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                } else {
+                    // Token count · USD cost · balance
+                    HStack(spacing: 4) {
+                        Text(tokenText(state.snapshot))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+                        Text("·")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(usdText(state.snapshot))
+                            .font(.caption2)
                             .monospacedDigit()
-                            .opacity(isStale || isDegraded ? 0.6 : 1.0)
-                    } else {
-                        // Token count · USD cost · balance
-                        HStack(spacing: 4) {
-                            Text(tokenText(state.snapshot))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                        if let bal = balanceText(state.snapshot), !bal.isEmpty {
                             Text("·")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
-                            Text(usdText(state.snapshot))
-                                .font(.caption2)
-                                .monospacedDigit()
-                            if let bal = balanceText(state.snapshot), !bal.isEmpty {
-                                Text("·")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                Text(bal)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                    .monospacedDigit()
-                            }
-                        }
-                        .opacity(isStale || isDegraded ? 0.6 : 1.0)
-                    }
-
-                    // Claude's canonical 5h/7d windows share one compact composite bar.
-                    // Every other provider retains its established quota presentation.
-                    if state.id == .claude, let snapshot = state.snapshot, snapshot.quotaGlance.hasAnyWindow {
-                        ClaudeQuotaGlanceView(glance: snapshot.quotaGlance, now: ctx.date)
-                            .frame(maxWidth: .infinity)
-                            .opacity(isStale || isDegraded ? 0.6 : 1.0)
-                    } else {
-                        QuotaBar(quota: state.snapshot?.displayedQuota)
-                            .frame(maxWidth: .infinity)
-                            .opacity(isStale || isDegraded ? 0.6 : 1.0)
-                    }
-
-                    // Per-account child rows when two or more accounts exist.
-                    // Claude keeps its dual glance and cost. Codex uses one primary bar.
-                    if let accountRows = state.snapshot?.accounts, accountRows.count >= 2 {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(accountRows) { account in
-                                AccountChildRow(account: account, providerID: state.id, now: ctx.date)
-                            }
-                        }
-                        .padding(.leading, 14)
-                        .padding(.top, 2)
-                        .opacity(isStale || isDegraded ? 0.6 : 1.0)
-                    }
-
-                    // Reset countdown + relative timestamp.
-                    //
-                    // G-01 (UAT 2026-05-18): the countdown reads the soonest
-                    // `resetsAt` across all `quotaWindows`. Codex provides
-                    // primary+secondary windows (rollout or wham/usage path);
-                    // Gemini provides per-model buckets. OpenRouter / Claude
-                    // currently emit no `quotaWindows`, so `resetsText` returns
-                    // "Resets —" — preserving the prior literal for those rows.
-                    HStack(spacing: 8) {
-                        RelativeTimestampLabel(date: state.lastSuccess, isStale: isStale)
-                        Spacer()
-                        if (state.snapshot?.accounts?.count ?? 0) < 2 {
-                            Text(resetsText(state.snapshot, now: ctx.date))
+                            Text(bal)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
                         }
                     }
+                    .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                }
 
-                    // Plan 03-07 / D-11 — degraded subtitle. Placed AFTER the
-                    // existing "Resets —" row so it reads as a footnote to the
-                    // row's data, not a replacement for the timestamp.
-                    if isDegraded {
-                        Text("Updated \(RelativeTimestampLabel.relativeString(from: state.lastSuccess ?? ctx.date, to: ctx.date)) ago — usage temporarily unavailable")
+                // Claude's canonical 5h/7d windows share one compact composite bar.
+                // Every other provider retains its established quota presentation.
+                if state.id == .claude, let snapshot = state.snapshot, snapshot.quotaGlance.hasAnyWindow {
+                    ClaudeQuotaGlanceView(glance: snapshot.quotaGlance, now: now)
+                        .frame(maxWidth: .infinity)
+                        .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                } else {
+                    QuotaBar(quota: state.snapshot?.displayedQuota)
+                        .frame(maxWidth: .infinity)
+                        .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                }
+
+                // Per-account child rows when two or more accounts exist.
+                // Claude keeps its dual glance and cost. Codex uses one primary bar.
+                if let accountRows = state.snapshot?.accounts, accountRows.count >= 2 {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(accountRows) { account in
+                            AccountChildRow(account: account, providerID: state.id, now: now)
+                        }
+                    }
+                    .padding(.leading, 14)
+                    .padding(.top, 2)
+                    .opacity(isStale || isDegraded ? 0.6 : 1.0)
+                }
+
+                // Reset countdown + relative timestamp.
+                //
+                // G-01 (UAT 2026-05-18): the countdown reads the soonest
+                // `resetsAt` across all `quotaWindows`. Codex provides
+                // primary+secondary windows (rollout or wham/usage path);
+                // Gemini provides per-model buckets. OpenRouter / Claude
+                // currently emit no `quotaWindows`, so `resetsText` returns
+                // "Resets —" — preserving the prior literal for those rows.
+                HStack(spacing: 8) {
+                    RelativeTimestampLabel(date: state.lastSuccess, now: now, isStale: isStale)
+                    Spacer()
+                    if (state.snapshot?.accounts?.count ?? 0) < 2 {
+                        Text(resetsText(state.snapshot, now: now))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+                            .monospacedDigit()
                     }
                 }
 
-                // Plan 03-07 (UI-11 / D-13) — trailing dashboard button.
-                // Always visible (no hover-reveal) so the affordance is
-                // one-click discoverable; `.disabled(dashboardURL == nil)`
-                // preserves row layout symmetry for providers without a
-                // mapped dashboard URL (local LLMs).
-                Spacer(minLength: 4)
-                Button {
-                    if let url = dashboardURL { openDashboardURL(url) }
-                } label: {
-                    Image(systemName: "arrow.up.right.square")
-                        .symbolRenderingMode(.monochrome)
-                        .font(.caption)
-                        .frame(width: 16, height: 16)
+                // Plan 03-07 / D-11 — degraded subtitle. Placed AFTER the
+                // existing "Resets —" row so it reads as a footnote to the
+                // row's data, not a replacement for the timestamp.
+                if isDegraded {
+                    Text("Updated \(RelativeTimestampLabel.relativeString(from: state.lastSuccess ?? now, to: now)) ago — usage temporarily unavailable")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(HoverableBorderedButtonStyle())
-                .disabled(dashboardURL == nil)
-                .help("Open \(state.displayName) dashboard")
-                .padding(.top, 2)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+
+            // Plan 03-07 (UI-11 / D-13) — trailing dashboard button.
+            // Always visible (no hover-reveal) so the affordance is
+            // one-click discoverable; `.disabled(dashboardURL == nil)`
+            // preserves row layout symmetry for providers without a
+            // mapped dashboard URL (local LLMs).
+            Spacer(minLength: 4)
+            Button {
+                if let url = dashboardURL { openDashboardURL(url) }
+            } label: {
+                Image(systemName: "arrow.up.right.square")
+                    .symbolRenderingMode(.monochrome)
+                    .font(.caption)
+                    .frame(width: 16, height: 16)
+            }
+            .buttonStyle(HoverableBorderedButtonStyle())
+            .disabled(dashboardURL == nil)
+            .help("Open \(state.displayName) dashboard")
+            .padding(.top, 2)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Private helpers
@@ -349,7 +348,7 @@ private func previewStore() -> AggregateStore {
         status: .ok(lastSuccess: .now.addingTimeInterval(-30)),
         lastSuccess: .now.addingTimeInterval(-30)
     )
-    return ProviderRowView(state: state)
+    return ProviderRowView(state: state, now: .now)
         .environment(previewStore())
         .frame(width: 360)
 }
@@ -362,7 +361,7 @@ private func previewStore() -> AggregateStore {
         status: .unauthenticated,
         lastSuccess: nil
     )
-    return ProviderRowView(state: state)
+    return ProviderRowView(state: state, now: .now)
         .environment(previewStore())
         .frame(width: 360)
 }
@@ -375,7 +374,7 @@ private func previewStore() -> AggregateStore {
         status: .error(ProviderError(kind: .auth, message: "HTTP 401")),
         lastSuccess: nil
     )
-    return ProviderRowView(state: state)
+    return ProviderRowView(state: state, now: .now)
         .environment(previewStore())
         .frame(width: 360)
 }
@@ -401,7 +400,7 @@ private func previewStore() -> AggregateStore {
         status: .ok(lastSuccess: .now.addingTimeInterval(-30)),
         lastSuccess: .now.addingTimeInterval(-30)
     )
-    return ProviderRowView(state: state)
+    return ProviderRowView(state: state, now: .now)
         .environment(previewStore())
         .frame(width: 360)
 }
@@ -414,7 +413,7 @@ private func previewStore() -> AggregateStore {
         status: .notRunning,
         lastSuccess: nil
     )
-    return ProviderRowView(state: state)
+    return ProviderRowView(state: state, now: .now)
         .environment(previewStore())
         .frame(width: 360)
 }
@@ -438,7 +437,7 @@ private func previewStore() -> AggregateStore {
                        error: ProviderError(kind: .http, message: "503")),
         lastSuccess: .now.addingTimeInterval(-180)
     )
-    return ProviderRowView(state: state)
+    return ProviderRowView(state: state, now: .now)
         .environment(previewStore())
         .frame(width: 360)
 }
