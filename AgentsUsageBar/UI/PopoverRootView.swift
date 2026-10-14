@@ -58,10 +58,15 @@ public struct PopoverRootView: View {
     private func trackVisibility(of window: NSWindow?) async {
         guard let window else { return }
         isVisible = window.occlusionState.contains(.visible)
-        let changes = NotificationCenter.default.notifications(
-            named: NSWindow.didChangeOcclusionStateNotification,
-            object: window
-        )
+        // Bridged through `AsyncStream<Void>` rather than `notifications(named:)`, whose
+        // non-Sendable `Notification` elements Swift 6.1 rejects on the main actor.
+        let (changes, continuation) = AsyncStream<Void>.makeStream()
+        let token = NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification,
+            object: window,
+            queue: .main
+        ) { _ in continuation.yield() }
+        defer { NotificationCenter.default.removeObserver(token) }
         for await _ in changes {
             isVisible = window.occlusionState.contains(.visible)
         }
