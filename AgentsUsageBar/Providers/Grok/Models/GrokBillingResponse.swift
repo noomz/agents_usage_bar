@@ -132,10 +132,13 @@ public struct GrokBillingResponse: Decodable, Sendable, Equatable {
     }
 
     /// 0...1 utilization for the billing window.
+    ///
+    /// `creditUsagePercent` is a percentage point (`1` means 1% used).
+    /// Values at or below 1 are still points; reading them as a 0...1
+    /// fraction painted a 1% window as full.
     public var normalizedPercent: Double? {
-        let raw = creditUsagePercent
-        guard let raw else { return nil }
-        let value = raw > 1.0 ? raw / 100.0 : raw
+        guard let raw = creditUsagePercent else { return nil }
+        let value = raw / 100.0
         return min(1.0, max(0.0, value))
     }
 

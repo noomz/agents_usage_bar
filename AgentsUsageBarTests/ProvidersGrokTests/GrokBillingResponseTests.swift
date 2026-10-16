@@ -45,6 +45,23 @@ struct GrokBillingResponseTests {
         #expect(quota?.used == 80)
     }
 
+    @Test func one_percent_on_the_wire_is_one_percent_used() throws {
+        let data = Data(#"""
+        {
+          "config": {
+            "currentPeriod": { "type": "USAGE_PERIOD_TYPE_WEEKLY" },
+            "creditUsagePercent": 1.0,
+            "productUsage": [{ "product": "GrokBuild", "usagePercent": 1.0 }]
+          }
+        }
+        """#.utf8)
+        let decoded = try JSONDecoder().decode(GrokBillingResponse.self, from: data)
+        #expect(decoded.creditUsagePercent == 1)
+        #expect(decoded.normalizedPercent == 0.01)
+        let quota = try #require(decoded.makeQuota())
+        #expect(Int((quota.fraction * 100).rounded()) == 1)
+    }
+
     @Test func decodes_live_weekly_config_envelope() throws {
         let data = try fixture("billing-config-weekly")
         let decoded = try JSONDecoder().decode(GrokBillingResponse.self, from: data)
