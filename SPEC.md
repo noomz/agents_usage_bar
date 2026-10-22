@@ -64,7 +64,7 @@ V13|History buckets by local day key only. A provider's reset time never moves d
 ### Store
 
 V14|`HistoryStore` is separate from `FileCacheStore`. It writes one file per day key in I9, holding every provider's records, the day's usage events, `backfillChecked`, and `schemaVersion`. Wiping or cold-starting `today.json` never touches `history/`.
-V15|After a poll, the store merges into the open day and writes only when the merged value changed, atomically (temp file plus rename). At launch it seeds what is on disk from the open day's file. A poll with no change does no file I/O.
+V15|After a poll, the store merges into the open day and writes only when the merged value changed, atomically (temp file plus rename). At launch it seeds what is on disk from the open day's file. A poll with no change does no file I/O. `firstSeen` and `lastSeen` are left out of the change check: they update in memory on every good poll and reach disk with the next changed write or the seal's final merge, so after an idle quit the stored `lastSeen` can be the time of the last changed write.
 V16|Sealed is derived, not stored: a file whose key is before the current day key is sealed. The first poll on a later key does a final merge into the previous key's file. After that, polling never writes a sealed file. Only backfill top-up (V31) may change it.
 V17|Retention is fixed at 90 day keys, with no setting. The seal step deletes files whose key is more than 90 days before the current key.
 V18|A file with an older `schemaVersion` is migrated when read and rewritten on the next write. A file that is newer, unknown, or unreadable is skipped and logged, and never deleted or overwritten. Schema 1 contains every field in I16 from S1 on; later slices fill fields, they do not add them.
@@ -143,7 +143,7 @@ T1|x|S0: Add the day-key owner: Gregorian `yyyy-MM-dd` in the current zone from 
 T2|x|S0: Route every I1 consumer through the owner. Tests with `VirtualClock`, a Buddhist-calendar locale, and an upgrade day with legacy keys in `today.json` and notification state. No behavior change on Gregorian hosts.|V1,V2,V3,I1,I3
 T3|x|S0 gate: Move notification-state migrate and prune into `startBackgroundServices` with an injected state store (B1). Clear the stale `dayKeyMigration.notif.` marker on this host. CI green, install, confirm the popover today totals, OpenRouter baseline, and today's fired bands survive the upgrade on this Buddhist-calendar host.|C7,V3,V61
 T4|x|S1: `HistoryStore` types for the full v1 day file, `schemaVersion` handling, and a read-only view. Reads are `nonisolated async`.|V14,V18,V19,V20,I9,I16
-T5|.|S1: Merge each poll into the open day (max totals, last balance, quota peak and end-of-day, presence), write only on change, seed at launch, seal on the first later key, prune past 90 days.|V7,V8,V11,V12,V13,V15,V16,V17,C4,I4,I5
+T5|~|S1: Merge each poll into the open day (max totals, last balance, quota peak and end-of-day, presence), write only on change, seed at launch, seal on the first later key, prune past 90 days.|V7,V8,V11,V12,V13,V15,V16,V17,C4,I4,I5
 T6|.|S1: Monotonic day key from the newest day file, and the more-than-1-day pause. Regression tests with a fixed `Clock`: sleep Mon→Thu, Tokyo→Honolulu, Honolulu→Tokyo, `America/New_York` DST spring and fall, clock set back 10 days.|V4,V5,V6,V12,ADR0002
 T7|.|S1: Accounts: account key and salt, account label rules, billing model and plan at poll time, `costEstimated` for observed estimated cost.|V9,V10,V21,V22,V25,I6,I7,I8,ADR0003
 T8|.|S1: `history/` 0700 and files 0600. SEC-04 email scan in `check-secrets.sh` and `ci.yml`. A synthetic day-file generator for fixtures.|V23,V24,C3,I15
@@ -176,3 +176,4 @@ T32|.|S7 gate: CI green, install, teaser, hotkey, and a notification click each 
 
 id|date|cause|fix
 B1|2026-10-22|Hosted test bundle shares the app's bundle id and real UserDefaults. `makeProduction()` ran `migrateLegacyDayKeys` during composition, before the `isHostingTests` guard. Test plan `region: US` made the legacy calendar Gregorian, so `2569-…` keys rekeyed to themselves and the run-once marker was stamped. The installed app would skip migration and re-fire today's bands.|V61
+B2|2026-10-22|Spec gap found planning T5: V10 `lastSeen` moves on every good poll, so V15 "a poll with no change does no file I/O" could never hold while any provider was `.ok`.|V15
