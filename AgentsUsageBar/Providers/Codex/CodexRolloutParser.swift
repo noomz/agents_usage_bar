@@ -143,4 +143,74 @@ public enum CodexRolloutParser {
 
         return (best.event, best.fileURL)
     }
+
+    /// Token usage per day key across rollout files, for backfill (SPEC I10). Each
+    /// `token_count` event adds its rise in the session's cumulative `total_token_usage` to
+    /// the day of its timestamp, so a session that runs past midnight splits across days.
+    /// A cumulative total that drops starts the session count again.
+    public static func dailyUsage(
+        in fileURLs: [URL],
+        dayKey: (Date) -> String,
+        using decoder: JSONDecoder = JSONDecoder()
+    ) -> [String: CodexDayUsage] {
+        var days: [String: CodexDayUsage] = [:]
+        for url in fileURLs {
+            guard let contents = try? String(contentsOf: url, encoding: .utf8) else {
+                logger.notice("read failed: \(url.lastPathComponent, privacy: .public)")
+                continue
+            }
+            var previous = CodexDayUsage()
+            for line in contents.split(separator: "\n", omittingEmptySubsequences: true) {
+                guard line.contains("\"token_count\""),
+                      let event = try? decoder.decode(CodexRolloutEvent.self, from: Data(line.utf8)),
+                      event.type == "event_msg",
+                      event.payload.type == "token_count",
+                      let usage = event.payload.info?.totalTokenUsage,
+                      let timestamp = parseISO8601(event.timestamp)
+                else { continue }
+                let current = CodexDayUsage(usage)
+                let rise = current.totalTokens < previous.totalTokens ? current : current.rise(since: previous)
+                days[dayKey(timestamp), default: CodexDayUsage()].add(rise)
+                previous = current
+            }
+        }
+        return days
+    }
+}
+
+/// Codex token counts summed over a day (SPEC I10).
+public struct CodexDayUsage: Sendable, Equatable {
+    public var inputTokens = 0
+    public var cachedInputTokens = 0
+    public var outputTokens = 0
+    public var reasoningOutputTokens = 0
+    public var totalTokens = 0
+
+    public init() {}
+
+    init(_ usage: CodexRolloutEvent.TokenUsage) {
+        inputTokens = usage.inputTokens
+        cachedInputTokens = usage.cachedInputTokens
+        outputTokens = usage.outputTokens
+        reasoningOutputTokens = usage.reasoningOutputTokens ?? 0
+        totalTokens = usage.totalTokens
+    }
+
+    func rise(since earlier: CodexDayUsage) -> CodexDayUsage {
+        var rise = CodexDayUsage()
+        rise.inputTokens = max(0, inputTokens - earlier.inputTokens)
+        rise.cachedInputTokens = max(0, cachedInputTokens - earlier.cachedInputTokens)
+        rise.outputTokens = max(0, outputTokens - earlier.outputTokens)
+        rise.reasoningOutputTokens = max(0, reasoningOutputTokens - earlier.reasoningOutputTokens)
+        rise.totalTokens = max(0, totalTokens - earlier.totalTokens)
+        return rise
+    }
+
+    mutating func add(_ other: CodexDayUsage) {
+        inputTokens += other.inputTokens
+        cachedInputTokens += other.cachedInputTokens
+        outputTokens += other.outputTokens
+        reasoningOutputTokens += other.reasoningOutputTokens
+        totalTokens += other.totalTokens
+    }
 }

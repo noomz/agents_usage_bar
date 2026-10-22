@@ -107,6 +107,19 @@ public struct CodexRolloutScanner: Sendable {
         return results
     }
 
+    /// Returns the rollout `*.jsonl` files under `<root>/YYYY/MM/DD` for each day key. A day
+    /// key is the Gregorian `yyyy-MM-dd` in the current zone, the same date the Codex CLI
+    /// names its directories with (SPEC V2, I10).
+    public func rolloutFiles(forDayKeys keys: [String]) -> [URL] {
+        guard let root, fileManager.fileExists(atPath: root.path) else { return [] }
+        return keys.flatMap { key in
+            let dir = key.split(separator: "-").reduce(root) { url, part in
+                url.appendingPathComponent(String(part), isDirectory: true)
+            }
+            return jsonlFiles(in: dir)
+        }
+    }
+
     // MARK: - Helpers
 
     private func jsonlFiles(in dir: URL) -> [URL] {

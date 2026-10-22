@@ -9,6 +9,9 @@ public protocol BackfillSource: Sendable {
     func reachDays() async -> Int?
     /// Backfilled records for the days in `keys` that had usage. A day left out had none.
     func records(for keys: [String]) async throws -> [String: DayRecord]
+    /// Every account known now, with its billing model and plan from I6. A new backfilled
+    /// record lists them all, since the source data names no account (V25, V62).
+    func accounts() async -> [UsageSnapshot.AccountUsage]
 }
 
 /// One gap-fill pass (V27): each source in turn, one at a time, over the sealed days in its
@@ -51,9 +54,11 @@ struct HistoryBackfill: Sendable {
             logger.error("history backfill \(source.provider.rawValue, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
             return
         }
+        let accounts = await store.backfillAccounts(await source.accounts(), of: source.provider)
         for key in keys {
-            let record = records[key] ?? DayRecord(
+            var record = records[key] ?? DayRecord(
                 provider: source.provider, tokens: 0, costUSD: Money(0), origin: .backfilled)
+            record.accounts = accounts
             await store.backfill(record, on: key)
         }
     }
