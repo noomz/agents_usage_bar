@@ -1,0 +1,7 @@
+2025-12-15 – 2026-03-14 · 90 days (today open) · trend 1 char = 3 days
+provider    spend     tokens  peak      days  trend
+OpenRouter  $178.00     2.7M           90/90  $▅▆▇█▅▆▇█▅▆▇█▅▆▇█▅▆▇█▅▆▇█▅▆▇█▅▆
+Claude      max/pro    15.6M  100% 5h  78/90  %▇█!█!▇!██!▇!█!█▇!█!█!██!█!█!██
+Codex       ?! +plus   11.2M  50% 5h   90/90  %▄!▄!!▄!▄!!▄!▄!!▄!▄!!▄!▄!!▄!▄!!
+total       $178.00!
+! incomplete

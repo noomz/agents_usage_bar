@@ -4,6 +4,7 @@ import Foundation
 public enum AUBCommand: Equatable, Sendable {
     case usage(UsageOptions)
     case quota(UsageOptions)
+    case stats(StatsOptions)
     case settings(SettingsAction, json: Bool)
     case themes(json: Bool, theme: CLITheme?)
     case install(prefix: String?)
@@ -34,6 +35,31 @@ public enum AUBCommand: Equatable, Sendable {
         }
     }
 
+    /// `aub stats` (SPEC V42–V46). The range resolves against today at run time.
+    public struct StatsOptions: Equatable, Sendable {
+        /// `.enabled` is the summary without local runtimes, `.all` adds them, `.one`
+        /// drills down into one provider.
+        public var filter: ProviderFilter
+        public var days: Int?
+        public var since: String?
+        public var until: String?
+        public var noColor: Bool
+
+        public init(
+            filter: ProviderFilter = .enabled,
+            days: Int? = nil,
+            since: String? = nil,
+            until: String? = nil,
+            noColor: Bool = false
+        ) {
+            self.filter = filter
+            self.days = days
+            self.since = since
+            self.until = until
+            self.noColor = noColor
+        }
+    }
+
     public enum ProviderFilter: Equatable, Sendable {
         case enabled
         case all
@@ -55,10 +81,11 @@ public enum AUBCommand: Equatable, Sendable {
     }
 
     private static let knownTokens: Set<String> = [
-        "usage", "quota", "limits", "settings", "themes", "install", "uninstall",
+        "usage", "quota", "limits", "stats", "settings", "themes", "install", "uninstall",
         "version", "help",
         "--help", "-h", "--version", "-V",
         "--json", "--cached", "--live", "--no-color", "--provider", "--prefix", "--theme", "--cli",
+        "--days", "--since", "--until",
     ]
 
     public static let helpText = """
@@ -68,6 +95,7 @@ public enum AUBCommand: Equatable, Sendable {
       aub [usage] [provider]   Print today's usage with quota bars
       aub quota [provider]     Print quota / limits / reset windows
       aub limits [provider]    Alias of quota
+      aub stats [provider]     Usage history: 14-day summary, or one row per day
       aub settings             List settings keys and values
       aub settings get <key>
       aub settings set <key> <value>
@@ -85,6 +113,9 @@ public enum AUBCommand: Equatable, Sendable {
       --provider ID   Restrict to one provider, or 'all'
       --theme NAME    CLI theme: compact (default) | classic
       --prefix PATH   Install symlink into PATH (install only)
+      --days N        Stats range length, ending today (default 14)
+      --since DATE    Stats range start, yyyy-MM-dd
+      --until DATE    Stats range end, yyyy-MM-dd
 
     Environment:
       AUB_THEME       CLI theme when --theme is absent (overrides the cli-theme setting)
@@ -103,6 +134,8 @@ public enum AUBCommand: Equatable, Sendable {
       aub --live
       aub usage --json
       aub quota claude
+      aub stats --days 30
+      aub stats claude --since 2026-10-01
       aub settings get refresh-interval
       aub settings set threshold 0.7
     """
@@ -117,6 +150,9 @@ public enum AUBParseError: Error, Equatable, CustomStringConvertible, Sendable {
     case missingSettingsValue
     case unknownTheme(String)
     case unknownThemeEnv(String)
+    case invalidDays(String)
+    case invalidDay(flag: String, value: String)
+    case emptyRange(String, String)
 
     public var description: String {
         switch self {
@@ -136,6 +172,12 @@ public enum AUBParseError: Error, Equatable, CustomStringConvertible, Sendable {
             return "unknown CLI theme '\(s)'; expected \(CLITheme.expectedNames)"
         case .unknownThemeEnv(let s):
             return "AUB_THEME: " + AUBParseError.unknownTheme(s).description
+        case .invalidDays(let s):
+            return "--days expects a whole number of days from 1, got '\(s)'"
+        case .invalidDay(let flag, let value):
+            return "\(flag) expects a date as yyyy-MM-dd, got '\(value)'"
+        case .emptyRange(let first, let last):
+            return "empty range: \(first) is after \(last)"
         }
     }
 }
@@ -149,6 +191,10 @@ extension AUBCommand {
         var providerFlag: String?
         var prefix: String?
         var theme: CLITheme?
+        var days: Int?
+        var since: String?
+        var until: String?
+        var rangeFlag: String?
         var positionals: [String] = []
 
         var i = 0
@@ -181,6 +227,18 @@ extension AUBCommand {
                 guard i < tokens.count else { return .failure(.missingValue("--theme")) }
                 guard let named = CLITheme.named(tokens[i]) else { return .failure(.unknownTheme(tokens[i])) }
                 theme = named
+            case "--days":
+                i += 1
+                guard i < tokens.count else { return .failure(.missingValue("--days")) }
+                guard let n = Int(tokens[i]), n >= 1 else { return .failure(.invalidDays(tokens[i])) }
+                days = n
+                rangeFlag = t
+            case "--since", "--until":
+                i += 1
+                guard i < tokens.count else { return .failure(.missingValue(t)) }
+                guard StatsRange.isDayKey(tokens[i]) else { return .failure(.invalidDay(flag: t, value: tokens[i])) }
+                if t == "--since" { since = tokens[i] } else { until = tokens[i] }
+                rangeFlag = t
             default:
                 if t.hasPrefix("-") {
                     return .failure(.unknownCommand(t))
@@ -192,6 +250,9 @@ extension AUBCommand {
 
         let head = positionals.first
         let rest = Array(positionals.dropFirst())
+        if let rangeFlag, head != "stats" {
+            return .failure(.unexpectedArgument(rangeFlag))
+        }
 
         func usageOptions(defaultFilter: ProviderFilter = .enabled) -> Result<UsageOptions, AUBParseError> {
             switch makeFilter(flag: providerFlag, positional: rest.first, defaultFilter: defaultFilter) {
@@ -226,6 +287,12 @@ extension AUBCommand {
             return usageOptions().map { .usage($0) }
         case "quota", "limits":
             return usageOptions().map { .quota($0) }
+        case "stats":
+            // `--theme` is accepted and ignored: stats has one layout (V46).
+            if json { return .failure(.unexpectedArgument("--json")) }
+            return usageOptions().map { opts in
+                .stats(StatsOptions(filter: opts.filter, days: days, since: since, until: until, noColor: noColor))
+            }
         case "settings":
             return parseSettings(rest, json: json)
         case "themes":
