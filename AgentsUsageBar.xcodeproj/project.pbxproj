@@ -372,6 +372,7 @@
 		AA061000000000000000003A /* ClaudeHookProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000003B /* ClaudeHookProvider.swift */; };
 		AA061000000000000000004A /* ClaudeHookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000004B /* ClaudeHookInstaller.swift */; };
 		AA061000000000000000005A /* ClaudeSwitchableProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000005B /* ClaudeSwitchableProvider.swift */; };
+		AA1D70000000000000000001A /* ClaudeAccountPlans.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D70000000000000000001B /* ClaudeAccountPlans.swift */; };
 		/* Claude switchable source (hook) — test target sources */
 		AA061000000000000000010A /* ClaudeHookPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000010B /* ClaudeHookPayloadTests.swift */; };
 		AA061000000000000000011A /* ClaudeHookProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000011B /* ClaudeHookProviderTests.swift */; };
@@ -805,6 +806,7 @@
 		AA061000000000000000003B /* ClaudeHookProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookProvider.swift; sourceTree = "<group>"; };
 		AA061000000000000000004B /* ClaudeHookInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookInstaller.swift; sourceTree = "<group>"; };
 		AA061000000000000000005B /* ClaudeSwitchableProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSwitchableProvider.swift; sourceTree = "<group>"; };
+		AA1D70000000000000000001B /* ClaudeAccountPlans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeAccountPlans.swift; sourceTree = "<group>"; };
 		AA061000000000000000010B /* ClaudeHookPayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookPayloadTests.swift; sourceTree = "<group>"; };
 		AA061000000000000000011B /* ClaudeHookProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookProviderTests.swift; sourceTree = "<group>"; };
 		AA061000000000000000012B /* ClaudeHookInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookInstallerTests.swift; sourceTree = "<group>"; };
@@ -1199,6 +1201,7 @@
 				AA061000000000000000003B /* ClaudeHookProvider.swift */,
 				AA061000000000000000004B /* ClaudeHookInstaller.swift */,
 				AA061000000000000000005B /* ClaudeSwitchableProvider.swift */,
+				AA1D70000000000000000001B /* ClaudeAccountPlans.swift */,
 			);
 			path = Claude;
 			sourceTree = "<group>";
@@ -2015,6 +2018,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA061000000000000000003A /* ClaudeHookProvider.swift in Sources */,
 				AA061000000000000000004A /* ClaudeHookInstaller.swift in Sources */,
 				AA061000000000000000005A /* ClaudeSwitchableProvider.swift in Sources */,
+				AA1D70000000000000000001A /* ClaudeAccountPlans.swift in Sources */,
 				/* Plan 02.05 — Threshold FSM persistence + snooze action handler */
 				AA020500000000000000001A /* NotificationStateStore.swift in Sources */,
 				AA020500000000000000002A /* NotificationActionHandler.swift in Sources */,

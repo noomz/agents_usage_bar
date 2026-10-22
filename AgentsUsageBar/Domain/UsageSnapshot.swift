@@ -52,7 +52,7 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
     /// Decoding compatibility: `Optional` + synthesised `init(from:)`, so cache envelopes
     /// written before this field existed decode with `accounts == nil` (same pattern as
     /// `tooltipLabel`).
-    public let accounts: [AccountUsage]?
+    public var accounts: [AccountUsage]?
 
     /// Provider-reported spend per calendar period (OpenRouter `usage_daily`,
     /// `usage_weekly`, `usage_monthly`). Periods are the provider's own — UTC
@@ -82,14 +82,27 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         public let quota: Quota?
         /// This account's own quota windows (plain "5h"/"7d" names, with `resetsAt`).
         public let quotaWindows: [QuotaWindow]?
+        /// Billing and identity at poll time, for history. Not cached in `today.json`.
+        public var accountInfo: AccountInfo?
 
         public var id: String { name }
 
-        public init(name: String, costTodayUSD: Decimal?, quota: Quota?, quotaWindows: [QuotaWindow]?) {
+        private enum CodingKeys: String, CodingKey {
+            case name, costTodayUSD, quota, quotaWindows
+        }
+
+        public init(
+            name: String,
+            costTodayUSD: Decimal?,
+            quota: Quota?,
+            quotaWindows: [QuotaWindow]?,
+            accountInfo: AccountInfo? = nil
+        ) {
             self.name = name
             self.costTodayUSD = costTodayUSD
             self.quota = quota
             self.quotaWindows = quotaWindows
+            self.accountInfo = accountInfo
         }
 
         /// Glance-bar quota: the 5-hour session window when this account has one.
@@ -126,6 +139,19 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
     /// written before this field existed continue to decode without error
     /// (the synthesised decoder reads absent optional keys as `nil`).
     public let tooltipLabel: String?
+
+    /// Billing and identity of a provider shown without `accounts`, for history (SPEC V9,
+    /// V25). Nil uses the provider's fixed billing model. Not cached in `today.json`.
+    public var accountInfo: AccountInfo?
+
+    /// True when `costTodayUSD` is tokens times the bundled price table (SPEC V10, I8).
+    /// Not cached in `today.json`.
+    public var costEstimated = false
+
+    private enum CodingKeys: String, CodingKey {
+        case providerID, asOf, tokensToday, costTodayUSD, balanceUSD, quota, raw, quotaWindows
+        case accounts, periodSpendUSD, tooltipLabel
+    }
 
     public init(
         providerID: ProviderID,
@@ -179,5 +205,22 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
             return "\(pct)% used · \(period)"
         }
         return "\(pct)% used"
+    }
+}
+
+
+/// How one account pays and who it is, captured at poll time for usage history
+/// (SPEC V9, V21, V25, I6). Lives in memory only.
+public struct AccountInfo: Sendable, Equatable {
+    public var billingModel: BillingModel
+    public var plan: String?
+    /// The provider's own account id (Codex `account_id`). History stores only its salted
+    /// hash (V21).
+    public var accountID: String?
+
+    public init(billingModel: BillingModel, plan: String? = nil, accountID: String? = nil) {
+        self.billingModel = billingModel
+        self.plan = plan
+        self.accountID = accountID
     }
 }

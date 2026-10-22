@@ -40,6 +40,7 @@ public actor ClaudeSwitchableProvider: UsageProvider {
     private let jsonl: ClaudeJSONLProvider
     private let hookProvider: ClaudeHookProvider
     private let source: @Sendable () -> ClaudeUsageSource
+    private var plans: ClaudeAccountPlans
 
     private var lastStatus: ProviderStatus = .error(ProviderError.notYetFetched)
 
@@ -54,11 +55,13 @@ public actor ClaudeSwitchableProvider: UsageProvider {
     public init(
         jsonl: ClaudeJSONLProvider,
         hookProvider: ClaudeHookProvider,
-        source: @escaping @Sendable () -> ClaudeUsageSource = ClaudeSwitchableProvider.defaultSource
+        source: @escaping @Sendable () -> ClaudeUsageSource = ClaudeSwitchableProvider.defaultSource,
+        home: URL = FileManager.default.homeDirectoryForCurrentUser
     ) {
         self.jsonl = jsonl
         self.hookProvider = hookProvider
         self.source = source
+        self.plans = ClaudeAccountPlans(home: home)
     }
 
     /// Reads the current Claude usage source straight from `UserDefaults` (thread-safe),
@@ -90,7 +93,7 @@ public actor ClaudeSwitchableProvider: UsageProvider {
             await hookProvider.pruneFeed(now: now)
         }
         do {
-            let snapshot: UsageSnapshot
+            var snapshot: UsageSnapshot
             if useHook {
                 async let tokensBox: Int?? = { [jsonl] in
                     (try? await jsonl.fetch(now: now))?.tokensToday
@@ -111,12 +114,29 @@ public actor ClaudeSwitchableProvider: UsageProvider {
                 )
             } else {
                 snapshot = try await delegate.fetch(now: now)
+                // Session reads price transcript tokens with the bundled table (SPEC I8).
+                snapshot.costEstimated = snapshot.costTodayUSD != nil
             }
+            annotateBilling(&snapshot)
             lastStatus = await delegate.status()
             return snapshot
         } catch {
             lastStatus = await delegate.status()
             throw error
+        }
+    }
+}
+
+extension ClaudeSwitchableProvider {
+    /// Each account's billing model and plan from its `.claude.json` (SPEC I6, V25). Session
+    /// reads have no `accounts`, so they are the `default` account.
+    private func annotateBilling(_ snapshot: inout UsageSnapshot) {
+        guard let accounts = snapshot.accounts else {
+            snapshot.accountInfo = plans.info(for: "default")
+            return
+        }
+        for index in accounts.indices {
+            snapshot.accounts?[index].accountInfo = plans.info(for: accounts[index].name)
         }
     }
 }

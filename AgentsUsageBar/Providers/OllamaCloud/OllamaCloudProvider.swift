@@ -156,7 +156,7 @@ public actor OllamaCloudProvider: UsageProvider {
         }
         tooltip.append(credential.sourceLabel)
 
-        return UsageSnapshot(
+        var snapshot = UsageSnapshot(
             providerID: .ollamaCloud,
             asOf: now,
             tokensToday: nil,
@@ -167,6 +167,8 @@ public actor OllamaCloudProvider: UsageProvider {
             quotaWindows: window.map { [$0] },
             tooltipLabel: tooltip.joined(separator: "\n")
         )
+        snapshot.accountInfo = AccountInfo(billingModel: .subscription, plan: plan?.lowercased())
+        return snapshot
     }
 
     /// Next local midnight on day `billingDay` strictly after `now`; the day clamps

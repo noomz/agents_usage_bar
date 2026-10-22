@@ -144,6 +144,22 @@ public actor CodexJSONLProvider: UsageProvider {
 
     public func fetch(now: Date) async throws -> UsageSnapshot {
         let discovered = logins()
+        var snap = try await fetch(now: now, logins: discovered)
+        // Cost comes only from rollout tokens times the bundled price table (SPEC I8).
+        snap.costEstimated = snap.costTodayUSD != nil
+        if snap.accounts == nil {
+            // Discovered logins are subscriptions. Without one, Codex runs on an API key.
+            let login = discovered.count == 1 ? discovered[0] : nil
+            snap.accountInfo = AccountInfo(
+                billingModel: login == nil ? .metered : .subscription,
+                plan: login == nil ? nil : snap.tooltipLabel?.lowercased(),
+                accountID: login?.accountId
+            )
+        }
+        return snap
+    }
+
+    private func fetch(now: Date, logins discovered: [CodexDiscoveredLogin]) async throws -> UsageSnapshot {
         let rollout = await readRollout(now: now)
 
         // Two or more subscription logins share one row. Rollout tokens and
@@ -284,7 +300,7 @@ public actor CodexJSONLProvider: UsageProvider {
         let labeled = CodexLoginDiscovery.labeled(discovered, planTypes: planTypes)
         let accounts = labeled.map { item in
             let response = discovered.firstIndex(of: item.login).flatMap { responses[$0] }
-            return accountUsage(name: item.label, response: response)
+            return accountUsage(name: item.label, login: item.login, response: response)
         }
         let maxPrimary = accounts.compactMap { account in
             account.quotaWindows?.first { $0.name == "primary" }?.utilization
@@ -338,14 +354,21 @@ public actor CodexJSONLProvider: UsageProvider {
     /// when a secondary window is present.
     private func accountUsage(
         name: String,
+        login: CodexDiscoveredLogin,
         response: CodexUsageResponse?
     ) -> UsageSnapshot.AccountUsage {
+        let info = AccountInfo(
+            billingModel: .subscription,
+            plan: response?.planType?.lowercased() ?? login.planSuffix,
+            accountID: login.accountId
+        )
         guard let response else {
             return UsageSnapshot.AccountUsage(
                 name: name,
                 costTodayUSD: nil,
                 quota: nil,
-                quotaWindows: nil
+                quotaWindows: nil,
+                accountInfo: info
             )
         }
         var windows: [QuotaWindow] = []
@@ -374,7 +397,8 @@ public actor CodexJSONLProvider: UsageProvider {
             name: name,
             costTodayUSD: nil,
             quota: quota,
-            quotaWindows: windows.isEmpty ? nil : windows
+            quotaWindows: windows.isEmpty ? nil : windows,
+            accountInfo: info
         )
     }
 

@@ -8,6 +8,8 @@ struct DayRecordMergeTests {
     static let t1 = Date(timeIntervalSince1970: 1_792_000_000)
     static let t2 = t1.addingTimeInterval(300)
     static let t3 = t1.addingTimeInterval(600)
+    /// Stands in for the salted hash: unique per test id, never containing the raw id.
+    static let fakeKey: @Sendable (String) -> String = { "h\($0.count)\($0.last.map(String.init) ?? "")" }
 
     static func sample(
         _ provider: String = "openrouter",
@@ -26,7 +28,7 @@ struct DayRecordMergeTests {
     private func fold(_ samples: UsageSnapshot...) -> DayRecord {
         var record = DayRecord(provider: samples[0].providerID, origin: .observed)
         for (index, sample) in samples.enumerated() {
-            record = record.merging(sample, at: Self.t1.addingTimeInterval(Double(index) * 300))
+            record = record.merging(sample, at: Self.t1.addingTimeInterval(Double(index) * 300), accountKey: Self.fakeKey)
         }
         return record
     }
@@ -90,18 +92,117 @@ struct DayRecordMergeTests {
     @Test("day merge: one record per provider, last zone, seen times ignored by the change check (V6, V11, V15)")
     func dayMerge() {
         let empty = DayFile(date: "2026-10-22", timeZone: "Asia/Bangkok")
-        let first = empty.merging([Self.sample(tokens: 5), Self.sample("ollama")], at: Self.t1, timeZone: "Asia/Bangkok")
+        let first = empty.merging([Self.sample(tokens: 5), Self.sample("ollama")], at: Self.t1, timeZone: "Asia/Bangkok", accountKey: Self.fakeKey)
         #expect(first.records.map(\.provider.rawValue) == ["ollama", "openrouter"])
 
-        let again = first.merging([Self.sample(tokens: 5)], at: Self.t2, timeZone: "Asia/Bangkok")
+        let again = first.merging([Self.sample(tokens: 5)], at: Self.t2, timeZone: "Asia/Bangkok", accountKey: Self.fakeKey)
         #expect(again.records.count == 2)
         #expect(again != first)
         #expect(again.hasSameContent(as: first))
 
-        let moved = again.merging([Self.sample(tokens: 5)], at: Self.t3, timeZone: "Asia/Tokyo")
+        let moved = again.merging([Self.sample(tokens: 5)], at: Self.t3, timeZone: "Asia/Tokyo", accountKey: Self.fakeKey)
         #expect(moved.timeZone == "Asia/Tokyo")
         #expect(!moved.hasSameContent(as: again))
 
-        #expect(first.merging([], at: Self.t3, timeZone: "UTC") == first)
+        #expect(first.merging([], at: Self.t3, timeZone: "UTC", accountKey: Self.fakeKey) == first)
+    }
+
+    // MARK: - Accounts (V9, V10, V21, V22, V25)
+
+    static func codexAccount(_ name: String, id: String?, plan: String?) -> UsageSnapshot.AccountUsage {
+        UsageSnapshot.AccountUsage(
+            name: name, costTodayUSD: nil, quota: nil,
+            quotaWindows: [QuotaWindow(name: "primary", utilization: 0.5, resetsAt: nil)],
+            accountInfo: AccountInfo(billingModel: .subscription, plan: plan, accountID: id))
+    }
+
+    @Test("a provider without accounts is one default account with its fixed billing model (V9, V25)")
+    func implicitAccount() {
+        let metered = fold(Self.sample(cost: 2, quota: Quota(used: 1, limit: 4, remaining: 3)))
+        #expect(metered.accounts == [DayAccount(
+            key: "default", label: "default", billingModel: .metered,
+            quota: [UsageSnapshot.providerQuotaWindow: QuotaDay(peak: 0.25, endOfDay: 0.25)])])
+        #expect(metered.accounts[0].costUSD == nil)
+        #expect(fold(Self.sample("ollama")).accounts.map(\.billingModel) == [.local])
+
+        var gemini = Self.sample("gemini")
+        gemini.accountInfo = AccountInfo(billingModel: .subscription, plan: "Standard")
+        #expect(fold(gemini).accounts.map(\.label) == ["default"])
+        #expect(fold(gemini).accounts.map(\.plan) == ["Standard"])
+    }
+
+    @Test("Claude accounts keep slug keys and labels, plan, billing model, and reported cost (V9, V22, V25)")
+    func claudeAccounts() {
+        var sample = Self.sample("claude", cost: 3)
+        sample.accounts = [
+            UsageSnapshot.AccountUsage(
+                name: "default", costTodayUSD: 1, quota: nil,
+                quotaWindows: [QuotaWindow(name: "5h", utilization: 0.2, resetsAt: nil)],
+                accountInfo: AccountInfo(billingModel: .subscription, plan: "max")),
+            UsageSnapshot.AccountUsage(name: "work", costTodayUSD: 2, quota: nil, quotaWindows: nil),
+        ]
+        let record = fold(sample)
+        #expect(record.accounts.map(\.key) == ["default", "work"])
+        #expect(record.accounts.map(\.label) == ["default", "work"])
+        #expect(record.accounts.map(\.billingModel) == [.subscription, .metered])
+        #expect(record.accounts[0].plan == "max")
+        #expect(record.accounts.map(\.costUSD) == [Money(1), Money(2)])
+        #expect(record.accounts[0].quota["5h"] == QuotaDay(peak: 0.2, endOfDay: 0.2))
+    }
+
+    @Test("Codex keys hash the account id; labels are never an email or the raw id (V21, V22)")
+    func codexLabels() {
+        var sample = Self.sample("codex")
+        sample.accounts = [
+            Self.codexAccount("pro", id: "id-one", plan: "pro"),
+            Self.codexAccount("a@example.com", id: "id-two", plan: "plus"),
+            Self.codexAccount("b@example.com", id: "id-three", plan: "team"),
+            Self.codexAccount("acct-id-four", id: "id-four", plan: "team"),
+        ]
+        let record = fold(sample)
+        let labels = Dictionary(uniqueKeysWithValues: record.accounts.map { ($0.key, $0.label) })
+        // Live plan label kept; email → unique plan; email or raw-id label with a shared plan → key prefix.
+        #expect(labels == ["h6e": "pro", "h6o": "plus", "h8e": "acct-h8e", "h7r": "acct-h7r"])
+        #expect(record.accounts.allSatisfy { $0.billingModel == .subscription })
+    }
+
+    @Test("the hashed key is stable per salt and changes with the salt (V21)")
+    func saltedKey() {
+        let salt = Data(repeating: 7, count: 32)
+        let key = DayAccount.key(forAccountID: "acct-123", salt: salt)
+        #expect(key == DayAccount.key(forAccountID: "acct-123", salt: salt))
+        #expect(key != DayAccount.key(forAccountID: "acct-123", salt: Data(repeating: 8, count: 32)))
+        #expect(key.count == 12)
+        #expect(!key.contains("123"))
+    }
+
+    @Test("an account merges across polls: newest label and plan, highest cost, quota peak (V7, V8, V25)")
+    func accountMerge() {
+        var first = Self.sample("claude")
+        first.accounts = [UsageSnapshot.AccountUsage(
+            name: "work", costTodayUSD: 5, quota: nil,
+            quotaWindows: [QuotaWindow(name: "5h", utilization: 0.9, resetsAt: nil)],
+            accountInfo: AccountInfo(billingModel: .subscription, plan: "pro"))]
+        var second = Self.sample("claude")
+        second.accounts = [UsageSnapshot.AccountUsage(
+            name: "work", costTodayUSD: 3, quota: nil,
+            quotaWindows: [QuotaWindow(name: "5h", utilization: 0.1, resetsAt: nil)],
+            accountInfo: AccountInfo(billingModel: .subscription, plan: "max"))]
+        let record = fold(first, second)
+        #expect(record.accounts.count == 1)
+        #expect(record.accounts[0].plan == "max")
+        #expect(record.accounts[0].costUSD == Money(5))
+        #expect(record.accounts[0].quota["5h"] == QuotaDay(peak: 0.9, endOfDay: 0.1))
+    }
+
+    @Test("costEstimated is set by any estimated cost sample, not by one without cost (V10)")
+    func costEstimated() {
+        var estimated = Self.sample("codex", cost: 1)
+        estimated.costEstimated = true
+        var noCost = Self.sample("codex")
+        noCost.costEstimated = true
+        #expect(fold(Self.sample("codex", cost: 1)).costEstimated == false)
+        #expect(fold(noCost).costEstimated == false)
+        #expect(fold(estimated, Self.sample("codex", cost: 2)).costEstimated == true)
     }
 }

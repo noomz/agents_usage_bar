@@ -241,6 +241,35 @@ struct CodexMultiLoginTests {
         #expect(!String(describing: snap.raw).contains("test-token-pro"))
     }
 
+    @Test func logins_carryBillingPlanAndAccountIDForHistory() async throws {
+        let root = try makeEmptyRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let oauth = RoutingOAuth(responses: [
+            plusID: .success(usage(plan: "plus", primaryPercent: 10, primaryReset: 1_800_000_000)),
+            proID: .success(usage(plan: "Pro", primaryPercent: 30, primaryReset: 1_800_003_600)),
+        ])
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let two = try await makeProvider(
+            root: root,
+            oauth: oauth,
+            logins: [
+                cliproxyLogin(accountId: plusID, token: "test-token-plus", plan: "plus"),
+                cliproxyLogin(accountId: proID, token: "test-token-pro", plan: "pro"),
+            ]
+        ).fetch(now: now)
+        #expect(two.accounts?.map(\.accountInfo) == [
+            AccountInfo(billingModel: .subscription, plan: "plus", accountID: plusID),
+            AccountInfo(billingModel: .subscription, plan: "pro", accountID: proID),
+        ])
+
+        let one = try await makeProvider(
+            root: root,
+            oauth: oauth,
+            logins: [cliproxyLogin(accountId: plusID, token: "test-token-plus", plan: "plus")]
+        ).fetch(now: now)
+        #expect(one.accountInfo == AccountInfo(billingModel: .subscription, plan: "plus", accountID: plusID))
+    }
+
     @Test func markedAccount_highestPrimary_thenSoonerReset_thenAlphabeticalLabel() {
         let sooner = Date(timeIntervalSince1970: 1_800_000_000)
         let later = Date(timeIntervalSince1970: 1_800_003_600)
