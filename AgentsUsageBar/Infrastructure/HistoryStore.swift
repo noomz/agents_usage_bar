@@ -13,6 +13,9 @@ import os.log
 /// The store keeps the shared `DayKeyOwner` at the newest day key (V4): it seeds it from the
 /// newest day file and advances it as it opens days, so a wall clock set back keeps writing
 /// the newest day, and one more than 1 day back pauses writes (V5).
+///
+/// Every seal starts gap-fill (V27): one low-priority pass over the backfill sources, whose
+/// writes come back through `backfill(_:on:)` so the store stays the only writer (V32).
 public actor HistoryStore {
     /// Day keys kept before the current key (V17).
     public static let retainedDays = 90
@@ -36,10 +39,25 @@ public actor HistoryStore {
     private var paused = false
     /// Loaded from `.account-salt` the first time an account id needs a key.
     private var salt: Data?
+    private let gapFill: HistoryBackfill
+    /// The running gap-fill pass, nil when idle.
+    private var gapFillTask: Task<Void, Never>?
+    /// A seal during a pass asks for one more, so a newly sealed day is not missed.
+    private var gapFillAgain = false
 
-    public init(directory: URL = HistoryReader.defaultDirectory, dayKeys: DayKeyOwner) {
+    public init(
+        directory: URL = HistoryReader.defaultDirectory,
+        dayKeys: DayKeyOwner,
+        backfillSources: [any BackfillSource] = []
+    ) {
         self.reader = HistoryReader(directory: directory)
         self.dayKeys = dayKeys
+        self.gapFill = HistoryBackfill(sources: backfillSources, reader: reader, dayKeys: dayKeys)
+    }
+
+    /// The day key polls write to, nil before the first poll.
+    public var openDayKey: String? {
+        openKey
     }
 
     /// Raises the day-key owner to the newest day file's key (V4). Reads the directory
@@ -76,7 +94,49 @@ public actor HistoryStore {
         open = merged
         if let onDisk, merged.hasSameContent(as: onDisk) { return }
         if onDisk == nil, merged.records.isEmpty { return }
-        write(merged)
+        if write(merged) {
+            onDisk = merged
+        }
+    }
+
+    /// Folds one provider's backfilled record into the sealed day `key` and marks the
+    /// provider checked (V29–V31). The open day, days past retention, a provider already
+    /// checked, and files this build cannot read are left alone (V17, V18, V27).
+    public func backfill(_ record: DayRecord, on key: String) async {
+        guard !paused, let openKey, key < openKey,
+              let cutoff = dayKeys.key(openKey, addingDays: -Self.retainedDays), key >= cutoff
+        else { return }
+        let day: DayFile
+        if FileManager.default.fileExists(atPath: reader.fileURL(for: key).path(percentEncoded: false)) {
+            guard let read = await reader.day(key) else { return }
+            day = read
+        } else {
+            day = DayFile(date: key, timeZone: dayKeys.timeZoneIdentifier)
+        }
+        guard !day.backfillChecked.contains(record.provider) else { return }
+        write(day.backfilling(record))
+    }
+
+    /// Waits for a running gap-fill pass, including any pass a seal queued behind it.
+    func gapFillFinished() async {
+        while let task = gapFillTask {
+            await task.value
+        }
+    }
+
+    /// Starts a gap-fill pass, or queues one more when a pass is running (V27).
+    private func startGapFill() {
+        guard gapFillTask == nil else {
+            gapFillAgain = true
+            return
+        }
+        gapFillTask = Task(priority: .background) {
+            repeat {
+                self.gapFillAgain = false
+                await self.gapFill.run(into: self)
+            } while self.gapFillAgain
+            self.gapFillTask = nil
+        }
     }
 
     /// Final merge into the previous open day, prune, then seed `key` from its file.
@@ -87,6 +147,7 @@ public actor HistoryStore {
         await prune(relativeTo: key)
         dayKeys.advanceNewest(to: key)
         openKey = key
+        defer { startGapFill() }
         let url = reader.fileURL(for: key)
         guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else {
             open = DayFile(date: key, timeZone: dayKeys.timeZoneIdentifier)
@@ -133,12 +194,14 @@ public actor HistoryStore {
         return fresh
     }
 
-    private func write(_ day: DayFile) {
+    @discardableResult
+    private func write(_ day: DayFile) -> Bool {
         do {
             try writePrivately(day.encoded(), to: reader.fileURL(for: day.date))
-            onDisk = day
+            return true
         } catch {
             logger.error("history write \(day.date, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            return false
         }
     }
 

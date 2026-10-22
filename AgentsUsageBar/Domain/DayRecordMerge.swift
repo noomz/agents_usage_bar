@@ -30,6 +30,31 @@ extension DayFile {
         return day
     }
 
+    /// The day with one provider's backfilled record folded in and the provider marked
+    /// checked (V29). It tops up a record already there (V31) or adds a new one that carries
+    /// no quota or seen times (V30). Events are never touched (V32).
+    public func backfilling(_ record: DayRecord) -> DayFile {
+        var day = self
+        if let index = day.records.firstIndex(where: { $0.provider == record.provider }) {
+            day.records[index] = day.records[index].toppedUp(by: record)
+        } else {
+            var added = record
+            added.origin = .backfilled
+            added.quota = [:]
+            added.firstSeen = nil
+            added.lastSeen = nil
+            for index in added.accounts.indices {
+                added.accounts[index].quota = [:]
+            }
+            day.records.append(added)
+            day.records.sort { $0.provider.rawValue < $1.provider.rawValue }
+        }
+        if !day.backfillChecked.contains(record.provider) {
+            day.backfillChecked.append(record.provider)
+        }
+        return day
+    }
+
     /// True when the two days differ only in `firstSeen` and `lastSeen`, which ride the next
     /// changed write instead of causing one (V15).
     public func hasSameContent(as other: DayFile) -> Bool {
@@ -67,6 +92,19 @@ extension DayRecord {
         record.accounts.sort { $0.key < $1.key }
         record.firstSeen = firstSeen ?? now
         record.lastSeen = now
+        return record
+    }
+
+    /// The record with a backfill's `tokens` and `costUSD` max-merged in (V7, V31). A cost the
+    /// backfill raised takes its estimated flag; everything else stays as it was.
+    func toppedUp(by backfill: DayRecord) -> DayRecord {
+        var record = self
+        record.tokens = highestKnown(tokens, backfill.tokens)
+        let cost = highestKnown(costUSD, backfill.costUSD)
+        if cost != costUSD {
+            record.costEstimated = backfill.costEstimated
+        }
+        record.costUSD = cost
         return record
     }
 }
