@@ -83,9 +83,11 @@ struct ProviderStats {
     enum Cell: Equatable {
         case value(Double)
         case present
-        /// No value for any day in the cell.
+        /// No record for any day in the cell.
         case gap
-        /// A bucket that holds a gap: marked, never drawn low.
+        /// Every day in the cell has a record but no value for the plotted metric (V64).
+        case noValue
+        /// A bucket mixing values, gaps, and no-value days: marked, never drawn low.
         case incomplete
     }
 
@@ -164,17 +166,19 @@ struct ProviderStats {
 
     /// Trend characters, oldest first, `bucketSize` days each and the newest bucket ending at
     /// the last key (V43, V44). Metered rows plot spend, subscription and mixed rows the
-    /// day's highest window peak, local rows presence.
+    /// day's highest window peak, local rows presence. A recorded day without that value
+    /// (no quota on a backfilled day, nil spend) is `noValue`, never a gap (V64).
     func trend(bucketSize: Int) -> [Cell] {
-        let daily: [Double?] = records.map { record in
+        // Outer nil is a gap, inner nil a recorded day with no value.
+        let daily: [Double??] = records.map { record in
             guard let record else { return nil }
             switch kind {
-            case .metered: return record.costSplit.spend.map { NSDecimalNumber(decimal: $0.amount).doubleValue }
-            case .subscription, .mixed: return Self.peak(record)?.fraction
+            case .metered: return .some(record.costSplit.spend.map { NSDecimalNumber(decimal: $0.amount).doubleValue })
+            case .subscription, .mixed: return .some(Self.peak(record)?.fraction)
             case .local: return 1
             }
         }
-        var buckets: [[Double?]] = []
+        var buckets: [[Double??]] = []
         var end = daily.count
         while end > 0 {
             let start = max(0, end - bucketSize)
@@ -182,9 +186,11 @@ struct ProviderStats {
             end = start
         }
         return buckets.map { bucket in
-            let known = bucket.compactMap { $0 }
-            if known.isEmpty { return .gap }
+            let recorded = bucket.compactMap { $0 }
+            if recorded.isEmpty { return .gap }
             if kind == .local { return .present }
+            let known = recorded.compactMap { $0 }
+            if known.isEmpty, recorded.count == bucket.count { return .noValue }
             if known.count < bucket.count { return .incomplete }
             return .value(kind == .metered ? known.reduce(0, +) : known.max()!)
         }

@@ -88,12 +88,47 @@ struct StatsTextRendererTests {
         let claude = summary(try range()).split(separator: "\n").first { $0.hasPrefix("Claude") }!
         #expect(claude.contains("·"))
         // The summary shows no estimated amount: Claude shows its plan, Codex spend is unknown.
+        // Every 5th Codex day is backfilled with no quota: recorded, so `?`, not a gap (V64).
+        let codex = summary(try range()).split(separator: "\n").first { $0.hasPrefix("Codex") }!
+        #expect(codex.contains("?"))
+        #expect(!codex.contains("·"))
         let legend = summary(try range()).split(separator: "\n").last!
-        #expect(legend == "· gap  ! incomplete")
+        #expect(legend == "· gap  ? no value  ! incomplete")
         #expect(drill("claude", try range()).hasSuffix("~ estimated  · gap  ! incomplete\n"))
         let openRouter = drill("openrouter", try range(days: 3))
         #expect(!openRouter.contains("estimated"))
         #expect(!openRouter.contains("gap"))
+    }
+
+    @Test("a recorded day with no value is `?`, a missing record is a gap; mixed buckets are incomplete (V64)")
+    func noValueVersusGap() {
+        let metered = [DayAccount(key: "default", label: "default", billingModel: .metered)]
+        let subscription = [DayAccount(key: "demo", label: "demo", billingModel: .subscription, plan: "pro")]
+        func record(_ accounts: [DayAccount], cost: Int? = nil, peak: Double? = nil, origin: RecordOrigin = .observed) -> DayRecord {
+            DayRecord(provider: ProviderID(rawValue: "demo"), costUSD: cost.map { Money(Decimal($0)) },
+                      quota: peak.map { ["5h": QuotaDay(peak: $0, endOfDay: $0)] } ?? [:],
+                      accounts: accounts, origin: origin)
+        }
+
+        // Metered: reported cost, nil cost, no record.
+        let spend = ProviderStats(id: ProviderID(rawValue: "demo"),
+                                  records: [record(metered, cost: 2), record(metered), nil])
+        #expect(spend.kind == .metered)
+        #expect(spend.trend(bucketSize: 1) == [.value(2), .noValue, .gap])
+        #expect(spend.trend(bucketSize: 3) == [.incomplete])
+
+        // Subscription: a peak, a backfilled day with no quota (V30), two more no-value days, no record.
+        let backfilled = record(subscription, origin: .backfilled)
+        let peaks = ProviderStats(id: ProviderID(rawValue: "demo"),
+                                  records: [record(subscription, peak: 0.5), backfilled, backfilled, backfilled, nil])
+        #expect(peaks.kind == .subscription)
+        #expect(peaks.trend(bucketSize: 1) == [.value(0.5), .noValue, .noValue, .noValue, .gap])
+        // Buckets end at the newest key: [peak] [?, ?] [?, gap].
+        #expect(peaks.trend(bucketSize: 2) == [.value(0.5), .noValue, .incomplete])
+        #expect(peaks.seenDays == 4)
+
+        let legend = StatsTextRenderer.Legend(noValue: true).line(color: false)
+        #expect(legend == ["? no value"])
     }
 
     @Test("beyond 30 days the trend is equal buckets named in the header; a gap marks its bucket (V44)")
