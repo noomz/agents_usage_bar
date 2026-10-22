@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// The one owner of the day key: the local date every "today" consumer files its state under
 /// (SPEC V1).
@@ -8,10 +9,16 @@ import Foundation
 /// so `TodayHelper.formatYYYYMMDD` with its default calendar gives `2569-10-22` where the day
 /// key is `2026-10-22`. Builds before S0 stored those locale-calendar keys in `today.json` and
 /// notification state; `isSameDay(_:as:)` still counts them as today on the same date (V3).
+///
+/// The day key never decreases (V4, ADR 0002): it is the later of the wall-clock date and the
+/// newest key, which `HistoryStore` seeds from the newest day file and advances as it opens
+/// days. Copies of an owner share that newest key, so every consumer gets the same day.
 public struct DayKeyOwner: Sendable {
     private let clock: any Clock
     private let timeZone: TimeZone
     private let legacyCalendar: Calendar
+    /// In memory only; the day files are the source of truth (V4).
+    private let newest = OSAllocatedUnfairLock<String?>(initialState: nil)
 
     /// - Parameters:
     ///   - timeZone: Defaults to `.autoupdatingCurrent` so a time-zone change is picked up
@@ -33,11 +40,38 @@ public struct DayKeyOwner: Sendable {
         key(for: clock.now())
     }
 
-    /// The day key for `date`.
+    /// The day key at `date`: its wall-clock key, held at the newest key when the wall clock
+    /// is behind it (V4).
     public func key(for date: Date) -> String {
+        let wall = wallKey(for: date)
+        return newest.withLock { newest in
+            guard let newest, newest > wall else { return wall }
+            return newest
+        }
+    }
+
+    /// The Gregorian `yyyy-MM-dd` of `date` in the current zone, ignoring the newest key.
+    public func wallKey(for date: Date) -> String {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = timeZone
         return TodayHelper.formatYYYYMMDD(date, calendar: gregorian)
+    }
+
+    /// Raises the newest key to `key`; a lower key is ignored.
+    public func advanceNewest(to key: String) {
+        newest.withLock { newest in
+            if newest.map({ $0 < key }) ?? true { newest = key }
+        }
+    }
+
+    /// True when the wall clock at `date` is more than 1 day behind the newest key. Time
+    /// zones never move the date back that far, so it is a clock error and history writes
+    /// pause (V5).
+    public func isClockBehind(at date: Date) -> Bool {
+        guard let newest = newest.withLock({ $0 }),
+              let floor = key(newest, addingDays: -1)
+        else { return false }
+        return wallKey(for: date) < floor
     }
 
     /// The current time zone id, stored as a day file's last zone seen (V6).
@@ -56,7 +90,7 @@ public struct DayKeyOwner: Sendable {
         guard let date = gregorian.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2], hour: 12)),
               let shifted = gregorian.date(byAdding: .day, value: days, to: date)
         else { return nil }
-        return self.key(for: shifted)
+        return wallKey(for: shifted)
     }
 
     /// The key a pre-S0 build stored for `date`: `yyyy-MM-dd` in the locale's calendar.
@@ -77,6 +111,6 @@ public struct DayKeyOwner: Sendable {
         guard parts.count == 3, let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2]),
               let date = legacyCalendar.date(from: DateComponents(year: year, month: month, day: day))
         else { return nil }
-        return key(for: date)
+        return wallKey(for: date)
     }
 }
