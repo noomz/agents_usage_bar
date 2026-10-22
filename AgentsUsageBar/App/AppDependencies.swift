@@ -190,7 +190,9 @@ public enum AppDependencies {
             thresholds: thresholds,
             notifications: notifications,
             notificationState: notificationState,
-            dayKeys: dayKeys
+            dayKeys: dayKeys,
+            // 9b. Usage history writer; first I/O is on the first poll (V15, V61).
+            history: HistoryStore(dayKeys: dayKeys)
         )
         store.updatePaceWarningsEnabled(preferences.paceWarningsEnabled)
         store.updateResetNotificationsEnabled(preferences.resetNotificationsEnabled)
