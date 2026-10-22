@@ -197,6 +197,14 @@ struct PollSchedulerSleepWakeTests {
         let defaults = UserDefaults(suiteName: "test-startup-\(UUID().uuidString)")!
         defaults.set(true, forKey: "aub.hasSeenWelcome")  // keep the Welcome window closed
         let preferences = UserPreferencesStore(defaults: defaults)
+        // A pre-S0 record on a Buddhist-calendar host (V3). The graph is built against an
+        // in-memory store so the test never writes the real defaults (V61).
+        var buddhist = Calendar(identifier: .buddhist)
+        buddhist.timeZone = .current
+        let dayKeys = DayKeyOwner(clock: VirtualClock(fixed: t0), legacyCalendar: buddhist)
+        let notificationState = InMemoryNotificationStateStore()
+        let legacyRecord = NotificationStateRecord(lastBand: .warning, snoozedUntilDay: nil)
+        notificationState.setRecord(legacyRecord, forProviderID: .openrouter, day: dayKeys.legacyKey(for: t0))
         let deps = Dependencies(
             store: store,
             scheduler: scheduler,
@@ -211,13 +219,18 @@ struct PollSchedulerSleepWakeTests {
             welcomeWindowController: WelcomeWindowController(
                 preferences: preferences,
                 config: ConfigStore(env: DictionaryEnvReader([:]), tomlPath: nil).load()
-            )
+            ),
+            notificationState: notificationState,
+            dayKeys: dayKeys
         )
+        #expect(notificationState.record(forProviderID: .openrouter, day: dayKeys.today()) == nil,
+                "building the graph must not migrate state")
 
         await deps.startBackgroundServices()
         try await Task.sleep(for: .milliseconds(150))
         let observation = try #require(deps.preferencesObservation)
         #expect(deps.backgroundServicesStarted)
+        #expect(notificationState.record(forProviderID: .openrouter, day: dayKeys.today()) == legacyRecord)
         #expect(await scheduler.isRunning())
         let countAfterFirst = await provider.count()
         #expect(countAfterFirst == 1)
