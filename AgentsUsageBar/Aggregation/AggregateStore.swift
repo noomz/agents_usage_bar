@@ -47,6 +47,7 @@ public final class AggregateStore {
     /// `hasAnyQuotaOnlyProvider` is true.
     private let hasTokensByID: [ProviderID: Bool]
     private let clock: any Clock
+    private let dayKeys: DayKeyOwner
     private let cache: any CacheStore
     /// Plan 05-03: changed from `let` to `var` to allow live threshold rebuild (D-04).
     /// The class is `@MainActor` — mutating a stored property is safe.
@@ -100,16 +101,18 @@ public final class AggregateStore {
         cache: any CacheStore,
         thresholds: ThresholdEngine,
         notifications: any NotificationManager,
-        notificationState: any NotificationStateStorage = InMemoryNotificationStateStore()
+        notificationState: any NotificationStateStorage = InMemoryNotificationStateStore(),
+        dayKeys: DayKeyOwner = DayKeyOwner()
     ) {
         self.registry = registry
         self.clock = clock
+        self.dayKeys = dayKeys
         self.cache = cache
         self.thresholds = thresholds
         self.notifications = notifications
         self.notificationState = notificationState
-        self.paceEngine = PaceEngine()
-        self.resetEngine = ResetEngine()
+        self.paceEngine = PaceEngine(dayKeys: dayKeys)
+        self.resetEngine = ResetEngine(dayKeys: dayKeys)
 
         var names: [ProviderID: String] = [:]
         // Plan 03-08 D-07: capture hasTokens alongside displayName in a single
@@ -149,7 +152,7 @@ public final class AggregateStore {
     /// Records "snoozed for today" for `providerID`, suppressing every threshold band on
     /// that provider until local-midnight rollover. Persists via `NotificationStateStorage`.
     public func snoozeToday(providerID: ProviderID, on now: Date) {
-        let day = TodayHelper.formatYYYYMMDD(now)
+        let day = dayKeys.key(for: now)
         let existing = notificationState.record(forProviderID: providerID, day: day)
         let updated = NotificationStateRecord(
             lastBand: existing?.lastBand ?? .normal,
@@ -233,7 +236,7 @@ public final class AggregateStore {
     /// changes (D-04). The `UserDefaultsNotificationStateStore` (per-day FSM state) is NOT
     /// touched — existing records survive the swap intact (Research Q7 confirmed safe).
     public func updateWarningFraction(_ newFraction: Double) {
-        thresholds = ThresholdEngine(warningFraction: newFraction, calendar: .current)
+        thresholds = ThresholdEngine(warningFraction: newFraction, dayKeys: dayKeys)
     }
 
     /// Enables or disables pace-limit warnings for every provider.
@@ -497,7 +500,7 @@ public final class AggregateStore {
     /// new band per fired decision so the next poll's lastBand comparison is correct.
     private func fireThresholdNotificationsIfNeeded(now: Date) async {
         let snapshots = providers.values.compactMap(\.snapshot)
-        let day = TodayHelper.formatYYYYMMDD(now)
+        let day = dayKeys.key(for: now)
         let allRecords = notificationState.allRecordsForToday(day)
         let lastBands: [ProviderID: ThresholdBand] = Dictionary(
             uniqueKeysWithValues: allRecords.map { ($0.0, $0.1.lastBand) }
@@ -533,7 +536,7 @@ public final class AggregateStore {
     /// Each pace decision is scheduled alone so it is not coalesced into "N providers crossed 80%".
     private func firePaceNotificationsIfNeeded(now: Date) async {
         let snapshots = providers.values.compactMap(\.snapshot)
-        let day = TodayHelper.formatYYYYMMDD(now)
+        let day = dayKeys.key(for: now)
         let allRecords = notificationState.allRecordsForToday(day)
         let snoozedUntilDay: [ProviderID: String] = Dictionary(
             uniqueKeysWithValues: allRecords.compactMap { pid, rec in
@@ -580,7 +583,7 @@ public final class AggregateStore {
     /// Snooze-today does not suppress these — snooze is for "running out", not "you're back".
     private func fireResetNotificationsIfNeeded(now: Date) async {
         let snapshots = providers.values.compactMap(\.snapshot)
-        let day = TodayHelper.formatYYYYMMDD(now)
+        let day = dayKeys.key(for: now)
         let allRecords = notificationState.allRecordsForToday(day)
         let alreadyFired: [ProviderID: Set<String>] = Dictionary(
             uniqueKeysWithValues: allRecords.map { pid, rec in

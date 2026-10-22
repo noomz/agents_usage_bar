@@ -85,7 +85,7 @@ private func makeTempRootDir() throws -> URL {
 }
 
 private func writeJSONLFixture(_ content: String, to url: URL) throws {
-    let today = TodayHelper.formatYYYYMMDD(.now)
+    let today = DayKeyOwner().key(for: .now)
     let materialized = content.replacingOccurrences(of: "<TODAY-T>", with: today + "T")
     try materialized.write(to: url, atomically: true, encoding: .utf8)
 }

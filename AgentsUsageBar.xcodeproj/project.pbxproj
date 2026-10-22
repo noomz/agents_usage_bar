@@ -53,6 +53,7 @@
 		AA020200000000000000020A /* SecretTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000020B /* SecretTests.swift */; };
 		AA020200000000000000021A /* TodayHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000021B /* TodayHelperTests.swift */; };
 		AA1D4E0000000000000000B1 /* DayKeyOwnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4E0000000000000000B2 /* DayKeyOwnerTests.swift */; };
+		AA1D4E0000000000000000C1 /* DayKeyUpgradeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4E0000000000000000C2 /* DayKeyUpgradeTests.swift */; };
 		AA020200000000000000022A /* QuotaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000022B /* QuotaTests.swift */; };
 		AA020200000000000000023A /* ThresholdStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000023B /* ThresholdStateTests.swift */; };
 		AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000024B /* FileCacheStoreTests.swift */; };
@@ -465,6 +466,7 @@
 		AA030400000000000000012B /* CodexJSONLProviderFallbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexJSONLProviderFallbackTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000021B /* TodayHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHelperTests.swift; sourceTree = "<group>"; };
 		AA1D4E0000000000000000B2 /* DayKeyOwnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayKeyOwnerTests.swift; sourceTree = "<group>"; };
+		AA1D4E0000000000000000C2 /* DayKeyUpgradeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayKeyUpgradeTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000022B /* QuotaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000023B /* ThresholdStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdStateTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000024B /* FileCacheStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStoreTests.swift; sourceTree = "<group>"; };
@@ -941,6 +943,7 @@
 				AA020200000000000000020B /* SecretTests.swift */,
 				AA020200000000000000021B /* TodayHelperTests.swift */,
 				AA1D4E0000000000000000B2 /* DayKeyOwnerTests.swift */,
+				AA1D4E0000000000000000C2 /* DayKeyUpgradeTests.swift */,
 				AA020200000000000000022B /* QuotaTests.swift */,
 				AA020200000000000000023B /* ThresholdStateTests.swift */,
 				/* Plan 02.07 — reset-clock caption */
@@ -2095,6 +2098,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA020200000000000000020A /* SecretTests.swift in Sources */,
 				AA020200000000000000021A /* TodayHelperTests.swift in Sources */,
 				AA1D4E0000000000000000B1 /* DayKeyOwnerTests.swift in Sources */,
+				AA1D4E0000000000000000C1 /* DayKeyUpgradeTests.swift in Sources */,
 				AA020200000000000000022A /* QuotaTests.swift in Sources */,
 				AA020200000000000000023A /* ThresholdStateTests.swift in Sources */,
 				AA111111000000000000003A /* QuotaGlanceTests.swift in Sources */,

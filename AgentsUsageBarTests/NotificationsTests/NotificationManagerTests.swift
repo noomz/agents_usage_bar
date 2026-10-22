@@ -32,7 +32,7 @@ extension FakeUNUserNotificationCenter {
         clock: any Clock = SystemClock(),
         calendar: Calendar = .current
     ) -> UNNotificationManager {
-        UNNotificationManager(center: self, clock: clock, calendar: calendar)
+        UNNotificationManager(center: self, clock: clock, dayKeys: DayKeyOwner(timeZone: calendar.timeZone))
     }
 }
 

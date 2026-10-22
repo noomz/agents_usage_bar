@@ -22,9 +22,8 @@ public struct ThresholdEngine: Sendable {
     /// Fraction at which the Warning band begins (default 0.80 = 80%).
     public let warningFraction: Double
 
-    /// Calendar used for ISO day-string derivation.
-    /// Defaults to `Calendar.current` (local timezone) per Pitfall 4.
-    private let calendar: Calendar
+    /// Day keys for stable IDs and the snooze-day comparison (SPEC V1).
+    private let dayKeys: DayKeyOwner
 
     /// D-11 degraded-provider tag (Plan 03-08).
     ///
@@ -42,9 +41,9 @@ public struct ThresholdEngine: Sendable {
     /// this constant to keep the literal DRY across the codebase.
     public static let degradedTag = "usage-temporarily-unavailable"
 
-    public init(warningFraction: Double = 0.80, calendar: Calendar = .current) {
+    public init(warningFraction: Double = 0.80, dayKeys: DayKeyOwner = DayKeyOwner()) {
         self.warningFraction = warningFraction
-        self.calendar = calendar
+        self.dayKeys = dayKeys
     }
 
     // MARK: - Phase 1 back-compat surface (D-11 warn80-only emission)
@@ -65,7 +64,7 @@ public struct ThresholdEngine: Sendable {
         now: Date,
         snoozedUntil: [ProviderID: Date]
     ) -> [NotificationDecision] {
-        let today = TodayHelper.formatYYYYMMDD(now, calendar: calendar)
+        let today = dayKeys.key(for: now)
         let snoozedUntilDay: [ProviderID: String] = snoozedUntil.compactMapValues { expiry in
             expiry > now ? today : nil
         }
@@ -111,7 +110,7 @@ public struct ThresholdEngine: Sendable {
         snoozedUntilDay: [ProviderID: String],
         lastBands: [ProviderID: ThresholdBand]
     ) -> [NotificationDecision] {
-        let today = TodayHelper.formatYYYYMMDD(now, calendar: calendar)
+        let today = dayKeys.key(for: now)
 
         // STEP 0 — Plan 03-08 D-11: drop snapshots marked degraded BEFORE
         // any band-transition arithmetic. The filter is provider-agnostic; any

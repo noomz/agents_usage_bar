@@ -55,7 +55,7 @@ public actor UNNotificationManager: NotificationManager {
 
     private let center: any UNUserNotificationCenterProtocol
     private let clock: any Clock          // B8: injected for deterministic coalesced-id day-string
-    private let calendar: Calendar
+    private let dayKeys: DayKeyOwner
     private let logger = Logger(subsystem: "app.agents-usage-bar", category: "notify")
 
     // MARK: - Auth state
@@ -73,11 +73,11 @@ public actor UNNotificationManager: NotificationManager {
     public init(
         center: any UNUserNotificationCenterProtocol = UNUserNotificationCenter.current(),
         clock: any Clock = SystemClock(),       // B8
-        calendar: Calendar = .current
+        dayKeys: DayKeyOwner = DayKeyOwner()
     ) {
         self.center = center
         self.clock = clock
-        self.calendar = calendar
+        self.dayKeys = dayKeys
     }
 
     // MARK: - Plan 02.05 — Category registration (Pitfall 6)
@@ -141,7 +141,7 @@ public actor UNNotificationManager: NotificationManager {
             content.sound = .default
             content.categoryIdentifier = Self.usageWarningCategoryID    // Plan 02.05 / Pitfall 6
             // Coalesced stable ID: day-string derived from injected clock (B8) + highest band suffix.
-            let dayString = isoDayString(clock.now())
+            let dayString = dayKeys.key(for: clock.now())
             let coalescedID = "coalesced:\(dayString):\(suffix)"
             request = UNNotificationRequest(identifier: coalescedID, content: content, trigger: nil)
         }
@@ -177,15 +177,6 @@ public actor UNNotificationManager: NotificationManager {
             }
             return granted
         }
-    }
-
-    /// Derives a `"yyyy-MM-dd"` string in the engine's calendar timezone.
-    private func isoDayString(_ date: Date) -> String {
-        let fmt = DateFormatter()
-        fmt.calendar = calendar
-        fmt.timeZone = calendar.timeZone
-        fmt.dateFormat = "yyyy-MM-dd"
-        return fmt.string(from: date)
     }
 }
 

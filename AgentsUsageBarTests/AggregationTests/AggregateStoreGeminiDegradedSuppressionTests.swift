@@ -41,7 +41,7 @@ struct AggregateStoreGeminiDegradedSuppressionTests {
     static let pidGemini = ProviderID.gemini
     static let pidOther = ProviderID(rawValue: "hypothetical")
 
-    let engine = ThresholdEngine(warningFraction: 0.80, calendar: ptCalendar)
+    let engine = ThresholdEngine(warningFraction: 0.80, dayKeys: DayKeyOwner(timeZone: ptCalendar.timeZone))
 
     // MARK: - Helpers
 

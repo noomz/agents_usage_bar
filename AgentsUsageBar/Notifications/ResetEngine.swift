@@ -24,10 +24,10 @@ public struct ResetSample: Sendable, Equatable {
 /// First poll (no sample) never fires.
 public struct ResetEngine: Sendable {
 
-    private let calendar: Calendar
+    private let dayKeys: DayKeyOwner
 
-    public init(calendar: Calendar = .current) {
-        self.calendar = calendar
+    public init(dayKeys: DayKeyOwner = DayKeyOwner()) {
+        self.dayKeys = dayKeys
     }
 
     /// Evaluates snapshots and returns reset decisions plus the samples to keep for the next poll.
@@ -39,7 +39,7 @@ public struct ResetEngine: Sendable {
         warningFraction: Double,
         enabled: Bool
     ) -> (decisions: [NotificationDecision], nextSamples: [ResetSample]) {
-        let today = TodayHelper.formatYYYYMMDD(now, calendar: calendar)
+        let today = dayKeys.key(for: now)
         var nextSamples: [ResetSample] = []
         var decisions: [NotificationDecision] = []
 

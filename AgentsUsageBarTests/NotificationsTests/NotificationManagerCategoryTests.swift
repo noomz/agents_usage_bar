@@ -48,7 +48,7 @@ struct NotificationManagerCategoryTests {
         UNNotificationManager(
             center: center,
             clock: VirtualClock(fixed: Self.noon_2026_05_13_PT),
-            calendar: Self.ptCalendar
+            dayKeys: DayKeyOwner(timeZone: Self.ptCalendar.timeZone)
         )
     }
 

@@ -30,7 +30,7 @@ actor FakeOAuthClient: ClaudeOAuthClientProtocol {
 
 /// Returns today's `"YYYY-MM-DD"` string and substitutes it for `<TODAY-T>` in `content`.
 private func materializeFixture(_ content: String) -> String {
-    let today = TodayHelper.formatYYYYMMDD(.now)
+    let today = DayKeyOwner().key(for: .now)
     return content.replacingOccurrences(of: "<TODAY-T>", with: today + "T")
 }
 
@@ -226,7 +226,7 @@ struct ClaudeJSONLProviderTests {
 
         let yesterdayDate = TodayHelper.startOfDay(.now).addingTimeInterval(-3600)
         let yesterdayStr = ISO8601DateFormatter().string(from: yesterdayDate)
-        let todayStr = TodayHelper.formatYYYYMMDD(.now) + "T15:00:00.000+00:00"
+        let todayStr = DayKeyOwner().key(for: .now) + "T15:00:00.000+00:00"
 
         let content = """
         {"type":"assistant","timestamp":"\(yesterdayStr)","requestId":"req-Y1","message":{"model":"claude-sonnet-4-5","role":"assistant","usage":{"input_tokens":5000,"output_tokens":5000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}

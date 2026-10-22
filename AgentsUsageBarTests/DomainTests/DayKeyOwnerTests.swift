@@ -79,4 +79,20 @@ struct DayKeyOwnerTests {
         #expect(!owner.isSameDay("2026-10-21", as: now))
         #expect(!owner.isSameDay("2026-10-22-x", as: now))
     }
+
+    @Test("a legacy key converts to the day key for the same date")
+    func legacyKeyConverts() {
+        let owner = Self.owner(at: "2026-10-22T03:00:00Z")
+        #expect(owner.key(fromLegacy: "2569-10-22") == "2026-10-22")
+        #expect(owner.key(fromLegacy: "2569-01-01") == "2026-01-01")
+    }
+
+    @Test("a value that is not a yyyy-MM-dd key does not convert")
+    func nonKeyDoesNotConvert() {
+        let owner = Self.owner(at: "2026-10-22T03:00:00Z")
+        #expect(owner.key(fromLegacy: "") == nil)
+        #expect(owner.key(fromLegacy: "2569-10") == nil)
+        #expect(owner.key(fromLegacy: "2569-10-x") == nil)
+        #expect(owner.key(fromLegacy: "migrated") == nil)
+    }
 }

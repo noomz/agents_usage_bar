@@ -8,7 +8,7 @@ import Foundation
 struct AggregateStoreSnoozeTests {
 
     /// Pinned to noon UTC so the date string matches across every reasonable test-host timezone
-    /// (the production code uses `TodayHelper.formatYYYYMMDD(now)` with `Calendar.current`).
+    /// (the production code uses `DayKeyOwner.key(for:)` in the host time zone).
     static let now: Date = {
         var comps = DateComponents()
         comps.year = 2026; comps.month = 5; comps.day = 13
@@ -19,9 +19,9 @@ struct AggregateStoreSnoozeTests {
         return cal.date(from: comps)!
     }()
 
-    /// Derive `today` from `now` using the host calendar — matches the production code path
+    /// Derive `today` from `now` through `DayKeyOwner` — matches the production code path
     /// inside `AggregateStore.snoozeToday(providerID:on:)` exactly.
-    static var today: String { TodayHelper.formatYYYYMMDD(now) }
+    static var today: String { DayKeyOwner().key(for: now) }
     static let pidA = ProviderID(rawValue: "openrouter")
     static let pidB = ProviderID(rawValue: "claude")
 

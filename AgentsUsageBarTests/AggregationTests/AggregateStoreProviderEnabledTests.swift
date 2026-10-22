@@ -22,7 +22,7 @@ struct AggregateStoreProviderEnabledTests {
             registry: registry,
             clock: VirtualClock(fixed: Date()),
             cache: NoopCacheStore(),
-            thresholds: ThresholdEngine(warningFraction: 0.80, calendar: .current),
+            thresholds: ThresholdEngine(warningFraction: 0.80),
             notifications: SpyNotificationManager(),
             notificationState: InMemoryNotificationStateStore()
         )

@@ -20,7 +20,7 @@ struct ResetEngineTests {
         return ptCalendar.date(from: comps)!
     }()
 
-    let engine = ResetEngine(calendar: ptCalendar)
+    let engine = ResetEngine(dayKeys: DayKeyOwner(timeZone: ptCalendar.timeZone))
 
     func snapshot(
         id: ProviderID = .claude,

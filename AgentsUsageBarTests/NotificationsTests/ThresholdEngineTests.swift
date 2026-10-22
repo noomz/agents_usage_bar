@@ -71,7 +71,7 @@ struct ThresholdEngineTests {
 
     @Test("stable single-decision ID format: providerID:yyyy-MM-dd:warn80")
     func stableIDFormat() throws {
-        let engine = ThresholdEngine(warningFraction: 0.80, calendar: Self.ptCalendar)
+        let engine = ThresholdEngine(warningFraction: 0.80, dayKeys: DayKeyOwner(timeZone: Self.ptCalendar.timeZone))
         let snap = makeSnapshot(quota: makeQuota(used: 8.2, limit: 10.0))
         let result = engine.decisions(for: [snap], now: Self.noon_2026_05_11_PT, snoozedUntil: [:])
         try #require(result.count == 1)

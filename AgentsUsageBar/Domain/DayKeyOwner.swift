@@ -49,4 +49,15 @@ public struct DayKeyOwner: Sendable {
     public func isSameDay(_ stored: String, as date: Date) -> Bool {
         stored == key(for: date) || stored == legacyKey(for: date)
     }
+
+    /// The day key for a `yyyy-MM-dd` key a pre-S0 build stored in the locale's calendar, or
+    /// nil when `legacy` is not that shape. Only correct for keys known to be legacy: on a
+    /// Buddhist host a day key read this way lands 543 years early.
+    public func key(fromLegacy legacy: String) -> String? {
+        let parts = legacy.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3, let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2]),
+              let date = legacyCalendar.date(from: DateComponents(year: year, month: month, day: day))
+        else { return nil }
+        return key(for: date)
+    }
 }

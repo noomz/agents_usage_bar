@@ -38,6 +38,7 @@ public enum ProviderRegistryFactory {
         localhostHTTP: any HTTPClient,
         cache: any CacheStore,
         clock: any Clock,
+        dayKeys: DayKeyOwner = DayKeyOwner(),
         processCatalog: any ProcessCatalog = ProcProcessCatalog(),
         loadOllamaDeviceKey: @escaping @Sendable () -> OllamaDeviceSigner? = { OllamaDeviceSigner.load() },
         loadOllamaCloudConfig: @escaping @Sendable () -> OllamaCloudConfig = { ConfigStore().load().ollamaCloud }
@@ -55,7 +56,7 @@ public enum ProviderRegistryFactory {
                 httpReferer: config.openrouter.httpReferer,
                 xTitle: config.openrouter.xTitle
             )
-            registry.append(OpenRouterProvider(client: client, cache: cache, clock: clock))
+            registry.append(OpenRouterProvider(client: client, cache: cache, clock: clock, dayKeys: dayKeys))
         }
         if config.openrouter.enabled, config.openrouter.apiKey == nil {
             placeholders.append(PlaceholderSeed(

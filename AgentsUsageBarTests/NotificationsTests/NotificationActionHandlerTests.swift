@@ -23,8 +23,8 @@ struct NotificationActionHandlerTests {
         return cal.date(from: comps)!
     }()
 
-    /// Derive `today` from `now` using host calendar — matches the production code path.
-    static var today: String { TodayHelper.formatYYYYMMDD(now) }
+    /// Derive `today` from `now` through `DayKeyOwner` — matches the production code path.
+    static var today: String { DayKeyOwner().key(for: now) }
     static let pidA = ProviderID(rawValue: "openrouter")
     static let pidB = ProviderID(rawValue: "claude")
 

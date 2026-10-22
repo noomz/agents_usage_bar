@@ -24,7 +24,7 @@ struct AggregateStoreUpdateWarningFractionTests {
             registry: [],
             clock: VirtualClock(fixed: Date()),
             cache: NoopCacheStore(),
-            thresholds: ThresholdEngine(warningFraction: warningFraction, calendar: .current),
+            thresholds: ThresholdEngine(warningFraction: warningFraction),
             notifications: SpyNotificationManager(),
             notificationState: notificationState
         )
@@ -47,13 +47,13 @@ struct AggregateStoreUpdateWarningFractionTests {
 
         // Assert: the new engine uses 0.90, so a snapshot at 85% (above 80 but below 90)
         // should be in the .warning band of the OLD engine but .normal on the NEW one.
-        let newEngine = ThresholdEngine(warningFraction: 0.90, calendar: .current)
+        let newEngine = ThresholdEngine(warningFraction: 0.90)
         let band = newEngine.currentBand(for: 0.85)
         #expect(band == .normal,
                 "85% should be .normal under 0.90 threshold (confirming engine was rebuilt)")
 
         // Cross-check: old engine would have returned .warning at 85%.
-        let oldEngine = ThresholdEngine(warningFraction: 0.80, calendar: .current)
+        let oldEngine = ThresholdEngine(warningFraction: 0.80)
         let oldBand = oldEngine.currentBand(for: 0.85)
         #expect(oldBand == .warning, "85% should be .warning under old 0.80 threshold")
     }
@@ -66,7 +66,7 @@ struct AggregateStoreUpdateWarningFractionTests {
         let store = makeStore(warningFraction: 0.80, notificationState: stateStore)
 
         let providerID = ProviderID.openrouter
-        let today = TodayHelper.formatYYYYMMDD(Date(), calendar: .current)
+        let today = DayKeyOwner().key(for: Date())
         let seededRecord = NotificationStateRecord(lastBand: .warning, snoozedUntilDay: nil)
         stateStore.setRecord(seededRecord, forProviderID: providerID, day: today)
 
@@ -92,7 +92,7 @@ struct AggregateStoreUpdateWarningFractionTests {
             registry: [],
             clock: VirtualClock(fixed: Date()),
             cache: NoopCacheStore(),
-            thresholds: ThresholdEngine(warningFraction: 0.80, calendar: .current),
+            thresholds: ThresholdEngine(warningFraction: 0.80),
             notifications: spy,
             notificationState: stateStore
         )

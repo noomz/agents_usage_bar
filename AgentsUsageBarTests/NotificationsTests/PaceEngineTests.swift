@@ -20,7 +20,7 @@ struct PaceEngineTests {
         return ptCalendar.date(from: comps)!
     }()
 
-    let engine = PaceEngine(calendar: ptCalendar)
+    let engine = PaceEngine(dayKeys: DayKeyOwner(timeZone: ptCalendar.timeZone))
 
     func snapshot(
         id: ProviderID = .claude,
@@ -211,7 +211,7 @@ struct PaceEngineTests {
     @Test("snoozed provider is silent")
     func snoozed_silent() {
         let snap = snapshot(windows: [window("5h", used: 0.40, remaining: 4 * 3600)])
-        let today = TodayHelper.formatYYYYMMDD(Self.now, calendar: Self.ptCalendar)
+        let today = DayKeyOwner(timeZone: Self.ptCalendar.timeZone).key(for: Self.now)
         #expect(evaluate(snaps: [snap], snoozed: [.claude: today]).isEmpty)
     }
 
