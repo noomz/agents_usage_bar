@@ -41,6 +41,7 @@
 		AA020200000000000000009A /* RefreshInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000009B /* RefreshInterval.swift */; };
 		AA02020000000000000000AA /* Secret.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA02020000000000000000AB /* Secret.swift */; };
 		AA02020000000000000000BA /* TodayHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA02020000000000000000BB /* TodayHelper.swift */; };
+		AA1D4E0000000000000000A1 /* DayKeyOwner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4E0000000000000000A2 /* DayKeyOwner.swift */; };
 		/* Plan 01.02 — Infrastructure sources */
 		AA020200000000000000010A /* HTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000010B /* HTTPClient.swift */; };
 		AA020200000000000000011A /* URLSessionHTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000011B /* URLSessionHTTPClient.swift */; };
@@ -51,6 +52,7 @@
 		/* Plan 01.02 — Test sources */
 		AA020200000000000000020A /* SecretTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000020B /* SecretTests.swift */; };
 		AA020200000000000000021A /* TodayHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000021B /* TodayHelperTests.swift */; };
+		AA1D4E0000000000000000B1 /* DayKeyOwnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4E0000000000000000B2 /* DayKeyOwnerTests.swift */; };
 		AA020200000000000000022A /* QuotaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000022B /* QuotaTests.swift */; };
 		AA020200000000000000023A /* ThresholdStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000023B /* ThresholdStateTests.swift */; };
 		AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000024B /* FileCacheStoreTests.swift */; };
@@ -444,6 +446,7 @@
 		AA020200000000000000009B /* RefreshInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshInterval.swift; sourceTree = "<group>"; };
 		AA02020000000000000000AB /* Secret.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secret.swift; sourceTree = "<group>"; };
 		AA02020000000000000000BB /* TodayHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHelper.swift; sourceTree = "<group>"; };
+		AA1D4E0000000000000000A2 /* DayKeyOwner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayKeyOwner.swift; sourceTree = "<group>"; };
 		/* Plan 01.02 — Infrastructure file references */
 		AA020200000000000000010B /* HTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPClient.swift; sourceTree = "<group>"; };
 		AA020200000000000000011B /* URLSessionHTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionHTTPClient.swift; sourceTree = "<group>"; };
@@ -461,6 +464,7 @@
 		AA030400000000000000011B /* CodexJSONLProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexJSONLProviderTests.swift; sourceTree = "<group>"; };
 		AA030400000000000000012B /* CodexJSONLProviderFallbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexJSONLProviderFallbackTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000021B /* TodayHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHelperTests.swift; sourceTree = "<group>"; };
+		AA1D4E0000000000000000B2 /* DayKeyOwnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayKeyOwnerTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000022B /* QuotaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000023B /* ThresholdStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdStateTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000024B /* FileCacheStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStoreTests.swift; sourceTree = "<group>"; };
@@ -900,6 +904,7 @@
 				AA020200000000000000009B /* RefreshInterval.swift */,
 				AA02020000000000000000AB /* Secret.swift */,
 				AA02020000000000000000BB /* TodayHelper.swift */,
+				AA1D4E0000000000000000A2 /* DayKeyOwner.swift */,
 				AA020100000000000000001B /* TranscriptOffset.swift */,
 				AA020300000000000000001B /* QuotaWindow.swift */,
 				AA061000000000000000001B /* ClaudeUsageSource.swift */,
@@ -935,6 +940,7 @@
 			children = (
 				AA020200000000000000020B /* SecretTests.swift */,
 				AA020200000000000000021B /* TodayHelperTests.swift */,
+				AA1D4E0000000000000000B2 /* DayKeyOwnerTests.swift */,
 				AA020200000000000000022B /* QuotaTests.swift */,
 				AA020200000000000000023B /* ThresholdStateTests.swift */,
 				/* Plan 02.07 — reset-clock caption */
@@ -1921,6 +1927,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA020200000000000000009A /* RefreshInterval.swift in Sources */,
 				AA02020000000000000000AA /* Secret.swift in Sources */,
 				AA02020000000000000000BA /* TodayHelper.swift in Sources */,
+				AA1D4E0000000000000000A1 /* DayKeyOwner.swift in Sources */,
 				AA020200000000000000010A /* HTTPClient.swift in Sources */,
 				AA020200000000000000011A /* URLSessionHTTPClient.swift in Sources */,
 				AA020200000000000000012A /* Clock.swift in Sources */,
@@ -2087,6 +2094,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA00000100000000000000AA /* AgentsUsageBarTests.swift in Sources */,
 				AA020200000000000000020A /* SecretTests.swift in Sources */,
 				AA020200000000000000021A /* TodayHelperTests.swift in Sources */,
+				AA1D4E0000000000000000B1 /* DayKeyOwnerTests.swift in Sources */,
 				AA020200000000000000022A /* QuotaTests.swift in Sources */,
 				AA020200000000000000023A /* ThresholdStateTests.swift in Sources */,
 				AA111111000000000000003A /* QuotaGlanceTests.swift in Sources */,

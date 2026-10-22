@@ -135,7 +135,7 @@ V60|The global hotkey is off by default. The user records it in Settings. It nee
 ## §T
 
 id|status|task|cites
-T1|.|S0: Add the day-key owner: Gregorian `yyyy-MM-dd` in the current zone from an injected `Clock`, plus same-day matching of legacy `Calendar.current` keys. Wall clock only; no history yet.|V1,V2,V3,I1,I2
+T1|x|S0: Add the day-key owner: Gregorian `yyyy-MM-dd` in the current zone from an injected `Clock`, plus same-day matching of legacy `Calendar.current` keys. Wall clock only; no history yet.|V1,V2,V3,I1,I2
 T2|.|S0: Route every I1 consumer through the owner. Tests with `VirtualClock`, a Buddhist-calendar locale, and an upgrade day with legacy keys in `today.json` and notification state. No behavior change on Gregorian hosts.|V1,V2,V3,I1,I3
 T3|.|S0 gate: CI green, install, confirm the popover today totals and OpenRouter baseline survive the upgrade on this Buddhist-calendar host.|C7,V3
 T4|.|S1: `HistoryStore` types for the full v1 day file, `schemaVersion` handling, and a read-only view. Reads are `nonisolated async`.|V14,V18,V19,V20,I9,I16
