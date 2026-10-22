@@ -110,32 +110,61 @@ public struct ThresholdEngine: Sendable {
         snoozedUntilDay: [ProviderID: String],
         lastBands: [ProviderID: ThresholdBand]
     ) -> [NotificationDecision] {
-        let today = dayKeys.key(for: now)
+        evaluate(for: snapshots, now: now, snoozedUntilDay: snoozedUntilDay, lastBands: lastBands)
+            .decisions
+    }
 
-        // STEP 0 — Plan 03-08 D-11: drop snapshots marked degraded BEFORE
-        // any band-transition arithmetic. The filter is provider-agnostic; any
-        // future provider that adopts the `usage-temporarily-unavailable` tag
-        // gets the same treatment.
+    /// Every band crossed since `lastBands`, plus the decisions to schedule (SPEC V34).
+    ///
+    /// A poll that jumps several bands returns one crossing per band (0.50 → 0.97 crosses
+    /// 80 and 95) and one decision at the highest. Snooze does not hide a crossing; it only
+    /// sets `notified: false` and drops the decision, so the caller still advances
+    /// `lastBand`.
+    public func evaluate(
+        for snapshots: [UsageSnapshot],
+        now: Date,
+        snoozedUntilDay: [ProviderID: String],
+        lastBands: [ProviderID: ThresholdBand]
+    ) -> (crossings: [QuotaCrossing], decisions: [NotificationDecision]) {
+        let today = dayKeys.key(for: now)
+        var crossings: [QuotaCrossing] = []
+        var decisions: [NotificationDecision] = []
+
+        // STEP 0 — Plan 03-08 D-11 / SPEC V37: a degraded snapshot crosses nothing.
+        // The filter is provider-agnostic; any future provider that adopts the
+        // `usage-temporarily-unavailable` tag gets the same treatment.
         let filtered = snapshots.filter { $0.raw["note"] != Self.degradedTag }
 
-        return filtered.compactMap { snap -> NotificationDecision? in
+        for snap in filtered {
             // D-14: no-limit accounts have nil quota — skip entirely.
-            guard let quota = snap.quota else { return nil }
+            guard let quota = snap.quota else { continue }
 
             let newBand = currentBand(for: quota.fraction)
             let oldBand = lastBands[snap.providerID] ?? .normal
 
-            // NOTIF-02: only on UPWARD transition.
-            guard newBand > oldBand else { return nil }
-            // `.normal` is never a target (`newBand > oldBand` and `oldBand >= .normal`
-            // imply `newBand > .normal`), but the explicit gate keeps the contract obvious.
-            guard newBand != .normal else { return nil }
+            // NOTIF-02: only on UPWARD transition. `oldBand >= .normal` makes every
+            // crossed band non-normal.
+            guard newBand > oldBand else { continue }
 
             // NOTIF-05 + default decision #2: snooze suppresses ALL bands for this provider.
-            if snoozedUntilDay[snap.providerID] == today { return nil }
+            let notified = snoozedUntilDay[snap.providerID] != today
 
-            return makeDecision(snap: snap, newBand: newBand, today: today, quota: quota)
+            for band in ThresholdBand.allCases where band > oldBand && band <= newBand {
+                guard let kind = band.eventKind else { continue }
+                crossings.append(
+                    QuotaCrossing(
+                        providerID: snap.providerID,
+                        kind: kind,
+                        fraction: quota.fraction,
+                        notified: notified
+                    )
+                )
+            }
+            if notified {
+                decisions.append(makeDecision(snap: snap, newBand: newBand, today: today, quota: quota))
+            }
         }
+        return (crossings, decisions)
     }
 
     /// Maps a quota fraction to the corresponding `ThresholdBand`.

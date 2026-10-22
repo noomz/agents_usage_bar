@@ -58,3 +58,37 @@ public struct NotificationDecision: Sendable, Equatable {
         self.windowName = windowName
     }
 }
+
+/// One crossing an engine detected on this poll: a quota band, a pace warning, or a
+/// window reset (SPEC V34). Detection ignores snooze and the enabled toggles; the
+/// dispatch gate sets `notified`, and the caller advances band and fired state for every
+/// crossing so turning notifications on later the same day does not re-fire it.
+public struct QuotaCrossing: Sendable, Equatable {
+    public let providerID: ProviderID
+    public let kind: UsageEventKind
+    /// Quota-window name for pace and reset; nil for a provider-level band.
+    public let window: String?
+    /// Band: the provider's quota fraction. Pace: the window's utilization. Reset: the
+    /// window's utilization before it reset.
+    public let fraction: Double
+    public let notified: Bool
+    /// Entry for today's fired set: the window name for pace, window plus old
+    /// `resetsAt` for reset (`ResetEngine.fireKey`), nil for a band.
+    public let stateKey: String?
+
+    public init(
+        providerID: ProviderID,
+        kind: UsageEventKind,
+        window: String? = nil,
+        fraction: Double,
+        notified: Bool,
+        stateKey: String? = nil
+    ) {
+        self.providerID = providerID
+        self.kind = kind
+        self.window = window
+        self.fraction = fraction
+        self.notified = notified
+        self.stateKey = stateKey
+    }
+}

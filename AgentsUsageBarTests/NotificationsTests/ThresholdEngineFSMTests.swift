@@ -279,4 +279,55 @@ struct ThresholdEngineFSMTests {
         )
         #expect(result.isEmpty)
     }
+
+    // MARK: - Crossings (SPEC V34, V35)
+
+    @Test("multi-band jump returns one crossing per band and one decision at the highest")
+    func evaluate_multiBand_crossingPerBand() throws {
+        let result = engine.evaluate(
+            for: [snap(Self.pidA, fraction: 0.97)],
+            now: Self.noon_2026_05_13_PT,
+            snoozedUntilDay: [:],
+            lastBands: [:]
+        )
+        #expect(result.crossings.map(\.kind) == [.band80, .band95])
+        #expect(result.crossings.allSatisfy { $0.notified && $0.window == nil && $0.fraction == 0.97 })
+        try #require(result.decisions.count == 1)
+        #expect(result.decisions[0].band == .critical)
+    }
+
+    @Test("snooze keeps the crossing with notified false and drops the decision")
+    func evaluate_snoozed_crossingNotNotified() {
+        let result = engine.evaluate(
+            for: [snap(Self.pidA, fraction: 0.85)],
+            now: Self.noon_2026_05_13_PT,
+            snoozedUntilDay: [Self.pidA: Self.today],
+            lastBands: [Self.pidA: .normal]
+        )
+        #expect(result.decisions.isEmpty)
+        #expect(result.crossings == [
+            QuotaCrossing(providerID: Self.pidA, kind: .band80, fraction: 0.85, notified: false)
+        ])
+    }
+
+    @Test("same band or a fall crosses nothing; degraded crosses nothing")
+    func evaluate_noUpwardMove_noCrossing() {
+        let degraded = UsageSnapshot(
+            providerID: Self.pidB,
+            asOf: Self.noon_2026_05_13_PT,
+            tokensToday: nil,
+            costTodayUSD: nil,
+            balanceUSD: nil,
+            quota: Quota(used: 90, limit: 100, remaining: 10),
+            raw: ["note": ThresholdEngine.degradedTag]
+        )
+        let result = engine.evaluate(
+            for: [snap(Self.pidA, fraction: 0.85), degraded],
+            now: Self.noon_2026_05_13_PT,
+            snoozedUntilDay: [:],
+            lastBands: [Self.pidA: .critical]
+        )
+        #expect(result.crossings.isEmpty)
+        #expect(result.decisions.isEmpty)
+    }
 }
