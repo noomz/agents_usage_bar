@@ -1,19 +1,29 @@
 import Foundation
 
-// Folding good poll samples into the open day (SPEC V7, V8, V10, V11).
+import CryptoKit
+
+// Folding good poll samples into the open day (SPEC V7–V11, V21, V22, V25).
 
 extension DayFile {
     /// The day with every sample folded in, one record per provider (V7, V11). The zone id
     /// becomes `timeZone`, the last one seen (V6). No samples leaves the day unchanged.
-    public func merging(_ samples: [UsageSnapshot], at now: Date, timeZone: String) -> DayFile {
+    /// `accountKey` turns a provider's own account id into its account key (V21).
+    public func merging(
+        _ samples: [UsageSnapshot],
+        at now: Date,
+        timeZone: String,
+        accountKey: (String) -> String
+    ) -> DayFile {
         guard !samples.isEmpty else { return self }
         var day = self
         day.timeZone = timeZone
         for sample in samples {
             if let index = day.records.firstIndex(where: { $0.provider == sample.providerID }) {
-                day.records[index] = day.records[index].merging(sample, at: now)
+                day.records[index] = day.records[index].merging(sample, at: now, accountKey: accountKey)
             } else {
-                day.records.append(DayRecord(provider: sample.providerID, origin: .observed).merging(sample, at: now))
+                day.records.append(
+                    DayRecord(provider: sample.providerID, origin: .observed)
+                        .merging(sample, at: now, accountKey: accountKey))
             }
         }
         day.records.sort { $0.provider.rawValue < $1.provider.rawValue }
@@ -38,19 +48,70 @@ extension DayFile {
 
 extension DayRecord {
     /// The record with one good sample folded in: highest totals, last balance, and per-window
-    /// peak and end-of-day quota (V7, V8, V10).
-    public func merging(_ sample: UsageSnapshot, at now: Date) -> DayRecord {
+    /// peak and end-of-day quota, and each account seen (V7–V10). A cost counts as estimated
+    /// when any sample that reported one was estimated.
+    public func merging(_ sample: UsageSnapshot, at now: Date, accountKey: (String) -> String) -> DayRecord {
         var record = self
         record.tokens = highestKnown(tokens, sample.tokensToday)
         record.costUSD = highestKnown(costUSD, sample.costTodayUSD.map(Money.init))
+        record.costEstimated = costEstimated || (sample.costTodayUSD != nil && sample.costEstimated)
         record.balanceUSD = sample.balanceUSD.map(Money.init) ?? balanceUSD
-        for (window, fraction) in sample.quotaFractions {
-            record.quota[window] = record.quota[window]?.merging(fraction.value, resetsAt: fraction.resetsAt)
-                ?? QuotaDay(peak: fraction.value, peakResetsAt: fraction.resetsAt, endOfDay: fraction.value)
+        record.quota = quota.merging(sample.quotaFractions)
+        for account in sample.dayAccounts(accountKey: accountKey) {
+            if let index = record.accounts.firstIndex(where: { $0.key == account.key }) {
+                record.accounts[index] = record.accounts[index].merging(account)
+            } else {
+                record.accounts.append(account)
+            }
         }
+        record.accounts.sort { $0.key < $1.key }
         record.firstSeen = firstSeen ?? now
         record.lastSeen = now
         return record
+    }
+}
+
+extension DayAccount {
+    /// The key every provider's single account uses, and Claude's `~/.claude` account.
+    public static let defaultKey = "default"
+
+    /// Folds a newer sample of the same account: the newest label, billing model, and plan
+    /// (V22, V25), the highest cost (V7), and per-window peak and end-of-day quota (V8).
+    func merging(_ newer: DayAccount) -> DayAccount {
+        var account = newer
+        account.costUSD = highestKnown(costUSD, newer.costUSD)
+        account.quota = quota.merging(newer.quota.mapValues { (value: $0.peak, resetsAt: $0.peakResetsAt) })
+        return account
+    }
+
+    /// A short salted hash of a provider's own account id, so history never holds the raw
+    /// id and nobody without the salt can link it (V21, ADR 0003).
+    public static func key(forAccountID accountID: String, salt: Data) -> String {
+        let digest = SHA256.hash(data: salt + Data(accountID.utf8))
+        return digest.prefix(6).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// The stored label: never an email and never derived from a raw account id (V22).
+    static func label(name: String, key: String, plan: String?, planIsUnique: Bool, hashed: Bool) -> String {
+        if !name.contains("@"), !(hashed && name.hasPrefix("acct-")) {
+            return name
+        }
+        if let plan, planIsUnique {
+            return plan
+        }
+        return "acct-" + key.prefix(4)
+    }
+}
+
+extension [String: QuotaDay] {
+    /// Each window's peak with its reset time, and the last value as end-of-day (V8).
+    func merging(_ fractions: [String: (value: Double, resetsAt: Date?)]) -> [String: QuotaDay] {
+        var merged = self
+        for (window, fraction) in fractions {
+            merged[window] = merged[window]?.merging(fraction.value, resetsAt: fraction.resetsAt)
+                ?? QuotaDay(peak: fraction.value, peakResetsAt: fraction.resetsAt, endOfDay: fraction.value)
+        }
+        return merged
     }
 }
 
@@ -70,14 +131,56 @@ extension UsageSnapshot {
 
     /// Quota fractions by window name (V8). Windows without utilization are skipped.
     var quotaFractions: [String: (value: Double, resetsAt: Date?)] {
-        let windows = (quotaWindows ?? []).compactMap { window in
+        Self.quotaFractions(windows: quotaWindows, quota: quota)
+    }
+
+    private static func quotaFractions(
+        windows: [QuotaWindow]?,
+        quota: Quota?
+    ) -> [String: (value: Double, resetsAt: Date?)] {
+        let fractions = (windows ?? []).compactMap { window in
             window.utilization.map { (window.name, (value: $0, resetsAt: window.resetsAt)) }
         }
-        if !windows.isEmpty {
-            return Dictionary(windows, uniquingKeysWith: { first, _ in first })
+        if !fractions.isEmpty {
+            return Dictionary(fractions, uniquingKeysWith: { first, _ in first })
         }
         guard let quota else { return [:] }
-        return [Self.providerQuotaWindow: (value: quota.fraction, resetsAt: nil)]
+        return [providerQuotaWindow: (value: quota.fraction, resetsAt: nil)]
+    }
+
+    /// The accounts this sample saw (V9). A provider without `accounts` is one account. With
+    /// no billing info, a local runtime is local and any other provider metered (I6).
+    func dayAccounts(accountKey: (String) -> String) -> [DayAccount] {
+        let fallback: BillingModel = providerID.isLocalRuntime ? .local : .metered
+        guard let accounts, !accounts.isEmpty else {
+            // Claude session reads and hook mode agree on `default`; a hashed key gets a
+            // plan or key-prefix label (V22).
+            let key = accountInfo?.accountID.map(accountKey) ?? DayAccount.defaultKey
+            let label = accountInfo?.accountID == nil ? key : accountInfo?.plan ?? "acct-" + key.prefix(4)
+            return [DayAccount(
+                key: key,
+                label: label,
+                billingModel: accountInfo?.billingModel ?? fallback,
+                plan: accountInfo?.plan,
+                quota: [:].merging(quotaFractions)
+            )]
+        }
+        let plans = accounts.compactMap { $0.accountInfo?.plan }
+        return accounts.map { account in
+            let info = account.accountInfo
+            let key = info?.accountID.map(accountKey) ?? account.name
+            return DayAccount(
+                key: key,
+                label: DayAccount.label(
+                    name: account.name, key: key, plan: info?.plan,
+                    planIsUnique: plans.filter { $0 == info?.plan }.count == 1,
+                    hashed: info?.accountID != nil),
+                billingModel: info?.billingModel ?? fallback,
+                plan: info?.plan,
+                costUSD: account.costTodayUSD.map(Money.init),
+                quota: [:].merging(Self.quotaFractions(windows: account.quotaWindows, quota: account.quota))
+            )
+        }
     }
 }
 

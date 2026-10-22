@@ -190,4 +190,43 @@ struct ClaudeSwitchableProviderTests {
             Issue.record("expected .error status, got \(status)")
         }
     }
+
+    // MARK: - Billing model and plan (SPEC I6, V25)
+
+    private func writeClaudeJSON(_ json: String, account: String, home: URL) throws {
+        let url = ClaudeAccountPlans.claudeJSON(for: account, home: home)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(json.utf8).write(to: url)
+    }
+
+    @Test func claudeJSONOrganizationTypeIsThePlan() {
+        let info = ClaudeAccountPlans.info(fromClaudeJSON: Data(#"{"oauthAccount":{"organizationType":"claude_max"},"projects":{}}"#.utf8))
+        #expect(info == AccountInfo(billingModel: .subscription, plan: "max"))
+        #expect(ClaudeAccountPlans.info(fromClaudeJSON: Data(#"{"projects":{}}"#.utf8)) == AccountInfo(billingModel: .metered))
+        #expect(ClaudeAccountPlans.info(fromClaudeJSON: Data("not json".utf8)) == AccountInfo(billingModel: .metered))
+    }
+
+    @Test func accountRootsAndMissingFile() throws {
+        let home = try makeTempDir()
+        #expect(ClaudeAccountPlans.claudeJSON(for: "default", home: home) == home.appending(path: ".claude.json"))
+        #expect(ClaudeAccountPlans.claudeJSON(for: "work", home: home) == home.appending(path: ".ccs/instances/work/.claude.json"))
+        try writeClaudeJSON(#"{"oauthAccount":{"organizationType":"claude_team"}}"#, account: "work", home: home)
+        var plans = ClaudeAccountPlans(home: home)
+        #expect(plans.info(for: "work") == AccountInfo(billingModel: .subscription, plan: "team"))
+        #expect(plans.info(for: "default") == AccountInfo(billingModel: .metered))
+    }
+
+    @Test func sessionReadsAnnotateDefaultAccountAndEstimatedCost() async throws {
+        let home = try makeTempDir()
+        try writeClaudeJSON(#"{"oauthAccount":{"organizationType":"claude_pro"}}"#, account: "default", home: home)
+        let facade = ClaudeSwitchableProvider(
+            jsonl: makeJSONLProvider(rootsEmptyDir: try makeTempDir()),
+            hookProvider: ClaudeHookProvider(feedDir: try makeTempDir()),
+            source: { .sessionReads },
+            home: home
+        )
+        let snapshot = try await facade.fetch(now: Date())
+        #expect(snapshot.accountInfo == AccountInfo(billingModel: .subscription, plan: "pro"))
+        #expect(snapshot.costEstimated == (snapshot.costTodayUSD != nil))
+    }
 }

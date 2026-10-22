@@ -99,8 +99,9 @@ struct HistoryStoreTests {
                                fraction: 0.8, notified: true)
         try writeRaw(DayFile(
             date: "2026-10-22", timeZone: Self.utc.identifier,
-            records: [DayRecord(provider: Self.pid("openrouter"), tokens: 500, origin: .observed,
-                                firstSeen: Self.at("2026-10-22T01:00:00Z"), lastSeen: Self.at("2026-10-22T08:00:00Z"))],
+            records: [DayRecord(provider: Self.pid("openrouter"), tokens: 500,
+                                accounts: [DayAccount(key: "default", label: "default", billingModel: .metered)],
+                                origin: .observed, firstSeen: Self.at("2026-10-22T01:00:00Z"), lastSeen: Self.at("2026-10-22T08:00:00Z"))],
             events: [event], backfillChecked: [Self.pid("claude")]
         ), in: dir)
         let before = try inode("2026-10-22", in: dir)
@@ -347,5 +348,43 @@ struct HistoryStoreTests {
         await store.record([sample(tokens: 8)], at: Self.at("2026-10-21T09:00:00Z"))
         #expect(try await dayKeys(in: dir) == ["2026-10-20", "2026-10-22"])
         #expect(await read("2026-10-22", in: dir)?.records.first?.tokens == 8)
+    }
+
+    // MARK: - Account salt (V21, ADR 0003)
+
+    private func codexSample(accountID: String) -> UsageSnapshot {
+        var codex = sample("codex", tokens: 1)
+        codex.accountInfo = AccountInfo(billingModel: .subscription, plan: "plus", accountID: accountID)
+        return codex
+    }
+
+    @Test("a Codex account id is stored only as its salted key; the salt is made once, 0600 (V21)")
+    func saltedCodexKey() async throws {
+        let dir = makeDirectory()
+        let rawID = "synthetic-account-0001"
+        await makeStore(dir).record([codexSample(accountID: rawID)], at: Self.at("2026-10-22T09:00:00Z"))
+
+        let saltURL = dir.appending(path: HistoryStore.saltFileName)
+        let salt = try Data(contentsOf: saltURL)
+        let mode = try FileManager.default.attributesOfItem(atPath: saltURL.path(percentEncoded: false))[.posixPermissions] as? Int
+        #expect(mode == 0o600)
+
+        let bytes = try Data(contentsOf: dir.appending(path: "2026-10-22.json"))
+        #expect(String(decoding: bytes, as: UTF8.self).contains(rawID) == false)
+        let account = try #require(await read("2026-10-22", in: dir)?.records.first?.accounts.first)
+        #expect(account.key == DayAccount.key(forAccountID: rawID, salt: salt))
+        #expect(account.label == "plus")
+
+        // A relaunch reuses the salt, so the same login keeps its key.
+        await makeStore(dir).record([codexSample(accountID: rawID)], at: Self.at("2026-10-22T10:00:00Z"))
+        #expect(try Data(contentsOf: saltURL) == salt)
+        #expect(await read("2026-10-22", in: dir)?.records.first?.accounts.map(\.key) == [account.key])
+    }
+
+    @Test("no account id needs no salt, so none is made (V21, C4)")
+    func noSaltWithoutAccountID() async {
+        let dir = makeDirectory()
+        await makeStore(dir).record([sample(tokens: 1)], at: Self.at("2026-10-22T09:00:00Z"))
+        #expect(!FileManager.default.fileExists(atPath: dir.appending(path: HistoryStore.saltFileName).path(percentEncoded: false)))
     }
 }

@@ -250,7 +250,7 @@ public actor GeminiOAuthProvider: UsageProvider {
         case .success(let response):
             let windows = windows(from: response.buckets)
             let primaryQuota: Quota? = computePrimaryQuota(from: windows)
-            let snap = UsageSnapshot(
+            var snap = UsageSnapshot(
                 providerID: id,
                 asOf: now,
                 tokensToday: nil,        // D-07
@@ -261,6 +261,8 @@ public actor GeminiOAuthProvider: UsageProvider {
                 quotaWindows: windows.isEmpty ? nil : windows,
                 tooltipLabel: tooltipLabel
             )
+            // Quota is what runs out on every Code Assist tier (SPEC I6).
+            snap.accountInfo = AccountInfo(billingModel: .subscription, plan: tooltipLabel)
             lastStatus = .ok(lastSuccess: now)
             lastSnapshot = snap
             return snap

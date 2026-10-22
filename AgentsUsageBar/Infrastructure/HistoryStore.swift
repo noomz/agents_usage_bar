@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import os.log
 
@@ -15,6 +16,8 @@ import os.log
 public actor HistoryStore {
     /// Day keys kept before the current key (V17).
     public static let retainedDays = 90
+    /// The per-install salt for account keys (V21, ADR 0003).
+    public static let saltFileName = ".account-salt"
 
     private let reader: HistoryReader
     private let dayKeys: DayKeyOwner
@@ -31,6 +34,8 @@ public actor HistoryStore {
     private var seeded = false
     /// True while writes pause for a clock error, so it is logged once (V5).
     private var paused = false
+    /// Loaded from `.account-salt` the first time an account id needs a key.
+    private var salt: Data?
 
     public init(directory: URL = HistoryReader.defaultDirectory, dayKeys: DayKeyOwner) {
         self.reader = HistoryReader(directory: directory)
@@ -65,7 +70,9 @@ public actor HistoryStore {
             await seal(opening: key)
         }
         guard let day = open else { return }
-        let merged = day.merging(samples, at: now, timeZone: dayKeys.timeZoneIdentifier)
+        let merged = day.merging(samples, at: now, timeZone: dayKeys.timeZoneIdentifier) { accountID in
+            DayAccount.key(forAccountID: accountID, salt: accountSalt())
+        }
         open = merged
         if let onDisk, merged.hasSameContent(as: onDisk) { return }
         if onDisk == nil, merged.records.isEmpty { return }
@@ -105,6 +112,27 @@ public actor HistoryStore {
                 logger.error("history prune \(old, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
             }
         }
+    }
+
+    /// The salt from `.account-salt`, made on first need. A missing salt is made again, so
+    /// Codex series split rather than a second copy being kept elsewhere (V21, ADR 0003).
+    private func accountSalt() -> Data {
+        if let salt { return salt }
+        let url = reader.directory.appending(path: Self.saltFileName, directoryHint: .notDirectory)
+        if let stored = try? Data(contentsOf: url), !stored.isEmpty {
+            salt = stored
+            return stored
+        }
+        let fresh = SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
+        do {
+            try FileManager.default.createDirectory(at: reader.directory, withIntermediateDirectories: true)
+            try fresh.write(to: url, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path(percentEncoded: false))
+        } catch {
+            logger.error("history salt write failed: \(error.localizedDescription, privacy: .public)")
+        }
+        salt = fresh
+        return fresh
     }
 
     /// Temp file plus rename, so a reader sees the old file or the new one (V15, V19).
