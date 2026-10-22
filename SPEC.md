@@ -132,12 +132,16 @@ V58|Deep links: a band, pace, reset, or auth event opens Calendar on its day wit
 V59|The popover teaser is a 14-day strip (13 sealed days plus today, marked in progress). It plots daily spend when any metered account appears in the 14 days, else daily quota peak, labelled "Spend 14d" or "Peak quota 14d". Gaps are empty slots, never zero. Budgets are not shown in the popover.
 V60|The global hotkey is off by default. The user records it in Settings. It needs no Accessibility permission.
 
+### Launch state
+
+V61|Building the dependency graph changes no persisted state. Launch-time migration and pruning of `today.json`, notification state, and `history/` run in `Dependencies.startBackgroundServices()`, which the hosted test bundle never runs. A test that starts services injects an in-memory store, so tests never write the real `app.agents-usage-bar` defaults or Application Support.
+
 ## §T
 
 id|status|task|cites
 T1|x|S0: Add the day-key owner: Gregorian `yyyy-MM-dd` in the current zone from an injected `Clock`, plus same-day matching of legacy `Calendar.current` keys. Wall clock only; no history yet.|V1,V2,V3,I1,I2
 T2|x|S0: Route every I1 consumer through the owner. Tests with `VirtualClock`, a Buddhist-calendar locale, and an upgrade day with legacy keys in `today.json` and notification state. No behavior change on Gregorian hosts.|V1,V2,V3,I1,I3
-T3|.|S0 gate: CI green, install, confirm the popover today totals and OpenRouter baseline survive the upgrade on this Buddhist-calendar host.|C7,V3
+T3|~|S0 gate: Move notification-state migrate and prune into `startBackgroundServices` with an injected state store (B1). Clear the stale `dayKeyMigration.notif.` marker on this host. CI green, install, confirm the popover today totals, OpenRouter baseline, and today's fired bands survive the upgrade on this Buddhist-calendar host.|C7,V3,V61
 T4|.|S1: `HistoryStore` types for the full v1 day file, `schemaVersion` handling, and a read-only view. Reads are `nonisolated async`.|V14,V18,V19,V20,I9,I16
 T5|.|S1: Merge each poll into the open day (max totals, last balance, quota peak and end-of-day, presence), write only on change, seed at launch, seal on the first later key, prune past 90 days.|V7,V8,V11,V12,V13,V15,V16,V17,C4,I4,I5
 T6|.|S1: Monotonic day key from the newest day file, and the more-than-1-day pause. Regression tests with a fixed `Clock`: sleep Mon→Thu, Tokyo→Honolulu, Honolulu→Tokyo, `America/New_York` DST spring and fall, clock set back 10 days.|V4,V5,V6,V12,ADR0002
@@ -171,3 +175,4 @@ T32|.|S7 gate: CI green, install, teaser, hotkey, and a notification click each 
 ## §B
 
 id|date|cause|fix
+B1|2026-10-22|Hosted test bundle shares the app's bundle id and real UserDefaults. `makeProduction()` ran `migrateLegacyDayKeys` during composition, before the `isHostingTests` guard. Test plan `region: US` made the legacy calendar Gregorian, so `2569-…` keys rekeyed to themselves and the run-once marker was stamped. The installed app would skip migration and re-fire today's bands.|V61

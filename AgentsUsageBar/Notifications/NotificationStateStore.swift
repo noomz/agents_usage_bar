@@ -86,7 +86,7 @@ public protocol NotificationStateStorage: Sendable {
     func allRecordsForToday(_ today: String) -> [(ProviderID, NotificationStateRecord)]
 
     /// Removes every record whose stored day is older than `(today - retentionDays)`.
-    /// Recommended `retentionDays = 7`. Called once at app launch from `AppDependencies.makeProduction()`.
+    /// Recommended `retentionDays = 7`. Called once at app launch from `Dependencies.startBackgroundServices()`.
     func pruneOldKeys(olderThan retentionDays: Int, today: String)
 
     /// Rewrites every record stored by a pre-S0 build, whose day and `snoozedUntilDay` are

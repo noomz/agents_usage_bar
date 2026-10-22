@@ -38,6 +38,9 @@ public final class Dependencies {
     /// `showIfNeeded()` is called from `startBackgroundServices()` after the scheduler starts;
     /// it is a no-op when `preferences.hasSeenWelcome == true` (D-10).
     public let welcomeWindowController: WelcomeWindowController
+    /// Notification FSM state, migrated and pruned by `startBackgroundServices()`.
+    public let notificationState: any NotificationStateStorage
+    public let dayKeys: DayKeyOwner
 
     public init(
         store: AggregateStore,
@@ -47,7 +50,9 @@ public final class Dependencies {
         powerObserver: PowerObserver,
         windowActivationObserver: WindowActivationObserver,
         preferences: UserPreferencesStore,
-        welcomeWindowController: WelcomeWindowController
+        welcomeWindowController: WelcomeWindowController,
+        notificationState: any NotificationStateStorage,
+        dayKeys: DayKeyOwner
     ) {
         self.store = store
         self.scheduler = scheduler
@@ -57,6 +62,8 @@ public final class Dependencies {
         self.windowActivationObserver = windowActivationObserver
         self.preferences = preferences
         self.welcomeWindowController = welcomeWindowController
+        self.notificationState = notificationState
+        self.dayKeys = dayKeys
     }
 
     // MARK: - Issue #18 — launch-time startup
@@ -76,6 +83,13 @@ public final class Dependencies {
     public func startBackgroundServices() async {
         guard !backgroundServicesStarted else { return }
         backgroundServicesStarted = true
+
+        // Pre-S0 records are rekeyed before the first poll reads them (SPEC V3), and records
+        // older than 7 days are pruned to bound the UserDefaults footprint. This runs here, not
+        // in `makeProduction()`, because the hosted test bundle builds the graph against the
+        // real defaults but never starts services (V61).
+        notificationState.migrateLegacyDayKeys(dayKeys)
+        notificationState.pruneOldKeys(olderThan: 7, today: dayKeys.today())
 
         // Plan 02.05 — install snooze action handler BEFORE the poll loop starts
         // so any notification fired by the first refresh has its action wired.
@@ -165,11 +179,8 @@ public enum AppDependencies {
         let notifications: any NotificationManager = UNNotificationManager(clock: clock, dayKeys: dayKeys)
 
         // 8b. Plan 02.05 — Per-(provider, day) FSM persistence + snooze (NOTIF-04 / NOTIF-05).
-        //     Prunes records older than 7 days at app launch — bounds the UserDefaults footprint.
-        //     Pre-S0 records are rekeyed first so the upgrade day keeps its fired bands (V3).
+        //     Migrated and pruned by `startBackgroundServices()` (V61).
         let notificationState = UserDefaultsNotificationStateStore()
-        notificationState.migrateLegacyDayKeys(dayKeys)
-        notificationState.pruneOldKeys(olderThan: 7, today: dayKeys.today())
 
         // 9. Aggregate store — seeds from cache immediately for cold-launch rendering (UI-07)
         let store = AggregateStore(
@@ -251,7 +262,9 @@ public enum AppDependencies {
             powerObserver: powerObserver,
             windowActivationObserver: windowActivationObserver,
             preferences: preferences,
-            welcomeWindowController: welcomeWindowController
+            welcomeWindowController: welcomeWindowController,
+            notificationState: notificationState,
+            dayKeys: dayKeys
         )
     }
 
