@@ -125,9 +125,7 @@ public actor HistoryStore {
         }
         let fresh = SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
         do {
-            try FileManager.default.createDirectory(at: reader.directory, withIntermediateDirectories: true)
-            try fresh.write(to: url, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path(percentEncoded: false))
+            try writePrivately(fresh, to: url)
         } catch {
             logger.error("history salt write failed: \(error.localizedDescription, privacy: .public)")
         }
@@ -135,14 +133,24 @@ public actor HistoryStore {
         return fresh
     }
 
-    /// Temp file plus rename, so a reader sees the old file or the new one (V15, V19).
     private func write(_ day: DayFile) {
         do {
-            try FileManager.default.createDirectory(at: reader.directory, withIntermediateDirectories: true)
-            try day.encoded().write(to: reader.fileURL(for: day.date), options: .atomic)
+            try writePrivately(day.encoded(), to: reader.fileURL(for: day.date))
             onDisk = day
         } catch {
             logger.error("history write \(day.date, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// Temp file plus rename, so a reader sees the old file or the new one (V15, V19).
+    /// `history/` is 0700 and its files 0600 (V23); the directory mode is set on every
+    /// write so a directory made by an older build is tightened too.
+    private func writePrivately(_ data: Data, to url: URL) throws {
+        let fm = FileManager.default
+        let directory = reader.directory.path(percentEncoded: false)
+        try fm.createDirectory(atPath: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory)
+        try data.write(to: url, options: .atomic)
+        try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path(percentEncoded: false))
     }
 }

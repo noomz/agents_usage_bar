@@ -65,6 +65,8 @@
 		AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000024B /* FileCacheStoreTests.swift */; };
 		AA1D4F00000000000000004A /* HistoryReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4F00000000000000004B /* HistoryReaderTests.swift */; };
 		AA1D50000000000000000004A /* HistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D50000000000000000004B /* HistoryStoreTests.swift */; };
+		AA1D52000000000000000004A /* SyntheticHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D52000000000000000004B /* SyntheticHistoryTests.swift */; };
+		AA1D51000000000000000004A /* SyntheticHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D51000000000000000004B /* SyntheticHistory.swift */; };
 		AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000025B /* URLSessionHTTPClientTests.swift */; };
 		/* Plan 05-02 — UserPreferencesStore + AppEnvironmentKeys app sources */
 		AA050200000000000000001A /* UserPreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000001B /* UserPreferencesStore.swift */; };
@@ -487,6 +489,8 @@
 		AA020200000000000000024B /* FileCacheStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStoreTests.swift; sourceTree = "<group>"; };
 		AA1D4F00000000000000004B /* HistoryReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryReaderTests.swift; sourceTree = "<group>"; };
 		AA1D50000000000000000004B /* HistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStoreTests.swift; sourceTree = "<group>"; };
+		AA1D52000000000000000004B /* SyntheticHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntheticHistoryTests.swift; sourceTree = "<group>"; };
+		AA1D51000000000000000004B /* SyntheticHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntheticHistory.swift; sourceTree = "<group>"; };
 		AA020200000000000000025B /* URLSessionHTTPClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionHTTPClientTests.swift; sourceTree = "<group>"; };
 		/* Plan 05-02 — UserPreferencesStore + AppEnvironmentKeys file references */
 		AA050200000000000000001B /* UserPreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferencesStore.swift; sourceTree = "<group>"; };
@@ -997,6 +1001,8 @@
 				AA020200000000000000024B /* FileCacheStoreTests.swift */,
 				AA1D4F00000000000000004B /* HistoryReaderTests.swift */,
 				AA1D50000000000000000004B /* HistoryStoreTests.swift */,
+				AA1D52000000000000000004B /* SyntheticHistoryTests.swift */,
+				AA1D51000000000000000004B /* SyntheticHistory.swift */,
 				AA020200000000000000025B /* URLSessionHTTPClientTests.swift */,
 				AA040300000000000000010B /* URLSessionHTTPClientTimeoutTierTests.swift */,
 				AA020100000000000000020B /* FileCacheStoreSchemaV2Tests.swift */,
@@ -2139,6 +2145,8 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */,
 				AA1D4F00000000000000004A /* HistoryReaderTests.swift in Sources */,
 				AA1D50000000000000000004A /* HistoryStoreTests.swift in Sources */,
+				AA1D52000000000000000004A /* SyntheticHistoryTests.swift in Sources */,
+				AA1D51000000000000000004A /* SyntheticHistory.swift in Sources */,
 				AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */,
 				AA040300000000000000010A /* URLSessionHTTPClientTimeoutTierTests.swift in Sources */,
 				AA030300000000000000010A /* TomlReaderTests.swift in Sources */,

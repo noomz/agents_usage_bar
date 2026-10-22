@@ -76,7 +76,7 @@ struct OllamaCloudProviderTests {
     """#.utf8)
     /// Made-up personal fields: prove they are never decoded or surfaced (V19).
     static let meJSON = Data(#"""
-    {"ID":"00000000-0000-0000-0000-000000000000","Name":"example-user","Email":"user@example.invalid",
+    {"ID":"00000000-0000-0000-0000-000000000000","Name":"example-user","Email":"user@example.com",
      "AvatarURL":"https://example.invalid/a.png","Bio":"","Links":[],"CreatedAt":"2026-01-01T00:00:00Z","Plan":"pro"}
     """#.utf8)
     static let now = Date(timeIntervalSince1970: 1_790_000_000)
@@ -268,7 +268,7 @@ struct OllamaCloudProviderTests {
 
         let snap = try await Self.provider(Self.happyHTTP()).fetch(now: Self.now)
         let surfaced = snap.raw.values.joined() + (snap.tooltipLabel ?? "")
-        for secret in ["example-user", "user@example.invalid", "00000000-0000", "fake-ollama-env"] {
+        for secret in ["example-user", "user@example.com", "00000000-0000", "fake-ollama-env"] {
             #expect(!surfaced.contains(secret))
         }
     }
@@ -276,7 +276,7 @@ struct OllamaCloudProviderTests {
     @Test func plan_2xxWithoutPlan_notRePosted() async throws {
         let http = FakeOllamaCloudHTTPClient()
         http.script("GET", "/api/usage", .success(Self.usageJSON))
-        http.script("POST", "/api/me", .success(Data(#"{"Email":"user@example.invalid"}"#.utf8)))
+        http.script("POST", "/api/me", .success(Data(#"{"Email":"user@example.com"}"#.utf8)))
         let provider = Self.provider(http)
         _ = try await provider.fetch(now: Self.now)
         let second = try await provider.fetch(now: Self.now)
