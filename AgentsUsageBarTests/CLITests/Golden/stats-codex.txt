@@ -1,0 +1,11 @@
+Codex · 2026-03-08 – 2026-03-14 · 7 days (today open)
+date        spend  value  tokens  peak    events  markers
+2026-03-08      ?      ?  200.0K  50% 5h          !
+2026-03-09      ?      ?   50.0K                  ! backfilled
+2026-03-10      ?      ?  100.0K  50% 5h          !
+2026-03-11      ?      ?  150.0K  50% 5h          !
+2026-03-12      ?      ?  200.0K  50% 5h          !
+2026-03-13      ?      ?   50.0K  50% 5h          !
+2026-03-14      ?      ?  100.0K                  ! backfilled open
+total          ?!     ?!  850.0K
+! incomplete

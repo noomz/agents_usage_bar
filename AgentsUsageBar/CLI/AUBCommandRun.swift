@@ -60,6 +60,46 @@ extension AUBCommand {
             return try await runUsage(opts, quotaOnly: false)
         case .quota(let opts):
             return try await runUsage(opts, quotaOnly: true)
+        case .stats(let opts):
+            return try await runStats(opts)
+        }
+    }
+
+    private static func runStats(_ opts: StatsOptions) async throws -> Int32 {
+        let result = try await stats(opts, reader: HistoryReader(), owner: DayKeyOwner())
+        fputs(result.text, result.code == 0 ? stdout : stderr)
+        return result.code
+    }
+
+    /// Reads `history/` read-only (V19). No history prints one line and exits 0; a store
+    /// that cannot be listed is an error with exit 1 (V46). The newest day file keeps today
+    /// from going back (V4).
+    static func stats(
+        _ opts: StatsOptions,
+        reader: HistoryReader,
+        owner: DayKeyOwner
+    ) async throws -> (text: String, code: Int32) {
+        let keys: [String]
+        do {
+            keys = try await reader.dayKeys()
+        } catch {
+            let path = reader.directory.path(percentEncoded: false)
+            return ("error: cannot read usage history at \(path): \(error.localizedDescription)\n", 1)
+        }
+        guard let newest = keys.last else {
+            return (StatsTextRenderer.noHistory + "\n", 0)
+        }
+        owner.advanceNewest(to: newest)
+        let range = try StatsRange.resolve(today: owner.today(), days: opts.days, since: opts.since, until: opts.until).get()
+        let days = try await reader.days(in: range.keys[0]...range.keys[range.keys.count - 1])
+        let color = CLIFormat.shouldColor(noColor: opts.noColor)
+        switch opts.filter {
+        case .one(let id):
+            return (StatsTextRenderer.renderProvider(days, id: id, range: range, color: color), 0)
+        case .enabled, .all:
+            return (StatsTextRenderer.renderSummary(
+                days, range: range, includeLocal: opts.filter == .all,
+                order: UserDefaults.standard.aubProviderOrder, color: color), 0)
         }
     }
 

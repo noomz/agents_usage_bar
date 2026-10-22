@@ -1,0 +1,7 @@
+2026-03-01 – 2026-03-14 · 14 days (today open)
+[2mprovider[0m    [2mspend[0m     [2mtokens[0m  [2mpeak[0m      [2mdays[0m  [2mtrend[0m
+OpenRouter  $26.00    440.0K           14/14  [2m$[0m▂▄▆█▂▄▆█▂▄▆█▂▄
+Claude      [2mmax/pro[0m     2.4M  [31m100% 5h[0m  12/14  [2m%[0m[2m·[0m▇██▂▄▇[2m·[0m█▅▆▇██
+Codex       ?![2m +plus[0m    1.7M  [33m50% 5h[0m   14/14  [2m%[0m▄▄▄[2m·[0m▄▄▄▄[2m·[0m▄▄▄▄[2m·[0m
+total       $26.00!
+[2m· gap  ! incomplete[0m

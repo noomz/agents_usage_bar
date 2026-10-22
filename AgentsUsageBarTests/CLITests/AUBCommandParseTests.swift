@@ -136,4 +136,31 @@ struct AUBCommandParseTests {
         #expect(AUBCommand.isSubcommand("themes"))
         #expect(AUBCommand.isSubcommand("--theme"))
     }
+
+    @Test("stats: summary, drill-down, all, and range flags (V42, V44)")
+    func stats() {
+        #expect(try! AUBCommand.parse(["stats"]).get() == .stats(.init()))
+        #expect(try! AUBCommand.parse(["stats", "claude", "--days", "30"]).get()
+                == .stats(.init(filter: .one(.claude), days: 30)))
+        #expect(try! AUBCommand.parse(["stats", "--provider", "all", "--no-color"]).get()
+                == .stats(.init(filter: .all, noColor: true)))
+        #expect(try! AUBCommand.parse(["stats", "--since", "2026-10-01", "--until", "2026-10-07"]).get()
+                == .stats(.init(since: "2026-10-01", until: "2026-10-07")))
+        #expect(AUBCommand.isSubcommand("stats"))
+    }
+
+    @Test("stats accepts and ignores --theme (V46)")
+    func statsTheme() {
+        #expect(try! AUBCommand.parse(["stats", "--theme", "classic"]).get() == .stats(.init()))
+    }
+
+    @Test("stats rejects bad range values; other commands reject range flags")
+    func statsErrors() {
+        #expect(AUBCommand.parse(["stats", "--days", "0"]) == .failure(.invalidDays("0")))
+        #expect(AUBCommand.parse(["stats", "--days"]) == .failure(.missingValue("--days")))
+        #expect(AUBCommand.parse(["stats", "--since", "2026-13-01"])
+                == .failure(.invalidDay(flag: "--since", value: "2026-13-01")))
+        #expect(AUBCommand.parse(["usage", "--days", "3"]) == .failure(.unexpectedArgument("--days")))
+        #expect(AUBCommand.parse(["stats", "nope"]) == .failure(.unknownProvider("nope")))
+    }
 }
