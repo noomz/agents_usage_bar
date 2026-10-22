@@ -11,7 +11,7 @@ A macOS menu bar app that surfaces today's AI agent usage across multiple provid
 
 - **Tech stack**: Swift + SwiftUI native macOS app — no Electron/Tauri/web wrappers
 - **Distribution**: Notarized DMG via GitHub Releases — no App Store in v1
-- **Aggregation window**: Today only (local-midnight reset) — no multi-day persistence in v1
+- **Aggregation window**: Today live (local-midnight reset) plus 90 days of daily history in local JSON day files (`history/`, see SPEC.md "Usage history"; this lifts the earlier today-only rule)
 - **Secrets**: No Keychain entry UI in v1 — read keys from env vars and existing CLI config files
 - **Refresh**: Background poll every 1–5 min (default 5m) + on-open refresh — must not noticeably impact battery; JSONL streaming reads only the delta since last poll
 - **Local file access**: Ship unsandboxed with Hardened Runtime + notarization. App Sandbox blocks reads of `~/.claude/projects/**`, `~/.codex/sessions/**`, `~/.gemini/oauth_creds.json` without temporary-exception entitlements deprecated by Apple. Since v1 is DMG-only (no MAS), unsandboxed is correct.
@@ -72,8 +72,8 @@ A macOS menu bar app that surfaces today's AI agent usage across multiple provid
 | `Codable` | `swift-json` / `SwiftyJSON` | Heterogeneous, deeply nested, unknown-shape payloads where schemaless traversal is genuinely easier. Our provider APIs have stable schemas — Codable wins. |
 | `DispatchSource` file events | `FSEvents` C API (CoreServices) | Use FSEvents if you need recursive history-replay-since-timestamp semantics. We don't — we poll on a timer anyway and only use file events to bust the cache between polls. |
 | `UserDefaults` for tiny state | **JSON flat file** in `~/Library/Application Support/AgentsUsageBar/today.json` | UserDefaults is fine for the "today" rollover marker + per-provider warning-fired flags. Flat JSON is better when you want the v1 user to be able to `cat` it during debugging. Pick **UserDefaults** for v1 (simpler, atomic, no FS plumbing). Switch to flat JSON only if you grow >a few KB of state. |
-| `UserDefaults` | Core Data / SwiftData | **Don't.** Today-only aggregation means we hold ≤8 providers × a handful of numbers in RAM. Any DB is overkill. SwiftData also requires macOS 14+ anyway and adds compile-time complexity for zero v1 benefit. |
-| `UserDefaults` | SQLite (GRDB / SQLite.swift) | Only if/when v2 adds historical multi-day charts. Out of scope here. |
+| `UserDefaults` | Core Data / SwiftData | **Don't.** Live state is ≤8 providers × a handful of numbers in RAM, and history is ≤90 small JSON day files. Any DB is overkill. SwiftData also requires macOS 14+ anyway and adds compile-time complexity for zero v1 benefit. |
+| `UserDefaults` | SQLite (GRDB / SQLite.swift) | Rejected for usage history too: under ~1k rows fits one JSON file per day (SPEC.md "Usage history"). Revisit only if retention grows far past 90 days. |
 | Swift Testing | XCTest | If a team member is uncomfortable with the macro syntax, or you need `XCUITest` UI testing. XCTest is still fully supported and Apple is not deprecating it. |
 | `create-dmg/create-dmg` (shell) | `sindresorhus/create-dmg` (Node) | Choose the Node one if you want zero configuration and accept a Node 20+ dependency in CI. Choose the shell one (recommended) for explicit layout control and reproducibility. |
 | `xcrun notarytool` (API key) | `notarytool` with app-specific password | Use app-specific password for local one-off submissions; **never** in CI. API key (`.p8`) is the only sane CI credential. |

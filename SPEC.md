@@ -1,81 +1,172 @@
-# SPEC — Codex accounts
+# SPEC — Usage history
 
-Prior spec archived: `docs/specs/ollama-cloud-usage.md`.
+Prior spec archived: `docs/specs/codex-accounts.md`.
 
-One Codex row. Auto-detect CLIProxy logins under `~/.ccs/cliproxy/auth/`. A machine with one ChatGPT login keeps today's single row, including live rollout windows and `max(primary, secondary)`. Two or more logins use the Claude header-plus-children layout. In that mode each login's quota comes from `wham/usage` with that login's own token. Today's spend stays on the header.
+AUB keeps a daily record of each provider's usage for the last 90 days: tokens, spend, quota peaks, and the accounts seen that day. Days the app missed are rebuilt where the provider still keeps the data. Notable moments (quota bands, budgets, pace, resets, sign-in lost) are recorded as usage events. Optional monthly budgets alert on spend. The history is shown by `aub stats`, exported as JSON or CSV, and drawn in a native dashboard window with a 14-day teaser in the popover.
+
+Vocabulary is in `GLOSSARY.md` (day record, day key, sealed, observed, backfilled, gap, usage event, estimated cost, billing model, account, account key, account label, spend, API-equivalent value, budget, month spend, dashboard). Decisions with trade-offs are in `docs/adr/0001`–`0003`.
 
 ## §G
 
-G1|With two or more enabled Codex logins, show each login's 5-hour quota under one Codex row. One login stays one row and keeps today's `max(primary, secondary)` quota.
+G1|Record per-provider, per-account daily usage for 90 days and show it in `aub stats`, JSON/CSV export, and a dashboard window, with usage events and monthly spend budgets, without adding polling cost.
 
 ## §C
 
-C1|This file is the contract. Implementation waits until the user invokes build.
-C2|No new config key. Discovery is automatic when the auth files exist.
-C3|`ProviderID` stays `.codex`. Logins are `UsageSnapshot.accounts` on that one snapshot.
-C4|This repo is public. This spec, tests, and fixtures contain no real access token, refresh token, id token, email, account id, or auth filename from a real machine.
-C5|`CodexUsageResponse` and `CodexRolloutEvent.RateLimits` stay separate types. `wham/usage` uses singular `rate_limit.primary_window` and `limit_window_seconds`. Rollout files use plural `rate_limits.primary` and `window_minutes`.
-C6|The single-account quota fix already in the working tree stays. Do not revert `CodexRolloutEvent.isPostLimitNulling`, `droppingWindowsReset(atOrBefore:)`, the parser inherit rule, or the windowless `wham/usage` overlay.
-C7|A Codex commit does not take unrelated dirty hunks. Known unrelated paths at spec time: `AgentsUsageBar/CLI/AUBCommand.swift`, `AgentsUsageBarTests/CLITests/AUBCommandParseTests.swift`, `AgentsUsageBarTests/CLITests/Golden/compact-empty-cached.txt`, `README.md`, `docs/specs/aub-cli-themes.md`, plus untracked `.pi/`, `AGENTS.md`, `docs/local/`, and `scripts/__pycache__/`. `CompactTextRenderer.swift` is both unrelated-dirty and a file this spec edits. Commit only the hunks this spec requires.
-C8|Do not claim the installed `aub` shows the new rows until `~/Applications/AgentsUsageBar.app` is replaced. `~/.local/bin/aub` points at that app binary.
+C1|This spec lifts the CLAUDE.md v1 constraint "today only, no multi-day persistence". The aggregation window is today live plus 90 days of daily history in local files. The CLAUDE.md constraint line and `.planning/PROJECT.md` change in the same commit as this spec.
+C2|This file is the contract. Implementation waits until the user invokes build.
+C3|This repo is public. Tests, fixtures, and commits contain no real spend, account name, email, account id, or token. History fixtures are generated synthetic data (fake slugs, round numbers), never copied from a real store.
+C4|Battery: history adds no timer, wakeup, or network call to the poll path. All history work rides the existing poll, the existing date-change detection, or a user action.
+C5|Swift and SwiftUI only. No new third-party dependency. Charts use Swift Charts. The hotkey uses Carbon `RegisterEventHotKey`.
+C6|Work ships in slices S0–S7 in §T order. Each slice is releasable on its own, with no feature flag. Day-file `schemaVersion` 1 and export `schemaVersion` 1 freeze at the first release that contains them. After that, fields are only added.
+C7|A slice is done when CI Build-and-test is green on its PR (a local Xcode build is not proof, because local Xcode accepts code CI rejects), and then `scripts/build-local.sh` installs the app and the slice's real check passes on the installed app. `~/.local/bin/aub` points at the installed app binary.
+C8|One GitHub issue per slice. Build PRs close their slice's issue.
 
 ## §I
 
-I1|CLIProxy auth|`~/.ccs/cliproxy/auth/codex-*.json`. Fields used: `type`, `email`, `account_id`, `access_token`, `disabled`. Filename shape `codex-<8 hex>-<email>-<plan>.json`. `priority` and `expired` are ignored.
-I2|Codex CLI auth|`~/.codex/auth.json` via `CodexCredentialLoader`. Subscription bearer is `tokens.access_token` plus `tokens.account_id`. Top-level `OPENAI_API_KEY` is the existing API-key path and is not a login row.
-I3|Quota HTTP|`GET https://chatgpt.com/backend-api/wham/usage` with `Authorization: Bearer`. Send `ChatGPT-Account-Id` only when that login has an `account_id`. Decode with `CodexUsageResponse`. The call does not go through CLIProxy.
-I4|Rollout|Today's Codex JSONL sessions stay the source of `tokensToday` and `costTodayUSD`. They do not record which login served a turn.
-I5|Snapshot|`UsageSnapshot.accounts: [AccountUsage]?` in `Domain/UsageSnapshot.swift`. Nil means one row. Count >= 2 means children.
-I6|Popover|`UI/ProviderRowView.swift`. Header bar uses `displayedQuota`. Children render when `accounts.count >= 2`. `AccountChildRow` currently always uses `ClaudeQuotaGlanceView`.
-I7|Compact CLI|`CLI/CompactTextRenderer.swift` `usageLines` and `quotaLines`. Both account branches are gated by `p.id == .claude`. Severity is `severityLine`.
-I8|Classic CLI and JSON|`CLI/UsageTextRenderer.swift` `accountLines` currently draws `claudeDualBarLine`. Usage JSON `ProviderJSON` in `CLI/UsageJSONRenderer.swift` already emits `accounts`. Quota JSON `QuotaJSONRow` has no `accounts` field today.
-I9|Menu bar tint and notify|`AggregateStore.maxQuotaFraction` reads `snapshot.quota` and `snapshot.quotaWindows`. `ThresholdEngine` reads `snapshot.quota` only.
+I1|Today key|`Domain/TodayHelper.swift` `formatYYYYMMDD(_:calendar:)` defaults to `Calendar.current`, so a Buddhist-calendar host gets `2569-…` keys. Callers: `Notifications/ThresholdEngine.swift`, `PaceEngine.swift`, `ResetEngine.swift`, `NotificationManager.swift` (`isoDayString`), `NotificationStateStore.swift` keys `notif.<provider>.<yyyy-MM-dd>`, `Infrastructure/PowerObserver.swift`, `Infrastructure/FileCacheStore.swift` (daily accumulator, baseline), `Aggregation/AggregateStore.swift` (snooze, threshold dispatch).
+I2|Clock|`Infrastructure/Clock.swift`: `protocol Clock`, `SystemClock`, `VirtualClock` for tests.
+I3|Live cache|`FileCacheStore` writes `~/Library/Application Support/AgentsUsageBar/today.json`. OpenRouter today cost is a baseline delta via `cache.baseline(for:on:)` and `maintainBaseline` in `Providers/OpenRouter/OpenRouterProvider.swift`.
+I4|Poll|`AggregateStore.refresh(now:)`. Threshold dispatch is `fireThresholdNotificationsIfNeeded(now:)`. Snooze is `snoozeToday(providerID:on:)`.
+I5|Snapshot|`Domain/UsageSnapshot.swift`: `UsageSnapshot` (`tokensToday`, `costTodayUSD`, `quota`, `quotaWindows`, `accounts`), `AccountUsage`.
+I6|Billing model sources|Claude `subscriptionType` (`Providers/Claude/ClaudeCredentialLoader.swift`, `ClaudeOAuthClient.swift`). Codex subscription login vs API key (`CodexLoginDiscovery`, `CodexCredentialLoader`). Gemini tier. Ollama Cloud plan. OpenRouter and Grok credits are metered. Local runtimes are local.
+I7|Account names|Claude: ccs instance slug or `default` (`Providers/Claude/ClaudeHookProvider.swift`). Codex: `CodexLoginDiscovery` labels, which can be an email (archived Codex spec V9).
+I8|Estimated cost|Claude cost in `sessionReads` mode (`Domain/ClaudeUsageSource.swift`) and Codex rollout cost are tokens times the bundled price table (`Resources/Pricing/`).
+I9|History dir|`~/Library/Application Support/AgentsUsageBar/history/`: `yyyy-MM-dd.json` day files and `.account-salt`.
+I10|Backfill sources|Claude `~/.claude/projects/**/*.jsonl` (and ccs instance roots), kept about 30 days by Claude's cleanup default. Codex `~/.codex/sessions/YYYY/MM/DD/` rollouts (Gregorian path components). OpenRouter `GET /api/v1/activity`, the last 30 UTC days, needs a management key.
+I11|OpenRouter management key|New. `OPENROUTER_MANAGEMENT_KEY` env, else `management_key` in the `[openrouter]` section of `config.toml`, the same layering as `OPENROUTER_API_KEY` in `Config/ConfigStore.swift`.
+I12|Config|`Config/AppConfig.swift`, `Config/ConfigStore.swift` (`config.toml`), `Config/UserPreferencesStore.swift` (Settings values in UserDefaults win over config, like `threshold`). Settings UI in `UI/Settings/`.
+I13|CLI|`CLI/AUBCommand.swift`, `CLI/AUBCommandRun.swift`, `CLI/CompactTextRenderer.swift` (palette, glyphs, severity), `CLI/CLITheme.swift`. New subcommands `stats` and `dashboard`.
+I14|App shell|`App/AgentsUsageBarApp.swift` (`MenuBarExtra`), `App/WindowActivationObserver.swift` and `setActivationPolicy`, `UI/PopoverRootView.swift`. `Resources/Info.plist` has no `CFBundleURLTypes` today.
+I15|Secret scan|SEC-04: `scripts/check-secrets.sh` and the scan step in `.github/workflows/ci.yml`. Today it matches API-key prefixes only.
+I16|Day file v1|`{schemaVersion: 1, date, timeZone, records: [DayRecord], events: [UsageEvent], backfillChecked: [providerId]}`. `DayRecord`: `provider`, `tokens?`, `costUSD?`, `costEstimated`, `balanceUSD?`, `quota: {window: {peak, peakResetsAt?, endOfDay}}`, `accounts: [{key, label, billingModel, plan?, billingModelAssumed, costUSD?, quota}]`, `origin`, `firstSeen?`, `lastSeen?`. `UsageEvent`: `time`, `provider?`, `kind`, `window?`, `account?`, `fraction`, `notified`, `carriedOver`. Money is a decimal string.
 
 ## §V
 
-### Single login, unchanged except the credential source
+### Day key
 
-V1|The rollout parser copies an older rate-limit window forward only when the newer event is post-limit nulling. Post-limit nulling means both windows are null and either `limit_id == "premium"` or `rate_limit_reached_type` is set. A CLIProxy null window keeps `limit_id` `codex` and does not inherit.
-V2|After that copy, the parser drops a window whose reset is at or before the newer event's time.
-V3|Zero subscription logins leaves today's provider behavior in place. That includes the API-key `~/.codex/auth.json` path, a missing auth file, and a rollout-only row.
-V4|One subscription login produces `accounts == nil`. Its quota stays `max(primary, secondary)`, from the live rollout windows when those exist. `wham/usage` is not required in that case. A windowless rollout overlays quota from `wham/usage` for that one login and keeps the rollout's `tokensToday` and `costTodayUSD`. A failed overlay leaves the rollout row with no quota bar. Primary-only rows and a required per-login `wham/usage` call apply only when two or more logins exist.
-V5|The one login's token is the token `wham/usage` uses. A lone CLIProxy file is enough when `~/.codex/auth.json` is absent. When the same `account_id` exists in both stores, the CLIProxy file supplies the token and `~/.codex/auth.json` is not a second login.
+V1|One day-key owner gives the current day key to every "today" consumer in I1 and to `HistoryStore`. No consumer computes a day key from `Calendar.current` itself.
+V2|A day key is `yyyy-MM-dd` from a Gregorian calendar in the current time zone, whatever calendar the user's locale uses. Display labels follow the system calendar and locale. Grid math, file names, and export use day keys.
+V3|On the first launch after S0, a key that `today.json` or `NotificationStateStore` stored with the old `Calendar.current` format for the same day counts as today. The upgrade does not reset the OpenRouter baseline, lose the daily accumulator, or fire a band notification a second time.
+V4|The day key never decreases across polls, wake, relaunch, or a time zone change. When the wall-clock date is earlier than the newest key, polls write to the newest key and a sealed day never reopens. A date skipped forward is a gap. The newest key is the newest day file in `history/`; when there is none, the wall clock decides. No other copy of it is stored.
+V5|When the wall-clock date is more than 1 day behind the newest key, history writes pause and the app logs it. The popover keeps showing live numbers.
+V6|A time zone change on the same date keeps the key. The record stores the last zone id seen that day. DST days of 23 or 25 hours are stored as they are.
 
-### Which logins exist
+### Day records
 
-V6|CLIProxy discovery reads `codex-*.json` in `~/.ccs/cliproxy/auth/`. A missing directory means zero CLIProxy logins. A file is skipped when `disabled` is true, when `type` is present and not `codex`, when `access_token` is missing or empty, when `account_id` is missing or empty, or when the JSON cannot be read. Skipped files do not drop the others.
-V7|`~/.codex/auth.json` is an extra login only when `tokens.access_token` is non-empty, `tokens.account_id` is non-empty, and that `account_id` is not already in the enabled CLIProxy set. An API-key auth file is never a login. A subscription auth file with no `account_id` is a login only when the enabled CLIProxy set is empty. That lone login omits `ChatGPT-Account-Id`, matching `CodexOAuthClient`.
-V8|Two CLIProxy files with the same `account_id` produce one login. The lexicographically smaller filename wins.
-V9|Each login's final label is unique, because `AccountUsage.id` is `name` and `ProviderRowView` uses that id in `ForEach`. The plan slug set is `plus`, `pro`, `team`, `business`, `enterprise`, `edu`, `free`, `guest`, compared case-insensitively and shown in lowercase. A CLIProxy file tries, in order: the filename's last `-` segment when it is a plan slug and that slug is unique, then a non-empty `email` that no other login uses, then `acct-` plus the first 8 characters of `account_id`, then `acct-` plus the full `account_id`. A missing or duplicate email skips to the next candidate. An extra `~/.codex/auth.json` row tries lowercased `plan_type` when that string is unique, then the same `acct-` fallbacks. After every login has a candidate, any label still shared by two logins moves each of those logins to its next fallback. Labels are sorted ascending with `<` before they are stored, so the popover and the CLI show the same order.
-V10|Logs, snapshots, tooltips, and `raw` never contain `access_token`, `refresh_token`, or `id_token`.
+V7|There is at most one day record per provider per day key. `tokens` and `costUSD` keep the highest value seen that day, so a degraded poll cannot shrink a day. Nil means unknown and is never written or shown as zero. `balanceUSD` keeps the last value seen.
+V8|Quota is stored per window name: the peak fraction with the `resetsAt` at the peak, and the end-of-day fraction (the last one seen). A window that resets during the day contributes its highest value across the local day.
+V9|Each account seen that day is stored with its account key, account label, billing model, plan name, and per-window peak and end-of-day quota. Account `costUSD` is stored only when the provider reports per-account cost (Claude ccs yes, Codex no).
+V10|`origin` is `observed` or `backfilled`. Observed records store `firstSeen` and `lastSeen`, the times of the first and last good samples. `costEstimated` is true when the cost is tokens times the price table (I8 and all Claude and Codex backfill).
+V11|A record is written for every provider with at least one `.ok` poll that day, including local runtimes with nil totals. No record means the provider was not seen.
+V12|Totals are never split, prorated, or interpolated across days. Usage polled before sleep stays in the last-polled day. Days slept through are gaps.
+V13|History buckets by local day key only. A provider's reset time never moves data between keys. The one exception is OpenRouter backfill: UTC day `D` goes into key `D` and the record stores time zone id `UTC`.
 
-### Two or more logins
+### Store
 
-V11|Two or more enabled subscription logins produce one Codex snapshot whose `accounts.count` equals the login count. `tokensToday` and `costTodayUSD` stay the rollout totals on the header. Each `AccountUsage.costTodayUSD` is nil. Spend is not split.
-V12|Each login is one independent `wham/usage` call with that login's access token and `ChatGPT-Account-Id`. One failure does not cancel the other calls and does not throw for the provider. The provider status stays `.ok` when the snapshot is returned. A failed login still has a row. Its `quota` is nil and its usage line is `unavailable`, not `no limit`.
-V13|A successful login stores `AccountUsage.quota` from `rate_limit.primary_window.used_percent` as a 0...1 fraction. `quotaWindows` holds `primary` then `secondary` when those objects exist, with `duration` taken from `limit_window_seconds` and the existing window names `primary` and `secondary`. A missing primary window makes the usage row unavailable. The secondary window does not fill in for it.
-V14|On a multi-login snapshot, `snapshot.quota` is the max primary fraction across logins that returned one, or nil when none did. `snapshot.quotaWindows` is nil. Menu-bar tint and the threshold notification therefore follow the 5-hour primary, because both read `snapshot.quota` once the header windows are nil. The weekly window stays on each account and is shown only in quota detail.
-V15|`●` marks the login with the highest primary fraction among logins that have one. An equal fraction uses the sooner primary `resetsAt`. A nil reset is later than any known reset, matching `QuotaGlance.select`. If the resets also tie, or both are nil, the alphabetically first label gets the mark. When no login has a primary fraction, no login gets `●`. A failed login is not eligible.
+V14|`HistoryStore` is separate from `FileCacheStore`. It writes one file per day key in I9, holding every provider's records, the day's usage events, `backfillChecked`, and `schemaVersion`. Wiping or cold-starting `today.json` never touches `history/`.
+V15|After a poll, the store merges into the open day and writes only when the merged value changed, atomically (temp file plus rename). At launch it seeds what is on disk from the open day's file. A poll with no change does no file I/O.
+V16|Sealed is derived, not stored: a file whose key is before the current day key is sealed. The first poll on a later key does a final merge into the previous key's file. After that, polling never writes a sealed file. Only backfill top-up (V31) may change it.
+V17|Retention is fixed at 90 day keys, with no setting. The seal step deletes files whose key is more than 90 days before the current key.
+V18|A file with an older `schemaVersion` is migrated when read and rewritten on the next write. A file that is newer, unknown, or unreadable is skipped and logged, and never deleted or overwritten. Schema 1 contains every field in I16 from S1 on; later slices fill fields, they do not add them.
+V19|`aub` opens history read-only. It never creates `history/`, writes, prunes, migrates, or reads `.account-salt`. A missing `history/` is empty history. There is no locking; atomic renames are enough.
+V20|History is decoded off the MainActor. The read API is `nonisolated async`. The app reads history only on a user action (dashboard open, Export…, popover open for the teaser), never on the poll path, and keeps no sealed-day cache. The dashboard holds its decoded days while it is open and drops them on close; when a poll changes the open day, only that day's file is re-read.
 
-### How the row looks
+### Privacy
 
-V16|Compact `aub usage` for multi-login Codex matches the Claude account shape. The header gauge is text, the header has no percent, and the header money is today's rollout spend. `severityLine` therefore does not count the header. Each child is indented like a Claude account row, shows a bar of its primary fraction, a duration-derived `5h` label, and that window's reset. The child V15 marks ends its name with `●`. When V15 marks nobody, no child name has `●`. A failed child is a problem line with the word `unavailable`.
-V17|The popover header keeps today's tokens, today's cost, and one bar of `displayedQuota`, which is the max primary fraction. The header reset caption stays hidden when `accounts.count >= 2`, which is the existing gate. Each child shows its label, one `QuotaBar` of its primary fraction, and its primary reset. A child shows no dollar amount. A failed child shows the label and `unavailable` and does not draw a healthy empty bar. Codex children do not use `ClaudeQuotaGlanceView`.
-V18|Classic `aub usage` draws the header as one single bar of the max primary fraction, not the Claude dual-glyph bar. Each child is the label, one single primary bar, and the primary reset, with no per-login cost. Compact and classic `aub quota` list each login's `primary` and `secondary` windows under that login's label.
-V19|Usage JSON `accounts` is null when fewer than two logins exist. With two or more, each account has `name`, `costTodayUSD: null`, `quota` equal to the primary fraction, and `quotaWindows` for primary and secondary. Header `tokensToday` and `costTodayUSD` remain the rollout totals. Quota JSON gains the same `accounts` array, without `costTodayUSD`, because V14 leaves header `quotaWindows` nil and `QuotaJSONRow` would otherwise drop the per-login windows. Below two logins, quota JSON stays free of `accounts`.
-V20|Claude's own header, dual-lane glance, and account rows stay on `p.id == .claude`. This spec adds a Codex branch. It does not route Codex through `claudeWindow` or `claudeDualBarLine`.
+V21|A Claude account key is the ccs instance slug or `default`. A Codex account key is a short hash of `account_id` with the per-install salt in `history/.account-salt` (ADR 0003). The salt is created on the first write. If it is missing while day files exist, a new salt is made and Codex series split. A raw `account_id` is never written to history or export.
+V22|An account label is never an email. When the live Codex label is an email, the stored label is the unique plan slug, else `acct-` plus the first 4 characters of the account key. Labels never come from a raw `account_id`. ccs slugs are stored as they are. Views show the newest label for a key.
+V23|`history/` is mode 0700. Day files and `.account-salt` are 0600.
+V24|SEC-04 (I15) also fails on any email address whose domain is not `example.com` or ends in `.test`.
+
+### Spend and value
+
+V25|Billing model (metered, subscription, local) and plan are captured per account per day at poll time from I6. A later plan change never rewrites a past day. Backfilled records take the model current at backfill time and set `billingModelAssumed`.
+V26|Spend comes from metered accounts only, reported or estimated. A subscription account's token-priced cost is API-equivalent value (ADR 0001). Value is never added to a spend total, month spend, or budget, never shares a series, column, or total with spend, and is always shown with `~$`.
+
+### Backfill
+
+V27|Gap-fill runs after the first poll's seal and prune at launch, and after any seal caused by a date change (wake, overnight polling). It runs as a low-priority background task, one provider at a time. It never delays the menu-bar number and never writes the open day.
+V28|Reach (I10): Claude about 30 days, Codex the whole 90 days, OpenRouter 30 UTC days and only when a management key is configured (I11), with no prompt. Gemini, Ollama, Ollama Cloud, LM Studio, llama.cpp, and Grok are forward-only.
+V29|Each day file lists in `backfillChecked` the providers already backfilled for that day. Launch work is the gaps plus days not yet checked for each provider, and nothing more. A provider that becomes backfill-capable later still fills its old gaps.
+V30|Inside a source's reach, a day with no usage gets a backfilled record with zero totals. Outside reach, and for forward-only providers, no record is written and the day stays a gap. Backfilled records never carry quota, `firstSeen`, or `lastSeen`.
+V31|Backfill never replaces an observed record. It only raises `tokens` and `costUSD` through the V7 max-merge, which recovers usage between the last poll and midnight. `origin`, quota, accounts, `firstSeen`, and `lastSeen` stay untouched.
+V32|Backfill never creates usage events. All backfill writes go through `HistoryStore`.
+
+### Usage events
+
+V33|Usage event kinds are band crossing (80, 95, 100), pace warning, quota reset, auth lost, auth recovered, and budget crossing. Each event stores `time`, `provider` (nil for the total budget), `kind`, `window` (nil for a provider-level band or a budget), `account` key (only for a per-account alert), `fraction`, `notified`, and `carriedOver`.
+V34|An event is the crossing, not the notification. `ThresholdEngine`, `PaceEngine`, and `ResetEngine` return every crossing. The snooze and enabled gate runs at dispatch and sets `notified`. `lastBand` advances on every crossing, so enabling notifications later the same day does not fire a band already crossed.
+V35|Bands record upward crossings only. Band state is per day key, so a provider still above a band at the first poll of a new day records that crossing with `carriedOver: true`. Gap days get no events.
+V36|Auth lost is a change from `.ok` to `.error(.auth)`, `.unauthenticated`, or payment required. Auth recovered is the first `.ok` after that. Network errors, breaker trips, not running, and disabled produce no event. No event is recorded at launch.
+V37|A degraded snapshot (`usage-temporarily-unavailable`) produces no event. The first non-degraded poll records the crossing at its own time.
+V38|Events are written into the open day's `events[]` on the same write as the records, with no per-day cap.
+
+### Budgets
+
+V39|Budgets are optional monthly USD caps: one per cost-reporting provider (Claude, Codex, OpenRouter) and one total. There are no daily or per-account budgets. Unset means no budget. `config.toml` `[budgets]` (`total_usd`, `<provider>_usd`) is the base; values edited in Settings win.
+V40|The budget month is the local calendar month of the day keys. Month spend sums the month's spend (V26), the open day included, so a crossing can fire mid-day. Estimated metered spend counts and marks the month "includes estimated". A gap or nil cost adds nothing and marks the month incomplete; the check still runs. The total sums cost-reporting providers only.
+V41|Budget crossings fire at the warning threshold (default 80%) and at 100%, upward only, through the V34 dispatch gate. Band state is per budget per month, with no carry-over into a new month. An edit is checked on the next poll: lowering a cap below spend fires at once, raising it lets the band fall back so it can fire again. Backfilled cost counts toward month spend; the next poll records any resulting crossing at its own time.
+
+### CLI
+
+V42|Bare `aub stats` prints a 14-day provider summary with columns provider, spend, tokens, peak, days (observed/range), and trend, then a total row of metered spend only, then one footer line per configured budget (for example `Oct spend $11.40 / $50 budget`).
+V43|The trend plots daily spend for metered rows, daily quota peak % (highest window) for subscription and mixed rows, and presence for local rows. A subscription spend cell shows the plan name dimmed. A mixed provider shows metered spend plus `+plan`. The peak cell is the highest window peak in range with its window name (`92% 5h`), coloured by the existing severity bands.
+V44|`aub stats <provider>` (or `--provider <id>`) prints one row per day: date, spend or value, tokens, peak, events, markers. Local runtimes are hidden unless `--provider all`, which shows presence (`used 9/14 days`). `--days N`, `--since`, and `--until` set the range. Beyond about 30 days, trend characters are equal buckets, the header names the bucket size, and a bucket containing a gap is marked incomplete, never drawn low.
+V45|Markers: `~` estimated, `·` gap in a trend, `!` incomplete total. The legend lists only markers present. Backfilled is flagged only in the drill-down. The header says `(today open)` and today is the last trend character.
+V46|`aub stats` has one layout using the compact palette and glyphs; `--theme` is accepted and ignored. Non-TTY, `NO_COLOR`, and `--no-color` drop ANSI only; sparklines stay Unicode. No history prints one line ("No history yet. The app records from first launch; backfill runs in the background") and exits 0. An unreadable store writes to stderr and exits 1. Plain `aub` never reads history.
+V47|`aub stats --json` and `--csv` write to stdout. The default range is every retained day; `--since`/`--until` (inclusive day keys), `--days`, and `--provider` narrow it. The dashboard Export… uses the same renderer, so the bytes match for the same scope.
+V48|Export JSON is `{schemaVersion: 1, exportedAt, range, days: [{date, timeZone, records, events, gaps}]}`. `gaps` lists enabled providers with no record that day. Unknown values are `null`, never 0. Money is a decimal string. Accounts export as key, label, billing model, and plan. Subscription token-priced cost exports as `valueUSD`, never as spend. Today is included with `sealed: false`. `backfillChecked`, the salt, and budgets are not exported.
+V49|Default CSV has one row per provider per day: date, provider, tokens, costUSD, valueUSD, costEstimated, balanceUSD, billingModel, origin, sealed, firstSeen, lastSeen. `--csv accounts|events|quota` selects another table, one per run. Quota windows appear only in the quota table, one row per (date, provider, account, window) with peak, peakResetsAt, endOfDay. A gap is a missing row; an unknown value is an empty cell; money is a plain number. The column set is fixed per `schemaVersion`; columns can be appended; a rename or removal bumps the version. The README documents this and warns that exports may contain ccs instance names and plan names.
+
+### Dashboard
+
+V50|The dashboard is one native SwiftUI window with Swift Charts. There is at most one instance, and it remembers its size and position. While it is open the app uses regular activation (Dock icon, Cmd-Tab); it returns to accessory mode when the window closes.
+V51|Every entry point opens the URL `agentsusagebar://dashboard[?day=yyyy-MM-dd&provider=<id>]`: the popover footer button, `aub dashboard`, the teaser, the hotkey, and notification clicks. The URL launches the app if needed. It only shows a view and changes nothing. Invalid or unknown parameters are ignored.
+V52|The window has a sidebar with Overview, one row per provider (a 14-day mini chart following the V43 trend rule, plus a budget bar when the provider has a budget), a "No cost data" section for local runtimes (each with a days-seen strip), and Calendar. Clicking a provider name in Overview selects its sidebar row. One range picker (7, 14, 30, 90 days, This month) is shared by Overview and provider detail; Calendar always shows every retained day.
+V53|Overview shows tiles Spend (matches month spend and budgets; `$0.00 · no metered accounts` when none), Subscription value (`~$`, dimmed, hidden when the range has no subscription account), Tokens, and Usage events with a "not notified" count; month budget bars; Spend per day stacked by provider, metered only, collapsing to one line of text when the range has no metered account; an event lane per provider; a quota band strip (one row per provider window, one cell per day coloured by peak band <80/80/95/100); and tokens per day. Provider chips filter Overview and the Calendar heatmap with one shared selection.
+V54|Provider detail has tabs named by billing model (Spend, Value, or Spend & value), Tokens, Quota (end-of-day-to-peak range bars per window), and Accounts. A mixed provider draws spend (solid) and value (hatched) as two series with separate totals, never summed. A large chart sits above a usage event table (time, kind, window, notified, carried over). The account picker narrows every tab to one account and is the only account filter.
+V55|Calendar shows budget rings, then month grids for every retained month, newest first. A metric picker colours days by Spend (default), Value, or Quota peak. Days show an event dot and a dashed border when partial. The selected day's panel has a card per provider with spend and value side by side, quota peak and end-of-day bars, accounts, and events. Today is marked "in progress".
+V56|Markers are the same in every view: estimated is `~$` with a lighter fill, partial ranges and months get a grey "incomplete" badge, gaps are grey "no data" bands in charts and dashed borders in Calendar, backfilled records are lighter with a "backfilled" badge in the day panel. Local runtimes show presence only and are never drawn as $0.
+V57|Export… is in the window toolbar and in File ▸ Export… (⌘E). It exports the current scope: Overview its range and chip selection, provider detail that provider and range, Calendar every retained day.
+V58|Deep links: a band, pace, reset, or auth event opens Calendar on its day with the provider's card outlined and the event highlighted. A budget notification opens Overview on This month. The teaser opens Overview on 14 days.
+V59|The popover teaser is a 14-day strip (13 sealed days plus today, marked in progress). It plots daily spend when any metered account appears in the 14 days, else daily quota peak, labelled "Spend 14d" or "Peak quota 14d". Gaps are empty slots, never zero. Budgets are not shown in the popover.
+V60|The global hotkey is off by default. The user records it in Settings. It needs no Accessibility permission.
 
 ## §T
 
 id|status|task|cites
-T1|x|Discover CLIProxy files and the optional `~/.codex/auth.json` login. Dedupe, skip, and label per V6-V10. Injectable directory and auth path. Synthetic fixtures only.|V6,V7,V8,V9,V10,C2,C4,I1,I2
-T2|x|One login keeps `accounts == nil`. Windowless overlay and the no-rollout fallback call `wham/usage` with that login's token. Live rollout windows still win. Existing parser tests stay green.|V1,V2,V3,V4,V5,C5,C6,I3,I4
-T3|x|Two or more logins build one snapshot. Independent `wham/usage` calls. Header tokens and cost from the rollout. Child cost nil. Isolate a failed login. Set header `quota` to the max primary and header `quotaWindows` to nil.|V11,V12,V13,V14,V15,I3,I4,I5,I9
-T4|x|Compact usage and quota render the Codex header and children. Severity ignores the header. `●` marks the highest primary. Failed child counts as unavailable.|V15,V16,V18,V20,I7
-T5|x|Popover children use a single primary `QuotaBar`. No child cost. No Claude glance. Header reset stays hidden at two or more accounts.|V14,V17,V20,I6
-T6|x|Classic usage and quota follow V18. Usage JSON and quota JSON follow V19, including `accounts` on quota JSON when two or more logins exist. Update goldens only for the Codex account branch.|V18,V19,V20,C7,I8
-T7|x|Regression tests for dedupe, disabled file, one login, two logins, one failed `wham/usage`, equal primary percents, and the parser inherit rules.|V1,V2,V4,V5,V6,V7,V8,V12,V15,C4
-T8|x|Replace `~/Applications/AgentsUsageBar.app` from this tree and confirm `~/.local/bin/aub` points at the new binary before calling the rows done.|C8
+T1|.|S0: Add the day-key owner: Gregorian `yyyy-MM-dd` in the current zone from an injected `Clock`, plus same-day matching of legacy `Calendar.current` keys. Wall clock only; no history yet.|V1,V2,V3,I1,I2
+T2|.|S0: Route every I1 consumer through the owner. Tests with `VirtualClock`, a Buddhist-calendar locale, and an upgrade day with legacy keys in `today.json` and notification state. No behavior change on Gregorian hosts.|V1,V2,V3,I1,I3
+T3|.|S0 gate: CI green, install, confirm the popover today totals and OpenRouter baseline survive the upgrade on this Buddhist-calendar host.|C7,V3
+T4|.|S1: `HistoryStore` types for the full v1 day file, `schemaVersion` handling, and a read-only view. Reads are `nonisolated async`.|V14,V18,V19,V20,I9,I16
+T5|.|S1: Merge each poll into the open day (max totals, last balance, quota peak and end-of-day, presence), write only on change, seed at launch, seal on the first later key, prune past 90 days.|V7,V8,V11,V12,V13,V15,V16,V17,C4,I4,I5
+T6|.|S1: Monotonic day key from the newest day file, and the more-than-1-day pause. Regression tests with a fixed `Clock`: sleep Mon→Thu, Tokyo→Honolulu, Honolulu→Tokyo, `America/New_York` DST spring and fall, clock set back 10 days.|V4,V5,V6,V12,ADR0002
+T7|.|S1: Accounts: account key and salt, account label rules, billing model and plan at poll time, `costEstimated` for observed estimated cost.|V9,V10,V21,V22,V25,I6,I7,I8,ADR0003
+T8|.|S1: `history/` 0700 and files 0600. SEC-04 email scan in `check-secrets.sh` and `ci.yml`. A synthetic day-file generator for fixtures.|V23,V24,C3,I15
+T9|.|S1 gate: CI green, install, run across at least one poll, inspect today's day file and its modes.|C7
+T10|.|S2: `aub stats` summary, drill-down, ranges, buckets, markers, legend, edge output. Golden tests on synthetic history.|V26,V42,V43,V44,V45,V46,I13
+T11|.|S2: `--json` and `--csv` renderers (all four CSV tables) and the README export section.|V26,V47,V48,V49
+T12|.|S2 gate: CI green, install, `aub stats`, `aub stats claude`, `aub stats --json` and `--csv` on real history.|C7
+T13|.|S3: Gap-fill scheduler: triggers, low priority, one provider at a time, `backfillChecked`, zero records inside reach, top-up only on observed days, no events.|V27,V29,V30,V31,V32
+T14|.|S3: Claude and Codex backfill sources with estimated cost and assumed billing model.|V10,V25,V28,I8,I10
+T15|.|S3: OpenRouter `/activity` source and the management key config.|V13,V28,I10,I11
+T16|.|S3 gate: CI green, install, delete a synthetic test day's file in a scratch history copy or wait for a missed day, confirm gap-fill writes it.|C7
+T17|.|S4: Engines return every crossing; the dispatch gate sets `notified`; `lastBand` advances on every crossing. Existing notification tests stay green.|V34,V35,I4
+T18|.|S4: Record band, pace, reset, and auth events into `events[]`, with carry-over and the degraded rule.|V33,V35,V36,V37,V38
+T19|.|S4 gate: CI green, install, confirm an event lands in today's file when a band is crossed.|C7
+T20|.|S5: `[budgets]` config, Settings fields, month spend.|V39,V40,I12
+T21|.|S5: Budget crossing events through the dispatch gate, and the `aub stats` budget footer.|V26,V41,V42
+T22|.|S5 gate: CI green, install, set a low budget, confirm the event, the notification, and the footer.|C7
+T23|.|S6: Dashboard window, activation switching, URL scheme in `Info.plist`, route handling, `aub dashboard`, popover footer button.|V50,V51,I14
+T24|.|S6: Sidebar, shared range, and Overview.|V20,V26,V52,V53,V56
+T25|.|S6: Provider detail.|V26,V54,V56
+T26|.|S6: Calendar.|V2,V55,V56
+T27|.|S6: Export… using the S2 renderer.|V47,V57
+T28|.|S6 gate: CI green, install, open via each S6 entry point, check every section against real history, export.|C7
+T29|.|S7: Popover teaser.|V20,V59
+T30|.|S7: Optional global hotkey in Settings.|V60,C5
+T31|.|S7: Notification-click deep links.|V58
+T32|.|S7 gate: CI green, install, teaser, hotkey, and a notification click each open the right view.|C7
 
 ## §B
 
