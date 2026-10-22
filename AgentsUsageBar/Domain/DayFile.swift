@@ -191,11 +191,18 @@ public enum UsageEventKind: String, Sendable, Equatable, Codable {
 }
 
 /// A USD amount stored as a decimal string, so no binary rounding touches money (I16).
+/// Rounded to micro-dollars on creation, so a `Decimal(Double)` expansion never reaches a
+/// day file, an export, or a view (V65).
 public struct Money: Sendable, Hashable, Comparable, Codable {
-    public var amount: Decimal
+    public static let scale = 6
+
+    public let amount: Decimal
 
     public init(_ amount: Decimal) {
-        self.amount = amount
+        var value = amount
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &value, Self.scale, .plain)
+        self.amount = rounded
     }
 
     public static func < (lhs: Money, rhs: Money) -> Bool {
@@ -209,7 +216,7 @@ public struct Money: Sendable, Hashable, Comparable, Codable {
             throw DecodingError.dataCorruptedError(
                 in: container, debugDescription: "money is not a decimal string: \(string)")
         }
-        self.amount = amount
+        self.init(amount)
     }
 
     public func encode(to encoder: any Encoder) throws {
