@@ -82,6 +82,7 @@ V24|SEC-04 (I15) also fails on any email address whose domain is not `example.co
 
 V25|Billing model (metered, subscription, local) and plan are captured per account per day at poll time from I6. A later plan change never rewrites a past day. Backfilled records take the model current at backfill time and set `billingModelAssumed`.
 V26|Spend comes from metered accounts only, reported or estimated. A subscription account's token-priced cost is API-equivalent value (ADR 0001). Value is never added to a spend total, month spend, or budget, never shares a series, column, or total with spend, and is always shown with `~$`.
+V65|Every `Money` amount is rounded to 6 decimal places (half away from zero) when it is created, from a provider value, a backfill sum, or a decoded day file. No binary floating-point expansion reaches a day file, an export, or a view. Sums of rounded amounts stay exact.
 
 ### Backfill
 
@@ -175,6 +176,7 @@ T30|.|S7: Optional global hotkey in Settings.|V60,C5
 T31|.|S7: Notification-click deep links.|V58
 T32|.|S7 gate: CI green, install, teaser, hotkey, and a notification click each open the right view.|C7
 T33|x|Fix trend cells: no-record gap vs recorded-no-value `?`, bucket rule, legend entry; golden test with a backfilled subscription day and a nil-cost metered day.|V42,V45,V64
+T34|.|Round `Money` to 6 decimal places at its one initializer; tests for a noisy Double-derived amount, decode of a noisy stored string, and encode output.|V65,I16
 
 ## §B
 
@@ -187,3 +189,4 @@ B5|2026-10-22|Spec gap found planning T14: V25 named the billing model of backfi
 B6|2026-10-22|Spec gap found planning T15: V13 said OpenRouter backfilled records store time zone id `UTC`, but I16 `DayRecord` had no zone field; the file's `timeZone` is the local zone.|V13,V18,I16
 B7|2026-10-22|Spec gap found planning T15: `/activity` serves only completed UTC days. In zones ahead of UTC the newest sealed key can be the in-progress UTC day, so gap-fill would write a zero record for it and mark it checked forever.|V63
 B8|2026-10-22|Found at T16 gate on real history: `ProviderStats.trend` mapped both a missing record and a record with no value for the row's metric to nil, so every backfilled subscription day (no quota, V30) and every metered day with nil cost drew the `·` gap marker. Claude and Codex showed `14/14` days beside 13 gap dots. V42 "days (observed/range)" also read as origin `observed`, while `seenDays` counts backfilled records.|V42,V45,V64
+B9|2026-10-22|Found at T16 gate on real history: money strings like `1272.601569999999994351616` and `0.0421083310000085504`. `Decimal(Double)` keeps the full binary expansion, and OpenRouter's baseline delta and the Claude/Codex backfill price sums are float arithmetic. Only the Claude hook path rounded (`%.6f`).|V65
