@@ -74,6 +74,7 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
     // MARK: - Properties
 
     private let url: URL
+    private let dayKeys: DayKeyOwner
     private let logger = AppLogger.logger(category: "cache")
     private let queue = DispatchQueue(
         label: "app.agents-usage-bar.cache",
@@ -83,7 +84,7 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
     // MARK: - Initializers
 
     /// Production initializer — creates `~/Library/Application Support/AgentsUsageBar/` if needed.
-    public init() throws {
+    public init(dayKeys: DayKeyOwner = DayKeyOwner()) throws {
         let appSupport = try FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
@@ -93,13 +94,15 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
         let dir = appSupport.appendingPathComponent("AgentsUsageBar", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         self.url = dir.appendingPathComponent("today.json", isDirectory: false)
+        self.dayKeys = dayKeys
     }
 
     /// Test seam — writes cache to an arbitrary root URL (e.g. a temp directory).
-    internal init(testingRootURL: URL) throws {
+    internal init(testingRootURL: URL, dayKeys: DayKeyOwner = DayKeyOwner()) throws {
         try FileManager.default.createDirectory(
             at: testingRootURL, withIntermediateDirectories: true)
         self.url = testingRootURL.appendingPathComponent("today.json", isDirectory: false)
+        self.dayKeys = dayKeys
     }
 
     // MARK: - Test support
@@ -134,11 +137,12 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
     public func maintainBaseline(for id: ProviderID, now: Date, currentValue: Double) {
         queue.sync(flags: .barrier) {
             let envelope = _loadEnvelope() ?? CacheEnvelope(providers: [:], baselines: [:], transcripts: [:])
-            let today = TodayHelper.formatYYYYMMDD(now)
+            let today = dayKeys.key(for: now)
             let existing = envelope.baselines[id]
 
             let newRecord: BaselineRecord
-            if existing == nil || existing!.date != today {
+            // A pre-S0 locale-calendar date for today still counts as today (SPEC V3).
+            if existing == nil || !dayKeys.isSameDay(existing!.date, as: now) {
                 // Cold start or new calendar day — set fresh baseline (D-05)
                 newRecord = BaselineRecord(
                     value: currentValue,
@@ -239,14 +243,14 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
     ) -> (tokens: Int, costUSD: Decimal) {
         queue.sync(flags: .barrier) {
             let envelope = _loadEnvelope() ?? CacheEnvelope(providers: [:], baselines: [:], transcripts: [:])
-            let today = TodayHelper.formatYYYYMMDD(now)
+            let today = dayKeys.key(for: now)
             let existing = envelope.dailyUsage[id]
 
             // Rollover: cold start or new calendar day → reset to this poll's delta.
             // Same day → add the delta to the running total.
             let newTokens: Int
             let newCost: Decimal
-            if existing == nil || existing!.date != today {
+            if existing == nil || !dayKeys.isSameDay(existing!.date, as: now) {
                 newTokens = deltaTokens
                 newCost = deltaCostUSD
             } else {

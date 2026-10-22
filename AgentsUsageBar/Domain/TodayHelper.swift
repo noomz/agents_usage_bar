@@ -46,17 +46,17 @@ public enum TodayHelper {
         return calendar.startOfDay(for: a) != calendar.startOfDay(for: b)
     }
 
-    /// Returns a `"YYYY-MM-DD"` string for `date` in the given calendar (default: `.current`).
+    /// Returns a `"YYYY-MM-DD"` string for `date` in `calendar`.
     ///
-    /// Used to produce stable notification identifiers (e.g. `"openrouter:2026-05-11:warn80"`)
-    /// and baseline-date keys in the cache.
+    /// Day keys come from `DayKeyOwner`, which passes a Gregorian calendar (SPEC V1, V2).
+    /// There is no `.current` default: on a Buddhist-calendar host it gives `2569-…`.
     ///
     /// IMPORTANT: Uses `DateComponents` extraction — NOT `DateFormatter` or
     /// `ISO8601DateFormatter`, both of which default to UTC and would produce the wrong
     /// date for users in UTC- timezones after 4–5 pm local time (Pitfall 4).
     public static func formatYYYYMMDD(
-        _ date: Date = .now,
-        calendar: Calendar = .current
+        _ date: Date,
+        calendar: Calendar
     ) -> String {
         let comps = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", comps.year!, comps.month!, comps.day!)

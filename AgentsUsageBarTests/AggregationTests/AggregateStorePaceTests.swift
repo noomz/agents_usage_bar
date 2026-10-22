@@ -16,7 +16,7 @@ struct AggregateStorePaceTests {
         return cal.date(from: comps)!
     }()
 
-    static var today: String { TodayHelper.formatYYYYMMDD(now) }
+    static var today: String { DayKeyOwner().key(for: now) }
 
     final actor PaceFakeProvider: UsageProvider {
         nonisolated let id: ProviderID

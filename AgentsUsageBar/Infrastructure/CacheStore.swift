@@ -5,9 +5,9 @@ import Foundation
 /// Used by `FileCacheStore.maintainBaseline` to implement the D-01..D-05
 /// baseline-delta approach: `costToday = current(total_usage) − baseline.value`.
 ///
-/// D-02: `date` is stored as a `"YYYY-MM-DD"` string in the user's local calendar
-/// (produced by `TodayHelper.formatYYYYMMDD`) so midnight rollover detection is
-/// timezone-correct even across DST transitions.
+/// D-02: `date` is a day key from `DayKeyOwner` (Gregorian `yyyy-MM-dd`, local zone) so
+/// midnight rollover detection is timezone-correct even across DST transitions. Builds
+/// before S0 stored a `Calendar.current` key; it still matches the same day (SPEC V3).
 public struct BaselineRecord: Sendable, Codable, Equatable {
     /// The `total_usage` value captured at the start of the current day (D-01).
     public let value: Double

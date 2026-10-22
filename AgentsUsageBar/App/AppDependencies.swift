@@ -117,6 +117,8 @@ public enum AppDependencies {
     public static func makeProduction() -> Dependencies {
         // 1. Wall clock (shared across all subsystems)
         let clock: any Clock = SystemClock()
+        // 1b. The one day-key owner (SPEC V1): every "today" key comes from it.
+        let dayKeys = DayKeyOwner(clock: clock)
 
         // 2. HTTP clients — TWO tiers per POLL-08 split (Plan 04-03 + CLAUDE.md):
         //    - http:          8s remote tier (OpenRouter / Claude / Codex / Gemini)
@@ -129,7 +131,7 @@ public enum AppDependencies {
         // 3. Cache store with NoopCacheStore fallback (B9)
         let cache: any CacheStore
         do {
-            cache = try FileCacheStore()
+            cache = try FileCacheStore(dayKeys: dayKeys)
         } catch {
             os.Logger(subsystem: "app.agents-usage-bar", category: "composition")
                 .error("Cache init failed; using NoopCacheStore: \(error.localizedDescription, privacy: .public)")
@@ -151,20 +153,23 @@ public enum AppDependencies {
             http: http,
             localhostHTTP: localhostHTTP,
             cache: cache,
-            clock: clock
+            clock: clock,
+            dayKeys: dayKeys
         )
         let registry = built.providers
 
         // 7. Threshold engine (warning-at-80% gate per D-11)
-        let thresholds = ThresholdEngine(warningFraction: config.threshold)
+        let thresholds = ThresholdEngine(warningFraction: config.threshold, dayKeys: dayKeys)
 
         // 8a. Notification manager (lazy auth NOTIF-06, coalescing B3+NOTIF-07, clock-injected B8)
-        let notifications: any NotificationManager = UNNotificationManager(clock: clock)
+        let notifications: any NotificationManager = UNNotificationManager(clock: clock, dayKeys: dayKeys)
 
         // 8b. Plan 02.05 — Per-(provider, day) FSM persistence + snooze (NOTIF-04 / NOTIF-05).
         //     Prunes records older than 7 days at app launch — bounds the UserDefaults footprint.
+        //     Pre-S0 records are rekeyed first so the upgrade day keeps its fired bands (V3).
         let notificationState = UserDefaultsNotificationStateStore()
-        notificationState.pruneOldKeys(olderThan: 7, today: TodayHelper.formatYYYYMMDD(clock.now()))
+        notificationState.migrateLegacyDayKeys(dayKeys)
+        notificationState.pruneOldKeys(olderThan: 7, today: dayKeys.today())
 
         // 9. Aggregate store — seeds from cache immediately for cold-launch rendering (UI-07)
         let store = AggregateStore(
@@ -173,7 +178,8 @@ public enum AppDependencies {
             cache: cache,
             thresholds: thresholds,
             notifications: notifications,
-            notificationState: notificationState
+            notificationState: notificationState,
+            dayKeys: dayKeys
         )
         store.updatePaceWarningsEnabled(preferences.paceWarningsEnabled)
         store.updateResetNotificationsEnabled(preferences.resetNotificationsEnabled)
@@ -219,7 +225,7 @@ public enum AppDependencies {
         //     stop/start (POLL-04 / POLL-09). MUST be constructed AFTER scheduler and held
         //     strongly in Dependencies for the app lifetime (Pitfall 4: observer must be
         //     live before any wake event).
-        let powerObserver = PowerObserver(store: store, scheduler: scheduler, clock: clock)
+        let powerObserver = PowerObserver(store: store, scheduler: scheduler, clock: clock, dayKeys: dayKeys)
 
         // 13. Plan 05-01 — WindowActivationObserver wires NSWindow didBecomeKey/willClose
         //     → setActivationPolicy(.regular)/.accessory (D-06 / SHELL-05). MUST be

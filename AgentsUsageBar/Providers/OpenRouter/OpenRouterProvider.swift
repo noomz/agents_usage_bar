@@ -36,15 +36,22 @@ public actor OpenRouterProvider: UsageProvider {
     private let client: any OpenRouterClient
     private let cache: any CacheStore
     private let clock: any Clock
+    private let dayKeys: DayKeyOwner
     private let logger = AppLogger.logger(category: "openrouter")
     private var lastStatus: ProviderStatus = .error(ProviderError.notYetFetched)
 
     // MARK: - Init
 
-    public init(client: any OpenRouterClient, cache: any CacheStore, clock: any Clock) {
+    public init(
+        client: any OpenRouterClient,
+        cache: any CacheStore,
+        clock: any Clock,
+        dayKeys: DayKeyOwner = DayKeyOwner()
+    ) {
         self.client = client
         self.cache = cache
         self.clock = clock
+        self.dayKeys = dayKeys
     }
 
     // MARK: - UsageProvider
@@ -63,10 +70,9 @@ public actor OpenRouterProvider: UsageProvider {
             // MARK: Baseline-delta logic (D-01..D-05)
 
             let baseline = cache.baseline(for: id, on: now)
-            let today = TodayHelper.formatYYYYMMDD(now)
             let costToday: Double
 
-            if let b = baseline, b.date == today {
+            if let b = baseline, dayKeys.isSameDay(b.date, as: now) {
                 if c.data.totalUsage >= b.value {
                     // Normal same-day positive delta (D-01)
                     costToday = c.data.totalUsage - b.value

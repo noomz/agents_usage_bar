@@ -148,7 +148,7 @@ struct PollSchedulerSleepWakeTests {
         let provider = SleepWakeProvider()
         let clock = SystemClock()
         let now = clock.now()
-        let today = TodayHelper.formatYYYYMMDD(now)
+        let today = DayKeyOwner().key(for: now)
 
         let providerX = ProviderID(rawValue: "powX")
         let seededRecord = NotificationStateRecord(lastBand: .warning, snoozedUntilDay: nil)

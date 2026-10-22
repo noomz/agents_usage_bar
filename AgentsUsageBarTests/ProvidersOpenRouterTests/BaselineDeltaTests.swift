@@ -49,7 +49,7 @@ struct BaselineDeltaTests {
     func coldLaunch_returnsZeroAndRecordsBaseline() async throws {
         let cache = FakeCacheStore()
         let now = Date()
-        let today = TodayHelper.formatYYYYMMDD(now)
+        let today = DayKeyOwner().key(for: now)
 
         let provider = makeProvider(creditsUsage: 50.0, cache: cache)
         let snap = try await provider.fetch(now: now)
@@ -70,7 +70,7 @@ struct BaselineDeltaTests {
     func secondPollSameDay_returnsDelta() async throws {
         let cache = FakeCacheStore()
         let now = Date()
-        let today = TodayHelper.formatYYYYMMDD(now)
+        let today = DayKeyOwner().key(for: now)
 
         // Pre-seed baseline from earlier this same day
         cache.seedBaseline(
@@ -94,7 +94,7 @@ struct BaselineDeltaTests {
     func negativeDelta_resetsAndLogs() async throws {
         let cache = FakeCacheStore()
         let now = Date()
-        let today = TodayHelper.formatYYYYMMDD(now)
+        let today = DayKeyOwner().key(for: now)
 
         // Pre-seed baseline higher than current value
         cache.seedBaseline(
@@ -125,7 +125,7 @@ struct BaselineDeltaTests {
         var comps = DateComponents()
         comps.year = 2026; comps.month = 5; comps.day = 11; comps.hour = 14; comps.minute = 0
         let now = cal.date(from: comps)!
-        let today = TodayHelper.formatYYYYMMDD(now, calendar: cal)
+        let today = DayKeyOwner(timeZone: cal.timeZone).key(for: now)
 
         // Baseline from yesterday (2026-05-10)
         cache.seedBaseline(
@@ -153,7 +153,7 @@ struct BaselineDeltaTests {
     func quotaConstructed_whenLimitPresent() async throws {
         let cache = FakeCacheStore()
         let now = Date()
-        let today = TodayHelper.formatYYYYMMDD(now)
+        let today = DayKeyOwner().key(for: now)
 
         cache.seedBaseline(
             BaselineRecord(value: 0.0, date: today, lastValue: 0.0, lastUpdated: now),
@@ -181,7 +181,7 @@ struct BaselineDeltaTests {
     func quotaNilWhenLimitRemainingMissingButLimitPresent() async throws {
         let cache = FakeCacheStore()
         let now = Date()
-        let today = TodayHelper.formatYYYYMMDD(now)
+        let today = DayKeyOwner().key(for: now)
 
         cache.seedBaseline(
             BaselineRecord(value: 0.0, date: today, lastValue: 0.0, lastUpdated: now),
@@ -210,7 +210,7 @@ struct BaselineDeltaTests {
     func balanceUSD_equalsCreditsMinusUsage() async throws {
         let cache = FakeCacheStore()
         let now = Date()
-        let today = TodayHelper.formatYYYYMMDD(now)
+        let today = DayKeyOwner().key(for: now)
 
         cache.seedBaseline(
             BaselineRecord(value: 0.0, date: today, lastValue: 0.0, lastUpdated: now),

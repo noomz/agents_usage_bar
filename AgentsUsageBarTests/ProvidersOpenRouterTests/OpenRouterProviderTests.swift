@@ -46,7 +46,7 @@ final class FakeCacheStore: CacheStore, @unchecked Sendable {
     }
 
     func maintainBaseline(for id: ProviderID, now: Date, currentValue: Double) {
-        let today = TodayHelper.formatYYYYMMDD(now)
+        let today = DayKeyOwner().key(for: now)
         let existing = baselines[id]
         let newRecord: BaselineRecord
         if existing == nil || existing!.date != today {

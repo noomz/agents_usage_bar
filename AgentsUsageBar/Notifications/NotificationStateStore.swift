@@ -53,6 +53,16 @@ public struct NotificationStateRecord: Sendable, Codable, Equatable {
         try c.encode(firedPaceWindows, forKey: .firedPaceWindows)
         try c.encode(firedResetKeys, forKey: .firedResetKeys)
     }
+
+    /// This record with a pre-S0 `snoozedUntilDay` rewritten as a day key.
+    func withLegacySnoozeDayMigrated(_ dayKeys: DayKeyOwner) -> NotificationStateRecord {
+        NotificationStateRecord(
+            lastBand: lastBand,
+            snoozedUntilDay: snoozedUntilDay.map { dayKeys.key(fromLegacy: $0) ?? $0 },
+            firedPaceWindows: firedPaceWindows,
+            firedResetKeys: firedResetKeys
+        )
+    }
 }
 
 // MARK: - NotificationStateStorage
@@ -78,6 +88,12 @@ public protocol NotificationStateStorage: Sendable {
     /// Removes every record whose stored day is older than `(today - retentionDays)`.
     /// Recommended `retentionDays = 7`. Called once at app launch from `AppDependencies.makeProduction()`.
     func pruneOldKeys(olderThan retentionDays: Int, today: String)
+
+    /// Rewrites every record stored by a pre-S0 build, whose day and `snoozedUntilDay` are
+    /// `Calendar.current` keys, under its day key (SPEC V3), so an upgrade day keeps its
+    /// fired bands and snooze. Runs once per store; later calls do nothing, because after it
+    /// every stored day is already a day key. Call at launch before `pruneOldKeys`.
+    func migrateLegacyDayKeys(_ dayKeys: DayKeyOwner)
 }
 
 // MARK: - UserDefaultsNotificationStateStore
@@ -129,7 +145,7 @@ public final class UserDefaultsNotificationStateStore: NotificationStateStorage,
     }
 
     public func pruneOldKeys(olderThan retentionDays: Int, today: String) {
-        let cal = Calendar.current
+        let cal = Self.dayKeyCalendar
         guard let todayDate = cal.date(from: ymdComponents(today)),
               let cutoff = cal.date(byAdding: .day, value: -retentionDays, to: todayDate)
         else { return }
@@ -146,10 +162,34 @@ public final class UserDefaultsNotificationStateStore: NotificationStateStorage,
         }
     }
 
+    public func migrateLegacyDayKeys(_ dayKeys: DayKeyOwner) {
+        let markerKey = "dayKeyMigration.\(keyPrefix)"
+        guard !defaults.bool(forKey: markerKey) else { return }
+        for (rawKey, value) in defaults.dictionaryRepresentation() where rawKey.hasPrefix(keyPrefix) {
+            // Key layout: "<keyPrefix><pid.rawValue>.<yyyy-MM-dd>"
+            guard let dot = rawKey.lastIndex(of: "."),
+                  let data = value as? Data,
+                  let record = try? JSONDecoder().decode(NotificationStateRecord.self, from: data),
+                  let day = dayKeys.key(fromLegacy: String(rawKey[rawKey.index(after: dot)...])),
+                  let migrated = try? JSONEncoder().encode(record.withLegacySnoozeDayMigrated(dayKeys))
+            else { continue }
+            defaults.removeObject(forKey: rawKey)
+            defaults.set(migrated, forKey: "\(rawKey[..<dot]).\(day)")
+        }
+        defaults.set(true, forKey: markerKey)
+    }
+
     // MARK: - Private helpers
 
     private func key(for id: ProviderID, day: String) -> String {
         "\(keyPrefix)\(id.rawValue).\(day)"
+    }
+
+    /// Day keys are Gregorian (SPEC V2), so they are parsed as Gregorian dates.
+    private static var dayKeyCalendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .autoupdatingCurrent
+        return cal
     }
 
     private func ymdComponents(_ s: String) -> DateComponents {
@@ -179,6 +219,7 @@ public final class InMemoryNotificationStateStore: NotificationStateStorage, @un
 
     /// Stored entries keyed by `"\(providerID.rawValue).\(day)"`.
     private var entries: [String: NotificationStateRecord] = [:]
+    private var migratedLegacyDayKeys = false
 
     public init() {}
 
@@ -202,7 +243,7 @@ public final class InMemoryNotificationStateStore: NotificationStateStorage, @un
     }
 
     public func pruneOldKeys(olderThan retentionDays: Int, today: String) {
-        let cal = Calendar.current
+        let cal = Self.dayKeyCalendar
         guard let todayDate = cal.date(from: ymdComponents(today)),
               let cutoff = cal.date(byAdding: .day, value: -retentionDays, to: todayDate)
         else { return }
@@ -220,10 +261,29 @@ public final class InMemoryNotificationStateStore: NotificationStateStorage, @un
         for key in toRemove { entries.removeValue(forKey: key) }
     }
 
+    public func migrateLegacyDayKeys(_ dayKeys: DayKeyOwner) {
+        guard !migratedLegacyDayKeys else { return }
+        migratedLegacyDayKeys = true
+        for (rawKey, record) in entries {
+            guard let dot = rawKey.lastIndex(of: "."),
+                  let day = dayKeys.key(fromLegacy: String(rawKey[rawKey.index(after: dot)...]))
+            else { continue }
+            entries.removeValue(forKey: rawKey)
+            entries["\(rawKey[..<dot]).\(day)"] = record.withLegacySnoozeDayMigrated(dayKeys)
+        }
+    }
+
     // MARK: - Private helpers
 
     private func key(for id: ProviderID, day: String) -> String {
         "\(id.rawValue).\(day)"
+    }
+
+    /// Day keys are Gregorian (SPEC V2), so they are parsed as Gregorian dates.
+    private static var dayKeyCalendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = .autoupdatingCurrent
+        return cal
     }
 
     private func ymdComponents(_ s: String) -> DateComponents {

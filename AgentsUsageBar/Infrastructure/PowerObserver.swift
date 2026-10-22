@@ -25,6 +25,7 @@ public final class PowerObserver {
     private let store: AggregateStore
     private let scheduler: PollScheduler
     private let clock: any Clock
+    private let dayKeys: DayKeyOwner
 
     // `nonisolated(unsafe)` for these last-cleanup-only properties: they are written
     // exactly once in `init` (on the main actor), then read solely by the nonisolated
@@ -53,13 +54,15 @@ public final class PowerObserver {
         store: AggregateStore,
         scheduler: PollScheduler,
         clock: any Clock,
+        dayKeys: DayKeyOwner = DayKeyOwner(),
         notificationCenter: NotificationCenter = NSWorkspace.shared.notificationCenter
     ) {
         self.store = store
         self.scheduler = scheduler
         self.clock = clock
+        self.dayKeys = dayKeys
         self.notificationCenter = notificationCenter
-        self.lastKnownDay = TodayHelper.formatYYYYMMDD(clock.now())
+        self.lastKnownDay = dayKeys.key(for: clock.now())
 
         // Subscribe to willSleep — pause the polling loop to conserve energy (POLL-09).
         sleepToken = notificationCenter.addObserver(
@@ -100,7 +103,7 @@ public final class PowerObserver {
     /// Called on `didWakeNotification`. Detects day rollover, refreshes the store, then resumes polling.
     internal func handleWake() async {
         let now = clock.now()
-        let today = TodayHelper.formatYYYYMMDD(now)
+        let today = dayKeys.key(for: now)
         if today != lastKnownDay {
             // Day rolled while asleep — UserDefaults FSM state is date-keyed; new day = new empty
             // allRecordsForToday(<new>) — no explicit reset required (RESEARCH §D.1).
