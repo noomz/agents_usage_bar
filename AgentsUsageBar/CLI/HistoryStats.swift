@@ -18,12 +18,15 @@ public struct StatsRange: Sendable, Equatable {
         max(1, (keys.count + Self.maxTrendCells - 1) / Self.maxTrendCells)
     }
 
-    /// Resolves the flags against `today`. `--until` later than today ends at today.
+    /// Resolves the flags against `today`. `--until` later than today ends at today. With
+    /// `oldest`, no `--days` and no `--since` start at it instead of 14 days back: export
+    /// covers every retained day by default (V47).
     public static func resolve(
         today: String,
         days: Int?,
         since: String?,
-        until: String?
+        until: String?,
+        oldest: String? = nil
     ) -> Result<StatsRange, AUBParseError> {
         let last: String
         let first: String
@@ -37,7 +40,11 @@ public struct StatsRange: Sendable, Equatable {
             last = days.flatMap { keyMath.key(since, addingDays: $0 - 1) }.map { min($0, today) } ?? today
         case let (nil, until):
             last = min(until ?? today, today)
-            first = keyMath.key(last, addingDays: -((days ?? defaultDays) - 1)) ?? last
+            if days == nil, let oldest {
+                first = min(oldest, last)
+            } else {
+                first = keyMath.key(last, addingDays: -((days ?? defaultDays) - 1)) ?? last
+            }
         }
         guard first <= last else { return .failure(.emptyRange(first, last)) }
         var keys = [first]

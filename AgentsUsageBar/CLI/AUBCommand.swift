@@ -44,20 +44,30 @@ public enum AUBCommand: Equatable, Sendable {
         public var since: String?
         public var until: String?
         public var noColor: Bool
+        public var format: StatsFormat
 
         public init(
             filter: ProviderFilter = .enabled,
             days: Int? = nil,
             since: String? = nil,
             until: String? = nil,
-            noColor: Bool = false
+            noColor: Bool = false,
+            format: StatsFormat = .text
         ) {
             self.filter = filter
             self.days = days
             self.since = since
             self.until = until
             self.noColor = noColor
+            self.format = format
         }
+    }
+
+    /// `aub stats` output: the text table, or an export (V47).
+    public enum StatsFormat: Equatable, Sendable {
+        case text
+        case json
+        case csv(HistoryExportRenderer.CSVTable)
     }
 
     public enum ProviderFilter: Equatable, Sendable {
@@ -85,7 +95,7 @@ public enum AUBCommand: Equatable, Sendable {
         "version", "help",
         "--help", "-h", "--version", "-V",
         "--json", "--cached", "--live", "--no-color", "--provider", "--prefix", "--theme", "--cli",
-        "--days", "--since", "--until",
+        "--days", "--since", "--until", "--csv",
     ]
 
     public static let helpText = """
@@ -96,6 +106,7 @@ public enum AUBCommand: Equatable, Sendable {
       aub quota [provider]     Print quota / limits / reset windows
       aub limits [provider]    Alias of quota
       aub stats [provider]     Usage history: 14-day summary, or one row per day
+      aub stats --json | --csv [accounts|events|quota]   Export history (every retained day)
       aub settings             List settings keys and values
       aub settings get <key>
       aub settings set <key> <value>
@@ -116,6 +127,7 @@ public enum AUBCommand: Equatable, Sendable {
       --days N        Stats range length, ending today (default 14)
       --since DATE    Stats range start, yyyy-MM-dd
       --until DATE    Stats range end, yyyy-MM-dd
+      --csv [TABLE]   Stats export as CSV: days (default), accounts, events, quota
 
     Environment:
       AUB_THEME       CLI theme when --theme is absent (overrides the cli-theme setting)
@@ -136,6 +148,7 @@ public enum AUBCommand: Equatable, Sendable {
       aub quota claude
       aub stats --days 30
       aub stats claude --since 2026-10-01
+      aub stats --csv quota --days 30
       aub settings get refresh-interval
       aub settings set threshold 0.7
     """
@@ -195,6 +208,7 @@ extension AUBCommand {
         var since: String?
         var until: String?
         var rangeFlag: String?
+        var csv: HistoryExportRenderer.CSVTable?
         var positionals: [String] = []
 
         var i = 0
@@ -239,6 +253,14 @@ extension AUBCommand {
                 guard StatsRange.isDayKey(tokens[i]) else { return .failure(.invalidDay(flag: t, value: tokens[i])) }
                 if t == "--since" { since = tokens[i] } else { until = tokens[i] }
                 rangeFlag = t
+            case "--csv":
+                // The table name is optional, so only a known table is taken as its value.
+                if i + 1 < tokens.count, let table = HistoryExportRenderer.CSVTable(rawValue: tokens[i + 1]) {
+                    csv = table
+                    i += 1
+                } else {
+                    csv = .days
+                }
             default:
                 if t.hasPrefix("-") {
                     return .failure(.unknownCommand(t))
@@ -252,6 +274,9 @@ extension AUBCommand {
         let rest = Array(positionals.dropFirst())
         if let rangeFlag, head != "stats" {
             return .failure(.unexpectedArgument(rangeFlag))
+        }
+        if csv != nil, head != "stats" {
+            return .failure(.unexpectedArgument("--csv"))
         }
 
         func usageOptions(defaultFilter: ProviderFilter = .enabled) -> Result<UsageOptions, AUBParseError> {
@@ -289,9 +314,11 @@ extension AUBCommand {
             return usageOptions().map { .quota($0) }
         case "stats":
             // `--theme` is accepted and ignored: stats has one layout (V46).
-            if json { return .failure(.unexpectedArgument("--json")) }
+            if json, csv != nil { return .failure(.unexpectedArgument("--csv")) }
+            let format: StatsFormat = json ? .json : csv.map(StatsFormat.csv) ?? .text
             return usageOptions().map { opts in
-                .stats(StatsOptions(filter: opts.filter, days: days, since: since, until: until, noColor: noColor))
+                .stats(StatsOptions(
+                    filter: opts.filter, days: days, since: since, until: until, noColor: noColor, format: format))
             }
         case "settings":
             return parseSettings(rest, json: json)

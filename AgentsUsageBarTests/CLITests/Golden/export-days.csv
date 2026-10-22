@@ -1,0 +1,12 @@
+date,provider,tokens,costUSD,valueUSD,costEstimated,balanceUSD,billingModel,origin,sealed,firstSeen,lastSeen
+2026-03-12,claude,200000,,10,true,,subscription,observed,true,2026-03-12T09:00:00Z,2026-03-12T18:00:00Z
+2026-03-12,codex,50000,,,true,,mixed,backfilled,true,,
+2026-03-12,ollama,,,,false,,local,observed,true,2026-03-12T09:00:00Z,2026-03-12T18:00:00Z
+2026-03-12,openrouter,50000,0.5,,false,16,metered,observed,true,2026-03-12T09:00:00Z,2026-03-12T18:00:00Z
+2026-03-13,claude,300000,,15,true,,subscription,observed,true,2026-03-13T09:00:00Z,2026-03-13T18:00:00Z
+2026-03-13,codex,100000,,,true,,mixed,observed,true,2026-03-13T09:00:00Z,2026-03-13T18:00:00Z
+2026-03-13,ollama,,,,false,,local,observed,true,2026-03-13T09:00:00Z,2026-03-13T18:00:00Z
+2026-03-13,openrouter,10000,1.5,,false,15,metered,observed,true,2026-03-13T09:00:00Z,2026-03-13T18:00:00Z
+2026-03-14,codex,150000,,,true,,mixed,observed,false,2026-03-14T09:00:00Z,2026-03-14T18:00:00Z
+2026-03-14,ollama,,,,false,,local,observed,false,2026-03-14T09:00:00Z,2026-03-14T18:00:00Z
+2026-03-14,openrouter,20000,2.5,,false,14,metered,observed,false,2026-03-14T09:00:00Z,2026-03-14T18:00:00Z

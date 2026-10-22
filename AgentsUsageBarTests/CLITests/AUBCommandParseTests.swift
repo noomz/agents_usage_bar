@@ -149,6 +149,18 @@ struct AUBCommandParseTests {
         #expect(AUBCommand.isSubcommand("stats"))
     }
 
+    @Test("stats --json and --csv [table] select an export (V47, V49)")
+    func statsExport() {
+        #expect(try! AUBCommand.parse(["stats", "--json"]).get() == .stats(.init(format: .json)))
+        #expect(try! AUBCommand.parse(["stats", "--csv"]).get() == .stats(.init(format: .csv(.days))))
+        #expect(try! AUBCommand.parse(["stats", "--csv", "quota", "--days", "30"]).get()
+                == .stats(.init(days: 30, format: .csv(.quota))))
+        #expect(try! AUBCommand.parse(["stats", "--csv", "claude"]).get()
+                == .stats(.init(filter: .one(.claude), format: .csv(.days))))
+        #expect(AUBCommand.parse(["stats", "--json", "--csv"]) == .failure(.unexpectedArgument("--csv")))
+        #expect(AUBCommand.parse(["usage", "--csv"]) == .failure(.unexpectedArgument("--csv")))
+    }
+
     @Test("stats accepts and ignores --theme (V46)")
     func statsTheme() {
         #expect(try! AUBCommand.parse(["stats", "--theme", "classic"]).get() == .stats(.init()))

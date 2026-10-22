@@ -66,7 +66,9 @@ extension AUBCommand {
     }
 
     private static func runStats(_ opts: StatsOptions) async throws -> Int32 {
-        let result = try await stats(opts, reader: HistoryReader(), owner: DayKeyOwner())
+        let enabled = await MainActor.run { UserPreferencesStore().providerEnabled }
+        let result = try await stats(
+            opts, reader: HistoryReader(), owner: DayKeyOwner(), isEnabled: { enabled[$0] ?? true })
         fputs(result.text, result.code == 0 ? stdout : stderr)
         return result.code
     }
@@ -77,7 +79,9 @@ extension AUBCommand {
     static func stats(
         _ opts: StatsOptions,
         reader: HistoryReader,
-        owner: DayKeyOwner
+        owner: DayKeyOwner,
+        isEnabled: @escaping @Sendable (ProviderID) -> Bool = { _ in true },
+        now: Date = Date()
     ) async throws -> (text: String, code: Int32) {
         let keys: [String]
         do {
@@ -85,6 +89,9 @@ extension AUBCommand {
         } catch {
             let path = reader.directory.path(percentEncoded: false)
             return ("error: cannot read usage history at \(path): \(error.localizedDescription)\n", 1)
+        }
+        if opts.format != .text {
+            return try await export(opts, keys: keys, reader: reader, owner: owner, isEnabled: isEnabled, now: now)
         }
         guard let newest = keys.last else {
             return (StatsTextRenderer.noHistory + "\n", 0)
@@ -207,6 +214,30 @@ extension AUBCommand {
             clock: clock,
             isEnabled: { id in enabled[id] ?? true }
         )
+    }
+
+    /// `--json` and `--csv` (V47): every retained day by default, narrowed by the range flags
+    /// and `--provider`. No history is a valid, empty export rather than the text line.
+    private static func export(
+        _ opts: StatsOptions,
+        keys: [String],
+        reader: HistoryReader,
+        owner: DayKeyOwner,
+        isEnabled: @escaping @Sendable (ProviderID) -> Bool,
+        now: Date
+    ) async throws -> (text: String, code: Int32) {
+        if let newest = keys.last { owner.advanceNewest(to: newest) }
+        let range = try StatsRange.resolve(
+            today: owner.today(), days: opts.days, since: opts.since, until: opts.until, oldest: keys.first).get()
+        let days = try await reader.days(in: range.keys[0]...range.keys[range.keys.count - 1])
+        let provider: ProviderID? = if case .one(let id) = opts.filter { id } else { nil }
+        let scope = HistoryExportRenderer.Scope(range: range, provider: provider, isEnabled: isEnabled)
+        switch opts.format {
+        case .csv(let table):
+            return (HistoryExportRenderer.csv(days, scope: scope, table: table), 0)
+        case .json, .text:
+            return (try HistoryExportRenderer.json(days, scope: scope, exportedAt: now), 0)
+        }
     }
 
     private static func versionString() -> String {

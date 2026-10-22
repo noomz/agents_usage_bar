@@ -149,7 +149,7 @@ T7|x|S1: Accounts: account key and salt, account label rules, billing model and 
 T8|x|S1: `history/` 0700 and files 0600. SEC-04 email scan in `check-secrets.sh` and `ci.yml`. A synthetic day-file generator for fixtures.|V23,V24,C3,I15
 T9|x|S1 gate: CI green, install, run across at least one poll, inspect today's day file and its modes.|C7
 T10|x|S2: `aub stats` summary, drill-down, ranges, buckets, markers, legend, edge output. Golden tests on synthetic history.|V26,V42,V43,V44,V45,V46,I13
-T11|.|S2: `--json` and `--csv` renderers (all four CSV tables) and the README export section.|V26,V47,V48,V49
+T11|x|S2: `--json` and `--csv` renderers (all four CSV tables) and the README export section.|V26,V47,V48,V49
 T12|.|S2 gate: CI green, install, `aub stats`, `aub stats claude`, `aub stats --json` and `--csv` on real history.|C7
 T13|.|S3: Gap-fill scheduler: triggers, low priority, one provider at a time, `backfillChecked`, zero records inside reach, top-up only on observed days, no events.|V27,V29,V30,V31,V32
 T14|.|S3: Claude and Codex backfill sources with estimated cost and assumed billing model.|V10,V25,V28,I8,I10
