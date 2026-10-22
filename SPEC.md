@@ -147,7 +147,7 @@ T5|x|S1: Merge each poll into the open day (max totals, last balance, quota peak
 T6|x|S1: Monotonic day key from the newest day file, and the more-than-1-day pause. Regression tests with a fixed `Clock`: sleep Mon→Thu, Tokyo→Honolulu, Honolulu→Tokyo, `America/New_York` DST spring and fall, clock set back 10 days.|V4,V5,V6,V12,ADR0002
 T7|x|S1: Accounts: account key and salt, account label rules, billing model and plan at poll time, `costEstimated` for observed estimated cost.|V9,V10,V21,V22,V25,I6,I7,I8,ADR0003
 T8|x|S1: `history/` 0700 and files 0600. SEC-04 email scan in `check-secrets.sh` and `ci.yml`. A synthetic day-file generator for fixtures.|V23,V24,C3,I15
-T9|.|S1 gate: CI green, install, run across at least one poll, inspect today's day file and its modes.|C7
+T9|x|S1 gate: CI green, install, run across at least one poll, inspect today's day file and its modes.|C7
 T10|.|S2: `aub stats` summary, drill-down, ranges, buckets, markers, legend, edge output. Golden tests on synthetic history.|V26,V42,V43,V44,V45,V46,I13
 T11|.|S2: `--json` and `--csv` renderers (all four CSV tables) and the README export section.|V26,V47,V48,V49
 T12|.|S2 gate: CI green, install, `aub stats`, `aub stats claude`, `aub stats --json` and `--csv` on real history.|C7
