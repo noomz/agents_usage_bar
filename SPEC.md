@@ -156,7 +156,7 @@ T12|x|S2 gate: CI green, install, `aub stats`, `aub stats claude`, `aub stats --
 T13|x|S3: Gap-fill scheduler: triggers, low priority, one provider at a time, `backfillChecked`, zero records inside reach, top-up only on observed days, no events.|V27,V29,V30,V31,V32
 T14|x|S3: Claude and Codex backfill sources with estimated cost and assumed billing model.|V10,V25,V28,V62,I8,I10
 T15|x|S3: OpenRouter `/activity` source and the management key config.|V13,V18,V28,V63,I10,I11,I16
-T16|.|S3 gate: CI green, install, delete a synthetic test day's file in a scratch history copy or wait for a missed day, confirm gap-fill writes it.|C7
+T16|x|S3 gate: CI green, install, delete a synthetic test day's file in a scratch history copy or wait for a missed day, confirm gap-fill writes it.|C7
 T17|.|S4: Engines return every crossing; the dispatch gate sets `notified`; `lastBand` advances on every crossing. Existing notification tests stay green.|V34,V35,I4
 T18|.|S4: Record band, pace, reset, and auth events into `events[]`, with carry-over and the degraded rule.|V33,V35,V36,V37,V38
 T19|.|S4 gate: CI green, install, confirm an event lands in today's file when a band is crossed.|C7
