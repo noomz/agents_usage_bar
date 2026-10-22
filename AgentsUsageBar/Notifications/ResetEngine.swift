@@ -30,7 +30,9 @@ public struct ResetEngine: Sendable {
         self.dayKeys = dayKeys
     }
 
-    /// Evaluates snapshots and returns reset decisions plus the samples to keep for the next poll.
+    /// Evaluates snapshots and returns every reset crossing (SPEC V34), the decisions to
+    /// schedule, and the samples to keep for the next poll. `enabled` only sets `notified`;
+    /// a reset is reported once either way.
     public func decisions(
         for snapshots: [UsageSnapshot],
         now: Date,
@@ -38,10 +40,11 @@ public struct ResetEngine: Sendable {
         alreadyFired: [ProviderID: Set<String>],
         warningFraction: Double,
         enabled: Bool
-    ) -> (decisions: [NotificationDecision], nextSamples: [ResetSample]) {
+    ) -> (decisions: [NotificationDecision], nextSamples: [ResetSample], crossings: [QuotaCrossing]) {
         let today = dayKeys.key(for: now)
         var nextSamples: [ResetSample] = []
         var decisions: [NotificationDecision] = []
+        var crossings: [QuotaCrossing] = []
 
         let prevIndex: [ResetSample.Key: ResetSample] = Dictionary(
             previous.map { ($0.key, $0) },
@@ -66,7 +69,6 @@ public struct ResetEngine: Sendable {
                     )
                 )
 
-                guard enabled else { continue }
                 let prev = prevIndex[ResetSample.Key(providerID: snap.providerID, windowName: window.name)]
                 guard let prev else { continue }
                 guard resetsAt > prev.resetsAt else { continue }
@@ -74,6 +76,18 @@ public struct ResetEngine: Sendable {
 
                 let key = Self.fireKey(windowName: window.name, resetsAt: prev.resetsAt)
                 guard !fired.contains(key) else { continue }
+
+                crossings.append(
+                    QuotaCrossing(
+                        providerID: snap.providerID,
+                        kind: .reset,
+                        window: window.name,
+                        fraction: prev.utilization,
+                        notified: enabled,
+                        stateKey: key
+                    )
+                )
+                guard enabled else { continue }
 
                 decisions.append(
                     makeDecision(
@@ -86,7 +100,7 @@ public struct ResetEngine: Sendable {
             }
         }
 
-        return (decisions, nextSamples)
+        return (decisions, nextSamples, crossings)
     }
 
     /// Dedup token for one reset event: window name plus the **old** `resetsAt`.

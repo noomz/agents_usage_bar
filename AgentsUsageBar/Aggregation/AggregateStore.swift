@@ -510,9 +510,9 @@ public final class AggregateStore {
         hasTokensByID.values.contains(false)
     }
 
-    /// Calls the FSM-aware `ThresholdEngine.decisions(for:now:snoozedUntilDay:lastBands:)`
-    /// overload (Plan 02.05) and dispatches results to `NotificationManager`. Persists the
-    /// new band per fired decision so the next poll's lastBand comparison is correct.
+    /// Calls the FSM-aware `ThresholdEngine.evaluate(for:now:snoozedUntilDay:lastBands:)`
+    /// (Plan 02.05) and dispatches the notified decisions to `NotificationManager`. Advances
+    /// `lastBand` for every crossing, snoozed or not (SPEC V34).
     private func fireThresholdNotificationsIfNeeded(now: Date) async {
         let snapshots = providers.values.compactMap(\.snapshot)
         let day = dayKeys.key(for: now)
@@ -526,24 +526,43 @@ public final class AggregateStore {
             }
         )
 
-        let decisions = thresholds.decisions(
+        let result = thresholds.evaluate(
             for: snapshots,
             now: now,
             snoozedUntilDay: snoozedUntilDay,
             lastBands: lastBands
         )
-        await notifications.schedule(decisions)
+        await notifications.schedule(result.decisions)
+        advanceNotificationState(for: result.crossings, day: day)
+    }
 
-        // Persist newly fired band per provider; preserve any existing snooze state.
-        for decision in decisions {
-            let existing = notificationState.record(forProviderID: decision.providerID, day: day)
-            let updated = NotificationStateRecord(
-                lastBand: decision.band,
-                snoozedUntilDay: existing?.snoozedUntilDay,
-                firedPaceWindows: existing?.firedPaceWindows ?? [],
-                firedResetKeys: existing?.firedResetKeys ?? []
+    /// Records every crossing in today's notification state, notified or not (SPEC V34):
+    /// bands raise `lastBand`, pace and reset add their `stateKey` to the fired sets.
+    /// Snooze state is preserved.
+    private func advanceNotificationState(for crossings: [QuotaCrossing], day: String) {
+        for crossing in crossings {
+            let existing = notificationState.record(forProviderID: crossing.providerID, day: day)
+            var lastBand = existing?.lastBand ?? .normal
+            var firedPace = existing?.firedPaceWindows ?? []
+            var firedResets = existing?.firedResetKeys ?? []
+            switch crossing.kind {
+            case .pace:
+                if let key = crossing.stateKey, !firedPace.contains(key) { firedPace.append(key) }
+            case .reset:
+                if let key = crossing.stateKey, !firedResets.contains(key) { firedResets.append(key) }
+            default:
+                if let band = ThresholdBand(eventKind: crossing.kind) { lastBand = max(lastBand, band) }
+            }
+            notificationState.setRecord(
+                NotificationStateRecord(
+                    lastBand: lastBand,
+                    snoozedUntilDay: existing?.snoozedUntilDay,
+                    firedPaceWindows: firedPace,
+                    firedResetKeys: firedResets
+                ),
+                forProviderID: crossing.providerID,
+                day: day
             )
-            notificationState.setRecord(updated, forProviderID: decision.providerID, day: day)
         }
     }
 
@@ -576,21 +595,8 @@ public final class AggregateStore {
 
         for decision in result.decisions {
             await notifications.schedule([decision])
-            guard let windowName = decision.windowName else { continue }
-            let existing = notificationState.record(forProviderID: decision.providerID, day: day)
-            var fired = existing?.firedPaceWindows ?? []
-            if !fired.contains(windowName) { fired.append(windowName) }
-            notificationState.setRecord(
-                NotificationStateRecord(
-                    lastBand: existing?.lastBand ?? .normal,
-                    snoozedUntilDay: existing?.snoozedUntilDay,
-                    firedPaceWindows: fired,
-                    firedResetKeys: existing?.firedResetKeys ?? []
-                ),
-                forProviderID: decision.providerID,
-                day: day
-            )
         }
+        advanceNotificationState(for: result.crossings, day: day)
     }
 
     /// Evaluates quota-window resets independently of the 80/95/100% FSM and pace warnings.
@@ -618,25 +624,7 @@ public final class AggregateStore {
 
         for decision in result.decisions {
             await notifications.schedule([decision])
-            guard let windowName = decision.windowName,
-                  let epoch = decision.id.split(separator: ":").last, !epoch.isEmpty
-            else { continue }
-            let existing = notificationState.record(forProviderID: decision.providerID, day: day)
-            var fired = existing?.firedResetKeys ?? []
-            // Dedup key is the *old* resetsAt. Reconstruct from the decision id suffix
-            // (`…:reset:<slug>:<epoch>`) because `resetSamples` already holds the new window.
-            let key = "\(windowName):\(epoch)"
-            if !fired.contains(key) { fired.append(key) }
-            notificationState.setRecord(
-                NotificationStateRecord(
-                    lastBand: existing?.lastBand ?? .normal,
-                    snoozedUntilDay: existing?.snoozedUntilDay,
-                    firedPaceWindows: existing?.firedPaceWindows ?? [],
-                    firedResetKeys: fired
-                ),
-                forProviderID: decision.providerID,
-                day: day
-            )
         }
+        advanceNotificationState(for: result.crossings, day: day)
     }
 }

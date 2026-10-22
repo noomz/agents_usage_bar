@@ -213,4 +213,30 @@ struct AggregateStoreResetTests {
         let keys = state.record(forProviderID: .claude, day: Self.today)?.firedResetKeys ?? []
         #expect(!keys.isEmpty)
     }
+
+    @Test("reset while off is recorded in firedResetKeys (V34)")
+    func toggleOff_recordsResetKey() async {
+        let state = InMemoryNotificationStateStore()
+        let provider = ResetFakeProvider(
+            id: .claude,
+            displayName: "Claude Code",
+            windows: [window("5h", used: 0.90, remaining: 600, at: Self.now)],
+            quotaUsed: 0.40
+        )
+        let spy = CapturingNotificationManager()
+        let store = makeStore(provider: provider, spy: spy, state: state)
+        store.updateResetNotificationsEnabled(false)
+
+        await store.refresh(now: Self.now)
+        let later = Self.now.addingTimeInterval(700)
+        await provider.setWindows(
+            [window("5h", used: 0.05, remaining: 5 * 3600, at: later)],
+            quotaUsed: 0.05
+        )
+        await store.refresh(now: later)
+
+        #expect(resetBatches(spy).isEmpty)
+        let expected = ResetEngine.fireKey(windowName: "5h", resetsAt: Self.now.addingTimeInterval(600))
+        #expect(state.record(forProviderID: .claude, day: Self.today)?.firedResetKeys == [expected])
+    }
 }

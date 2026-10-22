@@ -208,6 +208,45 @@ struct PaceEngineTests {
         #expect(result.nextSamples[0].utilization == 0.40)
     }
 
+    @Test("toggle off and snooze still report the crossing, not notified (V34)")
+    func gated_crossingReported_notNotified() throws {
+        let snap = snapshot(windows: [window("5h", used: 0.40, remaining: 4 * 3600)])
+        let today = DayKeyOwner(timeZone: Self.ptCalendar.timeZone).key(for: Self.now)
+        for (enabled, snoozed) in [(false, [ProviderID: String]()), (true, [.claude: today])] {
+            let result = engine.decisions(
+                for: [snap],
+                now: Self.now,
+                previous: [],
+                snoozedUntilDay: snoozed,
+                alreadyFired: [:],
+                enabled: enabled
+            )
+            #expect(result.decisions.isEmpty)
+            try #require(result.crossings.count == 1)
+            #expect(result.crossings[0] == QuotaCrossing(
+                providerID: .claude, kind: .pace, window: "5h", fraction: 0.40,
+                notified: false, stateKey: "5h"
+            ))
+        }
+    }
+
+    @Test("notified crossing pairs with its decision; an already-fired window crosses nothing")
+    func crossing_notified_and_alreadyFired() {
+        let snap = snapshot(windows: [window("5h", used: 0.40, remaining: 4 * 3600)])
+        let fresh = engine.decisions(
+            for: [snap], now: Self.now, previous: [], snoozedUntilDay: [:],
+            alreadyFired: [:], enabled: true
+        )
+        #expect(fresh.decisions.count == 1)
+        #expect(fresh.crossings.map(\.notified) == [true])
+
+        let again = engine.decisions(
+            for: [snap], now: Self.now, previous: [], snoozedUntilDay: [:],
+            alreadyFired: [.claude: ["5h"]], enabled: true
+        )
+        #expect(again.crossings.isEmpty)
+    }
+
     @Test("snoozed provider is silent")
     func snoozed_silent() {
         let snap = snapshot(windows: [window("5h", used: 0.40, remaining: 4 * 3600)])
