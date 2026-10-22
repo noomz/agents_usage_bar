@@ -49,6 +49,8 @@ public final class AggregateStore {
     private let clock: any Clock
     private let dayKeys: DayKeyOwner
     private let cache: any CacheStore
+    /// Usage history writer (SPEC V15). Nil in tests that do not exercise history.
+    private let history: HistoryStore?
     /// Plan 05-03: changed from `let` to `var` to allow live threshold rebuild (D-04).
     /// The class is `@MainActor` — mutating a stored property is safe.
     private var thresholds: ThresholdEngine
@@ -102,12 +104,14 @@ public final class AggregateStore {
         thresholds: ThresholdEngine,
         notifications: any NotificationManager,
         notificationState: any NotificationStateStorage = InMemoryNotificationStateStore(),
-        dayKeys: DayKeyOwner = DayKeyOwner()
+        dayKeys: DayKeyOwner = DayKeyOwner(),
+        history: HistoryStore? = nil
     ) {
         self.registry = registry
         self.clock = clock
         self.dayKeys = dayKeys
         self.cache = cache
+        self.history = history
         self.thresholds = thresholds
         self.notifications = notifications
         self.notificationState = notificationState
@@ -407,6 +411,17 @@ public final class AggregateStore {
         await firePaceNotificationsIfNeeded(now: now)
         await fireResetNotificationsIfNeeded(now: now)
         cache.save(providers)
+        await recordHistory(now: now)
+    }
+
+    /// Folds the providers that were `.ok` on this poll into the open history day (V11, V15).
+    /// A stale snapshot kept after an error is not a sample.
+    private func recordHistory(now: Date) async {
+        guard let history else { return }
+        let samples = providers.values
+            .filter { $0.status == .ok(lastSuccess: now) }
+            .compactMap(\.snapshot)
+        await history.record(samples, at: now)
     }
 
     /// Lazily creates (or returns the existing) per-provider 5-strike POLL-05 circuit breaker.

@@ -40,6 +40,25 @@ public struct DayKeyOwner: Sendable {
         return TodayHelper.formatYYYYMMDD(date, calendar: gregorian)
     }
 
+    /// The current time zone id, stored as a day file's last zone seen (V6).
+    public var timeZoneIdentifier: String {
+        timeZone.identifier
+    }
+
+    /// The day key `days` calendar days after `key` (before it when negative), or nil when
+    /// `key` is not `yyyy-MM-dd`.
+    public func key(_ key: String, addingDays days: Int) -> String? {
+        let parts = key.split(separator: "-", omittingEmptySubsequences: false).compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = timeZone
+        // Noon keeps a DST shift from moving the date.
+        guard let date = gregorian.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2], hour: 12)),
+              let shifted = gregorian.date(byAdding: .day, value: days, to: date)
+        else { return nil }
+        return self.key(for: shifted)
+    }
+
     /// The key a pre-S0 build stored for `date`: `yyyy-MM-dd` in the locale's calendar.
     public func legacyKey(for date: Date) -> String {
         TodayHelper.formatYYYYMMDD(date, calendar: legacyCalendar)

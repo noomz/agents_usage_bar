@@ -43,6 +43,7 @@
 		AA02020000000000000000BA /* TodayHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA02020000000000000000BB /* TodayHelper.swift */; };
 		AA1D4E0000000000000000A1 /* DayKeyOwner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4E0000000000000000A2 /* DayKeyOwner.swift */; };
 		AA1D4F00000000000000001A /* DayFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4F00000000000000001B /* DayFile.swift */; };
+		AA1D50000000000000000001A /* DayRecordMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D50000000000000000001B /* DayRecordMerge.swift */; };
 		/* Plan 01.02 — Infrastructure sources */
 		AA020200000000000000010A /* HTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000010B /* HTTPClient.swift */; };
 		AA020200000000000000011A /* URLSessionHTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000011B /* URLSessionHTTPClient.swift */; };
@@ -50,17 +51,20 @@
 		AA020200000000000000013A /* CacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000013B /* CacheStore.swift */; };
 		AA020200000000000000014A /* FileCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000014B /* FileCacheStore.swift */; };
 		AA1D4F00000000000000002A /* HistoryReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4F00000000000000002B /* HistoryReader.swift */; };
+		AA1D50000000000000000002A /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D50000000000000000002B /* HistoryStore.swift */; };
 		AA020200000000000000015A /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000015B /* AppLogger.swift */; };
 		/* Plan 01.02 — Test sources */
 		AA020200000000000000020A /* SecretTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000020B /* SecretTests.swift */; };
 		AA020200000000000000021A /* TodayHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000021B /* TodayHelperTests.swift */; };
 		AA1D4E0000000000000000B1 /* DayKeyOwnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4E0000000000000000B2 /* DayKeyOwnerTests.swift */; };
 		AA1D4F00000000000000003A /* DayFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4F00000000000000003B /* DayFileTests.swift */; };
+		AA1D50000000000000000003A /* DayRecordMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D50000000000000000003B /* DayRecordMergeTests.swift */; };
 		AA1D4E0000000000000000C1 /* DayKeyUpgradeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4E0000000000000000C2 /* DayKeyUpgradeTests.swift */; };
 		AA020200000000000000022A /* QuotaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000022B /* QuotaTests.swift */; };
 		AA020200000000000000023A /* ThresholdStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000023B /* ThresholdStateTests.swift */; };
 		AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000024B /* FileCacheStoreTests.swift */; };
 		AA1D4F00000000000000004A /* HistoryReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D4F00000000000000004B /* HistoryReaderTests.swift */; };
+		AA1D50000000000000000004A /* HistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D50000000000000000004B /* HistoryStoreTests.swift */; };
 		AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020200000000000000025B /* URLSessionHTTPClientTests.swift */; };
 		/* Plan 05-02 — UserPreferencesStore + AppEnvironmentKeys app sources */
 		AA050200000000000000001A /* UserPreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000001B /* UserPreferencesStore.swift */; };
@@ -453,6 +457,7 @@
 		AA02020000000000000000BB /* TodayHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHelper.swift; sourceTree = "<group>"; };
 		AA1D4E0000000000000000A2 /* DayKeyOwner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayKeyOwner.swift; sourceTree = "<group>"; };
 		AA1D4F00000000000000001B /* DayFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayFile.swift; sourceTree = "<group>"; };
+		AA1D50000000000000000001B /* DayRecordMerge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayRecordMerge.swift; sourceTree = "<group>"; };
 		/* Plan 01.02 — Infrastructure file references */
 		AA020200000000000000010B /* HTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPClient.swift; sourceTree = "<group>"; };
 		AA020200000000000000011B /* URLSessionHTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionHTTPClient.swift; sourceTree = "<group>"; };
@@ -460,6 +465,7 @@
 		AA020200000000000000013B /* CacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheStore.swift; sourceTree = "<group>"; };
 		AA020200000000000000014B /* FileCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStore.swift; sourceTree = "<group>"; };
 		AA1D4F00000000000000002B /* HistoryReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryReader.swift; sourceTree = "<group>"; };
+		AA1D50000000000000000002B /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
 		AA020200000000000000015B /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		/* Plan 01.02 — Test file references */
 		AA020200000000000000020B /* SecretTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretTests.swift; sourceTree = "<group>"; };
@@ -473,11 +479,13 @@
 		AA020200000000000000021B /* TodayHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayHelperTests.swift; sourceTree = "<group>"; };
 		AA1D4E0000000000000000B2 /* DayKeyOwnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayKeyOwnerTests.swift; sourceTree = "<group>"; };
 		AA1D4F00000000000000003B /* DayFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayFileTests.swift; sourceTree = "<group>"; };
+		AA1D50000000000000000003B /* DayRecordMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayRecordMergeTests.swift; sourceTree = "<group>"; };
 		AA1D4E0000000000000000C2 /* DayKeyUpgradeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayKeyUpgradeTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000022B /* QuotaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000023B /* ThresholdStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThresholdStateTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000024B /* FileCacheStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCacheStoreTests.swift; sourceTree = "<group>"; };
 		AA1D4F00000000000000004B /* HistoryReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryReaderTests.swift; sourceTree = "<group>"; };
+		AA1D50000000000000000004B /* HistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStoreTests.swift; sourceTree = "<group>"; };
 		AA020200000000000000025B /* URLSessionHTTPClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionHTTPClientTests.swift; sourceTree = "<group>"; };
 		/* Plan 05-02 — UserPreferencesStore + AppEnvironmentKeys file references */
 		AA050200000000000000001B /* UserPreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferencesStore.swift; sourceTree = "<group>"; };
@@ -916,6 +924,7 @@
 				AA02020000000000000000BB /* TodayHelper.swift */,
 				AA1D4E0000000000000000A2 /* DayKeyOwner.swift */,
 				AA1D4F00000000000000001B /* DayFile.swift */,
+				AA1D50000000000000000001B /* DayRecordMerge.swift */,
 				AA020100000000000000001B /* TranscriptOffset.swift */,
 				AA020300000000000000001B /* QuotaWindow.swift */,
 				AA061000000000000000001B /* ClaudeUsageSource.swift */,
@@ -936,6 +945,7 @@
 				AA020200000000000000013B /* CacheStore.swift */,
 				AA020200000000000000014B /* FileCacheStore.swift */,
 				AA1D4F00000000000000002B /* HistoryReader.swift */,
+				AA1D50000000000000000002B /* HistoryStore.swift */,
 				AA020200000000000000015B /* AppLogger.swift */,
 				AA050500000000000000004B /* NoopCacheStore.swift */,
 				/* Plan 02.06 — Resilience + energy primitives */
@@ -954,6 +964,7 @@
 				AA020200000000000000021B /* TodayHelperTests.swift */,
 				AA1D4E0000000000000000B2 /* DayKeyOwnerTests.swift */,
 				AA1D4F00000000000000003B /* DayFileTests.swift */,
+				AA1D50000000000000000003B /* DayRecordMergeTests.swift */,
 				AA1D4E0000000000000000C2 /* DayKeyUpgradeTests.swift */,
 				AA020200000000000000022B /* QuotaTests.swift */,
 				AA020200000000000000023B /* ThresholdStateTests.swift */,
@@ -983,6 +994,7 @@
 			children = (
 				AA020200000000000000024B /* FileCacheStoreTests.swift */,
 				AA1D4F00000000000000004B /* HistoryReaderTests.swift */,
+				AA1D50000000000000000004B /* HistoryStoreTests.swift */,
 				AA020200000000000000025B /* URLSessionHTTPClientTests.swift */,
 				AA040300000000000000010B /* URLSessionHTTPClientTimeoutTierTests.swift */,
 				AA020100000000000000020B /* FileCacheStoreSchemaV2Tests.swift */,
@@ -1944,12 +1956,14 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA02020000000000000000BA /* TodayHelper.swift in Sources */,
 				AA1D4E0000000000000000A1 /* DayKeyOwner.swift in Sources */,
 				AA1D4F00000000000000001A /* DayFile.swift in Sources */,
+				AA1D50000000000000000001A /* DayRecordMerge.swift in Sources */,
 				AA020200000000000000010A /* HTTPClient.swift in Sources */,
 				AA020200000000000000011A /* URLSessionHTTPClient.swift in Sources */,
 				AA020200000000000000012A /* Clock.swift in Sources */,
 				AA020200000000000000013A /* CacheStore.swift in Sources */,
 				AA020200000000000000014A /* FileCacheStore.swift in Sources */,
 				AA1D4F00000000000000002A /* HistoryReader.swift in Sources */,
+				AA1D50000000000000000002A /* HistoryStore.swift in Sources */,
 				AA020200000000000000015A /* AppLogger.swift in Sources */,
 				AA030300000000000000001A /* AppConfig.swift in Sources */,
 				AA030300000000000000002A /* EnvReader.swift in Sources */,
@@ -2113,12 +2127,14 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA020200000000000000021A /* TodayHelperTests.swift in Sources */,
 				AA1D4E0000000000000000B1 /* DayKeyOwnerTests.swift in Sources */,
 				AA1D4F00000000000000003A /* DayFileTests.swift in Sources */,
+				AA1D50000000000000000003A /* DayRecordMergeTests.swift in Sources */,
 				AA1D4E0000000000000000C1 /* DayKeyUpgradeTests.swift in Sources */,
 				AA020200000000000000022A /* QuotaTests.swift in Sources */,
 				AA020200000000000000023A /* ThresholdStateTests.swift in Sources */,
 				AA111111000000000000003A /* QuotaGlanceTests.swift in Sources */,
 				AA020200000000000000024A /* FileCacheStoreTests.swift in Sources */,
 				AA1D4F00000000000000004A /* HistoryReaderTests.swift in Sources */,
+				AA1D50000000000000000004A /* HistoryStoreTests.swift in Sources */,
 				AA020200000000000000025A /* URLSessionHTTPClientTests.swift in Sources */,
 				AA040300000000000000010A /* URLSessionHTTPClientTimeoutTierTests.swift in Sources */,
 				AA030300000000000000010A /* TomlReaderTests.swift in Sources */,
