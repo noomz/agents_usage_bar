@@ -392,6 +392,7 @@
 		AA070100000000000000006A /* UsageTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000006B /* UsageTextRenderer.swift */; };
 		AA070100000000000000044A /* CompactTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000044B /* CompactTextRenderer.swift */; };
 		AA1D5200000000000000004A /* StatsTextRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D5200000000000000004B /* StatsTextRenderer.swift */; };
+		AA1D5300000000000000001A /* HistoryExportRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D5300000000000000001B /* HistoryExportRenderer.swift */; };
 		AA1D5200000000000000003A /* HistoryStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D5200000000000000003B /* HistoryStats.swift */; };
 		AA070100000000000000042A /* CLIFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000042B /* CLIFormat.swift */; };
 		AA070100000000000000043A /* CLITheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000043B /* CLITheme.swift */; };
@@ -410,6 +411,7 @@
 		AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000014B /* UsageTextRendererTests.swift */; };
 		AA070100000000000000045A /* CompactTextRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000045B /* CompactTextRendererTests.swift */; };
 		AA1D5200000000000000005A /* StatsTextRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D5200000000000000005B /* StatsTextRendererTests.swift */; };
+		AA1D5300000000000000002A /* HistoryExportRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D5300000000000000002B /* HistoryExportRendererTests.swift */; };
 		AA070100000000000000046A /* CLIThemeSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000046B /* CLIThemeSelectionTests.swift */; };
 		AA070100000000000000040A /* CLIReportFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000040B /* CLIReportFixture.swift */; };
 		AA070100000000000000041A /* ClassicGoldenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA070100000000000000041B /* ClassicGoldenTests.swift */; };
@@ -832,6 +834,7 @@
 		AA070100000000000000006B /* UsageTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTextRenderer.swift; sourceTree = "<group>"; };
 		AA070100000000000000044B /* CompactTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTextRenderer.swift; sourceTree = "<group>"; };
 		AA1D5200000000000000004B /* StatsTextRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsTextRenderer.swift; sourceTree = "<group>"; };
+		AA1D5300000000000000001B /* HistoryExportRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryExportRenderer.swift; sourceTree = "<group>"; };
 		AA1D5200000000000000003B /* HistoryStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStats.swift; sourceTree = "<group>"; };
 		AA070100000000000000042B /* CLIFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIFormat.swift; sourceTree = "<group>"; };
 		AA070100000000000000043B /* CLITheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLITheme.swift; sourceTree = "<group>"; };
@@ -850,6 +853,7 @@
 		AA070100000000000000014B /* UsageTextRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTextRendererTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000045B /* CompactTextRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTextRendererTests.swift; sourceTree = "<group>"; };
 		AA1D5200000000000000005B /* StatsTextRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsTextRendererTests.swift; sourceTree = "<group>"; };
+		AA1D5300000000000000002B /* HistoryExportRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryExportRendererTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000046B /* CLIThemeSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIThemeSelectionTests.swift; sourceTree = "<group>"; };
 		AA070100000000000000040B /* CLIReportFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIReportFixture.swift; sourceTree = "<group>"; };
 		AA070100000000000000041B /* ClassicGoldenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicGoldenTests.swift; sourceTree = "<group>"; };
@@ -1421,6 +1425,7 @@
 				AA070100000000000000006B /* UsageTextRenderer.swift */,
 				AA070100000000000000044B /* CompactTextRenderer.swift */,
 				AA1D5200000000000000004B /* StatsTextRenderer.swift */,
+				AA1D5300000000000000001B /* HistoryExportRenderer.swift */,
 				AA1D5200000000000000003B /* HistoryStats.swift */,
 				AA070100000000000000042B /* CLIFormat.swift */,
 				AA070100000000000000043B /* CLITheme.swift */,
@@ -1441,6 +1446,7 @@
 				AA070100000000000000014B /* UsageTextRendererTests.swift */,
 				AA070100000000000000045B /* CompactTextRendererTests.swift */,
 				AA1D5200000000000000005B /* StatsTextRendererTests.swift */,
+				AA1D5300000000000000002B /* HistoryExportRendererTests.swift */,
 				AA070100000000000000046B /* CLIThemeSelectionTests.swift */,
 				AA070100000000000000040B /* CLIReportFixture.swift */,
 				AA070100000000000000041B /* ClassicGoldenTests.swift */,
@@ -2135,6 +2141,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000006A /* UsageTextRenderer.swift in Sources */,
 				AA070100000000000000044A /* CompactTextRenderer.swift in Sources */,
 				AA1D5200000000000000004A /* StatsTextRenderer.swift in Sources */,
+				AA1D5300000000000000001A /* HistoryExportRenderer.swift in Sources */,
 				AA1D5200000000000000003A /* HistoryStats.swift in Sources */,
 				AA070100000000000000042A /* CLIFormat.swift in Sources */,
 				AA070100000000000000043A /* CLITheme.swift in Sources */,
@@ -2333,6 +2340,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */,
 				AA070100000000000000045A /* CompactTextRendererTests.swift in Sources */,
 				AA1D5200000000000000005A /* StatsTextRendererTests.swift in Sources */,
+				AA1D5300000000000000002A /* HistoryExportRendererTests.swift in Sources */,
 				AA070100000000000000046A /* CLIThemeSelectionTests.swift in Sources */,
 				AA070100000000000000040A /* CLIReportFixture.swift in Sources */,
 				AA070100000000000000041A /* ClassicGoldenTests.swift in Sources */,

@@ -1,0 +1,367 @@
+{
+  "days" : [
+    {
+      "date" : "2026-03-12",
+      "events" : [
+        {
+          "account" : null,
+          "carriedOver" : false,
+          "fraction" : 1,
+          "kind" : "band80",
+          "notified" : true,
+          "provider" : "claude",
+          "time" : "2026-03-12T12:00:00Z",
+          "window" : "5h"
+        }
+      ],
+      "gaps" : [
+
+      ],
+      "records" : [
+        {
+          "accounts" : [
+            {
+              "billingModel" : "subscription",
+              "key" : "work-demo",
+              "label" : "work-demo",
+              "plan" : "max"
+            },
+            {
+              "billingModel" : "subscription",
+              "key" : "default",
+              "label" : "default",
+              "plan" : "pro"
+            }
+          ],
+          "balanceUSD" : null,
+          "billingModel" : "subscription",
+          "costEstimated" : true,
+          "costUSD" : null,
+          "firstSeen" : "2026-03-12T09:00:00Z",
+          "lastSeen" : "2026-03-12T18:00:00Z",
+          "origin" : "observed",
+          "provider" : "claude",
+          "quota" : {
+            "5h" : {
+              "endOfDay" : 0.5,
+              "peak" : 1,
+              "peakResetsAt" : "2026-03-12T14:00:00Z"
+            },
+            "7d" : {
+              "endOfDay" : 0.5,
+              "peak" : 0.5,
+              "peakResetsAt" : null
+            }
+          },
+          "tokens" : 200000,
+          "valueUSD" : "10"
+        },
+        {
+          "accounts" : [
+            {
+              "billingModel" : "metered",
+              "key" : "a1b2c3d4e5f6",
+              "label" : "acct-a1b2",
+              "plan" : null
+            },
+            {
+              "billingModel" : "subscription",
+              "key" : "f6e5d4c3b2a1",
+              "label" : "plus",
+              "plan" : "plus"
+            }
+          ],
+          "balanceUSD" : null,
+          "billingModel" : "mixed",
+          "costEstimated" : true,
+          "costUSD" : null,
+          "firstSeen" : null,
+          "lastSeen" : null,
+          "origin" : "backfilled",
+          "provider" : "codex",
+          "quota" : {
+
+          },
+          "tokens" : 50000,
+          "valueUSD" : null
+        },
+        {
+          "accounts" : [
+            {
+              "billingModel" : "local",
+              "key" : "default",
+              "label" : "default",
+              "plan" : null
+            }
+          ],
+          "balanceUSD" : null,
+          "billingModel" : "local",
+          "costEstimated" : false,
+          "costUSD" : null,
+          "firstSeen" : "2026-03-12T09:00:00Z",
+          "lastSeen" : "2026-03-12T18:00:00Z",
+          "origin" : "observed",
+          "provider" : "ollama",
+          "quota" : {
+
+          },
+          "tokens" : null,
+          "valueUSD" : null
+        },
+        {
+          "accounts" : [
+            {
+              "billingModel" : "metered",
+              "key" : "default",
+              "label" : "default",
+              "plan" : null
+            }
+          ],
+          "balanceUSD" : "16",
+          "billingModel" : "metered",
+          "costEstimated" : false,
+          "costUSD" : "0.5",
+          "firstSeen" : "2026-03-12T09:00:00Z",
+          "lastSeen" : "2026-03-12T18:00:00Z",
+          "origin" : "observed",
+          "provider" : "openrouter",
+          "quota" : {
+
+          },
+          "tokens" : 50000,
+          "valueUSD" : null
+        }
+      ],
+      "sealed" : true,
+      "timeZone" : "UTC"
+    },
+    {
+      "date" : "2026-03-13",
+      "events" : [
+
+      ],
+      "gaps" : [
+
+      ],
+      "records" : [
+        {
+          "accounts" : [
+            {
+              "billingModel" : "subscription",
+              "key" : "work-demo",
+              "label" : "work-demo",
+              "plan" : "max"
+            },
+            {
+              "billingModel" : "subscription",
+              "key" : "default",
+              "label" : "default",
+              "plan" : "pro"
+            }
+          ],
+          "balanceUSD" : null,
+          "billingModel" : "subscription",
+          "costEstimated" : true,
+          "costUSD" : null,
+          "firstSeen" : "2026-03-13T09:00:00Z",
+          "lastSeen" : "2026-03-13T18:00:00Z",
+          "origin" : "observed",
+          "provider" : "claude",
+          "quota" : {
+            "5h" : {
+              "endOfDay" : 0.125,
+              "peak" : 0.25,
+              "peakResetsAt" : "2026-03-13T14:00:00Z"
+            },
+            "7d" : {
+              "endOfDay" : 0.6000000000000001,
+              "peak" : 0.6000000000000001,
+              "peakResetsAt" : null
+            }
+          },
+          "tokens" : 300000,
+          "valueUSD" : "15"
+        },
+        {
+          "accounts" : [
+            {
+              "billingModel" : "metered",
+              "key" : "a1b2c3d4e5f6",
+              "label" : "acct-a1b2",
+              "plan" : null
+            },
+            {
+              "billingModel" : "subscription",
+              "key" : "f6e5d4c3b2a1",
+              "label" : "plus",
+              "plan" : "plus"
+            }
+          ],
+          "balanceUSD" : null,
+          "billingModel" : "mixed",
+          "costEstimated" : true,
+          "costUSD" : null,
+          "firstSeen" : "2026-03-13T09:00:00Z",
+          "lastSeen" : "2026-03-13T18:00:00Z",
+          "origin" : "observed",
+          "provider" : "codex",
+          "quota" : {
+            "5h" : {
+              "endOfDay" : 0.25,
+              "peak" : 0.5,
+              "peakResetsAt" : null
+            }
+          },
+          "tokens" : 100000,
+          "valueUSD" : null
+        },
+        {
+          "accounts" : [
+            {
+              "billingModel" : "local",
+              "key" : "default",
+              "label" : "default",
+              "plan" : null
+            }
+          ],
+          "balanceUSD" : null,
+          "billingModel" : "local",
+          "costEstimated" : false,
+          "costUSD" : null,
+          "firstSeen" : "2026-03-13T09:00:00Z",
+          "lastSeen" : "2026-03-13T18:00:00Z",
+          "origin" : "observed",
+          "provider" : "ollama",
+          "quota" : {
+
+          },
+          "tokens" : null,
+          "valueUSD" : null
+        },
+        {
+          "accounts" : [
+            {
+              "billingModel" : "metered",
+              "key" : "default",
+              "label" : "default",
+              "plan" : null
+            }
+          ],
+          "balanceUSD" : "15",
+          "billingModel" : "metered",
+          "costEstimated" : false,
+          "costUSD" : "1.5",
+          "firstSeen" : "2026-03-13T09:00:00Z",
+          "lastSeen" : "2026-03-13T18:00:00Z",
+          "origin" : "observed",
+          "provider" : "openrouter",
+          "quota" : {
+
+          },
+          "tokens" : 10000,
+          "valueUSD" : null
+        }
+      ],
+      "sealed" : true,
+      "timeZone" : "UTC"
+    },
+    {
+      "date" : "2026-03-14",
+      "events" : [
+
+      ],
+      "gaps" : [
+        "claude"
+      ],
+      "records" : [
+        {
+          "accounts" : [
+            {
+              "billingModel" : "metered",
+              "key" : "a1b2c3d4e5f6",
+              "label" : "acct-a1b2",
+              "plan" : null
+            },
+            {
+              "billingModel" : "subscription",
+              "key" : "f6e5d4c3b2a1",
+              "label" : "plus",
+              "plan" : "plus"
+            }
+          ],
+          "balanceUSD" : null,
+          "billingModel" : "mixed",
+          "costEstimated" : true,
+          "costUSD" : null,
+          "firstSeen" : "2026-03-14T09:00:00Z",
+          "lastSeen" : "2026-03-14T18:00:00Z",
+          "origin" : "observed",
+          "provider" : "codex",
+          "quota" : {
+            "5h" : {
+              "endOfDay" : 0.25,
+              "peak" : 0.5,
+              "peakResetsAt" : null
+            }
+          },
+          "tokens" : 150000,
+          "valueUSD" : null
+        },
+        {
+          "accounts" : [
+            {
+              "billingModel" : "local",
+              "key" : "default",
+              "label" : "default",
+              "plan" : null
+            }
+          ],
+          "balanceUSD" : null,
+          "billingModel" : "local",
+          "costEstimated" : false,
+          "costUSD" : null,
+          "firstSeen" : "2026-03-14T09:00:00Z",
+          "lastSeen" : "2026-03-14T18:00:00Z",
+          "origin" : "observed",
+          "provider" : "ollama",
+          "quota" : {
+
+          },
+          "tokens" : null,
+          "valueUSD" : null
+        },
+        {
+          "accounts" : [
+            {
+              "billingModel" : "metered",
+              "key" : "default",
+              "label" : "default",
+              "plan" : null
+            }
+          ],
+          "balanceUSD" : "14",
+          "billingModel" : "metered",
+          "costEstimated" : false,
+          "costUSD" : "2.5",
+          "firstSeen" : "2026-03-14T09:00:00Z",
+          "lastSeen" : "2026-03-14T18:00:00Z",
+          "origin" : "observed",
+          "provider" : "openrouter",
+          "quota" : {
+
+          },
+          "tokens" : 20000,
+          "valueUSD" : null
+        }
+      ],
+      "sealed" : false,
+      "timeZone" : "UTC"
+    }
+  ],
+  "exportedAt" : "2026-03-14T14:53:20Z",
+  "range" : {
+    "from" : "2026-03-12",
+    "to" : "2026-03-14"
+  },
+  "schemaVersion" : 1
+}

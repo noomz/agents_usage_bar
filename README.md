@@ -156,6 +156,36 @@ aub usage --cached          # same as default; explicit cache read
 
 Settings writes go to the same `aub.*` UserDefaults keys as the GUI. API keys are still env / `config.toml` only.
 
+### Usage history export
+
+The app keeps one file per day for the last 90 days. `aub stats` reads it; `--json` and `--csv` export it to stdout.
+
+```
+aub stats --json > history.json        # every retained day
+aub stats --csv --days 30              # one row per provider per day
+aub stats --csv quota --provider claude
+aub stats --csv events --since 2026-10-01 --until 2026-10-14
+```
+
+The default range is every retained day, today included. `--days N`, `--since DATE`, `--until DATE` (inclusive, `yyyy-MM-dd`), and `--provider ID` narrow it.
+
+**JSON** is `{schemaVersion: 1, exportedAt, range: {from, to}, days: [...]}`. Each day has `date`, `timeZone`, `sealed` (`false` for today, which is still open), `records`, `events`, and `gaps` (enabled providers seen in the range with no record that day). Unknown values are `null`, never `0`. Money is a decimal string.
+
+**CSV** writes one table per run. A gap is a missing row, an unknown value is an empty cell, and money is a plain number.
+
+| `--csv` | One row per | Columns |
+|---|---|---|
+| (default) | provider per day | date, provider, tokens, costUSD, valueUSD, costEstimated, balanceUSD, billingModel, origin, sealed, firstSeen, lastSeen |
+| `accounts` | account per provider per day | date, provider, account, label, billingModel, plan |
+| `events` | usage event | date, time, provider, kind, window, account, fraction, notified, carriedOver |
+| `quota` | quota window per provider (and account) per day | date, provider, account, window, peak, peakResetsAt, endOfDay |
+
+`costUSD` is spend from metered accounts. `valueUSD` is the API-equivalent value of subscription accounts (tokens times list price); it is not money you paid and is never added to spend. `costEstimated` is `true` when cost is tokens times the bundled price table. `billingModel` is `metered`, `subscription`, `local`, or `mixed`. `origin` is `observed` (polled that day) or `backfilled` (rebuilt later).
+
+Each table's columns are fixed for `schemaVersion` 1. New columns are only appended; a rename or removal bumps the version.
+
+> **Privacy:** exports can contain ccs instance names and plan names. They never contain emails, raw account ids, or tokens. Check an export before you share it.
+
 ## Build for distribution
 
 Releases are produced by the GitHub Actions release workflow (`.github/workflows/release.yml`) on `v*` tag push: archive → sign with Developer ID → export → DMG via `create-dmg/create-dmg` → notarize via `xcrun notarytool` → staple → EdDSA-sign for Sparkle → publish to GitHub Releases + update appcast on `gh-pages`. The one-time credential provisioning (Apple Developer ID `.p12`, App Store Connect API `.p8`, Sparkle EdDSA key pair, etc.) is documented in [`docs/release-setup.md`](docs/release-setup.md).

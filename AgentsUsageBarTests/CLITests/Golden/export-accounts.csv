@@ -1,0 +1,17 @@
+date,provider,account,label,billingModel,plan
+2026-03-12,claude,work-demo,work-demo,subscription,max
+2026-03-12,claude,default,default,subscription,pro
+2026-03-12,codex,a1b2c3d4e5f6,acct-a1b2,metered,
+2026-03-12,codex,f6e5d4c3b2a1,plus,subscription,plus
+2026-03-12,ollama,default,default,local,
+2026-03-12,openrouter,default,default,metered,
+2026-03-13,claude,work-demo,work-demo,subscription,max
+2026-03-13,claude,default,default,subscription,pro
+2026-03-13,codex,a1b2c3d4e5f6,acct-a1b2,metered,
+2026-03-13,codex,f6e5d4c3b2a1,plus,subscription,plus
+2026-03-13,ollama,default,default,local,
+2026-03-13,openrouter,default,default,metered,
+2026-03-14,codex,a1b2c3d4e5f6,acct-a1b2,metered,
+2026-03-14,codex,f6e5d4c3b2a1,plus,subscription,plus
+2026-03-14,ollama,default,default,local,
+2026-03-14,openrouter,default,default,metered,
