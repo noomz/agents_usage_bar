@@ -15,10 +15,10 @@ struct HistoryStoreTests {
         ISO8601DateFormatter().date(from: iso)!
     }
 
-    private static func dayKeys() -> DayKeyOwner {
+    private static func dayKeys(_ zone: TimeZone = utc) -> DayKeyOwner {
         var gregorian = Calendar(identifier: .gregorian)
-        gregorian.timeZone = utc
-        return DayKeyOwner(clock: VirtualClock(fixed: at("2026-10-22T12:00:00Z")), timeZone: utc, legacyCalendar: gregorian)
+        gregorian.timeZone = zone
+        return DayKeyOwner(clock: VirtualClock(fixed: at("2026-10-22T12:00:00Z")), timeZone: zone, legacyCalendar: gregorian)
     }
 
     private func makeDirectory() -> URL {
@@ -135,8 +135,8 @@ struct HistoryStoreTests {
 
         let sealed = try inode("2026-10-19", in: dir)
         await store.record([sample(tokens: 9)], at: Self.at("2026-10-22T09:00:00Z"))
-        // A wall clock that goes back still writes the open key (V16).
-        await store.record([sample(tokens: 11)], at: Self.at("2026-10-19T10:00:00Z"))
+        // A wall clock that goes back 1 day still writes the open key (V4, V16).
+        await store.record([sample(tokens: 11)], at: Self.at("2026-10-21T10:00:00Z"))
         #expect(try inode("2026-10-19", in: dir) == sealed)
         #expect(await read("2026-10-22", in: dir)?.records.first?.tokens == 11)
     }
@@ -196,5 +196,156 @@ struct HistoryStoreTests {
         let day = try #require(await read("2026-10-22", in: dir))
         #expect(day.records.map(\.provider.rawValue) == ["openrouter"])
         #expect(day.records.first?.costUSD == Money(2))
+    }
+
+    // MARK: V4, V5, V6, V12 — monotonic day key (T6, ADR 0002)
+
+    private static let tokyo = TimeZone(identifier: "Asia/Tokyo")!
+    private static let honolulu = TimeZone(identifier: "Pacific/Honolulu")!
+    private static let newYork = TimeZone(identifier: "America/New_York")!
+
+    private func dayKeys(in dir: URL) async throws -> [String] {
+        try await HistoryReader(directory: dir).dayKeys()
+    }
+
+    @Test("sleep Mon to Thu: Mon keeps its usage, Tue and Wed are gaps (V12)")
+    func sleepThroughDays() async throws {
+        let dir = makeDirectory()
+        let store = makeStore(dir)
+        await store.record([sample(tokens: 10)], at: Self.at("2026-10-19T09:00:00Z"))
+        await store.record([sample(tokens: 5)], at: Self.at("2026-10-22T09:00:00Z"))
+
+        #expect(try await dayKeys(in: dir) == ["2026-10-19", "2026-10-22"])
+        #expect(await read("2026-10-19", in: dir)?.records.first?.tokens == 10)
+        #expect(await read("2026-10-22", in: dir)?.records.first?.tokens == 5)
+    }
+
+    @Test("Tokyo to Honolulu: the earlier wall date keeps writing the newest key (V4, V6)")
+    func tokyoToHonolulu() async throws {
+        let dir = makeDirectory()
+        // 2026-10-22 09:00 JST
+        await HistoryStore(directory: dir, dayKeys: Self.dayKeys(Self.tokyo))
+            .record([sample(tokens: 10)], at: Self.at("2026-10-22T00:00:00Z"))
+
+        // Landed: 2026-10-21 19:00 HST.
+        let owner = Self.dayKeys(Self.honolulu)
+        let store = HistoryStore(directory: dir, dayKeys: owner)
+        let landed = Self.at("2026-10-22T05:00:00Z")
+        await store.record([sample(tokens: 20)], at: landed)
+
+        #expect(owner.wallKey(for: landed) == "2026-10-21")
+        #expect(owner.key(for: landed) == "2026-10-22")
+        #expect(try await dayKeys(in: dir) == ["2026-10-22"])
+        let day = try #require(await read("2026-10-22", in: dir))
+        #expect(day.timeZone == Self.honolulu.identifier)
+        #expect(day.records.first?.tokens == 20)
+
+        // The wall date catches up (02:00 HST Oct 22), then passes it (02:00 HST Oct 23).
+        await store.record([sample(tokens: 30)], at: Self.at("2026-10-22T12:00:00Z"))
+        await store.record([sample(tokens: 1)], at: Self.at("2026-10-23T12:00:00Z"))
+        #expect(try await dayKeys(in: dir) == ["2026-10-22", "2026-10-23"])
+        #expect(await read("2026-10-22", in: dir)?.records.first?.tokens == 30)
+    }
+
+    @Test("Honolulu to Tokyo: the date skips forward and the earlier day is sealed (V4, V16)")
+    func honoluluToTokyo() async throws {
+        let dir = makeDirectory()
+        // 2026-10-21 10:00 HST
+        await HistoryStore(directory: dir, dayKeys: Self.dayKeys(Self.honolulu))
+            .record([sample(tokens: 10)], at: Self.at("2026-10-21T20:00:00Z"))
+
+        // Landed: 2026-10-22 07:00 JST.
+        let store = HistoryStore(directory: dir, dayKeys: Self.dayKeys(Self.tokyo))
+        await store.record([sample(tokens: 3)], at: Self.at("2026-10-21T22:00:00Z"))
+
+        #expect(try await dayKeys(in: dir) == ["2026-10-21", "2026-10-22"])
+        let earlier = try #require(await read("2026-10-21", in: dir))
+        #expect(earlier.timeZone == Self.honolulu.identifier)
+        #expect(earlier.records.first?.tokens == 10)
+        let later = try #require(await read("2026-10-22", in: dir))
+        #expect(later.timeZone == Self.tokyo.identifier)
+        #expect(later.records.first?.tokens == 3)
+    }
+
+    @Test("New York DST spring forward: the 23-hour day is one day file (V6)")
+    func dstSpringForward() async throws {
+        let dir = makeDirectory()
+        let store = HistoryStore(directory: dir, dayKeys: Self.dayKeys(Self.newYork))
+        await store.record([sample(tokens: 1)], at: Self.at("2026-03-08T04:30:00Z"))  // Mar 7 23:30 EST
+        await store.record([sample(tokens: 2)], at: Self.at("2026-03-08T06:30:00Z"))  // Mar 8 01:30 EST
+        await store.record([sample(tokens: 3)], at: Self.at("2026-03-08T07:30:00Z"))  // Mar 8 03:30 EDT
+        await store.record([sample(tokens: 4)], at: Self.at("2026-03-09T03:59:00Z"))  // Mar 8 23:59 EDT
+        await store.record([sample(tokens: 5)], at: Self.at("2026-03-09T04:01:00Z"))  // Mar 9 00:01 EDT
+
+        #expect(try await dayKeys(in: dir) == ["2026-03-07", "2026-03-08", "2026-03-09"])
+        let day = try #require(await read("2026-03-08", in: dir)?.records.first)
+        #expect(day.tokens == 4)
+        #expect(day.firstSeen == Self.at("2026-03-08T06:30:00Z"))
+        #expect(day.lastSeen == Self.at("2026-03-09T03:59:00Z"))
+    }
+
+    @Test("New York DST fall back: the 25-hour day is one day file (V6)")
+    func dstFallBack() async throws {
+        let dir = makeDirectory()
+        let store = HistoryStore(directory: dir, dayKeys: Self.dayKeys(Self.newYork))
+        await store.record([sample(tokens: 1)], at: Self.at("2026-11-01T03:59:00Z"))  // Oct 31 23:59 EDT
+        await store.record([sample(tokens: 2)], at: Self.at("2026-11-01T04:01:00Z"))  // Nov 1 00:01 EDT
+        await store.record([sample(tokens: 3)], at: Self.at("2026-11-01T05:30:00Z"))  // Nov 1 01:30 EDT
+        await store.record([sample(tokens: 4)], at: Self.at("2026-11-01T06:30:00Z"))  // Nov 1 01:30 EST
+        await store.record([sample(tokens: 5)], at: Self.at("2026-11-02T04:59:00Z"))  // Nov 1 23:59 EST
+        await store.record([sample(tokens: 6)], at: Self.at("2026-11-02T05:01:00Z"))  // Nov 2 00:01 EST
+
+        #expect(try await dayKeys(in: dir) == ["2026-10-31", "2026-11-01", "2026-11-02"])
+        let day = try #require(await read("2026-11-01", in: dir)?.records.first)
+        #expect(day.tokens == 5)
+        let first = try #require(day.firstSeen)
+        let last = try #require(day.lastSeen)
+        #expect(last.timeIntervalSince(first) == 25 * 3600 - 2 * 60)
+    }
+
+    @Test("clock set back 1 day keeps writing the newest key (V4)")
+    func clockBackOneDay() async throws {
+        let dir = makeDirectory()
+        let store = makeStore(dir)
+        await store.record([sample(tokens: 10)], at: Self.at("2026-10-22T09:00:00Z"))
+        await store.record([sample(tokens: 20)], at: Self.at("2026-10-21T09:00:00Z"))
+
+        #expect(try await dayKeys(in: dir) == ["2026-10-22"])
+        #expect(await read("2026-10-22", in: dir)?.records.first?.tokens == 20)
+    }
+
+    @Test("clock set back 10 days pauses writes and holds the key (V4, V5)")
+    func clockBackTenDays() async throws {
+        let dir = makeDirectory()
+        let owner = Self.dayKeys()
+        let store = HistoryStore(directory: dir, dayKeys: owner)
+        await store.record([sample(tokens: 10)], at: Self.at("2026-10-22T09:00:00Z"))
+
+        let wrong = Self.at("2026-10-12T09:00:00Z")
+        await store.record([sample(tokens: 50)], at: wrong)
+        #expect(owner.key(for: wrong) == "2026-10-22")
+        #expect(try await dayKeys(in: dir) == ["2026-10-22"])
+        #expect(await read("2026-10-22", in: dir)?.records.first?.tokens == 10)
+
+        // Clock fixed: writes resume on the newest key.
+        await store.record([sample(tokens: 60)], at: Self.at("2026-10-22T10:00:00Z"))
+        #expect(await read("2026-10-22", in: dir)?.records.first?.tokens == 60)
+    }
+
+    @Test("after a relaunch the newest day file sets the key; a clock set back writes nothing older (V4, V5)")
+    func relaunchSeedsFromNewestFile() async throws {
+        let dir = makeDirectory()
+        try writeRaw(DayFile(date: "2026-10-20", timeZone: "UTC"), in: dir)
+        try writeRaw(DayFile(date: "2026-10-22", timeZone: "UTC"), in: dir)
+
+        let owner = Self.dayKeys()
+        let store = HistoryStore(directory: dir, dayKeys: owner)
+        await store.seedNewestKey()
+        #expect(owner.key(for: Self.at("2026-10-21T09:00:00Z")) == "2026-10-22")
+
+        await store.record([sample(tokens: 7)], at: Self.at("2026-10-12T09:00:00Z"))
+        await store.record([sample(tokens: 8)], at: Self.at("2026-10-21T09:00:00Z"))
+        #expect(try await dayKeys(in: dir) == ["2026-10-20", "2026-10-22"])
+        #expect(await read("2026-10-22", in: dir)?.records.first?.tokens == 8)
     }
 }

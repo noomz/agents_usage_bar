@@ -41,6 +41,8 @@ public final class Dependencies {
     /// Notification FSM state, migrated and pruned by `startBackgroundServices()`.
     public let notificationState: any NotificationStateStorage
     public let dayKeys: DayKeyOwner
+    /// Usage history writer; seeds `dayKeys` with the newest day file at launch (V4).
+    public let history: HistoryStore?
 
     public init(
         store: AggregateStore,
@@ -52,7 +54,8 @@ public final class Dependencies {
         preferences: UserPreferencesStore,
         welcomeWindowController: WelcomeWindowController,
         notificationState: any NotificationStateStorage,
-        dayKeys: DayKeyOwner
+        dayKeys: DayKeyOwner,
+        history: HistoryStore? = nil
     ) {
         self.store = store
         self.scheduler = scheduler
@@ -64,6 +67,7 @@ public final class Dependencies {
         self.welcomeWindowController = welcomeWindowController
         self.notificationState = notificationState
         self.dayKeys = dayKeys
+        self.history = history
     }
 
     // MARK: - Issue #18 — launch-time startup
@@ -84,6 +88,9 @@ public final class Dependencies {
         guard !backgroundServicesStarted else { return }
         backgroundServicesStarted = true
 
+        // The day key never decreases (V4): every consumer below and the first poll see the
+        // newest day file's key, not a wall clock that went back.
+        await history?.seedNewestKey()
         // Pre-S0 records are rekeyed before the first poll reads them (SPEC V3), and records
         // older than 7 days are pruned to bound the UserDefaults footprint. This runs here, not
         // in `makeProduction()`, because the hosted test bundle builds the graph against the
@@ -182,6 +189,7 @@ public enum AppDependencies {
         //     Migrated and pruned by `startBackgroundServices()` (V61).
         let notificationState = UserDefaultsNotificationStateStore()
 
+        let history = HistoryStore(dayKeys: dayKeys)
         // 9. Aggregate store — seeds from cache immediately for cold-launch rendering (UI-07)
         let store = AggregateStore(
             registry: registry,
@@ -191,8 +199,8 @@ public enum AppDependencies {
             notifications: notifications,
             notificationState: notificationState,
             dayKeys: dayKeys,
-            // 9b. Usage history writer; first I/O is on the first poll (V15, V61).
-            history: HistoryStore(dayKeys: dayKeys)
+            // 9b. Usage history writer; first I/O is at launch services (V4, V15, V61).
+            history: history
         )
         store.updatePaceWarningsEnabled(preferences.paceWarningsEnabled)
         store.updateResetNotificationsEnabled(preferences.resetNotificationsEnabled)
@@ -266,7 +274,8 @@ public enum AppDependencies {
             preferences: preferences,
             welcomeWindowController: welcomeWindowController,
             notificationState: notificationState,
-            dayKeys: dayKeys
+            dayKeys: dayKeys,
+            history: history
         )
     }
 

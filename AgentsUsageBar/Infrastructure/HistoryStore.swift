@@ -8,6 +8,10 @@ import os.log
 /// its file on the first poll, so building the store does no I/O (V61). The first poll on a
 /// later day key does a final merge into the previous file, and polling never writes that
 /// sealed file again (V16). The first poll and every seal also prune past 90 days (V17).
+///
+/// The store keeps the shared `DayKeyOwner` at the newest day key (V4): it seeds it from the
+/// newest day file and advances it as it opens days, so a wall clock set back keeps writing
+/// the newest day, and one more than 1 day back pauses writes (V5).
 public actor HistoryStore {
     /// Day keys kept before the current key (V17).
     public static let retainedDays = 90
@@ -23,16 +27,40 @@ public actor HistoryStore {
     private var open: DayFile?
     /// The open day as last read or written; nil when it has no file.
     private var onDisk: DayFile?
+    /// True once the owner was seeded from disk, so a paused poll does no I/O.
+    private var seeded = false
+    /// True while writes pause for a clock error, so it is logged once (V5).
+    private var paused = false
 
     public init(directory: URL = HistoryReader.defaultDirectory, dayKeys: DayKeyOwner) {
         self.reader = HistoryReader(directory: directory)
         self.dayKeys = dayKeys
     }
 
+    /// Raises the day-key owner to the newest day file's key (V4). Reads the directory
+    /// listing only.
+    public func seedNewestKey() async {
+        seeded = true
+        if let newest = try? await reader.dayKeys().last {
+            dayKeys.advanceNewest(to: newest)
+        }
+    }
+
     /// Folds one poll's good samples (providers `.ok` on this poll) into the open day.
     public func record(_ samples: [UsageSnapshot], at now: Date) async {
-        // A sealed day never reopens (V16). T6 adds the rest of the monotonic key (V4, V5).
-        let key = max(dayKeys.key(for: now), openKey ?? "")
+        if !seeded {
+            await seedNewestKey()
+        }
+        guard !dayKeys.isClockBehind(at: now) else {
+            if !paused {
+                logger.error("history writes paused: wall clock \(self.dayKeys.wallKey(for: now), privacy: .public) is more than 1 day behind \(self.dayKeys.key(for: now), privacy: .public)")
+            }
+            paused = true
+            return
+        }
+        paused = false
+        // Never below the open key, so a sealed day never reopens (V4, V16).
+        let key = dayKeys.key(for: now)
         if key != openKey {
             await seal(opening: key)
         }
@@ -50,6 +78,7 @@ public actor HistoryStore {
             write(open)
         }
         await prune(relativeTo: key)
+        dayKeys.advanceNewest(to: key)
         openKey = key
         let url = reader.fileURL(for: key)
         guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else {

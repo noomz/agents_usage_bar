@@ -95,4 +95,49 @@ struct DayKeyOwnerTests {
         #expect(owner.key(fromLegacy: "2569-10-x") == nil)
         #expect(owner.key(fromLegacy: "migrated") == nil)
     }
+
+    // MARK: V4, V5 — the key never decreases
+
+    @Test("the key holds at the newest key when the wall clock is behind it, for every copy (V1, V4)")
+    func keyHoldsAtNewest() {
+        let owner = Self.owner(at: "2026-10-22T03:00:00Z")
+        let consumerCopy = owner
+        owner.advanceNewest(to: "2026-10-22")
+
+        // 2026-10-21 10:00 ICT
+        let dayBefore = Self.date("2026-10-21T03:00:00Z")
+        #expect(owner.wallKey(for: dayBefore) == "2026-10-21")
+        #expect(consumerCopy.key(for: dayBefore) == "2026-10-22")
+        #expect(consumerCopy.isSameDay("2026-10-22", as: dayBefore))
+        // A later wall date still moves the key forward.
+        #expect(consumerCopy.key(for: Self.date("2026-10-23T03:00:00Z")) == "2026-10-23")
+    }
+
+    @Test("the newest key never goes down")
+    func newestOnlyRises() {
+        let owner = Self.owner(at: "2026-10-01T03:00:00Z")
+        owner.advanceNewest(to: "2026-10-22")
+        owner.advanceNewest(to: "2026-10-05")
+        #expect(owner.today() == "2026-10-22")
+    }
+
+    @Test("key arithmetic and legacy rekeying ignore the newest key")
+    func pureConversionsIgnoreNewest() {
+        let owner = Self.owner(at: "2026-10-22T03:00:00Z")
+        owner.advanceNewest(to: "2026-12-31")
+        #expect(owner.key("2026-10-22", addingDays: -90) == "2026-07-24")
+        #expect(owner.key(fromLegacy: "2569-10-20") == "2026-10-20")
+    }
+
+    @Test("a clock error is a wall date more than 1 day behind the newest key (V5)")
+    func clockBehind() {
+        let owner = Self.owner(at: "2026-10-22T03:00:00Z")
+        #expect(!owner.isClockBehind(at: Self.date("2026-10-12T03:00:00Z")))
+
+        owner.advanceNewest(to: "2026-10-22")
+        #expect(!owner.isClockBehind(at: Self.date("2026-10-22T03:00:00Z")))
+        #expect(!owner.isClockBehind(at: Self.date("2026-10-21T03:00:00Z")))
+        #expect(owner.isClockBehind(at: Self.date("2026-10-20T03:00:00Z")))
+        #expect(owner.isClockBehind(at: Self.date("2026-10-12T03:00:00Z")))
+    }
 }
