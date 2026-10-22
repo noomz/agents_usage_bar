@@ -100,6 +100,7 @@ threshold = 0.80           # 0.0–1.0 — quota fraction that triggers a warnin
 
 [openrouter]
 api_key   = "<your-openrouter-key>"  # overridden by OPENROUTER_API_KEY env var
+# management_key = "<your-management-key>"  # optional; rebuilds the last 30 UTC days of history. Overridden by OPENROUTER_MANAGEMENT_KEY
 
 [ollama]
 # Ollama Cloud usage row — on automatically after `ollama signin` or with a key.

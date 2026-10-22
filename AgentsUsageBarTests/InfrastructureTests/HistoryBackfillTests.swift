@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import os
 @testable import AgentsUsageBar
 
 /// A backfill source with fixed usage that logs what each pass asked it for.
@@ -11,6 +12,7 @@ private actor FakeSource: BackfillSource {
     private let fails: Bool
     private let tracker: OverlapTracker?
     private(set) var requested: [[String]] = []
+    nonisolated let unheld = OSAllocatedUnfairLock<Set<String>>(initialState: [])
 
     init(
         _ provider: String, reach: Int?, usage: [String: DayRecord] = [:],
@@ -43,6 +45,10 @@ private actor FakeSource: BackfillSource {
 
     func accounts() -> [UsageSnapshot.AccountUsage] {
         known
+    }
+
+    nonisolated func holds(_ key: String) -> Bool {
+        !unheld.withLock { $0.contains(key) }
     }
 }
 
@@ -239,6 +245,38 @@ struct HistoryBackfillTests {
         await firstPoll(makeStore(dir, [source]))
         #expect(await source.requested == [["2026-10-20", "2026-10-21"]])
         #expect(await read("2026-10-20", in: dir)?.backfillChecked == [Self.pid("openrouter")])
+    }
+
+    @Test("an unheld key is not asked for, written, or checked, and fills once held (V63)")
+    func unheldKeyWaits() async throws {
+        let dir = makeDirectory()
+        let source = FakeSource("openrouter", reach: 3)
+        source.unheld.withLock { $0 = ["2026-10-21"] }
+        await firstPoll(makeStore(dir, [source]))
+        #expect(await source.requested == [["2026-10-19", "2026-10-20"]])
+        #expect(await read("2026-10-21", in: dir) == nil)
+
+        source.unheld.withLock { $0 = [] }
+        await firstPoll(makeStore(dir, [source]))
+        #expect(await source.requested.last == ["2026-10-21"])
+        #expect(await read("2026-10-21", in: dir)?.backfillChecked == [Self.pid("openrouter")])
+    }
+
+    @Test("a backfilled record keeps its zone; topping up an observed record does not set one (V13, V31)")
+    func keepsRecordZone() async throws {
+        let dir = makeDirectory()
+        var utcDay = used("openrouter", tokens: 30, cost: 2)
+        utcDay.timeZone = "UTC"
+        var observed = DayRecord(provider: Self.pid("openrouter"), costUSD: Money(1), origin: .observed)
+        observed.firstSeen = Self.at("2026-10-20T01:00:00Z")
+        try writeRaw(DayFile(date: "2026-10-20", timeZone: "UTC", records: [observed]), in: dir)
+        let source = FakeSource("openrouter", reach: 2, usage: ["2026-10-20": utcDay, "2026-10-21": utcDay])
+        await firstPoll(makeStore(dir, [source]))
+
+        #expect(try #require(await read("2026-10-21", in: dir)?.records.first).timeZone == "UTC")
+        let toppedUp = try #require(await read("2026-10-20", in: dir)?.records.first)
+        #expect(toppedUp.timeZone == nil)
+        #expect(toppedUp.origin == .observed)
     }
 
     @Test("a failed source leaves its days unchecked and the next source still runs")

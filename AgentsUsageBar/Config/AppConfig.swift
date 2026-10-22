@@ -114,18 +114,24 @@ public struct OpenRouterConfig: Sendable, Equatable {
     /// Whether the OpenRouter provider is enabled. Default: `true`.
     public let enabled: Bool
 
+    /// Management key for `GET /activity` backfill (SPEC I11, V28). `nil` means OpenRouter
+    /// stays forward-only. Wrapped in `Secret` like `apiKey` (SEC-01).
+    public let managementKey: Secret?
+
     public init(
         apiKey: Secret?,
         apiURL: URL,
         httpReferer: String?,
         xTitle: String,
-        enabled: Bool
+        enabled: Bool,
+        managementKey: Secret? = nil
     ) {
         self.apiKey = apiKey
         self.apiURL = apiURL
         self.httpReferer = httpReferer
         self.xTitle = xTitle
         self.enabled = enabled
+        self.managementKey = managementKey
     }
 }
 
@@ -133,7 +139,9 @@ extension OpenRouterConfig {
     /// Returns a copy of this config with the `enabled` flag replaced.
     /// Plan 05-02: used by `ConfigStore.load(preferences:)` to apply UserDefaults overlay (D-02).
     func withEnabled(_ enabled: Bool) -> OpenRouterConfig {
-        OpenRouterConfig(apiKey: apiKey, apiURL: apiURL, httpReferer: httpReferer, xTitle: xTitle, enabled: enabled)
+        OpenRouterConfig(
+            apiKey: apiKey, apiURL: apiURL, httpReferer: httpReferer, xTitle: xTitle, enabled: enabled,
+            managementKey: managementKey)
     }
 }
 
