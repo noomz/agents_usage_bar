@@ -28,4 +28,10 @@ public struct OpenRouterEndpoint: Sendable, Equatable {
     public var key: URL {
         baseURL.appending(path: "key")
     }
+
+    /// `GET /api/v1/activity` — spend and tokens per UTC day for the last 30 completed UTC
+    /// days. Needs a management key (SPEC I10, I11).
+    public var activity: URL {
+        baseURL.appending(path: "activity")
+    }
 }

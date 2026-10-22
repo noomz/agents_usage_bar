@@ -51,6 +51,24 @@ struct ConfigStoreTests {
         #expect(config.openrouter.apiKey?.revealForRequest() == "env-key")
     }
 
+    // MARK: - Management key (I11): env > [openrouter] management_key > nil
+
+    @Test("managementKey resolves env over toml, nil when absent")
+    func managementKeyLayering() throws {
+        let tomlURL = try writeTempToml("[openrouter]\nmanagement_key = \"toml-mgmt\"\n")
+        let fromToml = ConfigStore(env: DictionaryEnvReader([:]), tomlPath: tomlURL).load()
+        #expect(fromToml.openrouter.managementKey?.revealForRequest() == "toml-mgmt")
+        #expect(fromToml.openrouter.apiKey == nil)
+
+        let fromEnv = ConfigStore(
+            env: DictionaryEnvReader(["OPENROUTER_MANAGEMENT_KEY": "env-mgmt"]), tomlPath: tomlURL).load()
+        #expect(fromEnv.openrouter.managementKey?.revealForRequest() == "env-mgmt")
+        #expect(fromEnv.openrouter.withEnabled(false).managementKey?.revealForRequest() == "env-mgmt")
+
+        let absent = ConfigStore(env: DictionaryEnvReader([:]), tomlPath: nonExistentURL()).load()
+        #expect(absent.openrouter.managementKey == nil)
+    }
+
     // MARK: - Test 3: TOML only → resolves apiKey from toml
 
     @Test("tomlOnly_resolvesApiKey")

@@ -87,6 +87,16 @@ public final class ConfigStore: @unchecked Sendable {
             apiKey = nil
         }
 
+        // --- managementKey (OPENROUTER_MANAGEMENT_KEY), same layering as apiKey (I11) ---
+        let managementKey: Secret?
+        if let envKey = env.value(forKey: "OPENROUTER_MANAGEMENT_KEY") {
+            managementKey = Secret(envKey)
+        } else if case .string(let s) = orSection["management_key"] {
+            managementKey = Secret(s)
+        } else {
+            managementKey = nil
+        }
+
         // --- apiURL (OPENROUTER_API_URL) ---
         let apiURL: URL
         if let envURL = env.value(forKey: "OPENROUTER_API_URL"),
@@ -311,7 +321,8 @@ public final class ConfigStore: @unchecked Sendable {
                 apiURL: apiURL,
                 httpReferer: httpReferer,
                 xTitle: xTitle,
-                enabled: enabled
+                enabled: enabled,
+                managementKey: managementKey
             ),
             codex: CodexConfig(
                 enabled: codexEnabled,

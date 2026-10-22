@@ -36,6 +36,9 @@ public struct DayFile: Sendable, Equatable, Codable {
 /// One provider's usage for one day key (V7–V13).
 public struct DayRecord: Sendable, Equatable, Codable {
     public var provider: ProviderID
+    /// `UTC` for an OpenRouter backfilled record, whose day is a UTC day. Nil means the
+    /// day is the file's zone (V13).
+    public var timeZone: String?
     /// Highest value seen that day. Nil is unknown, never zero (V7).
     public var tokens: Int?
     /// Highest value seen that day. Nil is unknown, never zero (V7).
@@ -54,6 +57,7 @@ public struct DayRecord: Sendable, Equatable, Codable {
 
     public init(
         provider: ProviderID,
+        timeZone: String? = nil,
         tokens: Int? = nil,
         costUSD: Money? = nil,
         costEstimated: Bool = false,
@@ -65,6 +69,7 @@ public struct DayRecord: Sendable, Equatable, Codable {
         lastSeen: Date? = nil
     ) {
         self.provider = provider
+        self.timeZone = timeZone
         self.tokens = tokens
         self.costUSD = costUSD
         self.costEstimated = costEstimated

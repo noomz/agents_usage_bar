@@ -12,10 +12,19 @@ public protocol BackfillSource: Sendable {
     /// Every account known now, with its billing model and plan from I6. A new backfilled
     /// record lists them all, since the source data names no account (V25, V62).
     func accounts() async -> [UsageSnapshot.AccountUsage]
+    /// True when the source can serve day `key` now. Gap-fill asks only for held keys; an
+    /// unheld key stays unchecked for a later pass (V63).
+    func holds(_ key: String) -> Bool
+}
+
+extension BackfillSource {
+    func holds(_ key: String) -> Bool {
+        true
+    }
 }
 
 /// One gap-fill pass (V27): each source in turn, one at a time, over the sealed days in its
-/// reach that it has not checked yet (V29). A day in reach with no usage gets a zero record
+/// reach that it holds and has not checked yet (V29, V63). A day in reach with no usage gets a zero record
 /// (V30). Writes go through `HistoryStore.backfill(_:on:)` (V32).
 struct HistoryBackfill: Sendable {
     let sources: [any BackfillSource]
@@ -40,7 +49,7 @@ struct HistoryBackfill: Sendable {
         let depth = min(reach, HistoryStore.retainedDays)
         var keys: [String] = []
         for back in (1...depth).reversed() {
-            guard let key = dayKeys.key(today, addingDays: -back) else { continue }
+            guard let key = dayKeys.key(today, addingDays: -back), source.holds(key) else { continue }
             if await reader.day(key)?.backfillChecked.contains(source.provider) != true {
                 keys.append(key)
             }

@@ -61,6 +61,13 @@ public enum ProviderRegistryFactory {
             )
             registry.append(OpenRouterProvider(client: client, cache: cache, clock: clock, dayKeys: dayKeys))
         }
+        if config.openrouter.enabled, let managementKey = config.openrouter.managementKey {
+            let activity = OpenRouterEndpoint(baseURL: config.openrouter.apiURL).activity
+            let headers = config.openrouter.xTitle.isEmpty ? [:] : ["X-Title": config.openrouter.xTitle]
+            backfillSources.append(OpenRouterBackfillSource(clock: clock) {
+                try await http.get(activity, bearer: managementKey, extraHeaders: headers, as: OpenRouterActivityResponse.self)
+            })
+        }
         if config.openrouter.enabled, config.openrouter.apiKey == nil {
             placeholders.append(PlaceholderSeed(
                 providerID: .openrouter,

@@ -38,7 +38,7 @@ I12|Config|`Config/AppConfig.swift`, `Config/ConfigStore.swift` (`config.toml`),
 I13|CLI|`CLI/AUBCommand.swift`, `CLI/AUBCommandRun.swift`, `CLI/CompactTextRenderer.swift` (palette, glyphs, severity), `CLI/CLITheme.swift`. New subcommands `stats` and `dashboard`.
 I14|App shell|`App/AgentsUsageBarApp.swift` (`MenuBarExtra`), `App/WindowActivationObserver.swift` and `setActivationPolicy`, `UI/PopoverRootView.swift`. `Resources/Info.plist` has no `CFBundleURLTypes` today.
 I15|Secret scan|SEC-04: `scripts/check-secrets.sh` and the scan step in `.github/workflows/ci.yml`. Today it matches API-key prefixes only.
-I16|Day file v1|`{schemaVersion: 1, date, timeZone, records: [DayRecord], events: [UsageEvent], backfillChecked: [providerId]}`. `DayRecord`: `provider`, `tokens?`, `costUSD?`, `costEstimated`, `balanceUSD?`, `quota: {window: {peak, peakResetsAt?, endOfDay}}`, `accounts: [{key, label, billingModel, plan?, billingModelAssumed, costUSD?, quota}]`, `origin`, `firstSeen?`, `lastSeen?`. `UsageEvent`: `time`, `provider?`, `kind`, `window?`, `account?`, `fraction`, `notified`, `carriedOver`. Money is a decimal string.
+I16|Day file v1|`{schemaVersion: 1, date, timeZone, records: [DayRecord], events: [UsageEvent], backfillChecked: [providerId]}`. `DayRecord`: `provider`, `timeZone?`, `tokens?`, `costUSD?`, `costEstimated`, `balanceUSD?`, `quota: {window: {peak, peakResetsAt?, endOfDay}}`, `accounts: [{key, label, billingModel, plan?, billingModelAssumed, costUSD?, quota}]`, `origin`, `firstSeen?`, `lastSeen?`. `UsageEvent`: `time`, `provider?`, `kind`, `window?`, `account?`, `fraction`, `notified`, `carriedOver`. Money is a decimal string.
 
 ## §V
 
@@ -59,7 +59,7 @@ V9|Each account seen that day is stored with its account key, account label, bil
 V10|`origin` is `observed` or `backfilled`. Observed records store `firstSeen` and `lastSeen`, the times of the first and last good samples. `costEstimated` is true when the cost is tokens times the price table (I8 and all Claude and Codex backfill).
 V11|A record is written for every provider with at least one `.ok` poll that day, including local runtimes with nil totals. No record means the provider was not seen.
 V12|Totals are never split, prorated, or interpolated across days. Usage polled before sleep stays in the last-polled day. Days slept through are gaps.
-V13|History buckets by local day key only. A provider's reset time never moves data between keys. The one exception is OpenRouter backfill: UTC day `D` goes into key `D` and the record stores time zone id `UTC`.
+V13|History buckets by local day key only. A provider's reset time never moves data between keys. The one exception is OpenRouter backfill: UTC day `D` goes into key `D` and the record stores `timeZone: "UTC"`. Every other record leaves `timeZone` nil; its day is the file's zone.
 
 ### Store
 
@@ -67,7 +67,7 @@ V14|`HistoryStore` is separate from `FileCacheStore`. It writes one file per day
 V15|After a poll, the store merges into the open day and writes only when the merged value changed, atomically (temp file plus rename). At launch it seeds what is on disk from the open day's file. A poll with no change does no file I/O. `firstSeen` and `lastSeen` are left out of the change check: they update in memory on every good poll and reach disk with the next changed write or the seal's final merge, so after an idle quit the stored `lastSeen` can be the time of the last changed write.
 V16|Sealed is derived, not stored: a file whose key is before the current day key is sealed. The first poll on a later key does a final merge into the previous key's file. After that, polling never writes a sealed file. Only backfill top-up (V31) may change it.
 V17|Retention is fixed at 90 day keys, with no setting. The seal step deletes files whose key is more than 90 days before the current key.
-V18|A file with an older `schemaVersion` is migrated when read and rewritten on the next write. A file that is newer, unknown, or unreadable is skipped and logged, and never deleted or overwritten. Schema 1 contains every field in I16 from S1 on; later slices fill fields, they do not add them.
+V18|A file with an older `schemaVersion` is migrated when read and rewritten on the next write. A file that is newer, unknown, or unreadable is skipped and logged, and never deleted or overwritten. Schema 1 contains every field in I16 from S1 on; later slices fill fields, they do not add them. The one exception is `DayRecord.timeZone?`, added in S3 before any release contained schema 1 (B6).
 V19|`aub` opens history read-only. It never creates `history/`, writes, prunes, migrates, or reads `.account-salt`. A missing `history/` is empty history. There is no locking; atomic renames are enough.
 V20|History is decoded off the MainActor. The read API is `nonisolated async`. The app reads history only on a user action (dashboard open, Export…, popover open for the teaser), never on the poll path, and keeps no sealed-day cache. The dashboard holds its decoded days while it is open and drops them on close; when a poll changes the open day, only that day's file is re-read.
 
@@ -92,6 +92,7 @@ V30|Inside a source's reach, a day with no usage gets a backfilled record with z
 V31|Backfill never replaces an observed record. It only raises `tokens` and `costUSD` through the V7 max-merge, which recovers usage between the last poll and midnight. `origin`, quota, accounts, `firstSeen`, and `lastSeen` stay untouched.
 V32|Backfill never creates usage events. All backfill writes go through `HistoryStore`.
 V62|A new backfilled record lists every account known at backfill time: Claude `default` when `~/.claude.json` exists plus each ccs instance with a `.claude.json`; Codex the discovered subscription logins, else one metered `default` account. Each takes billing model and plan from I6 at backfill time with `billingModelAssumed` true, and carries no `costUSD` and no quota. Transcripts and rollouts hold no account id, so usage is never split by account.
+V63|A backfill source states which day keys it holds. Gap-fill asks a source only for held keys in its reach. An unheld key gets no record, is not added to `backfillChecked`, and is tried again on a later pass. OpenRouter holds key `D` only when UTC day `D` is completed and is one of the last 30 UTC days; Claude and Codex hold every key in their reach.
 
 ### Usage events
 
@@ -154,7 +155,7 @@ T11|x|S2: `--json` and `--csv` renderers (all four CSV tables) and the README ex
 T12|x|S2 gate: CI green, install, `aub stats`, `aub stats claude`, `aub stats --json` and `--csv` on real history.|C7
 T13|x|S3: Gap-fill scheduler: triggers, low priority, one provider at a time, `backfillChecked`, zero records inside reach, top-up only on observed days, no events.|V27,V29,V30,V31,V32
 T14|x|S3: Claude and Codex backfill sources with estimated cost and assumed billing model.|V10,V25,V28,V62,I8,I10
-T15|.|S3: OpenRouter `/activity` source and the management key config.|V13,V28,I10,I11
+T15|x|S3: OpenRouter `/activity` source and the management key config.|V13,V18,V28,V63,I10,I11,I16
 T16|.|S3 gate: CI green, install, delete a synthetic test day's file in a scratch history copy or wait for a missed day, confirm gap-fill writes it.|C7
 T17|.|S4: Engines return every crossing; the dispatch gate sets `notified`; `lastBand` advances on every crossing. Existing notification tests stay green.|V34,V35,I4
 T18|.|S4: Record band, pace, reset, and auth events into `events[]`, with carry-over and the degraded rule.|V33,V35,V36,V37,V38
@@ -181,3 +182,5 @@ B2|2026-10-22|Spec gap found planning T5: V10 `lastSeen` moves on every good pol
 B3|2026-10-22|Spec gap found planning T7: I6 named Claude `subscriptionType` from the credential loader, but hook mode (default, ccs instances) never loads credentials and per-instance credentials sit in Keychain, which re-prompts on ad-hoc builds.|I6
 B4|2026-10-22|Spec gap found planning T8: V24 had no room for the public addresses already in the repo (copyright address in `Info.plist` and `README.md`, gh-pages committer in `release.yml`), so the scan would fail on day one.|V24
 B5|2026-10-22|Spec gap found planning T14: V25 named the billing model of backfilled records but not which accounts they list. Transcripts and rollouts carry no account id, and ccs instance `projects/` dirs can symlink into one shared context group, so per-file attribution is ambiguous.|V62
+B6|2026-10-22|Spec gap found planning T15: V13 said OpenRouter backfilled records store time zone id `UTC`, but I16 `DayRecord` had no zone field; the file's `timeZone` is the local zone.|V13,V18,I16
+B7|2026-10-22|Spec gap found planning T15: `/activity` serves only completed UTC days. In zones ahead of UTC the newest sealed key can be the in-progress UTC day, so gap-fill would write a zero record for it and mark it checked forever.|V63

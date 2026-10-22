@@ -78,3 +78,23 @@ public struct OpenRouterKeyResponse: Decodable, Sendable, Equatable {
         public let isFreeTier: Bool
     }
 }
+
+// MARK: - Activity Response
+
+/// Response from `GET /api/v1/activity`: one item per UTC date, model, and endpoint.
+///
+/// Verified against https://openrouter.ai/openapi.json `ActivityItem` (2026-10-22).
+/// Decoded with `keyDecodingStrategy = .convertFromSnakeCase`. Only the fields backfill
+/// reads are declared.
+public struct OpenRouterActivityResponse: Decodable, Sendable, Equatable {
+    public let data: [Item]
+
+    public struct Item: Decodable, Sendable, Equatable {
+        /// UTC date, `YYYY-MM-DD`.
+        public let date: String
+        /// OpenRouter credits spent (USD). BYOK spend is separate and not included.
+        public let usage: Decimal
+        public let promptTokens: Int
+        public let completionTokens: Int
+    }
+}
