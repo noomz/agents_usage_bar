@@ -2,6 +2,6 @@
 provider    spend     tokens  peak      days  trend
 OpenRouter  $26.00    440.0K           14/14  $▂▄▆█▂▄▆█▂▄▆█▂▄
 Claude      max/pro     2.4M  100% 5h  12/14  %·▇██▂▄▇·█▅▆▇██
-Codex       ?! +plus    1.7M  50% 5h   14/14  %▄▄▄·▄▄▄▄·▄▄▄▄·
+Codex       ?! +plus    1.7M  50% 5h   14/14  %▄▄▄?▄▄▄▄?▄▄▄▄?
 total       $26.00!
-· gap  ! incomplete
+· gap  ? no value  ! incomplete

@@ -210,6 +210,9 @@ public enum StatsTextRenderer {
             case .gap:
                 legend.gap = true
                 segments.append(("·", .dim))
+            case .noValue:
+                legend.noValue = true
+                segments.append(("?", .dim))
             case .incomplete:
                 legend.incomplete = true
                 segments.append(("!", .plain))
@@ -239,10 +242,11 @@ public enum StatsTextRenderer {
     struct Legend {
         var estimated = false
         var gap = false
+        var noValue = false
         var incomplete = false
 
         func line(color: Bool) -> [String] {
-            let entries = [(estimated, "~ estimated"), (gap, "· gap"), (incomplete, "! incomplete")]
+            let entries = [(estimated, "~ estimated"), (gap, "· gap"), (noValue, "? no value"), (incomplete, "! incomplete")]
                 .filter(\.0).map(\.1)
             guard !entries.isEmpty else { return [] }
             return [CompactTextRenderer.dim(entries.joined(separator: "  "), color: color)]
