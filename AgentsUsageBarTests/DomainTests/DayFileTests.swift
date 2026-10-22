@@ -92,6 +92,23 @@ struct DayFileTests {
         }
     }
 
+    @Test("money rounds to 6 decimal places on creation, decode, and encode (V65)")
+    func moneyRoundsToMicroDollars() throws {
+        // Double arithmetic noise, as a baseline delta or a price sum produces it.
+        let noisy = Money(Decimal(0.1 + 0.2))
+        #expect(noisy.amount == Decimal(string: "0.3")!)
+        #expect(Money(Decimal(1272.60157)).amount == Decimal(string: "1272.60157")!)
+        #expect(Money(Decimal(string: "0.0000005")!).amount == Decimal(string: "0.000001")!)
+        #expect(Money(Decimal(string: "-0.0000005")!).amount == Decimal(string: "-0.000001")!)
+        #expect(Money(Decimal(string: "0.00004")!).amount == Decimal(string: "0.00004")!)
+
+        let stored = Data(#"["1272.601569999999994351616", "0.0421083310000085504"]"#.utf8)
+        let decoded = try JSONDecoder().decode([Money].self, from: stored)
+        #expect(decoded.map(\.amount) == [Decimal(string: "1272.60157")!, Decimal(string: "0.042108")!])
+        let encoded = try JSONEncoder().encode(decoded)
+        #expect(String(decoding: encoded, as: UTF8.self) == #"["1272.60157","0.042108"]"#)
+    }
+
     @Test("newer or unknown schemaVersion is unsupported (V18)", arguments: [0, 2, 99])
     func unsupportedVersion(_ version: Int) {
         let data = Data(#"{"schemaVersion": \#(version), "date": "2026-10-22"}"#.utf8)
