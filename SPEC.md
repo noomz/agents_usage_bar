@@ -91,6 +91,7 @@ V29|Each day file lists in `backfillChecked` the providers already backfilled fo
 V30|Inside a source's reach, a day with no usage gets a backfilled record with zero totals. Outside reach, and for forward-only providers, no record is written and the day stays a gap. Backfilled records never carry quota, `firstSeen`, or `lastSeen`.
 V31|Backfill never replaces an observed record. It only raises `tokens` and `costUSD` through the V7 max-merge, which recovers usage between the last poll and midnight. `origin`, quota, accounts, `firstSeen`, and `lastSeen` stay untouched.
 V32|Backfill never creates usage events. All backfill writes go through `HistoryStore`.
+V62|A new backfilled record lists every account known at backfill time: Claude `default` when `~/.claude.json` exists plus each ccs instance with a `.claude.json`; Codex the discovered subscription logins, else one metered `default` account. Each takes billing model and plan from I6 at backfill time with `billingModelAssumed` true, and carries no `costUSD` and no quota. Transcripts and rollouts hold no account id, so usage is never split by account.
 
 ### Usage events
 
@@ -152,7 +153,7 @@ T10|x|S2: `aub stats` summary, drill-down, ranges, buckets, markers, legend, edg
 T11|x|S2: `--json` and `--csv` renderers (all four CSV tables) and the README export section.|V26,V47,V48,V49
 T12|x|S2 gate: CI green, install, `aub stats`, `aub stats claude`, `aub stats --json` and `--csv` on real history.|C7
 T13|x|S3: Gap-fill scheduler: triggers, low priority, one provider at a time, `backfillChecked`, zero records inside reach, top-up only on observed days, no events.|V27,V29,V30,V31,V32
-T14|.|S3: Claude and Codex backfill sources with estimated cost and assumed billing model.|V10,V25,V28,I8,I10
+T14|x|S3: Claude and Codex backfill sources with estimated cost and assumed billing model.|V10,V25,V28,V62,I8,I10
 T15|.|S3: OpenRouter `/activity` source and the management key config.|V13,V28,I10,I11
 T16|.|S3 gate: CI green, install, delete a synthetic test day's file in a scratch history copy or wait for a missed day, confirm gap-fill writes it.|C7
 T17|.|S4: Engines return every crossing; the dispatch gate sets `notified`; `lastBand` advances on every crossing. Existing notification tests stay green.|V34,V35,I4
@@ -179,3 +180,4 @@ B1|2026-10-22|Hosted test bundle shares the app's bundle id and real UserDefault
 B2|2026-10-22|Spec gap found planning T5: V10 `lastSeen` moves on every good poll, so V15 "a poll with no change does no file I/O" could never hold while any provider was `.ok`.|V15
 B3|2026-10-22|Spec gap found planning T7: I6 named Claude `subscriptionType` from the credential loader, but hook mode (default, ccs instances) never loads credentials and per-instance credentials sit in Keychain, which re-prompts on ad-hoc builds.|I6
 B4|2026-10-22|Spec gap found planning T8: V24 had no room for the public addresses already in the repo (copyright address in `Info.plist` and `README.md`, gh-pages committer in `release.yml`), so the scan would fail on day one.|V24
+B5|2026-10-22|Spec gap found planning T14: V25 named the billing model of backfilled records but not which accounts they list. Transcripts and rollouts carry no account id, and ccs instance `projects/` dirs can symlink into one shared context group, so per-file attribution is ambiguous.|V62

@@ -32,7 +32,8 @@ extension DayFile {
 
     /// The day with one provider's backfilled record folded in and the provider marked
     /// checked (V29). It tops up a record already there (V31) or adds a new one that carries
-    /// no quota or seen times (V30). Events are never touched (V32).
+    /// no quota or seen times (V30) and whose accounts are assumed, with no per-account cost
+    /// (V62). Events are never touched (V32).
     public func backfilling(_ record: DayRecord) -> DayFile {
         var day = self
         if let index = day.records.firstIndex(where: { $0.provider == record.provider }) {
@@ -45,6 +46,8 @@ extension DayFile {
             added.lastSeen = nil
             for index in added.accounts.indices {
                 added.accounts[index].quota = [:]
+                added.accounts[index].costUSD = nil
+                added.accounts[index].billingModelAssumed = true
             }
             day.records.append(added)
             day.records.sort { $0.provider.rawValue < $1.provider.rawValue }

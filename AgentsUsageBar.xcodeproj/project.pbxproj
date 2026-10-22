@@ -167,7 +167,9 @@
 		/* Plan 03-01 Task 2 — CodexRoots + CodexRolloutScanner (app target) + tests */
 		AA030100000000000000002A /* CodexRoots.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000002B /* CodexRoots.swift */; };
 		AA030100000000000000003A /* CodexRolloutScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000003B /* CodexRolloutScanner.swift */; };
+		AA1D5500000000000000002A /* CodexBackfillSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D5500000000000000002B /* CodexBackfillSource.swift */; };
 		AA030100000000000000010A /* CodexRolloutScannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000010B /* CodexRolloutScannerTests.swift */; };
+		AA1D5500000000000000004A /* CodexBackfillSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D5500000000000000004B /* CodexBackfillSourceTests.swift */; };
 		/* Plan 03-01 Task 3 — CodexRolloutEvent + CodexRolloutParser (app target) + tests */
 		AA030100000000000000004A /* CodexRolloutEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000004B /* CodexRolloutEvent.swift */; };
 		AA030100000000000000005A /* CodexRolloutParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030100000000000000005B /* CodexRolloutParser.swift */; };
@@ -311,6 +313,7 @@
 		/* Plan 02.01 — Claude transcript tests (test target) */
 		AA020100000000000000010A /* TranscriptRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000010B /* TranscriptRecordTests.swift */; };
 		AA020100000000000000011A /* TranscriptReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000011B /* TranscriptReaderTests.swift */; };
+		AA1D5500000000000000003A /* ClaudeBackfillSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D5500000000000000003B /* ClaudeBackfillSourceTests.swift */; };
 		AA020100000000000000012A /* TranscriptDirectoryScannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA020100000000000000012B /* TranscriptDirectoryScannerTests.swift */; };
 		/* Plan 02.02 — Bundled pricing resource (app target) */
 		AA020202000000000000001A /* claude-models.json in Resources */ = {isa = PBXBuildFile; fileRef = AA020202000000000000001B /* claude-models.json */; };
@@ -379,6 +382,7 @@
 		AA061000000000000000004A /* ClaudeHookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000004B /* ClaudeHookInstaller.swift */; };
 		AA061000000000000000005A /* ClaudeSwitchableProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000005B /* ClaudeSwitchableProvider.swift */; };
 		AA1D70000000000000000001A /* ClaudeAccountPlans.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D70000000000000000001B /* ClaudeAccountPlans.swift */; };
+		AA1D5500000000000000001A /* ClaudeBackfillSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D5500000000000000001B /* ClaudeBackfillSource.swift */; };
 		/* Claude switchable source (hook) — test target sources */
 		AA061000000000000000010A /* ClaudeHookPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000010B /* ClaudeHookPayloadTests.swift */; };
 		AA061000000000000000011A /* ClaudeHookProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA061000000000000000011B /* ClaudeHookProviderTests.swift */; };
@@ -598,7 +602,9 @@
 		/* Plan 03-01 Task 2 — CodexRoots + CodexRolloutScanner file references */
 		AA030100000000000000002B /* CodexRoots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRoots.swift; sourceTree = "<group>"; };
 		AA030100000000000000003B /* CodexRolloutScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRolloutScanner.swift; sourceTree = "<group>"; };
+		AA1D5500000000000000002B /* CodexBackfillSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBackfillSource.swift; sourceTree = "<group>"; };
 		AA030100000000000000010B /* CodexRolloutScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRolloutScannerTests.swift; sourceTree = "<group>"; };
+		AA1D5500000000000000004B /* CodexBackfillSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBackfillSourceTests.swift; sourceTree = "<group>"; };
 		/* Plan 03-01 Task 3 — CodexRolloutEvent + CodexRolloutParser file references */
 		AA030100000000000000004B /* CodexRolloutEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRolloutEvent.swift; sourceTree = "<group>"; };
 		AA030100000000000000005B /* CodexRolloutParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRolloutParser.swift; sourceTree = "<group>"; };
@@ -761,6 +767,7 @@
 		AA020100000000000000004B /* TranscriptDirectoryScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptDirectoryScanner.swift; sourceTree = "<group>"; };
 		AA020100000000000000010B /* TranscriptRecordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptRecordTests.swift; sourceTree = "<group>"; };
 		AA020100000000000000011B /* TranscriptReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptReaderTests.swift; sourceTree = "<group>"; };
+		AA1D5500000000000000003B /* ClaudeBackfillSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeBackfillSourceTests.swift; sourceTree = "<group>"; };
 		AA020100000000000000012B /* TranscriptDirectoryScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptDirectoryScannerTests.swift; sourceTree = "<group>"; };
 		/* Plan 02.02 — Bundled pricing JSON file references */
 		AA020202000000000000001B /* claude-models.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "claude-models.json"; sourceTree = "<group>"; };
@@ -824,6 +831,7 @@
 		AA061000000000000000004B /* ClaudeHookInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookInstaller.swift; sourceTree = "<group>"; };
 		AA061000000000000000005B /* ClaudeSwitchableProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSwitchableProvider.swift; sourceTree = "<group>"; };
 		AA1D70000000000000000001B /* ClaudeAccountPlans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeAccountPlans.swift; sourceTree = "<group>"; };
+		AA1D5500000000000000001B /* ClaudeBackfillSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeBackfillSource.swift; sourceTree = "<group>"; };
 		AA061000000000000000010B /* ClaudeHookPayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookPayloadTests.swift; sourceTree = "<group>"; };
 		AA061000000000000000011B /* ClaudeHookProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookProviderTests.swift; sourceTree = "<group>"; };
 		AA061000000000000000012B /* ClaudeHookInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHookInstallerTests.swift; sourceTree = "<group>"; };
@@ -1185,6 +1193,7 @@
 			children = (
 				AA030100000000000000002B /* CodexRoots.swift */,
 				AA030100000000000000003B /* CodexRolloutScanner.swift */,
+				AA1D5500000000000000002B /* CodexBackfillSource.swift */,
 				AA030100000000000000005B /* CodexRolloutParser.swift */,
 				/* Plan 03-03 — Codex OAuth fallback */
 				AA030200000000000000001B /* CodexCredentialLoader.swift */,
@@ -1230,6 +1239,7 @@
 				AA061000000000000000004B /* ClaudeHookInstaller.swift */,
 				AA061000000000000000005B /* ClaudeSwitchableProvider.swift */,
 				AA1D70000000000000000001B /* ClaudeAccountPlans.swift */,
+				AA1D5500000000000000001B /* ClaudeBackfillSource.swift */,
 			);
 			path = Claude;
 			sourceTree = "<group>";
@@ -1756,6 +1766,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 			isa = PBXGroup;
 			children = (
 				AA030100000000000000010B /* CodexRolloutScannerTests.swift */,
+				AA1D5500000000000000004B /* CodexBackfillSourceTests.swift */,
 				AA030100000000000000011B /* CodexRolloutParserTests.swift */,
 				/* Plan 03-03 — Codex OAuth fallback tests */
 				AA030200000000000000010B /* CodexCredentialLoaderTests.swift */,
@@ -1796,6 +1807,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 			children = (
 				AA020100000000000000010B /* TranscriptRecordTests.swift */,
 				AA020100000000000000011B /* TranscriptReaderTests.swift */,
+				AA1D5500000000000000003B /* ClaudeBackfillSourceTests.swift */,
 				AA020100000000000000012B /* TranscriptDirectoryScannerTests.swift */,
 				AA020300000000000000010B /* ClaudeCredentialLoaderTests.swift */,
 				AA020300000000000000011B /* ClaudeOAuthResponsesTests.swift */,
@@ -2054,6 +2066,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA061000000000000000004A /* ClaudeHookInstaller.swift in Sources */,
 				AA061000000000000000005A /* ClaudeSwitchableProvider.swift in Sources */,
 				AA1D70000000000000000001A /* ClaudeAccountPlans.swift in Sources */,
+				AA1D5500000000000000001A /* ClaudeBackfillSource.swift in Sources */,
 				/* Plan 02.05 — Threshold FSM persistence + snooze action handler */
 				AA020500000000000000001A /* NotificationStateStore.swift in Sources */,
 				AA020500000000000000002A /* NotificationActionHandler.swift in Sources */,
@@ -2064,6 +2077,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				/* Plan 03-01 — CodexRoots + CodexRolloutScanner */
 				AA030100000000000000002A /* CodexRoots.swift in Sources */,
 				AA030100000000000000003A /* CodexRolloutScanner.swift in Sources */,
+				AA1D5500000000000000002A /* CodexBackfillSource.swift in Sources */,
 				/* Plan 03-01 — CodexRolloutEvent + CodexRolloutParser */
 				AA030100000000000000004A /* CodexRolloutEvent.swift in Sources */,
 				AA030100000000000000005A /* CodexRolloutParser.swift in Sources */,
@@ -2206,6 +2220,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				/* Plan 02.01 — Claude transcript tests */
 				AA020100000000000000010A /* TranscriptRecordTests.swift in Sources */,
 				AA020100000000000000011A /* TranscriptReaderTests.swift in Sources */,
+				AA1D5500000000000000003A /* ClaudeBackfillSourceTests.swift in Sources */,
 				AA020100000000000000012A /* TranscriptDirectoryScannerTests.swift in Sources */,
 				AA020300000000000000010A /* ClaudeCredentialLoaderTests.swift in Sources */,
 				AA020100000000000000020A /* FileCacheStoreSchemaV2Tests.swift in Sources */,
@@ -2239,6 +2254,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000047A /* ProviderOrderTests.swift in Sources */,
 				/* Plan 03-01 Task 2 — CodexRolloutScanner tests */
 				AA030100000000000000010A /* CodexRolloutScannerTests.swift in Sources */,
+				AA1D5500000000000000004A /* CodexBackfillSourceTests.swift in Sources */,
 				/* Plan 03-01 Task 3 — CodexRolloutParser tests */
 				AA030100000000000000011A /* CodexRolloutParserTests.swift in Sources */,
 				/* Plan 03-03 Task 1 — CodexCredentialLoader tests */

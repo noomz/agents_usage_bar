@@ -189,7 +189,7 @@ public enum AppDependencies {
         //     Migrated and pruned by `startBackgroundServices()` (V61).
         let notificationState = UserDefaultsNotificationStateStore()
 
-        let history = HistoryStore(dayKeys: dayKeys)
+        let history = HistoryStore(dayKeys: dayKeys, backfillSources: built.backfillSources)
         // 9. Aggregate store — seeds from cache immediately for cold-launch rendering (UI-07)
         let store = AggregateStore(
             registry: registry,

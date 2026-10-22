@@ -93,6 +93,18 @@ public struct DayKeyOwner: Sendable {
         return wallKey(for: shifted)
     }
 
+    /// The first instant of day `key` in the current zone, or nil when `key` is not
+    /// `yyyy-MM-dd`.
+    public func start(of key: String) -> Date? {
+        let parts = key.split(separator: "-", omittingEmptySubsequences: false).compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = timeZone
+        guard let noon = gregorian.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2], hour: 12))
+        else { return nil }
+        return gregorian.startOfDay(for: noon)
+    }
+
     /// The key a pre-S0 build stored for `date`: `yyyy-MM-dd` in the locale's calendar.
     public func legacyKey(for date: Date) -> String {
         TodayHelper.formatYYYYMMDD(date, calendar: legacyCalendar)

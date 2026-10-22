@@ -7,14 +7,19 @@ private actor FakeSource: BackfillSource {
     nonisolated let provider: ProviderID
     private var reach: Int?
     private let usage: [String: DayRecord]
+    private let known: [UsageSnapshot.AccountUsage]
     private let fails: Bool
     private let tracker: OverlapTracker?
     private(set) var requested: [[String]] = []
 
-    init(_ provider: String, reach: Int?, usage: [String: DayRecord] = [:], fails: Bool = false, tracker: OverlapTracker? = nil) {
+    init(
+        _ provider: String, reach: Int?, usage: [String: DayRecord] = [:],
+        accounts: [UsageSnapshot.AccountUsage] = [], fails: Bool = false, tracker: OverlapTracker? = nil
+    ) {
         self.provider = ProviderID(rawValue: provider)
         self.reach = reach
         self.usage = usage
+        self.known = accounts
         self.fails = fails
         self.tracker = tracker
     }
@@ -34,6 +39,10 @@ private actor FakeSource: BackfillSource {
         await tracker?.leave()
         if fails { throw URLError(.cannotConnectToHost) }
         return usage.filter { keys.contains($0.key) }
+    }
+
+    func accounts() -> [UsageSnapshot.AccountUsage] {
+        known
     }
 }
 
@@ -123,20 +132,61 @@ struct HistoryBackfillTests {
         let dir = makeDirectory()
         var record = used("codex", tokens: 10, cost: 1)
         record.quota = ["5h": QuotaDay(peak: 0.9, endOfDay: 0.5)]
-        record.accounts = [DayAccount(key: "default", label: "default", billingModel: .subscription,
-                                      billingModelAssumed: true, quota: ["5h": QuotaDay(peak: 0.9, endOfDay: 0.5)])]
         record.firstSeen = Self.at("2026-10-21T01:00:00Z")
         record.lastSeen = Self.at("2026-10-21T02:00:00Z")
         record.origin = .observed
-        await firstPoll(makeStore(dir, [FakeSource("codex", reach: 1, usage: ["2026-10-21": record])]))
+        let account = UsageSnapshot.AccountUsage(
+            name: "default", costTodayUSD: 7, quota: nil,
+            quotaWindows: [QuotaWindow(name: "5h", utilization: 0.9, resetsAt: nil)],
+            accountInfo: AccountInfo(billingModel: .subscription, plan: "plus"))
+        await firstPoll(makeStore(dir, [FakeSource("codex", reach: 1, usage: ["2026-10-21": record], accounts: [account])]))
 
         let stored = try #require(await read("2026-10-21", in: dir)?.records.first)
         #expect(stored.origin == .backfilled)
         #expect(stored.quota.isEmpty)
         #expect(stored.accounts.map(\.quota) == [[:]])
-        #expect(stored.accounts.map(\.billingModelAssumed) == [true])
         #expect(stored.firstSeen == nil)
         #expect(stored.lastSeen == nil)
+    }
+
+    @Test("every day a source fills, zero days too, lists all its accounts as assumed with no per-account cost (V25, V62)")
+    func listsAssumedAccounts() async throws {
+        let dir = makeDirectory()
+        let accounts = [
+            UsageSnapshot.AccountUsage(
+                name: "default", costTodayUSD: 3, quota: nil, quotaWindows: nil,
+                accountInfo: AccountInfo(billingModel: .subscription, plan: "max")),
+            UsageSnapshot.AccountUsage(
+                name: "work", costTodayUSD: nil, quota: nil, quotaWindows: nil,
+                accountInfo: AccountInfo(billingModel: .metered)),
+        ]
+        let source = FakeSource("claude", reach: 2, usage: ["2026-10-21": used("claude", tokens: 5, cost: 1)], accounts: accounts)
+        await firstPoll(makeStore(dir, [source]))
+
+        let expected = [
+            DayAccount(key: "default", label: "default", billingModel: .subscription, plan: "max", billingModelAssumed: true),
+            DayAccount(key: "work", label: "work", billingModel: .metered, billingModelAssumed: true),
+        ]
+        for key in ["2026-10-20", "2026-10-21"] {
+            #expect(try #require(await read(key, in: dir)?.records.first).accounts == expected)
+        }
+    }
+
+    @Test("an account id is stored only as its salted key (V21, V62)")
+    func hashesAccountIDs() async throws {
+        let dir = makeDirectory()
+        let login = UsageSnapshot.AccountUsage(
+            name: "someone@example.com", costTodayUSD: nil, quota: nil, quotaWindows: nil,
+            accountInfo: AccountInfo(billingModel: .subscription, plan: "plus", accountID: "acct-raw-id"))
+        await firstPoll(makeStore(dir, [FakeSource("codex", reach: 1, accounts: [login])]))
+
+        let account = try #require(await read("2026-10-21", in: dir)?.records.first?.accounts.first)
+        let salt = try Data(contentsOf: dir.appending(path: HistoryStore.saltFileName))
+        #expect(account.key == DayAccount.key(forAccountID: "acct-raw-id", salt: salt))
+        #expect(account.label == "plus")
+        let raw = try String(contentsOf: dir.appending(path: "2026-10-21.json"), encoding: .utf8)
+        #expect(!raw.contains("acct-raw-id"))
+        #expect(!raw.contains("@"))
     }
 
     @Test("an observed day is only topped up: totals rise, nothing else moves, events stay (V31, V32)")
@@ -150,7 +200,9 @@ struct HistoryBackfillTests {
             origin: .observed, firstSeen: Self.at("2026-10-21T08:00:00Z"), lastSeen: Self.at("2026-10-21T22:00:00Z"))
         let lowCost = DayRecord(provider: Self.pid("codex"), tokens: 100, costUSD: Money(5), origin: .observed)
         try writeRaw(DayFile(date: "2026-10-21", timeZone: "UTC", records: [observed, lowCost], events: [event]), in: dir)
-        let claude = FakeSource("claude", reach: 1, usage: ["2026-10-21": used("claude", tokens: 600, cost: 4)])
+        let claude = FakeSource(
+            "claude", reach: 1, usage: ["2026-10-21": used("claude", tokens: 600, cost: 4)],
+            accounts: [UsageSnapshot.AccountUsage(name: "work", costTodayUSD: nil, quota: nil, quotaWindows: nil)])
         let codex = FakeSource("codex", reach: 1, usage: ["2026-10-21": used("codex", tokens: 50, cost: 1)])
         await firstPoll(makeStore(dir, [claude, codex]))
 

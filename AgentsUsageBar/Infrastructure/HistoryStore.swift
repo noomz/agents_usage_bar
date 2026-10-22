@@ -117,6 +117,17 @@ public actor HistoryStore {
         write(day.backfilling(record))
     }
 
+    /// A backfill source's accounts as day accounts, keyed with this install's salt (V21, V62).
+    func backfillAccounts(_ accounts: [UsageSnapshot.AccountUsage], of provider: ProviderID) -> [DayAccount] {
+        guard !accounts.isEmpty else { return [] }
+        let sample = UsageSnapshot(
+            providerID: provider, asOf: .distantPast, tokensToday: nil, costTodayUSD: nil,
+            balanceUSD: nil, quota: nil, raw: [:], accounts: accounts)
+        return sample.dayAccounts { accountID in
+            DayAccount.key(forAccountID: accountID, salt: accountSalt())
+        }
+    }
+
     /// Waits for a running gap-fill pass, including any pass a seal queued behind it.
     func gapFillFinished() async {
         while let task = gapFillTask {

@@ -25,6 +25,8 @@ public struct PlaceholderSeed: Sendable, Equatable {
 public struct ProviderRegistry {
     public let providers: [any UsageProvider]
     public let placeholders: [PlaceholderSeed]
+    /// Past-day sources for usage history gap-fill (SPEC V28).
+    public var backfillSources: [any BackfillSource] = []
 }
 
 /// Shared composition of the provider registry for the menu-bar app and `aub`.
@@ -45,6 +47,7 @@ public enum ProviderRegistryFactory {
     ) -> ProviderRegistry {
         var registry: [any UsageProvider] = []
         var placeholders: [PlaceholderSeed] = []
+        var backfillSources: [any BackfillSource] = []
         let logger = os.Logger(subsystem: "app.agents-usage-bar", category: "composition")
 
         if config.openrouter.enabled, let apiKey = config.openrouter.apiKey {
@@ -105,6 +108,7 @@ public enum ProviderRegistryFactory {
                 jsonl: claudeProvider,
                 hookProvider: ClaudeHookProvider()
             ))
+            backfillSources.append(ClaudeBackfillSource(pricing: claudePricing, dayKeys: dayKeys))
             let claudeRoots = ClaudeRoots.defaultRoots
             let hasTranscripts = claudeRoots.contains { FileManager.default.fileExists(atPath: $0.path) }
             if oauthClient == nil, !hasTranscripts {
@@ -156,6 +160,7 @@ public enum ProviderRegistryFactory {
                     clock: clock,
                     logins: discoverLogins
                 ))
+                backfillSources.append(CodexBackfillSource(pricing: codexPricing, dayKeys: dayKeys, logins: discoverLogins))
                 codexRegistered = true
             } else {
                 codexRegistered = false
@@ -284,7 +289,7 @@ public enum ProviderRegistryFactory {
             placeholders: &placeholders
         )
 
-        return ProviderRegistry(providers: registry, placeholders: placeholders)
+        return ProviderRegistry(providers: registry, placeholders: placeholders, backfillSources: backfillSources)
     }
 
     /// Registers `[engine.*]` + the built-in LM Studio llama.cpp row.
