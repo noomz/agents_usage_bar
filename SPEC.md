@@ -76,7 +76,7 @@ V20|History is decoded off the MainActor. The read API is `nonisolated async`. T
 V21|A Claude account key is the ccs instance slug or `default`. A Codex account key is a short hash of `account_id` with the per-install salt in `history/.account-salt` (ADR 0003). The salt is created on the first write. If it is missing while day files exist, a new salt is made and Codex series split. A raw `account_id` is never written to history or export.
 V22|An account label is never an email. When the live Codex label is an email, the stored label is the unique plan slug, else `acct-` plus the first 4 characters of the account key. Labels never come from a raw `account_id`. ccs slugs are stored as they are. Views show the newest label for a key.
 V23|`history/` is mode 0700. Day files and `.account-salt` are 0600.
-V24|SEC-04 (I15) also fails on any email address whose domain is not `example.com` or ends in `.test`.
+V24|SEC-04 (I15) also fails on any email address whose domain is not `example.com` or ends in `.test`, unless the address is on the exact allowlist in `scripts/check-secrets.sh`. The allowlist holds only public repo addresses: the copyright address in `Info.plist` and `README.md`, and the gh-pages committer `ci@github.com` in `release.yml`. It matches whole addresses, never domains.
 
 ### Spend and value
 
@@ -178,3 +178,4 @@ id|date|cause|fix
 B1|2026-10-22|Hosted test bundle shares the app's bundle id and real UserDefaults. `makeProduction()` ran `migrateLegacyDayKeys` during composition, before the `isHostingTests` guard. Test plan `region: US` made the legacy calendar Gregorian, so `2569-…` keys rekeyed to themselves and the run-once marker was stamped. The installed app would skip migration and re-fire today's bands.|V61
 B2|2026-10-22|Spec gap found planning T5: V10 `lastSeen` moves on every good poll, so V15 "a poll with no change does no file I/O" could never hold while any provider was `.ok`.|V15
 B3|2026-10-22|Spec gap found planning T7: I6 named Claude `subscriptionType` from the credential loader, but hook mode (default, ccs instances) never loads credentials and per-instance credentials sit in Keychain, which re-prompts on ad-hoc builds.|I6
+B4|2026-10-22|Spec gap found planning T8: V24 had no room for the public addresses already in the repo (copyright address in `Info.plist` and `README.md`, gh-pages committer in `release.yml`), so the scan would fail on day one.|V24
