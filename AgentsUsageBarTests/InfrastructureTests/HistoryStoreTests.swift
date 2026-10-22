@@ -381,6 +381,23 @@ struct HistoryStoreTests {
         #expect(await read("2026-10-22", in: dir)?.records.first?.accounts.map(\.key) == [account.key])
     }
 
+    // MARK: - Modes (V23)
+
+    private func mode(_ url: URL) throws -> Int? {
+        try FileManager.default.attributesOfItem(atPath: url.path(percentEncoded: false))[.posixPermissions] as? Int
+    }
+
+    @Test("history/ is 0700 and day files 0600, tightening a directory an older build made (V23)")
+    func privateModes() async throws {
+        let dir = makeDirectory()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o755])
+
+        await makeStore(dir).record([sample(tokens: 1)], at: Self.at("2026-10-22T09:00:00Z"))
+
+        #expect(try mode(dir) == 0o700)
+        #expect(try mode(dir.appending(path: "2026-10-22.json")) == 0o600)
+    }
+
     @Test("no account id needs no salt, so none is made (V21, C4)")
     func noSaltWithoutAccountID() async {
         let dir = makeDirectory()
