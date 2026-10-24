@@ -69,8 +69,9 @@ public actor HistoryStore {
         }
     }
 
-    /// Folds one poll's good samples (providers `.ok` on this poll) into the open day.
-    public func record(_ samples: [UsageSnapshot], at now: Date) async {
+    /// Folds one poll's good samples (providers `.ok` on this poll) into the open day, and
+    /// appends the poll's usage events on the same write (V38).
+    public func record(_ samples: [UsageSnapshot], events: [UsageEvent] = [], at now: Date) async {
         if !seeded {
             await seedNewestKey()
         }
@@ -88,12 +89,13 @@ public actor HistoryStore {
             await seal(opening: key)
         }
         guard let day = open else { return }
-        let merged = day.merging(samples, at: now, timeZone: dayKeys.timeZoneIdentifier) { accountID in
+        var merged = day.merging(samples, at: now, timeZone: dayKeys.timeZoneIdentifier) { accountID in
             DayAccount.key(forAccountID: accountID, salt: accountSalt())
         }
+        merged.events += events
         open = merged
         if let onDisk, merged.hasSameContent(as: onDisk) { return }
-        if onDisk == nil, merged.records.isEmpty { return }
+        if onDisk == nil, merged.isEmpty { return }
         if write(merged) {
             onDisk = merged
         }
@@ -152,7 +154,7 @@ public actor HistoryStore {
 
     /// Final merge into the previous open day, prune, then seed `key` from its file.
     private func seal(opening key: String) async {
-        if let open, open != onDisk, !open.records.isEmpty {
+        if let open, open != onDisk, !open.isEmpty {
             write(open)
         }
         await prune(relativeTo: key)

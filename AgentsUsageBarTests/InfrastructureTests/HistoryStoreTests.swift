@@ -70,6 +70,21 @@ struct HistoryStoreTests {
         #expect(!FileManager.default.fileExists(atPath: dir.path(percentEncoded: false)))
     }
 
+    @Test("events append to the open day on the poll's write, even with no record (V38)")
+    func recordsEvents() async throws {
+        let dir = makeDirectory()
+        let store = makeStore(dir)
+        let lost = UsageEvent(time: Self.at("2026-10-22T09:00:00Z"), provider: Self.pid("openrouter"), kind: .authLost, fraction: 0, notified: false)
+        await store.record([], events: [lost], at: Self.at("2026-10-22T09:00:00Z"))
+        #expect(await read("2026-10-22", in: dir)?.events == [lost])
+
+        let band = UsageEvent(time: Self.at("2026-10-22T09:05:00Z"), provider: Self.pid("openrouter"), kind: .band80, fraction: 0.8, notified: true)
+        await store.record([sample(tokens: 1)], events: [band], at: Self.at("2026-10-22T09:05:00Z"))
+        let day = try #require(await read("2026-10-22", in: dir))
+        #expect(day.events == [lost, band])
+        #expect(day.records.count == 1)
+    }
+
     @Test("no change means no write; seen times ride the next changed write (V15)")
     func writesOnlyOnChange() async throws {
         let dir = makeDirectory()
