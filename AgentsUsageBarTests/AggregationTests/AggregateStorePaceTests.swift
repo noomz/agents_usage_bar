@@ -168,4 +168,30 @@ struct AggregateStorePaceTests {
         let paceBatches = spy.scheduledDecisions.filter { $0.contains(where: { $0.windowName != nil }) }
         #expect(paceBatches.count == 1)
     }
+
+    @Test("pace crossed while off is recorded, so turning it on the same day does not fire (V34)")
+    func toggleOff_thenOn_sameDay_silent() async {
+        let state = InMemoryNotificationStateStore()
+        let provider = PaceFakeProvider(
+            id: .claude,
+            displayName: "Claude Code",
+            windows: [window("5h", used: 0.40, remaining: 4 * 3600, at: Self.now)]
+        )
+        let spy = CapturingNotificationManager()
+        let store = AggregateStore(
+            registry: [provider],
+            clock: VirtualClock(fixed: Self.now),
+            cache: AggFakeCacheStore(),
+            thresholds: ThresholdEngine(),
+            notifications: spy,
+            notificationState: state
+        )
+        store.updatePaceWarningsEnabled(false)
+        await store.refresh(now: Self.now)
+        #expect(state.record(forProviderID: .claude, day: Self.today)?.firedPaceWindows == ["5h"])
+
+        store.updatePaceWarningsEnabled(true)
+        await store.refresh(now: Self.now.addingTimeInterval(60))
+        #expect(spy.scheduledDecisions.filter { $0.contains(where: { $0.windowName != nil }) }.isEmpty)
+    }
 }

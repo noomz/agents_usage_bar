@@ -58,6 +58,11 @@ extension DayFile {
         return day
     }
 
+    /// True when the day has no record and no event, so a new file is not worth writing.
+    public var isEmpty: Bool {
+        records.isEmpty && events.isEmpty
+    }
+
     /// True when the two days differ only in `firstSeen` and `lastSeen`, which ride the next
     /// changed write instead of causing one (V15).
     public func hasSameContent(as other: DayFile) -> Bool {

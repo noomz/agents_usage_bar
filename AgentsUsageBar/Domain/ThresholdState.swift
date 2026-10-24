@@ -38,6 +38,23 @@ extension ThresholdBand: Comparable {
     }
 }
 
+/// Usage event kind of a crossing into this band (SPEC V33); nil for `.normal`.
+extension ThresholdBand {
+    public var eventKind: UsageEventKind? {
+        switch self {
+        case .normal:   return nil
+        case .warning:  return .band80
+        case .critical: return .band95
+        case .exceeded: return .band100
+        }
+    }
+
+    public init?(eventKind: UsageEventKind) {
+        guard let band = Self.allCases.first(where: { $0.eventKind == eventKind }) else { return nil }
+        self = band
+    }
+}
+
 /// FSM enum modeling quota utilization severity.
 ///
 /// D-11: Phase 1 emits only `.warning` (80%). The `.critical` (95%) and `.exceeded` (100%)

@@ -162,4 +162,29 @@ struct AggregateStoreSnoozeTests {
         try #require(spy.scheduledDecisions.count == 1)
         #expect(spy.scheduledDecisions[0].isEmpty)
     }
+
+    @Test("snoozed crossing still advances lastBand (V34)")
+    func snoozedCrossing_advancesLastBand() async {
+        let state = InMemoryNotificationStateStore()
+        state.setRecord(
+            NotificationStateRecord(lastBand: .normal, snoozedUntilDay: Self.today),
+            forProviderID: Self.pidA,
+            day: Self.today
+        )
+        let provider = SnoozeFakeProvider(id: Self.pidA, displayName: "OpenRouter", fraction: 0.97)
+        let store = AggregateStore(
+            registry: [provider],
+            clock: VirtualClock(fixed: Self.now),
+            cache: AggFakeCacheStore(),
+            thresholds: ThresholdEngine(),
+            notifications: NoopNotificationManager(),
+            notificationState: state
+        )
+
+        await store.refresh(now: Self.now)
+
+        let record = state.record(forProviderID: Self.pidA, day: Self.today)
+        #expect(record?.lastBand == .critical)
+        #expect(record?.snoozedUntilDay == Self.today)
+    }
 }

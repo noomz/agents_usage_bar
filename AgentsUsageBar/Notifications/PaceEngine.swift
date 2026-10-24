@@ -127,7 +127,9 @@ public struct PaceEngine: Sendable {
         self.dayKeys = dayKeys
     }
 
-    /// Evaluates snapshots and returns pace decisions plus the samples to keep for the next poll.
+    /// Evaluates snapshots and returns every pace crossing (SPEC V34), the decisions to
+    /// schedule, and the samples to keep for the next poll. `enabled` and snooze only set
+    /// `notified`; a crossing is reported once per window per day either way.
     public func decisions(
         for snapshots: [UsageSnapshot],
         now: Date,
@@ -135,10 +137,11 @@ public struct PaceEngine: Sendable {
         snoozedUntilDay: [ProviderID: String],
         alreadyFired: [ProviderID: Set<String>],
         enabled: Bool
-    ) -> (decisions: [NotificationDecision], nextSamples: [PaceSample]) {
+    ) -> (decisions: [NotificationDecision], nextSamples: [PaceSample], crossings: [QuotaCrossing]) {
         let today = dayKeys.key(for: now)
         var nextSamples: [PaceSample] = []
         var decisions: [NotificationDecision] = []
+        var crossings: [QuotaCrossing] = []
 
         let prevIndex: [PaceSample.Key: PaceSample] = Dictionary(
             previous.map { ($0.key, $0) },
@@ -149,7 +152,7 @@ public struct PaceEngine: Sendable {
             if snap.raw["note"] == ThresholdEngine.degradedTag { continue }
             guard let windows = snap.quotaWindows else { continue }
 
-            let snoozed = snoozedUntilDay[snap.providerID] == today
+            let notified = enabled && snoozedUntilDay[snap.providerID] != today
             let fired = alreadyFired[snap.providerID] ?? []
 
             for window in windows {
@@ -164,7 +167,6 @@ public struct PaceEngine: Sendable {
                     )
                 )
 
-                guard enabled, !snoozed else { continue }
                 guard clamped > 0, clamped < 1 else { continue }
                 guard !fired.contains(window.name) else { continue }
 
@@ -184,6 +186,18 @@ public struct PaceEngine: Sendable {
                     now: now
                 )
                 guard windowPace || recentPace else { continue }
+
+                crossings.append(
+                    QuotaCrossing(
+                        providerID: snap.providerID,
+                        kind: .pace,
+                        window: window.name,
+                        fraction: clamped,
+                        notified: notified,
+                        stateKey: window.name
+                    )
+                )
+                guard notified else { continue }
 
                 let rateETA: TimeInterval
                 if recentPace, let prev {
@@ -209,7 +223,7 @@ public struct PaceEngine: Sendable {
             }
         }
 
-        return (decisions, nextSamples)
+        return (decisions, nextSamples, crossings)
     }
 
     // MARK: - A / B

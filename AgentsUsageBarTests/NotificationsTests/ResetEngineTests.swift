@@ -184,6 +184,29 @@ struct ResetEngineTests {
         #expect(result.nextSamples.count == 1)
     }
 
+    @Test("toggle off still reports the reset crossing with its fire key, not notified (V34)")
+    func toggleOff_crossingReported_notNotified() throws {
+        let prev = sample(used: 0.90, remaining: 60)
+        let snap = snapshot(windows: [window("5h", used: 0.10, remaining: 5 * 3600)])
+        for enabled in [false, true] {
+            let result = engine.decisions(
+                for: [snap],
+                now: Self.now,
+                previous: [prev],
+                alreadyFired: [:],
+                warningFraction: 0.80,
+                enabled: enabled
+            )
+            #expect(result.decisions.count == (enabled ? 1 : 0))
+            try #require(result.crossings.count == 1)
+            #expect(result.crossings[0] == QuotaCrossing(
+                providerID: .claude, kind: .reset, window: "5h", fraction: 0.90,
+                notified: enabled,
+                stateKey: ResetEngine.fireKey(windowName: "5h", resetsAt: prev.resetsAt)
+            ))
+        }
+    }
+
     @Test("already-fired key is silent; other window can still fire")
     func alreadyFired_perWindow() {
         let prev5h = sample(name: "5h", used: 0.90, remaining: 60)
