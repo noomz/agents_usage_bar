@@ -162,7 +162,7 @@ T16|x|S3 gate: CI green, install, delete a synthetic test day's file in a scratc
 T17|x|S4: Engines return every crossing; the dispatch gate sets `notified`; `lastBand` advances on every crossing. Existing notification tests stay green.|V34,V35,I4
 T18|x|S4: Record band, pace, reset, and auth events into `events[]`, with carry-over and the degraded rule.|V33,V35,V36,V37,V38
 T19|x|S4 gate: CI green, install, confirm an event lands in today's file when a band is crossed.|C7
-T20|.|S5: `[budgets]` config, Settings fields, month spend.|V39,V40,I12
+T20|x|S5: `[budgets]` config, Settings fields, month spend.|V39,V40,I12
 T21|.|S5: Budget crossing events through the dispatch gate, and the `aub stats` budget footer.|V26,V41,V42
 T22|.|S5 gate: CI green, install, set a low budget, confirm the event, the notification, and the footer.|C7
 T23|.|S6: Dashboard window, activation switching, URL scheme in `Info.plist`, route handling, `aub dashboard`, popover footer button.|V50,V51,I14

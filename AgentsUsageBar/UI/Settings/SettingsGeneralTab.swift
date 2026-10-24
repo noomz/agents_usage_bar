@@ -2,7 +2,7 @@ import SwiftUI
 import ServiceManagement
 import os
 
-/// General Settings tab — refresh interval, warning threshold, theme, open-at-login.
+/// General Settings tab — refresh interval, warning threshold, budgets, theme, open-at-login.
 ///
 /// All four controls are bound to `UserPreferencesStore` via explicit setters (D-07).
 /// Hot-reload happens via `AppDependencies.observePreferences` in AppDependencies.swift (D-04):
@@ -77,6 +77,26 @@ struct SettingsGeneralTab: View {
                     .foregroundStyle(.secondary)
             }
 
+            // MARK: Budgets (SPEC V39)
+            Section("Monthly Budgets") {
+                let configured = ConfigStore(env: ProcessInfoEnvReader()).load().budgets.caps
+                ForEach(BudgetScope.all, id: \.self) { scope in
+                    TextField(
+                        budgetLabel(scope),
+                        value: Binding(
+                            get: { preferences.budgetOverrides[scope] },
+                            set: { preferences.setBudget(scope, usd: $0) }
+                        ),
+                        format: .currency(code: "USD"),
+                        prompt: Text(configured[scope].map { "\($0.amount) from config.toml" } ?? "No budget")
+                    )
+                    .multilineTextAlignment(.trailing)
+                }
+                Text("Warns when this month's spend reaches the warning threshold and again at 100%. Subscription usage never counts. Empty uses config.toml; 0 turns a budget off.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             // MARK: Theme (D-07, Discretion)
             Section("Appearance") {
                 Picker("Theme", selection: Binding(
@@ -135,6 +155,13 @@ struct SettingsGeneralTab: View {
         .padding()
         .onAppear {
             loginItemStatus = SMAppService.mainApp.status
+        }
+    }
+
+    private func budgetLabel(_ scope: BudgetScope) -> String {
+        switch scope {
+        case .total: return "All providers"
+        case .provider(let id): return id.displayHint
         }
     }
 

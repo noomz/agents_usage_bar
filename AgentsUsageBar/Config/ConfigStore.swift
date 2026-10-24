@@ -72,6 +72,7 @@ public final class ConfigStore: @unchecked Sendable {
         let ollamaSection = toml["ollama"] ?? [:]
         let lmstudioSection = toml["lmstudio"] ?? [:]
         let llamacppSection = toml["llamacpp"] ?? [:]
+        let budgetsSection = toml["budgets"] ?? [:]
 
         let defaults = AppConfig.defaults
 
@@ -313,6 +314,23 @@ public final class ConfigStore: @unchecked Sendable {
             llamacppPort = nil
         }
 
+        // --- budgets (SPEC V39): toml only; a missing, non-number, or non-positive cap is no budget ---
+        var budgetCaps: [BudgetScope: Money] = [:]
+        for scope in BudgetScope.all {
+            let cap: Decimal?
+            switch budgetsSection[scope.tomlKey] {
+            case .int(let i): cap = Decimal(i)
+            case .double(let d): cap = Decimal(d)
+            case nil: continue
+            default: cap = nil
+            }
+            guard let cap, cap > 0 else {
+                logger.warning("config: [budgets] \(scope.tomlKey, privacy: .public) must be a positive number — ignoring")
+                continue
+            }
+            budgetCaps[scope] = Money(cap)
+        }
+
         return AppConfig(
             refreshInterval: refreshInterval,
             threshold: threshold,
@@ -347,7 +365,8 @@ public final class ConfigStore: @unchecked Sendable {
             ),
             lmstudio: LMStudioConfig(enabled: lmstudioEnabled, port: lmstudioPort),
             llamacpp: LlamaCppConfig(enabled: llamacppEnabled, port: llamacppPort),
-            engines: LocalEngineConfig.parse(from: toml)
+            engines: LocalEngineConfig.parse(from: toml),
+            budgets: BudgetConfig(caps: budgetCaps)
         )
     }
 
@@ -358,6 +377,7 @@ public final class ConfigStore: @unchecked Sendable {
     /// - `refreshInterval` — polling cadence
     /// - `threshold` — warning-band fraction
     /// - per-provider `enabled` — when explicitly set in UserDefaults (non-empty map)
+    /// - budget caps — per scope, when edited in Settings (SPEC V39)
     ///
     /// NOTE: `theme` and `openAtLogin` are UI-only preferences — they do NOT appear in
     /// `AppConfig` and are consumed directly from `UserPreferencesStore` by the UI layer.
@@ -402,7 +422,8 @@ public final class ConfigStore: @unchecked Sendable {
             ),
             engines: config.engines.map { engine in
                 engine.withEnabled(prefs.providerEnabled[engine.id] ?? engine.enabled)
-            }
+            },
+            budgets: config.budgets.overlaid(with: prefs.budgetOverrides)
         )
         // NOTE: apiKey, bearer, OAuth credentials are NOT touched here (D-03, CFG-01).
         return config

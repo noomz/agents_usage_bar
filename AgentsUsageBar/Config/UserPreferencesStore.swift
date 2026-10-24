@@ -20,6 +20,10 @@ public enum AUBDefaultsKey {
     public static func providerEnabled(_ id: ProviderID) -> String {
         "aub.provider.\(id.rawValue).enabled"
     }
+    /// Budget cap edited in Settings: "aub.budget.<total|provider>" (Double USD; 0 = no budget).
+    public static func budget(_ scope: BudgetScope) -> String {
+        "aub.budget.\(scope.name)"
+    }
 }
 
 extension UserDefaults {
@@ -96,6 +100,10 @@ public final class UserPreferencesStore {
     /// providers that exist in the registry; detection seeding sets these on first launch).
     public private(set) var providerEnabled: [ProviderID: Bool] = [:]
 
+    /// Budget caps edited in Settings (SPEC V39), in USD. Absent scope = use `config.toml`;
+    /// zero = no budget even when config sets one.
+    public private(set) var budgetOverrides: [BudgetScope: Double] = [:]
+
     // MARK: - Private
 
     private let defaults: UserDefaults
@@ -165,6 +173,15 @@ public final class UserPreferencesStore {
         defaults.set(enabled, forKey: AUBDefaultsKey.providerEnabled(id))
     }
 
+    /// `nil` clears the Settings value so `config.toml` applies again; negatives store as 0.
+    public func setBudget(_ scope: BudgetScope, usd: Double?) {
+        if let usd {
+            defaults.set(max(0, usd), forKey: AUBDefaultsKey.budget(scope))
+        } else {
+            defaults.removeObject(forKey: AUBDefaultsKey.budget(scope))
+        }
+    }
+
     // MARK: - Private load
 
     private func loadAll() {
@@ -202,5 +219,13 @@ public final class UserPreferencesStore {
             }
         }
         providerEnabled = map
+
+        var budgets: [BudgetScope: Double] = [:]
+        for scope in BudgetScope.all {
+            if let usd = defaults.object(forKey: AUBDefaultsKey.budget(scope)) as? Double {
+                budgets[scope] = usd
+            }
+        }
+        budgetOverrides = budgets
     }
 }

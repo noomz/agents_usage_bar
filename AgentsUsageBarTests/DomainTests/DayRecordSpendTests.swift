@@ -57,3 +57,73 @@ struct DayRecordSpendTests {
         #expect(!split.hasMetered && !split.hasSubscription)
     }
 }
+
+@Suite("SpendTotal.month")
+struct MonthSpendTests {
+
+    private func spend(_ id: ProviderID, _ cost: Decimal?, estimated: Bool = false,
+                       _ model: BillingModel = .metered) -> DayRecord {
+        DayRecord(provider: id, costUSD: cost.map(Money.init), costEstimated: estimated,
+                  accounts: [DayAccount(key: "default", label: "default", billingModel: model)],
+                  origin: .observed)
+    }
+
+    private func day(_ date: String, _ records: DayRecord...) -> DayFile {
+        DayFile(date: date, timeZone: "UTC", records: records)
+    }
+
+    @Test("sums the month's metered spend, open day included, and ignores the previous month (V40)")
+    func sumsMonthOnly() {
+        let days = [
+            day("2026-09-30", spend(.openrouter, 100)),
+            day("2026-10-01", spend(.openrouter, 2)),
+            day("2026-10-02", spend(.openrouter, 3)),
+            day("2026-10-03", spend(.openrouter, 4)),
+        ]
+        let total = SpendTotal.month(days, today: "2026-10-03", scope: .provider(.openrouter))
+        #expect(total == SpendTotal(amount: 9))
+    }
+
+    @Test("a gap or a nil cost adds nothing and marks the month incomplete (V40)")
+    func gapAndNilAreIncomplete() {
+        let days = [
+            day("2026-10-01", spend(.openrouter, 2)),
+            day("2026-10-03", spend(.openrouter, nil)),
+        ]
+        let total = SpendTotal.month(days, today: "2026-10-03", scope: .provider(.openrouter))
+        #expect(total == SpendTotal(amount: 2, incomplete: true))
+    }
+
+    @Test("estimated metered spend counts and marks the month estimated (V40)")
+    func estimatedCounts() {
+        let days = [day("2026-10-01", spend(.claude, 4, estimated: true))]
+        let total = SpendTotal.month(days, today: "2026-10-01", scope: .provider(.claude))
+        #expect(total == SpendTotal(amount: 4, estimated: true))
+    }
+
+    @Test("subscription value is never month spend (V26)")
+    func subscriptionIsNotSpend() {
+        let days = [day("2026-10-01", spend(.claude, 40, estimated: true, .subscription))]
+        let total = SpendTotal.month(days, today: "2026-10-01", scope: .provider(.claude))
+        #expect(total.amount == nil)
+        #expect(!total.incomplete)
+    }
+
+    @Test("the total sums cost-reporting providers with metered spend only (V39, V40)")
+    func totalSumsCostReporting() {
+        let days = [
+            day("2026-10-01",
+                spend(.openrouter, 2), spend(.claude, 3), spend(.grok, 50),
+                spend(.codex, 30, estimated: true, .subscription)),
+            day("2026-10-02", spend(.openrouter, 1), spend(.claude, 1)),
+        ]
+        let total = SpendTotal.month(days, today: "2026-10-02", scope: .total)
+        #expect(total == SpendTotal(amount: 7))
+    }
+
+    @Test("month keys come from the Gregorian key text, not a calendar (V2)")
+    func keysFromText() {
+        let days = [day("2026-02-28", spend(.openrouter, 1)), day("2026-03-01", spend(.openrouter, 2))]
+        #expect(SpendTotal.month(days, today: "2026-03-01", scope: .total) == SpendTotal(amount: 2))
+    }
+}

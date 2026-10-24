@@ -29,6 +29,8 @@ public struct AppConfig: Sendable, Equatable {
     public let llamacpp: LlamaCppConfig
     /// Built-in + user `[engine.<slug>]` local engines (LM Studio llama.cpp, custom).
     public let engines: [LocalEngineConfig]
+    /// Monthly spend caps (SPEC V39). Empty means no budget.
+    public let budgets: BudgetConfig
 
     public init(
         refreshInterval: RefreshInterval,
@@ -41,7 +43,8 @@ public struct AppConfig: Sendable, Equatable {
         ollamaCloud: OllamaCloudConfig = .defaults,
         lmstudio: LMStudioConfig,
         llamacpp: LlamaCppConfig,
-        engines: [LocalEngineConfig] = LocalEngineConfig.builtIns
+        engines: [LocalEngineConfig] = LocalEngineConfig.builtIns,
+        budgets: BudgetConfig = .none
     ) {
         self.refreshInterval = refreshInterval
         self.threshold = threshold
@@ -54,6 +57,7 @@ public struct AppConfig: Sendable, Equatable {
         self.lmstudio = lmstudio
         self.llamacpp = llamacpp
         self.engines = engines
+        self.budgets = budgets
     }
 
     /// Built-in defaults (D-15).
@@ -89,6 +93,51 @@ public struct AppConfig: Sendable, Equatable {
         llamacpp: LlamaCppConfig(enabled: true, port: nil),
         engines: LocalEngineConfig.builtIns
     )
+}
+
+// MARK: - Budgets
+
+/// What one budget caps (SPEC V39): one cost-reporting provider, or all of them together.
+public enum BudgetScope: Sendable, Hashable {
+    case total
+    case provider(ProviderID)
+
+    /// The cost-reporting providers that can carry a budget and that the total sums (V39, V40).
+    public static let providers: [ProviderID] = [.claude, .codex, .openrouter]
+
+    public static let all: [BudgetScope] = [.total] + providers.map { .provider($0) }
+
+    /// `config.toml` `[budgets]` key: `total_usd` or `<provider>_usd`.
+    public var tomlKey: String { "\(name)_usd" }
+
+    /// Stable name used by config keys: `total` or the provider id.
+    public var name: String {
+        switch self {
+        case .total: return "total"
+        case .provider(let id): return id.rawValue
+        }
+    }
+}
+
+/// Monthly USD spend caps (SPEC V39). A scope without a cap has no budget.
+public struct BudgetConfig: Sendable, Equatable {
+    public var caps: [BudgetScope: Money]
+
+    public init(caps: [BudgetScope: Money]) {
+        self.caps = caps
+    }
+
+    public static let none = BudgetConfig(caps: [:])
+
+    /// Settings values win over config (V39): a positive override is the cap, zero turns the
+    /// budget off, and no override keeps the config value.
+    func overlaid(with overrides: [BudgetScope: Double]) -> BudgetConfig {
+        var caps = caps
+        for (scope, value) in overrides {
+            caps[scope] = value > 0 ? Money(Decimal(value)) : nil
+        }
+        return BudgetConfig(caps: caps)
+    }
 }
 
 // MARK: - OpenRouterConfig
