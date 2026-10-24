@@ -71,13 +71,7 @@ struct ProviderStats {
         case metered, subscription, mixed, local
     }
 
-    /// A summed amount: the known part, whether any of it is estimated, and whether any day
-    /// in range is a gap or an unknown amount (V40, V45).
-    struct Total: Equatable {
-        var amount: Decimal?
-        var estimated = false
-        var incomplete = false
-    }
+    typealias Total = SpendTotal
 
     /// One trend character's worth of days (V43–V45).
     enum Cell: Equatable {
@@ -129,21 +123,7 @@ struct ProviderStats {
     var value: Total { total(\.value, applies: \.hasSubscription) }
 
     private func total(_ amount: KeyPath<DayCostSplit, Money?>, applies: KeyPath<DayCostSplit, Bool>) -> Total {
-        var result = Total()
-        for record in records {
-            guard let split = record?.costSplit else {
-                result.incomplete = true
-                continue
-            }
-            guard split[keyPath: applies] else { continue }
-            guard let money = split[keyPath: amount] else {
-                result.incomplete = true
-                continue
-            }
-            result.amount = (result.amount ?? 0) + money.amount
-            result.estimated = result.estimated || split.estimated
-        }
-        return result
+        .sum(records, amount, applies: applies)
     }
 
     /// Sum of known tokens, nil when no day reports them.

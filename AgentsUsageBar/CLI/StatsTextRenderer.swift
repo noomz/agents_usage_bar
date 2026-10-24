@@ -154,12 +154,7 @@ public enum StatsTextRenderer {
             return [Cell("total"), Cell(segments: [(CLIFormat.usd(0), .plain), (" no metered accounts", .dim)])]
         }
         var sum = ProviderStats.Total()
-        for p in metered {
-            let spend = p.spend
-            if let amount = spend.amount { sum.amount = (sum.amount ?? 0) + amount }
-            sum.estimated = sum.estimated || spend.estimated
-            sum.incomplete = sum.incomplete || spend.incomplete
-        }
+        for p in metered { sum.add(p.spend) }
         return [Cell("total"), Cell(amountText(sum, legend: &legend))]
     }
 
