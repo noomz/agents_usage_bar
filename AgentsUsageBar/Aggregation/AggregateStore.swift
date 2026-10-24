@@ -68,6 +68,12 @@ public final class AggregateStore {
     private var paceWarningsEnabled: Bool = true
     /// Global reset-back notification toggle. Default on; Settings / observePreferences flips it.
     private var resetNotificationsEnabled: Bool = true
+    /// Providers whose last auth-relevant poll this run was `.ok` (V36). Empty at launch, so
+    /// a provider failing auth on its first poll records no event.
+    private var authenticated: Set<ProviderID> = []
+    /// Providers with an auth lost event and no `.ok` since, so the next `.ok` records auth
+    /// recovered (V36).
+    private var authLost: Set<ProviderID> = []
 
     // MARK: - Coalescing state
 
@@ -364,6 +370,9 @@ public final class AggregateStore {
             let allow = await cb.canAttempt(now: now)
             gateDecisions.append((p, allow, !allow))
         }
+        // Each provider's last sample before this poll, for band carry-over (V35).
+        let previousSnapshots = providers.compactMapValues(\.snapshot)
+        var polled: [ProviderID] = []
 
         await withTaskGroup(of: (ProviderID, Result<UsageSnapshot, Error>).self) { group in
             for decision in gateDecisions {
@@ -402,26 +411,95 @@ public final class AggregateStore {
                     }
                 }
                 apply(result, for: id, now: now)
+                polled.append(id)
             }
         }
 
         lastTick = now
         rollupTotals()
-        await fireThresholdNotificationsIfNeeded(now: now)
-        await firePaceNotificationsIfNeeded(now: now)
-        await fireResetNotificationsIfNeeded(now: now)
+        var events = authEvents(for: polled, now: now)
+        events += await fireThresholdNotificationsIfNeeded(now: now, previousSnapshots: previousSnapshots)
+        events += await firePaceNotificationsIfNeeded(now: now)
+        events += await fireResetNotificationsIfNeeded(now: now)
         cache.save(providers)
-        await recordHistory(now: now)
+        await recordHistory(now: now, events: events)
     }
 
-    /// Folds the providers that were `.ok` on this poll into the open history day (V11, V15).
-    /// A stale snapshot kept after an error is not a sample.
-    private func recordHistory(now: Date) async {
+    /// Folds the providers that were `.ok` on this poll into the open history day (V11, V15),
+    /// with this poll's usage events on the same write (V38). A stale snapshot kept after an
+    /// error is not a sample.
+    private func recordHistory(now: Date, events: [UsageEvent]) async {
         guard let history else { return }
         let samples = providers.values
             .filter { $0.status == .ok(lastSuccess: now) }
             .compactMap(\.snapshot)
-        await history.record(samples, at: now)
+        await history.record(samples, events: events, at: now)
+    }
+
+    /// Auth lost when a polled provider goes from authenticated to a rejected or missing
+    /// credential, auth recovered on its first `.ok` after that (V36). Statuses that say
+    /// nothing about auth (network errors, breaker trips, not running) leave the state as
+    /// it is, and a degraded `.ok` is skipped (V37). Auth events are never notified.
+    private func authEvents(for polled: [ProviderID], now: Date) -> [UsageEvent] {
+        var events: [UsageEvent] = []
+        for id in polled {
+            guard let state = providers[id], let isAuthenticated = Self.isAuthenticated(state.status)
+            else { continue }
+            let kind: UsageEventKind
+            if isAuthenticated {
+                if state.snapshot?.raw["note"] == ThresholdEngine.degradedTag { continue }
+                authenticated.insert(id)
+                guard authLost.remove(id) != nil else { continue }
+                kind = .authRecovered
+            } else {
+                guard authenticated.remove(id) != nil else { continue }
+                authLost.insert(id)
+                kind = .authLost
+            }
+            events.append(UsageEvent(time: now, provider: id, kind: kind, fraction: 0, notified: false))
+        }
+        return events
+    }
+
+    /// True for `.ok`, false for a rejected key, payment required, or no credential (V36),
+    /// nil for a status that says nothing about auth.
+    private static func isAuthenticated(_ status: ProviderStatus) -> Bool? {
+        switch status {
+        case .ok:
+            return true
+        case .unauthenticated:
+            return false
+        case .stale(_, let error), .error(let error):
+            return error.kind == .auth || error.kind == .paymentRequired ? false : nil
+        case .notRunning, .disabled:
+            return nil
+        }
+    }
+
+    /// The usage event for one engine crossing at `now` (V33, V34).
+    private func usageEvent(_ crossing: QuotaCrossing, at now: Date, carriedOver: Bool = false) -> UsageEvent {
+        UsageEvent(
+            time: now,
+            provider: crossing.providerID,
+            kind: crossing.kind,
+            window: crossing.window,
+            fraction: crossing.fraction,
+            notified: crossing.notified,
+            carriedOver: carriedOver
+        )
+    }
+
+    /// A band crossing is carried over when the provider's last sample before this poll is
+    /// from an earlier day and already in that band: band state starts fresh each day key,
+    /// so the crossing did not happen today (V35).
+    private func isCarriedOver(_ crossing: QuotaCrossing, previous: UsageSnapshot?, day: String) -> Bool {
+        guard let band = ThresholdBand(eventKind: crossing.kind),
+              let previous,
+              previous.raw["note"] != ThresholdEngine.degradedTag,
+              let fraction = previous.quota?.fraction,
+              dayKeys.wallKey(for: previous.asOf) < day
+        else { return false }
+        return thresholds.currentBand(for: fraction) >= band
     }
 
     /// Lazily creates (or returns the existing) per-provider 5-strike POLL-05 circuit breaker.
@@ -512,8 +590,12 @@ public final class AggregateStore {
 
     /// Calls the FSM-aware `ThresholdEngine.evaluate(for:now:snoozedUntilDay:lastBands:)`
     /// (Plan 02.05) and dispatches the notified decisions to `NotificationManager`. Advances
-    /// `lastBand` for every crossing, snoozed or not (SPEC V34).
-    private func fireThresholdNotificationsIfNeeded(now: Date) async {
+    /// `lastBand` for every crossing, snoozed or not (SPEC V34). Returns the crossings as
+    /// usage events.
+    private func fireThresholdNotificationsIfNeeded(
+        now: Date,
+        previousSnapshots: [ProviderID: UsageSnapshot]
+    ) async -> [UsageEvent] {
         let snapshots = providers.values.compactMap(\.snapshot)
         let day = dayKeys.key(for: now)
         let allRecords = notificationState.allRecordsForToday(day)
@@ -534,6 +616,13 @@ public final class AggregateStore {
         )
         await notifications.schedule(result.decisions)
         advanceNotificationState(for: result.crossings, day: day)
+        return result.crossings.map { crossing in
+            usageEvent(
+                crossing,
+                at: now,
+                carriedOver: isCarriedOver(crossing, previous: previousSnapshots[crossing.providerID], day: day)
+            )
+        }
     }
 
     /// Records every crossing in today's notification state, notified or not (SPEC V34):
@@ -568,7 +657,8 @@ public final class AggregateStore {
 
     /// Evaluates window-average + recent-stream pace independently of the 80/95/100% FSM.
     /// Each pace decision is scheduled alone so it is not coalesced into "N providers crossed 80%".
-    private func firePaceNotificationsIfNeeded(now: Date) async {
+    /// Returns the crossings as usage events.
+    private func firePaceNotificationsIfNeeded(now: Date) async -> [UsageEvent] {
         let snapshots = providers.values.compactMap(\.snapshot)
         let day = dayKeys.key(for: now)
         let allRecords = notificationState.allRecordsForToday(day)
@@ -597,12 +687,14 @@ public final class AggregateStore {
             await notifications.schedule([decision])
         }
         advanceNotificationState(for: result.crossings, day: day)
+        return result.crossings.map { usageEvent($0, at: now) }
     }
 
     /// Evaluates quota-window resets independently of the 80/95/100% FSM and pace warnings.
     /// Each reset decision is scheduled alone so it is not coalesced into "N providers crossed 80%".
     /// Snooze-today does not suppress these — snooze is for "running out", not "you're back".
-    private func fireResetNotificationsIfNeeded(now: Date) async {
+    /// Returns the crossings as usage events.
+    private func fireResetNotificationsIfNeeded(now: Date) async -> [UsageEvent] {
         let snapshots = providers.values.compactMap(\.snapshot)
         let day = dayKeys.key(for: now)
         let allRecords = notificationState.allRecordsForToday(day)
@@ -626,5 +718,6 @@ public final class AggregateStore {
             await notifications.schedule([decision])
         }
         advanceNotificationState(for: result.crossings, day: day)
+        return result.crossings.map { usageEvent($0, at: now) }
     }
 }
