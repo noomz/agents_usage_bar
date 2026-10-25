@@ -19,7 +19,10 @@
 		AA1D6000000000000000060A /* DashboardModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000060B /* DashboardModel.swift */; };
 		AA1D6000000000000000070A /* DashboardSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000070B /* DashboardSidebarView.swift */; };
 		AA1D6000000000000000080A /* DashboardOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000080B /* DashboardOverviewView.swift */; };
+		AA1D60000000000000000B0A /* DashboardProviderDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000B0B /* DashboardProviderDetailView.swift */; };
+		AA1D60000000000000000A0A /* DashboardProviderDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000A0B /* DashboardProviderDetail.swift */; };
 		AA1D6000000000000000090A /* DashboardOverviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000090B /* DashboardOverviewTests.swift */; };
+		AA1D60000000000000000C0A /* DashboardProviderDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000C0B /* DashboardProviderDetailTests.swift */; };
 		AA1D6000000000000000040A /* DashboardRouteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000040B /* DashboardRouteTests.swift */; };
 		AA080800000000000000001A /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA080800000000000000001B /* AppEnvironment.swift */; };
 		AA000001000000000000003A /* AggregateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000003B /* AggregateStore.swift */; };
@@ -469,7 +472,10 @@
 		AA1D6000000000000000060B /* DashboardModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModel.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000070B /* DashboardSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardSidebarView.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000080B /* DashboardOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardOverviewView.swift; sourceTree = "<group>"; };
+		AA1D60000000000000000B0B /* DashboardProviderDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardProviderDetailView.swift; sourceTree = "<group>"; };
+		AA1D60000000000000000A0B /* DashboardProviderDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardProviderDetail.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000090B /* DashboardOverviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardOverviewTests.swift; sourceTree = "<group>"; };
+		AA1D60000000000000000C0B /* DashboardProviderDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardProviderDetailTests.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000040B /* DashboardRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRouteTests.swift; sourceTree = "<group>"; };
 		AA080800000000000000001B /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		AA000001000000000000003B /* AggregateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStore.swift; sourceTree = "<group>"; };
@@ -1448,6 +1454,8 @@
 				AA1D6000000000000000020B /* DashboardWindowController.swift */,
 				AA1D6000000000000000030B /* DashboardRootView.swift */,
 				AA1D6000000000000000080B /* DashboardOverviewView.swift */,
+				AA1D60000000000000000B0B /* DashboardProviderDetailView.swift */,
+				AA1D60000000000000000A0B /* DashboardProviderDetail.swift */,
 				AA1D6000000000000000070B /* DashboardSidebarView.swift */,
 				AA1D6000000000000000060B /* DashboardModel.swift */,
 				AA1D6000000000000000050B /* DashboardOverview.swift */,
@@ -1555,6 +1563,7 @@
 			children = (
 				AA1D6000000000000000040B /* DashboardRouteTests.swift */,
 				AA1D6000000000000000090B /* DashboardOverviewTests.swift */,
+				AA1D60000000000000000C0B /* DashboardProviderDetailTests.swift */,
 				AA060600000000000000010B /* QuotaBarTests.swift */,
 				AA060600000000000000011B /* RelativeTimestampLabelTests.swift */,
 				AA060600000000000000012B /* FooterViewTests.swift */,
@@ -2041,6 +2050,8 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA1D6000000000000000020A /* DashboardWindowController.swift in Sources */,
 				AA1D6000000000000000030A /* DashboardRootView.swift in Sources */,
 				AA1D6000000000000000080A /* DashboardOverviewView.swift in Sources */,
+				AA1D60000000000000000B0A /* DashboardProviderDetailView.swift in Sources */,
+				AA1D60000000000000000A0A /* DashboardProviderDetail.swift in Sources */,
 				AA1D6000000000000000070A /* DashboardSidebarView.swift in Sources */,
 				AA1D6000000000000000060A /* DashboardModel.swift in Sources */,
 				AA1D6000000000000000050A /* DashboardOverview.swift in Sources */,
@@ -2427,6 +2438,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000011A /* AUBCommandParseTests.swift in Sources */,
 				AA1D6000000000000000040A /* DashboardRouteTests.swift in Sources */,
 				AA1D6000000000000000090A /* DashboardOverviewTests.swift in Sources */,
+				AA1D60000000000000000C0A /* DashboardProviderDetailTests.swift in Sources */,
 				AA070100000000000000012A /* CLISettingsTests.swift in Sources */,
 				AA070100000000000000013A /* CLIInstallerTests.swift in Sources */,
 				AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */,
