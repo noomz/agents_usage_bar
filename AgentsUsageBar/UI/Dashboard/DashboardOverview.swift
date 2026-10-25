@@ -229,3 +229,12 @@ extension DashboardRange {
         return formatter
     }()
 }
+
+extension StatsRange {
+    /// The x domain of a day chart: local midnight of the first key to the end of the last.
+    var chartDomain: ClosedRange<Date> {
+        let first = DashboardRange.date(forKey: keys[0])
+        let last = DashboardRange.date(forKey: keys[keys.count - 1])
+        return first...last.addingTimeInterval(86_400)
+    }
+}

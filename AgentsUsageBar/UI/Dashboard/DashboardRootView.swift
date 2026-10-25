@@ -34,9 +34,8 @@ struct DashboardRootView: View {
             case .overview:
                 DashboardOverviewView(model: model, budgets: model.budgets(store.budgets), warningFraction: store.warningFraction)
             case .provider(let id):
-                Text(id.displayHint)
-                    .font(.title2)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                DashboardProviderDetailView(model: model, id: id)
+                    .id(id)
             case .calendar:
                 Text("Calendar")
                     .font(.title2)
@@ -63,11 +62,134 @@ enum DashboardPalette {
         case .exceeded: return .red
         }
     }
+
+    /// Provider names and colours for `chartForegroundStyleScale`.
+    static var providerScale: (domain: [String], range: [Color]) {
+        (ProviderID.allKnown.map(\.displayHint), ProviderID.allKnown.map(color))
+    }
+
+    /// Diagonal hatching on a faint fill: the value series beside solid spend (V54).
+    static func hatch(_ color: Color) -> ImagePaint {
+        let stroke = NSColor(color)
+        let image = NSImage(size: NSSize(width: 6, height: 6), flipped: false) { rect in
+            stroke.withAlphaComponent(0.2).setFill()
+            rect.fill()
+            let line = NSBezierPath()
+            line.move(to: NSPoint(x: rect.minX, y: rect.minY))
+            line.line(to: NSPoint(x: rect.maxX, y: rect.maxY))
+            line.lineWidth = 1.5
+            stroke.setStroke()
+            line.stroke()
+            return true
+        }
+        return ImagePaint(image: Image(nsImage: image))
+    }
+
+    static func symbol(_ kind: UsageEventKind) -> String {
+        switch kind {
+        case .band80, .band95, .band100: return "exclamationmark.triangle.fill"
+        case .pace: return "speedometer"
+        case .reset: return "arrow.counterclockwise"
+        case .authLost: return "lock.fill"
+        case .authRecovered: return "lock.open.fill"
+        case .budgetWarning, .budgetLimit: return "dollarsign.circle.fill"
+        }
+    }
 }
 
 /// `$1.23`, or `~$1.23` when any of it is estimated or it is value (V26, V56).
 func dashboardUSD(_ amount: Decimal, approximate: Bool = false) -> String {
     (approximate ? "~" : "") + CLIFormat.usd(amount)
+}
+
+/// A summed amount, or `—` when nothing is known (V7).
+func dashboardTotal(_ total: SpendTotal, approximate: Bool) -> String {
+    total.amount.map { dashboardUSD($0, approximate: approximate) } ?? "—"
+}
+
+/// The range picker shared by Overview and provider detail, and the days it covers (V52).
+struct DashboardRangeHeader: View {
+    @Bindable var model: DashboardModel
+
+    var body: some View {
+        let range = model.range.statsRange(today: model.today)
+        HStack {
+            Picker("Range", selection: $model.range) {
+                ForEach(DashboardRange.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 440)
+            Spacer()
+            Text(label(range))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func label(_ range: StatsRange) -> String {
+        let first = DashboardRange.date(forKey: range.keys[0]).formatted(date: .abbreviated, time: .omitted)
+        let last = DashboardRange.date(forKey: range.keys[range.keys.count - 1]).formatted(date: .abbreviated, time: .omitted)
+        return "\(first) – \(last)" + (range.isTodayOpen ? " · today in progress" : "")
+    }
+}
+
+/// A titled block of the dashboard.
+struct DashboardSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    init(_ title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.headline)
+            content
+        }
+    }
+}
+
+/// A chart's small legend or caveat line.
+struct DashboardNote: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text).font(.caption2).foregroundStyle(.secondary)
+    }
+}
+
+/// A headline number. Value is dimmed (V26); a partial total gets the "incomplete" badge (V56).
+struct DashboardTile: View {
+    let title: String
+    let value: String
+    var note: String?
+    var incomplete = false
+    var dimmed = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Text(title).font(.caption).foregroundStyle(.secondary)
+                if incomplete { DashboardBadge(text: "incomplete") }
+            }
+            Text(value)
+                .font(.title.bold().monospacedDigit())
+                .foregroundStyle(dimmed ? .secondary : .primary)
+            if let note {
+                Text(note).font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        .padding(10)
+        .frame(minWidth: 150, alignment: .leading)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+    }
 }
 
 /// Grey "incomplete" badge for a partial range or month (V56).

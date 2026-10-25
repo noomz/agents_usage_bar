@@ -13,48 +13,27 @@ struct DashboardOverviewView: View {
         let overview = model.overview
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                header(overview.range)
+                DashboardRangeHeader(model: model)
                 chips
                 tiles(overview)
                 if !budgets.isEmpty { budgetSection }
-                section("Spend per day") { spendChart(overview) }
+                DashboardSection("Spend per day") { spendChart(overview) }
                 if !overview.events.isEmpty {
-                    section("Usage events") { eventLane(overview) }
+                    DashboardSection("Usage events") { eventLane(overview) }
                 }
                 if !overview.quotaRows.isEmpty {
-                    section("Quota peak per day") { quotaStrip(overview) }
+                    DashboardSection("Quota peak per day") { quotaStrip(overview) }
                 }
                 if !overview.tokensPerDay.isEmpty {
-                    section("Tokens per day") { tokenChart(overview) }
+                    DashboardSection("Tokens per day") { tokenChart(overview) }
                 }
-                section("By provider") { providerList(overview) }
+                DashboardSection("By provider") { providerList(overview) }
             }
             .padding(20)
         }
     }
 
     // MARK: - Header, chips, tiles
-
-    private func header(_ range: StatsRange) -> some View {
-        HStack {
-            Picker("Range", selection: $model.range) {
-                ForEach(DashboardRange.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(maxWidth: 440)
-            Spacer()
-            Text(rangeLabel(range))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private func rangeLabel(_ range: StatsRange) -> String {
-        let first = DashboardRange.date(forKey: range.keys[0]).formatted(date: .abbreviated, time: .omitted)
-        let last = DashboardRange.date(forKey: range.keys[range.keys.count - 1]).formatted(date: .abbreviated, time: .omitted)
-        return "\(first) – \(last)" + (range.isTodayOpen ? " · today in progress" : "")
-    }
 
     /// One chip per provider with a record in range; switching one off filters Overview and
     /// the Calendar heatmap (V53).
@@ -84,48 +63,26 @@ struct DashboardOverviewView: View {
         HStack(alignment: .top, spacing: 12) {
             spendTile(overview)
             if let value = overview.value {
-                tile("Subscription value", total(value, approximate: true), note: "API-equivalent, not spend",
+                DashboardTile(title: "Subscription value", value: dashboardTotal(value, approximate: true), note: "API-equivalent, not spend",
                      incomplete: value.incomplete, dimmed: true)
             }
-            tile("Tokens", overview.tokens.map { $0.formatted(.number.notation(.compactName)) } ?? "—")
-            tile("Usage events", "\(overview.events.count)", note: "\(overview.notNotifiedCount) not notified")
+            DashboardTile(title: "Tokens", value: overview.tokens.map { $0.formatted(.number.notation(.compactName)) } ?? "—")
+            DashboardTile(title: "Usage events", value: "\(overview.events.count)", note: "\(overview.notNotifiedCount) not notified")
         }
     }
 
     private func spendTile(_ overview: DashboardOverview) -> some View {
         if overview.spendProviders.isEmpty {
-            return tile("Spend", dashboardUSD(0), note: "no metered accounts")
+            return DashboardTile(title: "Spend", value: dashboardUSD(0), note: "no metered accounts")
         }
         let spend = overview.spend
-        return tile("Spend", total(spend, approximate: spend.estimated), note: spend.estimated ? "includes estimated" : nil,
+        return DashboardTile(title: "Spend", value: dashboardTotal(spend, approximate: spend.estimated), note: spend.estimated ? "includes estimated" : nil,
                     incomplete: spend.incomplete)
-    }
-
-    private func total(_ total: SpendTotal, approximate: Bool) -> String {
-        total.amount.map { dashboardUSD($0, approximate: approximate) } ?? "—"
-    }
-
-    private func tile(
-        _ title: String, _ value: String, note: String? = nil, incomplete: Bool = false, dimmed: Bool = false
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 4) {
-                Text(title).font(.caption).foregroundStyle(.secondary)
-                if incomplete { DashboardBadge(text: "incomplete") }
-            }
-            Text(value)
-                .font(.title.bold().monospacedDigit())
-                .foregroundStyle(dimmed ? .secondary : .primary)
-            if let note { Text(note).font(.caption2).foregroundStyle(.secondary) }
-        }
-        .padding(10)
-        .frame(minWidth: 150, alignment: .leading)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var budgetSection: some View {
         let month = DashboardRange.date(forKey: model.today).formatted(.dateTime.month(.wide).year())
-        return section("Budgets · \(month)") {
+        return DashboardSection("Budgets · \(month)") {
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(budgets) { budget in
                     DashboardBudgetBar(
@@ -138,16 +95,6 @@ struct DashboardOverviewView: View {
     }
 
     // MARK: - Charts
-
-    private func xDomain(_ range: StatsRange) -> ClosedRange<Date> {
-        let first = DashboardRange.date(forKey: range.keys[0])
-        let last = DashboardRange.date(forKey: range.keys[range.keys.count - 1])
-        return first...last.addingTimeInterval(86_400)
-    }
-
-    private var providerScale: (domain: [String], range: [Color]) {
-        (ProviderID.allKnown.map(\.displayHint), ProviderID.allKnown.map(DashboardPalette.color))
-    }
 
     @ViewBuilder
     private func spendChart(_ overview: DashboardOverview) -> some View {
@@ -169,8 +116,8 @@ struct DashboardOverviewView: View {
                         .opacity(day.estimated || day.backfilled ? 0.55 : 1)
                 }
             }
-            .chartForegroundStyleScale(domain: providerScale.domain, range: providerScale.range)
-            .chartXScale(domain: xDomain(overview.range))
+            .chartForegroundStyleScale(domain: DashboardPalette.providerScale.domain, range: DashboardPalette.providerScale.range)
+            .chartXScale(domain: overview.range.chartDomain)
             .chartYAxis {
                 AxisMarks { value in
                     AxisGridLine()
@@ -180,7 +127,7 @@ struct DashboardOverviewView: View {
                 }
             }
             .frame(height: 200)
-            chartNote("lighter = estimated (~$) or backfilled · grey band = no data")
+            DashboardNote("lighter = estimated (~$) or backfilled · grey band = no data")
         }
     }
 
@@ -189,23 +136,12 @@ struct DashboardOverviewView: View {
             PointMark(
                 x: .value("Time", event.time),
                 y: .value("Provider", event.provider?.displayHint ?? "Total budget"))
-                .symbol { Image(systemName: Self.symbol(event.kind)).font(.caption) }
+                .symbol { Image(systemName: DashboardPalette.symbol(event.kind)).font(.caption) }
                 .opacity(event.notified ? 1 : 0.4)
         }
-        .chartXScale(domain: xDomain(overview.range))
+        .chartXScale(domain: overview.range.chartDomain)
         .frame(height: CGFloat(40 + 22 * Set(overview.events.map(\.provider)).count))
-        .overlay(alignment: .topTrailing) { chartNote("faded = not notified") }
-    }
-
-    private static func symbol(_ kind: UsageEventKind) -> String {
-        switch kind {
-        case .band80, .band95, .band100: return "exclamationmark.triangle.fill"
-        case .pace: return "speedometer"
-        case .reset: return "arrow.counterclockwise"
-        case .authLost: return "lock.fill"
-        case .authRecovered: return "lock.open.fill"
-        case .budgetWarning, .budgetLimit: return "dollarsign.circle.fill"
-        }
+        .overlay(alignment: .topTrailing) { DashboardNote("faded = not notified") }
     }
 
     private func quotaStrip(_ overview: DashboardOverview) -> some View {
@@ -225,7 +161,7 @@ struct DashboardOverviewView: View {
                     .frame(height: 12)
                 }
             }
-            chartNote("peak band: under 80% · 80% · 95% · 100% · dashed = no data · faint = no value")
+            DashboardNote("peak band: under 80% · 80% · 95% · 100% · dashed = no data · faint = no value")
         }
     }
 
@@ -256,8 +192,8 @@ struct DashboardOverviewView: View {
                     .opacity(day.backfilled ? 0.55 : 1)
             }
         }
-        .chartForegroundStyleScale(domain: providerScale.domain, range: providerScale.range)
-        .chartXScale(domain: xDomain(overview.range))
+        .chartForegroundStyleScale(domain: DashboardPalette.providerScale.domain, range: DashboardPalette.providerScale.range)
+        .chartXScale(domain: overview.range.chartDomain)
         .frame(height: 140)
     }
 
@@ -276,8 +212,8 @@ struct DashboardOverviewView: View {
                 GridRow {
                     Button(provider.id.displayHint) { model.section = .provider(provider.id) }
                         .buttonStyle(.link)
-                    Text(provider.hasSpend ? total(provider.spend, approximate: provider.spend.estimated) : "")
-                    Text(provider.hasValue ? total(provider.value, approximate: true) : "")
+                    Text(provider.hasSpend ? dashboardTotal(provider.spend, approximate: provider.spend.estimated) : "")
+                    Text(provider.hasValue ? dashboardTotal(provider.value, approximate: true) : "")
                         .foregroundStyle(.secondary)
                     Text(provider.tokens.map { $0.formatted(.number.notation(.compactName)) } ?? "—")
                     Text(provider.peak.map { "\(Int(($0.fraction * 100).rounded()))% \($0.window)" } ?? "")
@@ -286,18 +222,5 @@ struct DashboardOverviewView: View {
                 .font(.callout.monospacedDigit())
             }
         }
-    }
-
-    // MARK: - Layout helpers
-
-    private func section<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.headline)
-            content()
-        }
-    }
-
-    private func chartNote(_ text: String) -> some View {
-        Text(text).font(.caption2).foregroundStyle(.secondary)
     }
 }
