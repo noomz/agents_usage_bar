@@ -165,7 +165,7 @@ T18|x|S4: Record band, pace, reset, and auth events into `events[]`, with carry-
 T19|x|S4 gate: CI green, install, confirm an event lands in today's file when a band is crossed.|C7
 T20|x|S5: `[budgets]` config, Settings fields, month spend.|V39,V40,I12
 T21|x|S5: Budget crossing events through the dispatch gate, and the `aub stats` budget footer.|V26,V41,V42,V66
-T22|.|S5 gate: CI green, install, set a low budget, confirm the event, the notification, and the footer.|C7
+T22|x|S5 gate: CI green, install, set a low budget, confirm the event, the notification, and the footer.|C7
 T23|.|S6: Dashboard window, activation switching, URL scheme in `Info.plist`, route handling, `aub dashboard`, popover footer button.|V50,V51,I14
 T24|.|S6: Sidebar, shared range, and Overview.|V20,V26,V52,V53,V56
 T25|.|S6: Provider detail.|V26,V54,V56
