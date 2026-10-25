@@ -126,7 +126,9 @@ public actor UNNotificationManager: NotificationManager {
             content.title = d.title
             content.body = d.body
             content.sound = .default
-            content.categoryIdentifier = Self.usageWarningCategoryID    // Plan 02.05 / Pitfall 6
+            if d.snoozable {
+                content.categoryIdentifier = Self.usageWarningCategoryID    // Plan 02.05 / Pitfall 6
+            }
             request = UNNotificationRequest(identifier: d.id, content: content, trigger: nil)
         } else {
             // Coalescing path: ONE notification for N providers (B3 + NOTIF-07).

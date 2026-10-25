@@ -14,6 +14,9 @@ import os.log
 /// newest day file and advances it as it opens days, so a wall clock set back keeps writing
 /// the newest day, and one more than 1 day back pauses writes (V5).
 ///
+/// Opening a day key also reads the month's sealed days, so each poll checks month spend
+/// against the budgets with no file read (V66).
+///
 /// Every seal starts gap-fill (V27): one low-priority pass over the backfill sources, whose
 /// writes come back through `backfill(_:on:)` so the store stays the only writer (V32).
 public actor HistoryStore {
@@ -44,6 +47,12 @@ public actor HistoryStore {
     private var gapFillTask: Task<Void, Never>?
     /// A seal during a pass asks for one more, so a newly sealed day is not missed.
     private var gapFillAgain = false
+    /// The open month's sealed days, for month spend (V66). Read when a day key opens.
+    private var monthDays: [DayFile] = []
+    /// A backfill wrote into the open month, so the next poll reads its days again (V66).
+    private var monthStale = false
+    /// Each budget's band this month (V41, V66), seeded from the month's budget events.
+    private var budgetBands: [BudgetScope: ThresholdBand] = [:]
 
     public init(
         directory: URL = HistoryReader.defaultDirectory,
@@ -69,9 +78,17 @@ public actor HistoryStore {
         }
     }
 
-    /// Folds one poll's good samples (providers `.ok` on this poll) into the open day, and
-    /// appends the poll's usage events on the same write (V38).
-    public func record(_ samples: [UsageSnapshot], events: [UsageEvent] = [], at now: Date) async {
+    /// Folds one poll's good samples (providers `.ok` on this poll) into the open day, checks
+    /// month spend against `budgets`, and appends the poll's usage events and budget crossings
+    /// on the same write (V38, V41). Returns the budget crossings for the caller to notify.
+    @discardableResult
+    public func record(
+        _ samples: [UsageSnapshot],
+        events: [UsageEvent] = [],
+        budgets: BudgetConfig = .none,
+        warningFraction: Double = 0.8,
+        at now: Date
+    ) async -> [BudgetCrossing] {
         if !seeded {
             await seedNewestKey()
         }
@@ -80,7 +97,7 @@ public actor HistoryStore {
                 logger.error("history writes paused: wall clock \(self.dayKeys.wallKey(for: now), privacy: .public) is more than 1 day behind \(self.dayKeys.key(for: now), privacy: .public)")
             }
             paused = true
-            return
+            return []
         }
         paused = false
         // Never below the open key, so a sealed day never reopens (V4, V16).
@@ -88,17 +105,53 @@ public actor HistoryStore {
         if key != openKey {
             await seal(opening: key)
         }
-        guard let day = open else { return }
+        guard let day = open else { return [] }
         var merged = day.merging(samples, at: now, timeZone: dayKeys.timeZoneIdentifier) { accountID in
             DayAccount.key(forAccountID: accountID, salt: accountSalt())
         }
-        merged.events += events
+        if monthStale {
+            await loadMonth(of: key)
+        }
+        let crossings = budgetCrossings(merged, budgets: budgets, warningFraction: warningFraction, at: now)
+        merged.events += events + crossings.map(\.event)
         open = merged
-        if let onDisk, merged.hasSameContent(as: onDisk) { return }
-        if onDisk == nil, merged.isEmpty { return }
+        if let onDisk, merged.hasSameContent(as: onDisk) { return crossings }
+        if onDisk == nil, merged.isEmpty { return crossings }
         if write(merged) {
             onDisk = merged
         }
+        return crossings
+    }
+
+    /// Month spend per capped budget, the open day included, against the bands so far (V40,
+    /// V41). The bands follow the current spend, so a raised cap lets one fall (V66).
+    private func budgetCrossings(
+        _ day: DayFile,
+        budgets: BudgetConfig,
+        warningFraction: Double,
+        at now: Date
+    ) -> [BudgetCrossing] {
+        guard !budgets.caps.isEmpty else { return [] }
+        let days = monthDays + [day]
+        var spends: [BudgetScope: SpendTotal] = [:]
+        for scope in budgets.caps.keys {
+            spends[scope] = SpendTotal.month(days, today: day.date, scope: scope)
+        }
+        let result = BudgetEngine.evaluate(
+            budgets: budgets, spends: spends, bands: budgetBands, warningFraction: warningFraction, at: now)
+        budgetBands = result.bands
+        return result.crossings
+    }
+
+    /// Reads the sealed days of `key`'s month, before `key` (V66).
+    private func loadMonth(of key: String) async {
+        monthStale = false
+        let first = String(key.prefix(8)) + "01"
+        guard first < key, let previous = dayKeys.key(key, addingDays: -1) else {
+            monthDays = []
+            return
+        }
+        monthDays = (try? await reader.days(in: first...previous)) ?? []
     }
 
     /// Folds one provider's backfilled record into the sealed day `key` and marks the
@@ -116,7 +169,9 @@ public actor HistoryStore {
             day = DayFile(date: key, timeZone: dayKeys.timeZoneIdentifier)
         }
         guard !day.backfillChecked.contains(record.provider) else { return }
-        write(day.backfilling(record))
+        if write(day.backfilling(record)), key.prefix(8) == openKey.prefix(8) {
+            monthStale = true
+        }
     }
 
     /// A backfill source's accounts as day accounts, keyed with this install's salt (V21, V62).
@@ -162,14 +217,16 @@ public actor HistoryStore {
         openKey = key
         defer { startGapFill() }
         let url = reader.fileURL(for: key)
-        guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else {
+        if FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) {
+            // Nil means the reader skipped and logged the file (V18).
+            open = await reader.day(key)
+            onDisk = open
+        } else {
             open = DayFile(date: key, timeZone: dayKeys.timeZoneIdentifier)
             onDisk = nil
-            return
         }
-        // Nil means the reader skipped and logged the file (V18).
-        open = await reader.day(key)
-        onDisk = open
+        await loadMonth(of: key)
+        budgetBands = BudgetEngine.bands(from: monthDays + [open].compactMap { $0 })
     }
 
     /// Deletes day files more than `retainedDays` before `key`. Files this build cannot

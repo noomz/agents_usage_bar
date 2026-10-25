@@ -419,4 +419,67 @@ struct HistoryStoreTests {
         await makeStore(dir).record([sample(tokens: 1)], at: Self.at("2026-10-22T09:00:00Z"))
         #expect(!FileManager.default.fileExists(atPath: dir.appending(path: HistoryStore.saltFileName).path(percentEncoded: false)))
     }
+
+    // MARK: - Budgets (V40, V41, V66)
+
+    private static let totalBudget = BudgetConfig(caps: [.total: Money(50)])
+
+    private func meteredDay(_ key: String, cost: Decimal, events: [UsageEvent] = []) -> DayFile {
+        var day = DayFile(date: key, timeZone: Self.utc.identifier)
+        day.records = [DayRecord(provider: Self.pid("openrouter"), costUSD: Money(cost),
+                                 accounts: [DayAccount(key: "default", label: "default", billingModel: .metered)],
+                                 origin: .observed)]
+        day.events = events
+        return day
+    }
+
+    @Test("month spend counts the month's sealed days; the crossing lands on the poll's write (V40, V66)")
+    func budgetCountsSealedDays() async throws {
+        let dir = makeDirectory()
+        try writeRaw(meteredDay("2026-10-05", cost: 30), in: dir)
+        let store = makeStore(dir)
+        let crossings = await store.record([sample(cost: 15)], budgets: Self.totalBudget, at: Self.at("2026-10-22T09:00:00Z"))
+        #expect(crossings.map(\.event.kind) == [.budgetWarning])
+        #expect(crossings.first?.spend.amount == 45)
+        let day = try #require(await read("2026-10-22", in: dir))
+        #expect(day.events.map(\.kind) == [.budgetWarning])
+        #expect(day.events.first?.provider == nil)
+    }
+
+    @Test("a relaunch seeds budget bands from the month's events, so nothing fires twice (V66)")
+    func budgetSeedsFromEvents() async throws {
+        let dir = makeDirectory()
+        try writeRaw(meteredDay("2026-10-05", cost: 30), in: dir)
+        await makeStore(dir).record([sample(cost: 15)], budgets: Self.totalBudget, at: Self.at("2026-10-22T09:00:00Z"))
+        let relaunched = makeStore(dir)
+        let crossings = await relaunched.record([sample(cost: 16)], budgets: Self.totalBudget, at: Self.at("2026-10-22T10:00:00Z"))
+        #expect(crossings.isEmpty)
+        #expect(await read("2026-10-22", in: dir)?.events.count == 1)
+    }
+
+    @Test("budget bands do not carry into a new month (V41)")
+    func budgetNoCarryOver() async throws {
+        let dir = makeDirectory()
+        let limit = UsageEvent(time: Self.at("2026-09-30T09:00:00Z"), provider: nil, kind: .budgetLimit, fraction: 1.2, notified: true)
+        try writeRaw(meteredDay("2026-09-30", cost: 60, events: [limit]), in: dir)
+        let store = HistoryStore(directory: dir, dayKeys: Self.dayKeys())
+        let quiet = await store.record([sample(cost: 1)], budgets: Self.totalBudget, at: Self.at("2026-10-22T09:00:00Z"))
+        #expect(quiet.isEmpty)
+        let crossed = await store.record([sample(cost: 41)], budgets: Self.totalBudget, at: Self.at("2026-10-22T10:00:00Z"))
+        #expect(crossed.map(\.event.kind) == [.budgetWarning])
+    }
+
+    @Test("backfilled cost in the month counts on the next poll (V41, V66)")
+    func budgetCountsBackfill() async throws {
+        let dir = makeDirectory()
+        let store = makeStore(dir)
+        let first = await store.record([sample(cost: 15)], budgets: Self.totalBudget, at: Self.at("2026-10-22T09:00:00Z"))
+        #expect(first.isEmpty)
+        let backfilled = DayRecord(provider: Self.pid("openrouter"), costUSD: Money(30),
+                                   accounts: [DayAccount(key: "default", label: "default", billingModel: .metered)],
+                                   origin: .backfilled)
+        await store.backfill(backfilled, on: "2026-10-10")
+        let next = await store.record([sample(cost: 15)], budgets: Self.totalBudget, at: Self.at("2026-10-22T10:00:00Z"))
+        #expect(next.map(\.event.kind) == [.budgetWarning])
+    }
 }

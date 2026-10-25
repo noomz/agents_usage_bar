@@ -18,6 +18,7 @@ struct AggregateStoreUsageEventsTests {
     enum Outcome: Sendable {
         case fraction(Double, degraded: Bool = false)
         case failure(ProviderError)
+        case cost(Decimal)
     }
 
     final actor ScriptedProvider: UsageProvider {
@@ -38,6 +39,11 @@ struct AggregateStoreUsageEventsTests {
             switch next {
             case .failure(let error):
                 throw error
+            case .cost(let cost):
+                return UsageSnapshot(
+                    providerID: id, asOf: now, tokensToday: nil, costTodayUSD: cost,
+                    balanceUSD: nil, quota: nil, raw: [:]
+                )
             case .fraction(let fraction, let degraded):
                 return UsageSnapshot(
                     providerID: id,
@@ -57,6 +63,7 @@ struct AggregateStoreUsageEventsTests {
         let dir = URL(fileURLWithPath: NSTemporaryDirectory())
             .appending(path: UUID().uuidString, directoryHint: .isDirectory)
         let store: AggregateStore
+        let notifications = SpyNotificationManager()
 
         @MainActor
         init() {
@@ -72,7 +79,7 @@ struct AggregateStoreUsageEventsTests {
                 clock: VirtualClock(fixed: AggregateStoreUsageEventsTests.at("2026-10-22T12:00:00Z")),
                 cache: AggFakeCacheStore(),
                 thresholds: ThresholdEngine(dayKeys: dayKeys),
-                notifications: NoopNotificationManager(),
+                notifications: notifications,
                 notificationState: InMemoryNotificationStateStore(),
                 dayKeys: dayKeys,
                 history: HistoryStore(directory: dir, dayKeys: dayKeys)
@@ -181,5 +188,19 @@ struct AggregateStoreUsageEventsTests {
         await h.poll(.failure(ProviderError(kind: .network, message: "offline")), at: "2026-10-22T09:10:00Z")
         await h.poll(.fraction(0.10), at: "2026-10-22T09:20:00Z")
         #expect(await h.events("2026-10-22").isEmpty)
+    }
+
+    @Test("a budget crossing is recorded notified and scheduled alone, without snooze (V41, V66)")
+    func budgetCrossing() async {
+        let h = Harness()
+        h.store.updateBudgets(BudgetConfig(caps: [.total: Money(10)]))
+        await h.poll(.cost(5), at: "2026-10-22T09:00:00Z")
+        await h.poll(.cost(9), at: "2026-10-22T10:00:00Z")
+        let budget = await h.events("2026-10-22").filter { $0.kind == .budgetWarning }
+        #expect(budget.count == 1)
+        #expect(budget.first?.notified == true)
+        let scheduled = h.notifications.scheduledDecisions.filter { !$0.isEmpty }
+        #expect(scheduled.map { $0.map(\.id) } == [["budget:total:2026-10:warn"]])
+        #expect(scheduled.first?.first?.snoozable == false)
     }
 }

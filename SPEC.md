@@ -69,7 +69,7 @@ V16|Sealed is derived, not stored: a file whose key is before the current day ke
 V17|Retention is fixed at 90 day keys, with no setting. The seal step deletes files whose key is more than 90 days before the current key.
 V18|A file with an older `schemaVersion` is migrated when read and rewritten on the next write. A file that is newer, unknown, or unreadable is skipped and logged, and never deleted or overwritten. Schema 1 contains every field in I16 from S1 on; later slices fill fields, they do not add them. The one exception is `DayRecord.timeZone?`, added in S3 before any release contained schema 1 (B6).
 V19|`aub` opens history read-only. It never creates `history/`, writes, prunes, migrates, or reads `.account-salt`. A missing `history/` is empty history. There is no locking; atomic renames are enough.
-V20|History is decoded off the MainActor. The read API is `nonisolated async`. The app reads history only on a user action (dashboard open, Export…, popover open for the teaser), never on the poll path, and keeps no sealed-day cache. The dashboard holds its decoded days while it is open and drops them on close; when a poll changes the open day, only that day's file is re-read.
+V20|History is decoded off the MainActor. The read API is `nonisolated async`. The app reads history only on a user action (dashboard open, Export…, popover open for the teaser), never on the poll path, and keeps no sealed-day cache. The dashboard holds its decoded days while it is open and drops them on close; when a poll changes the open day, only that day's file is re-read. The one poll-side exception is month spend for budgets (V66).
 
 ### Privacy
 
@@ -109,6 +109,7 @@ V38|Events are written into the open day's `events[]` on the same write as the r
 V39|Budgets are optional monthly USD caps: one per cost-reporting provider (Claude, Codex, OpenRouter) and one total. There are no daily or per-account budgets. Unset means no budget. `config.toml` `[budgets]` (`total_usd`, `<provider>_usd`) is the base; values edited in Settings win.
 V40|The budget month is the local calendar month of the day keys. Month spend sums the month's spend (V26), the open day included, so a crossing can fire mid-day. Estimated metered spend counts and marks the month "includes estimated". A gap or nil cost adds nothing and marks the month incomplete; the check still runs. The total sums cost-reporting providers only.
 V41|Budget crossings fire at the warning threshold (default 80%) and at 100%, upward only, through the V34 dispatch gate. Band state is per budget per month, with no carry-over into a new month. An edit is checked on the next poll: lowering a cap below spend fires at once, raising it lets the band fall back so it can fire again. Backfilled cost counts toward month spend; the next poll records any resulting crossing at its own time.
+V66|`HistoryStore` reads the month's sealed day files when it opens a day key, and again on the next poll after a backfill write into that month. It holds them while that month is open. A poll adds the open day in memory and reads no file. Budget band state is seeded from the month's budget events in those files (the highest band per budget), then follows the current band on each poll, so a raised cap lets it fall without an event. Budgets have no snooze: the gate always notifies, and a budget notification has no snooze action.
 
 ### CLI
 
@@ -163,7 +164,7 @@ T17|x|S4: Engines return every crossing; the dispatch gate sets `notified`; `las
 T18|x|S4: Record band, pace, reset, and auth events into `events[]`, with carry-over and the degraded rule.|V33,V35,V36,V37,V38
 T19|x|S4 gate: CI green, install, confirm an event lands in today's file when a band is crossed.|C7
 T20|x|S5: `[budgets]` config, Settings fields, month spend.|V39,V40,I12
-T21|.|S5: Budget crossing events through the dispatch gate, and the `aub stats` budget footer.|V26,V41,V42
+T21|x|S5: Budget crossing events through the dispatch gate, and the `aub stats` budget footer.|V26,V41,V42,V66
 T22|.|S5 gate: CI green, install, set a low budget, confirm the event, the notification, and the footer.|C7
 T23|.|S6: Dashboard window, activation switching, URL scheme in `Info.plist`, route handling, `aub dashboard`, popover footer button.|V50,V51,I14
 T24|.|S6: Sidebar, shared range, and Overview.|V20,V26,V52,V53,V56
@@ -190,3 +191,4 @@ B6|2026-10-22|Spec gap found planning T15: V13 said OpenRouter backfilled record
 B7|2026-10-22|Spec gap found planning T15: `/activity` serves only completed UTC days. In zones ahead of UTC the newest sealed key can be the in-progress UTC day, so gap-fill would write a zero record for it and mark it checked forever.|V63
 B8|2026-10-22|Found at T16 gate on real history: `ProviderStats.trend` mapped both a missing record and a record with no value for the row's metric to nil, so every backfilled subscription day (no quota, V30) and every metered day with nil cost drew the `·` gap marker. Claude and Codex showed `14/14` days beside 13 gap dots. V42 "days (observed/range)" also read as origin `observed`, while `seenDays` counts backfilled records.|V42,V45,V64
 B9|2026-10-22|Found at T16 gate on real history: money strings like `1272.601569999999994351616` and `0.0421083310000085504`. `Decimal(Double)` keeps the full binary expansion, and OpenRouter's baseline delta and the Claude/Codex backfill price sums are float arithmetic. Only the Claude hook path rounded (`%.6f`).|V65
+B10|2026-10-25|Spec gap found planning T21: V40 month spend includes the month's sealed days and V41 checks it on every poll, but V20 said the poll path never reads history. Where budget band state lives across relaunch was unstated, and snooze (per provider per day) has no meaning for a monthly or total budget.|V20,V41,V66

@@ -66,9 +66,12 @@ extension AUBCommand {
     }
 
     private static func runStats(_ opts: StatsOptions) async throws -> Int32 {
-        let enabled = await MainActor.run { UserPreferencesStore().providerEnabled }
+        let (enabled, budgets) = await MainActor.run {
+            let preferences = UserPreferencesStore()
+            return (preferences.providerEnabled, ConfigStore(env: ProcessInfoEnvReader()).load(preferences: preferences).budgets)
+        }
         let result = try await stats(
-            opts, reader: HistoryReader(), owner: DayKeyOwner(), isEnabled: { enabled[$0] ?? true })
+            opts, reader: HistoryReader(), owner: DayKeyOwner(), isEnabled: { enabled[$0] ?? true }, budgets: budgets)
         fputs(result.text, result.code == 0 ? stdout : stderr)
         return result.code
     }
@@ -81,6 +84,7 @@ extension AUBCommand {
         reader: HistoryReader,
         owner: DayKeyOwner,
         isEnabled: @escaping @Sendable (ProviderID) -> Bool = { _ in true },
+        budgets: BudgetConfig = .none,
         now: Date = Date()
     ) async throws -> (text: String, code: Int32) {
         let keys: [String]
@@ -104,9 +108,12 @@ extension AUBCommand {
         case .one(let id):
             return (StatsTextRenderer.renderProvider(days, id: id, range: range, color: color), 0)
         case .enabled, .all:
+            // Month spend for the budget footer covers this month, whatever the range (V40, V42).
+            let monthDays = budgets.caps.isEmpty
+                ? [] : try await reader.days(in: String(range.today.prefix(8)) + "01"...range.today)
             return (StatsTextRenderer.renderSummary(
                 days, range: range, includeLocal: opts.filter == .all,
-                order: UserDefaults.standard.aubProviderOrder, color: color), 0)
+                order: UserDefaults.standard.aubProviderOrder, budgets: budgets, monthDays: monthDays, color: color), 0)
         }
     }
 
