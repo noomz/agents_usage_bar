@@ -85,6 +85,14 @@ extension ProviderID {
         .openrouter, .claude, .codex, .gemini, .grok, .ollama, .ollamaCloud, .lmstudio, .lmstudioLlamaCpp, .llamacpp
     ]
 
+    /// The provider a user-typed token names: a known id or `engine.<slug>`, else nil.
+    public static func named(_ token: String) -> ProviderID? {
+        if token.hasPrefix("engine."), token.count > "engine.".count {
+            return ProviderID(rawValue: token)
+        }
+        return allKnown.first { $0.rawValue == token }
+    }
+
     /// User-set provider order (`provider-order`, SPEC V31): ids listed in
     /// `preference` first, in that order; then unlisted ids in `allKnown` order;
     /// then everything else (`engine.*`) alphabetically by raw value. Listed ids

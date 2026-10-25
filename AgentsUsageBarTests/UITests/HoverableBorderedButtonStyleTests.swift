@@ -60,10 +60,10 @@ struct HoverableBorderedButtonStyleTests {
     func footerViewWiresNewStyle() throws {
         let footerSrc = try source(at: "AgentsUsageBar/UI/FooterView.swift")
         let occurrences = footerSrc.components(separatedBy: "HoverableBorderedButtonStyle()").count - 1
-        // The footer now has 3 buttons — Refresh, Settings, Quit — each wired with the
-        // new style (the Settings button was added after this test was written; Issue #4).
-        #expect(occurrences == 3,
-                "FooterView.swift must contain exactly 3 occurrences of `HoverableBorderedButtonStyle()` (one per footer button); found \(occurrences)")
+        // The footer has 4 buttons — Refresh, Settings, Dashboard (SPEC V51), Quit — each
+        // wired with the new style.
+        #expect(occurrences == 4,
+                "FooterView.swift must contain exactly 4 occurrences of `HoverableBorderedButtonStyle()` (one per footer button); found \(occurrences)")
         #expect(!footerSrc.contains(".buttonStyle(.bordered)"),
                 "FooterView.swift must NOT contain `.buttonStyle(.bordered)` after the modifier swap")
     }

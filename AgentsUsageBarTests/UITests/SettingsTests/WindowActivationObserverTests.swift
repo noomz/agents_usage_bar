@@ -57,6 +57,20 @@ struct WindowActivationObserverTests {
         #expect(NSApplication.shared.activationPolicy() == .regular)
     }
 
+    /// SPEC V50 — the dashboard window uses regular activation while open.
+    @Test func dashboardWindow_flipsToRegularThenAccessory() async {
+        resetActivationPolicy()
+        defer { resetActivationPolicy() }
+
+        let observer = WindowActivationObserver(notificationCenter: NotificationCenter())
+        let window = makeManagedWindow(title: DashboardWindowController.title)
+
+        observer.handleBecomeKey(window)
+        #expect(NSApplication.shared.activationPolicy() == .regular)
+        observer.handleWillClose(window)
+        #expect(NSApplication.shared.activationPolicy() == .accessory)
+    }
+
     @Test func singleWindowClose_flipsToAccessory() async {
         resetActivationPolicy()
         defer { resetActivationPolicy() }

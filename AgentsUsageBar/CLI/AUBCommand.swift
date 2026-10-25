@@ -5,6 +5,8 @@ public enum AUBCommand: Equatable, Sendable {
     case usage(UsageOptions)
     case quota(UsageOptions)
     case stats(StatsOptions)
+    /// `aub dashboard [provider]` opens the dashboard window (SPEC V51).
+    case dashboard(DashboardRoute)
     case settings(SettingsAction, json: Bool)
     case themes(json: Bool, theme: CLITheme?)
     case install(prefix: String?)
@@ -91,7 +93,7 @@ public enum AUBCommand: Equatable, Sendable {
     }
 
     private static let knownTokens: Set<String> = [
-        "usage", "quota", "limits", "stats", "settings", "themes", "install", "uninstall",
+        "usage", "quota", "limits", "stats", "dashboard", "settings", "themes", "install", "uninstall",
         "version", "help",
         "--help", "-h", "--version", "-V",
         "--json", "--cached", "--live", "--no-color", "--provider", "--prefix", "--theme", "--cli",
@@ -107,6 +109,7 @@ public enum AUBCommand: Equatable, Sendable {
       aub limits [provider]    Alias of quota
       aub stats [provider]     Usage history: 14-day summary, or one row per day
       aub stats --json | --csv [accounts|events|quota]   Export history (every retained day)
+      aub dashboard [provider] Open the dashboard window, launching the app if needed
       aub settings             List settings keys and values
       aub settings get <key>
       aub settings set <key> <value>
@@ -320,6 +323,11 @@ extension AUBCommand {
                 .stats(StatsOptions(
                     filter: opts.filter, days: days, since: since, until: until, noColor: noColor, format: format))
             }
+        case "dashboard":
+            if rest.count > 1 { return .failure(.unexpectedArgument(rest[1])) }
+            guard let token = rest.first else { return .success(.dashboard(DashboardRoute())) }
+            guard let id = ProviderID.named(token) else { return .failure(.unknownProvider(token)) }
+            return .success(.dashboard(DashboardRoute(provider: id)))
         case "settings":
             return parseSettings(rest, json: json)
         case "themes":
@@ -332,7 +340,7 @@ extension AUBCommand {
             if let extra = rest.first { return .failure(.unexpectedArgument(extra)) }
             return .success(.uninstall)
         default:
-            if let id = parseKnownProvider(head!) {
+            if let id = ProviderID.named(head!) {
                 if let extra = rest.first { return .failure(.unexpectedArgument(extra)) }
                 return .success(.usage(UsageOptions(
                     filter: .one(id), json: json, noColor: noColor, cached: cached, theme: theme
@@ -375,14 +383,8 @@ extension AUBCommand {
 
     private static func parseProviderToken(_ token: String) -> Result<ProviderFilter, AUBParseError> {
         if token == "all" { return .success(.all) }
-        if let id = parseKnownProvider(token) { return .success(.one(id)) }
+        if let id = ProviderID.named(token) { return .success(.one(id)) }
         return .failure(.unknownProvider(token))
     }
 
-    private static func parseKnownProvider(_ token: String) -> ProviderID? {
-        if token.hasPrefix("engine."), token.count > "engine.".count {
-            return ProviderID(rawValue: token)
-        }
-        return ProviderID.allKnown.first { $0.rawValue == token }
-    }
 }

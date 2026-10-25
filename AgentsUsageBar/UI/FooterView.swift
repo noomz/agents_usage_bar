@@ -59,6 +59,14 @@ public struct FooterView: View {
                 .keyboardShortcut(",", modifiers: .command)
                 .buttonStyle(HoverableBorderedButtonStyle())
 
+                Button {
+                    // Every dashboard entry point opens the URL (SPEC V51).
+                    Task { try? await DashboardRoute().open() }
+                } label: {
+                    Label("Dashboard", systemImage: "chart.xyaxis.line")
+                }
+                .buttonStyle(HoverableBorderedButtonStyle())
+
                 Spacer()
 
                 Button("Quit") {

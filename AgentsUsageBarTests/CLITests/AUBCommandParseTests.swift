@@ -52,6 +52,15 @@ struct AUBCommandParseTests {
         #expect(try! AUBCommand.parse(["limits", "codex"]).get() == .quota(.init(filter: .one(.codex))))
     }
 
+    @Test("dashboard opens Overview, or one provider's detail (V51)")
+    func dashboard() {
+        #expect(try! AUBCommand.parse(["dashboard"]).get() == .dashboard(DashboardRoute()))
+        #expect(try! AUBCommand.parse(["dashboard", "claude"]).get() == .dashboard(DashboardRoute(provider: .claude)))
+        #expect(AUBCommand.parse(["dashboard", "nope"]) == .failure(.unknownProvider("nope")))
+        #expect(AUBCommand.parse(["dashboard", "claude", "codex"]) == .failure(.unexpectedArgument("codex")))
+        #expect(AUBCommand.isSubcommand("dashboard"))
+    }
+
     @Test("unknown provider")
     func unknownProvider() {
         let result = AUBCommand.parse(["usage", "nope"])

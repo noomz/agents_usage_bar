@@ -12,6 +12,10 @@
 		AA111111000000000000003A /* QuotaGlanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA111111000000000000003B /* QuotaGlanceTests.swift */; };
 		AA000001000000000000001A /* AgentsUsageBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000001B /* AgentsUsageBarApp.swift */; };
 		AA000001000000000000002A /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000002B /* AppDependencies.swift */; };
+		AA1D6000000000000000010A /* DashboardRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000010B /* DashboardRoute.swift */; };
+		AA1D6000000000000000020A /* DashboardWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000020B /* DashboardWindowController.swift */; };
+		AA1D6000000000000000030A /* DashboardRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000030B /* DashboardRootView.swift */; };
+		AA1D6000000000000000040A /* DashboardRouteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000040B /* DashboardRouteTests.swift */; };
 		AA080800000000000000001A /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA080800000000000000001B /* AppEnvironment.swift */; };
 		AA000001000000000000003A /* AggregateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000003B /* AggregateStore.swift */; };
 		AA000001000000000000004A /* ProviderID.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000004B /* ProviderID.swift */; };
@@ -453,6 +457,10 @@
 		AA00000100000000000000BB /* AgentsUsageBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgentsUsageBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA000001000000000000001B /* AgentsUsageBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsUsageBarApp.swift; sourceTree = "<group>"; };
 		AA000001000000000000002B /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		AA1D6000000000000000010B /* DashboardRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRoute.swift; sourceTree = "<group>"; };
+		AA1D6000000000000000020B /* DashboardWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardWindowController.swift; sourceTree = "<group>"; };
+		AA1D6000000000000000030B /* DashboardRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRootView.swift; sourceTree = "<group>"; };
+		AA1D6000000000000000040B /* DashboardRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRouteTests.swift; sourceTree = "<group>"; };
 		AA080800000000000000001B /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		AA000001000000000000003B /* AggregateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStore.swift; sourceTree = "<group>"; };
 		AA000001000000000000004B /* ProviderID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderID.swift; sourceTree = "<group>"; };
@@ -941,6 +949,7 @@
 			children = (
 				AA000001000000000000001B /* AgentsUsageBarApp.swift */,
 				AA000001000000000000002B /* AppDependencies.swift */,
+				AA1D6000000000000000010B /* DashboardRoute.swift */,
 				AA080800000000000000001B /* AppEnvironment.swift */,
 				/* Plan 05-01 — WindowActivationObserver */
 				AA050100000000000000001B /* WindowActivationObserver.swift */,
@@ -1418,8 +1427,18 @@
 				AA050100000000000000030B /* Settings */,
 				/* Plan 05-04 — Welcome detection + onboarding copy */
 				AA050400000000000000030B /* Welcome */,
+				AA1D60000000000000000050 /* Dashboard */,
 			);
 			path = UI;
+			sourceTree = "<group>";
+		};
+		AA1D60000000000000000050 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				AA1D6000000000000000020B /* DashboardWindowController.swift */,
+				AA1D6000000000000000030B /* DashboardRootView.swift */,
+			);
+			path = Dashboard;
 			sourceTree = "<group>";
 		};
 		/* Plan 05-04 — UI/Welcome subgroup */
@@ -1520,6 +1539,7 @@
 		AA060600000000000000032B /* UITests */ = {
 			isa = PBXGroup;
 			children = (
+				AA1D6000000000000000040B /* DashboardRouteTests.swift */,
 				AA060600000000000000010B /* QuotaBarTests.swift */,
 				AA060600000000000000011B /* RelativeTimestampLabelTests.swift */,
 				AA060600000000000000012B /* FooterViewTests.swift */,
@@ -2002,6 +2022,9 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 			files = (
 				AA000001000000000000001A /* AgentsUsageBarApp.swift in Sources */,
 				AA000001000000000000002A /* AppDependencies.swift in Sources */,
+				AA1D6000000000000000010A /* DashboardRoute.swift in Sources */,
+				AA1D6000000000000000020A /* DashboardWindowController.swift in Sources */,
+				AA1D6000000000000000030A /* DashboardRootView.swift in Sources */,
 				AA080800000000000000001A /* AppEnvironment.swift in Sources */,
 				AA000001000000000000003A /* AggregateStore.swift in Sources */,
 				AA000001000000000000004A /* ProviderID.swift in Sources */,
@@ -2383,6 +2406,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000010A /* QuotaBandTests.swift in Sources */,
 				AA091000000000000000010A /* ResetCountdownTests.swift in Sources */,
 				AA070100000000000000011A /* AUBCommandParseTests.swift in Sources */,
+				AA1D6000000000000000040A /* DashboardRouteTests.swift in Sources */,
 				AA070100000000000000012A /* CLISettingsTests.swift in Sources */,
 				AA070100000000000000013A /* CLIInstallerTests.swift in Sources */,
 				AA070100000000000000014A /* UsageTextRendererTests.swift in Sources */,
