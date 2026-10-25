@@ -69,7 +69,7 @@ public final class AggregateStore {
     /// Global reset-back notification toggle. Default on; Settings / observePreferences flips it.
     private var resetNotificationsEnabled: Bool = true
     /// Monthly spend caps, `config.toml` overlaid by Settings (V39).
-    private var budgets: BudgetConfig = .none
+    public private(set) var budgets: BudgetConfig = .none
     /// Providers whose last auth-relevant poll this run was `.ok` (V36). Empty at launch, so
     /// a provider failing auth on its first poll records no event.
     private var authenticated: Set<ProviderID> = []
@@ -241,6 +241,11 @@ public final class AggregateStore {
     }
 
     // MARK: - Plan 05-03 — Hot-reload paths (D-04)
+
+    /// The warning threshold quota bands and budgets fire at (V41).
+    public var warningFraction: Double {
+        thresholds.warningFraction
+    }
 
     /// Replaces `ThresholdEngine` with a new instance using the updated warning fraction.
     ///
