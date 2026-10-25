@@ -23,6 +23,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { await dependencies.startBackgroundServices() }
     }
 
+    /// Dashboard URLs (SPEC V51). Launch Services delivers them here on a cold launch too,
+    /// after `applicationDidFinishLaunching`. Other URLs are ignored.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for route in urls.compactMap(DashboardRoute.init(url:)) {
+            dependencies.dashboardWindowController.show(route)
+        }
+    }
+
     /// True when launched as the host of a test bundle. Checks several markers:
     /// which ones are set differs between XCTest and Swift Testing runs.
     static func isHostingTests(_ env: [String: String]) -> Bool {

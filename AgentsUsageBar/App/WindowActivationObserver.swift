@@ -50,9 +50,9 @@ public final class WindowActivationObserver {
     private let logger = AppLogger.logger(category: "activation")
 
     /// Window titles that trigger the activation policy flip. Matches the SwiftUI
-    /// Settings scene default title ("Settings") and the WelcomeWindowController title
-    /// set in Plan 05-05 ("Welcome").
-    private static let managedTitles: Set<String> = ["Settings", "Welcome"]
+    /// Settings scene default title ("Settings"), the WelcomeWindowController title
+    /// set in Plan 05-05 ("Welcome"), and the dashboard window (SPEC V50).
+    private static let managedTitles: Set<String> = ["Settings", "Welcome", DashboardWindowController.title]
 
     // MARK: - Init
 

@@ -62,6 +62,9 @@ extension AUBCommand {
             return try await runUsage(opts, quotaOnly: true)
         case .stats(let opts):
             return try await runStats(opts)
+        case .dashboard(let route):
+            try await route.open()
+            return 0
         }
     }
 

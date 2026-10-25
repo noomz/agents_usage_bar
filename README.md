@@ -158,6 +158,7 @@ aub                         # menu-bar cache (same layout as the popover; fast)
 aub --live                  # fetch providers now
 aub usage --json            # cached snapshot, machine-readable
 aub quota claude            # limits + reset windows (cache)
+aub dashboard [provider]    # open the dashboard window (agentsusagebar://dashboard)
 aub settings                # list keys
 aub settings get threshold
 aub settings set threshold 0.70

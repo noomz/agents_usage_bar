@@ -38,6 +38,8 @@ public final class Dependencies {
     /// `showIfNeeded()` is called from `startBackgroundServices()` after the scheduler starts;
     /// it is a no-op when `preferences.hasSeenWelcome == true` (D-10).
     public let welcomeWindowController: WelcomeWindowController
+    /// The one dashboard window (SPEC V50), shown by `agentsusagebar://dashboard` URLs.
+    public let dashboardWindowController = DashboardWindowController()
     /// Notification FSM state, migrated and pruned by `startBackgroundServices()`.
     public let notificationState: any NotificationStateStorage
     public let dayKeys: DayKeyOwner
