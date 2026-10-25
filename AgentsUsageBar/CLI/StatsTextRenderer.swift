@@ -6,12 +6,15 @@ public enum StatsTextRenderer {
 
     public static let noHistory = "No history yet. The app records from first launch; backfill runs in the background"
 
-    /// Bare `aub stats`: one row per provider, then a total of metered spend (V42, V43).
+    /// Bare `aub stats`: one row per provider, then a total of metered spend, then one line
+    /// per configured budget with this month's spend from `monthDays` (V42, V43).
     public static func renderSummary(
         _ days: [DayFile],
         range: StatsRange,
         includeLocal: Bool,
         order: [ProviderID] = [],
+        budgets: BudgetConfig = .none,
+        monthDays: [DayFile] = [],
         color: Bool
     ) -> String {
         let providers = ProviderStats.collect(days, range: range, includeLocal: includeLocal, order: order)
@@ -37,6 +40,7 @@ public enum StatsTextRenderer {
         }
         rows.append(totalRow(providers.filter(\.hasSpend), legend: &legend))
         out.append(contentsOf: table(rows, color: color))
+        out.append(contentsOf: budgetLines(budgets, monthDays: monthDays, today: range.today, legend: &legend))
         out.append(contentsOf: legend.line(color: color))
         return out.joined(separator: "\n") + "\n"
     }
@@ -229,6 +233,31 @@ public enum StatsTextRenderer {
         case .budgetLimit: "budget 100%"
         }
         return event.window.map { "\(kind) \($0)" } ?? kind
+    }
+
+    /// `Oct spend $11.40 / $50.00 budget`, the total first, then each provider budget (V42).
+    static func budgetLines(_ budgets: BudgetConfig, monthDays: [DayFile], today: String, legend: inout Legend) -> [String] {
+        let month = monthLabel(today)
+        return BudgetScope.all.compactMap { scope in
+            guard let cap = budgets.caps[scope] else { return nil }
+            let spend = SpendTotal.month(monthDays, today: today, scope: scope)
+            let prefix = scope.providerID.map { name($0) + " " } ?? ""
+            return "\(prefix)\(month) spend \(amountText(spend, legend: &legend)) / \(CLIFormat.usd(cap.amount)) budget"
+        }
+    }
+
+    /// The month of a day key, named by the system calendar and locale (V2).
+    static func monthLabel(_ key: String) -> String {
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = TimeZone(identifier: "UTC")!
+        let parts = key.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3,
+              let date = gregorian.date(from: DateComponents(year: parts[0], month: parts[1], day: 15))
+        else { return key }
+        let formatter = DateFormatter()
+        formatter.timeZone = gregorian.timeZone
+        formatter.setLocalizedDateFormatFromTemplate("MMM")
+        return formatter.string(from: date)
     }
 
     // MARK: - Legend

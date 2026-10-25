@@ -46,6 +46,22 @@ struct StatsTextRendererTests {
 
     // MARK: - Behaviour
 
+    @Test("one footer line per configured budget with this month's spend, total first (V42)")
+    func budgetFooter() throws {
+        let budgets = BudgetConfig(caps: [.total: Money(50), .provider(.openrouter): Money(20)])
+        let out = StatsTextRenderer.renderSummary(
+            Self.history, range: try range(), includeLocal: false, budgets: budgets, monthDays: Self.history, color: false)
+        var legend = StatsTextRenderer.Legend()
+        let total = StatsTextRenderer.amountText(SpendTotal.month(Self.history, today: Self.today, scope: .total), legend: &legend)
+        let lines = out.split(separator: "\n").map(String.init)
+        let totalLine = try #require(lines.firstIndex(of: "Mar spend \(total) / $50.00 budget"))
+        let providerLine = try #require(lines.firstIndex {
+            $0.hasPrefix(StatsTextRenderer.name(.openrouter) + " Mar spend ") && $0.hasSuffix(" / $20.00 budget")
+        })
+        #expect(totalLine < providerLine)
+        #expect(!summary(try range()).contains("budget"))
+    }
+
     @Test("summary header names the range and the open day; today is the last trend character (V45)")
     func headerAndOpenDay() throws {
         let lines = summary(try range()).split(separator: "\n")

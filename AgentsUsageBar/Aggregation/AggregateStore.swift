@@ -68,6 +68,8 @@ public final class AggregateStore {
     private var paceWarningsEnabled: Bool = true
     /// Global reset-back notification toggle. Default on; Settings / observePreferences flips it.
     private var resetNotificationsEnabled: Bool = true
+    /// Monthly spend caps, `config.toml` overlaid by Settings (V39).
+    private var budgets: BudgetConfig = .none
     /// Providers whose last auth-relevant poll this run was `.ok` (V36). Empty at launch, so
     /// a provider failing auth on its first poll records no event.
     private var authenticated: Set<ProviderID> = []
@@ -259,6 +261,11 @@ public final class AggregateStore {
         resetNotificationsEnabled = enabled
     }
 
+    /// Replaces the monthly budgets; the next poll checks month spend against them (V41).
+    public func updateBudgets(_ budgets: BudgetConfig) {
+        self.budgets = budgets
+    }
+
     /// Enables or disables a provider at runtime per D-04 (CONTEXT.md).
     ///
     /// - When disabled: records the id in `disabledProviderIDs` (so `performRefresh` and
@@ -427,13 +434,23 @@ public final class AggregateStore {
 
     /// Folds the providers that were `.ok` on this poll into the open history day (V11, V15),
     /// with this poll's usage events on the same write (V38). A stale snapshot kept after an
-    /// error is not a sample.
+    /// error is not a sample. Budget crossings are notified one budget per notification, with
+    /// no snooze gate (V41, V66).
     private func recordHistory(now: Date, events: [UsageEvent]) async {
         guard let history else { return }
         let samples = providers.values
             .filter { $0.status == .ok(lastSuccess: now) }
             .compactMap(\.snapshot)
-        await history.record(samples, events: events, at: now)
+        let crossings = await history.record(
+            samples, events: events, budgets: budgets, warningFraction: thresholds.warningFraction, at: now)
+        let decisions = BudgetEngine.decisions(
+            for: crossings,
+            month: String(dayKeys.key(for: now).prefix(7)),
+            displayName: { [displayNamesByID] id in displayNamesByID[id] ?? id.displayHint }
+        )
+        for decision in decisions {
+            await notifications.schedule([decision])
+        }
     }
 
     /// Auth lost when a polled provider goes from authenticated to a rejected or missing

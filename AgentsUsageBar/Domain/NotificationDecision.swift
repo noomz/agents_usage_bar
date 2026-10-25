@@ -40,6 +40,9 @@ public struct NotificationDecision: Sendable, Equatable {
     /// `"primary"`). `nil` for threshold-band decisions.
     public let windowName: String?
 
+    /// False for a budget notification, which has no snooze action (SPEC V66).
+    public let snoozable: Bool
+
     public init(
         id: String,
         title: String,
@@ -47,7 +50,8 @@ public struct NotificationDecision: Sendable, Equatable {
         providerID: ProviderID,
         displayName: String,
         band: ThresholdBand,
-        windowName: String? = nil
+        windowName: String? = nil,
+        snoozable: Bool = true
     ) {
         self.id = id
         self.title = title
@@ -56,6 +60,7 @@ public struct NotificationDecision: Sendable, Equatable {
         self.displayName = displayName
         self.band = band
         self.windowName = windowName
+        self.snoozable = snoozable
     }
 }
 

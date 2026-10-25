@@ -104,6 +104,7 @@ api_key   = "<your-openrouter-key>"  # overridden by OPENROUTER_API_KEY env var
 
 [budgets]
 # Optional monthly spend caps in USD; warn at the threshold and at 100%. Settings values win.
+# `aub stats` ends with this month's spend against each budget.
 # Subscription usage (Claude Pro/Max, ChatGPT plans) is never spend.
 # total_usd      = 50
 # claude_usd     = 20

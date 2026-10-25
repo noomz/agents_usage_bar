@@ -64,6 +64,18 @@ struct NotificationManagerCategoryTests {
         #expect(req.content.categoryIdentifier == UNNotificationManager.usageWarningCategoryID)
     }
 
+    @Test("a budget decision has no category, so no snooze action (V66)")
+    func schedule_nonSnoozable_hasNoCategory() async throws {
+        let center = FakeUNUserNotificationCenter()
+        let manager = makeManager(center)
+        let budget = NotificationDecision(
+            id: "budget:total:2026-05:warn", title: "Monthly budget at 80%", body: "$40.00 of $50.00 spent this month.",
+            providerID: ProviderID(rawValue: "budget"), displayName: "Monthly", band: .warning, snoozable: false)
+        await manager.schedule([budget])
+        let req = try #require(center.addCalls.first)
+        #expect(req.content.categoryIdentifier.isEmpty)
+    }
+
     @Test("schedule coalesced (2 decisions) sets categoryIdentifier on the coalesced request")
     func schedule_coalesced_setsCategoryIdentifier() async throws {
         let center = FakeUNUserNotificationCenter()

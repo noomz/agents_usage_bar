@@ -103,7 +103,9 @@ public final class Dependencies {
         UNUserNotificationCenter.current().delegate = actionHandler
         // Plan 05-03 — hot-reload observer alongside the poll loop.
         preferencesObservation = Task { [preferences, scheduler, store] in
-            await AppDependencies.observePreferences(preferences, scheduler: scheduler, store: store)
+            await AppDependencies.observePreferences(
+                preferences, scheduler: scheduler, store: store,
+                baseBudgets: ConfigStore(env: ProcessInfoEnvReader()).load().budgets)
         }
         await scheduler.start()
         // Plan 05-05 — Welcome window on first launch (D-10); no-op once hasSeenWelcome.
@@ -204,6 +206,7 @@ public enum AppDependencies {
         )
         store.updatePaceWarningsEnabled(preferences.paceWarningsEnabled)
         store.updateResetNotificationsEnabled(preferences.resetNotificationsEnabled)
+        store.updateBudgets(config.budgets)
 
         // 10. Seed placeholder rows when providers are not configured (B10).
         //     Specs come from ProviderRegistryFactory so the GUI and `aub` stay aligned.
@@ -289,6 +292,7 @@ public enum AppDependencies {
     /// - `refreshInterval` → `scheduler.updateInterval(_:)`
     /// - `threshold`       → `store.updateWarningFraction(_:)`
     /// - `providerEnabled` → `store.setProviderEnabled(_:enabled:)` for changed providers
+    /// - `budgetOverrides` → `store.updateBudgets(_:)`, overlaid on `baseBudgets` from `config.toml` (V39)
     ///
     /// Theme and open-at-login are wired at the SwiftUI layer (`.preferredColorScheme`) and
     /// in `SettingsGeneralTab.toggleOpenAtLogin` respectively — they do not need actor calls.
@@ -300,13 +304,15 @@ public enum AppDependencies {
     public static func observePreferences(
         _ preferences: UserPreferencesStore,
         scheduler: PollScheduler,
-        store: AggregateStore
+        store: AggregateStore,
+        baseBudgets: BudgetConfig = .none
     ) async {
         var lastInterval = preferences.refreshInterval
         var lastThreshold = preferences.threshold
         var lastPaceWarningsEnabled = preferences.paceWarningsEnabled
         var lastResetNotificationsEnabled = preferences.resetNotificationsEnabled
         var lastProviderEnabled = preferences.providerEnabled
+        var lastBudgetOverrides = preferences.budgetOverrides
 
         while !Task.isCancelled {
             // withObservationTracking fires onChange once when any accessed property changes.
@@ -319,6 +325,7 @@ public enum AppDependencies {
                     _ = preferences.paceWarningsEnabled
                     _ = preferences.resetNotificationsEnabled
                     _ = preferences.providerEnabled
+                    _ = preferences.budgetOverrides
                 } onChange: {
                     // onChange fires on the thread that made the change.
                     // Resume the continuation to wake the loop.
@@ -334,6 +341,7 @@ public enum AppDependencies {
             let newPaceWarningsEnabled = preferences.paceWarningsEnabled
             let newResetNotificationsEnabled = preferences.resetNotificationsEnabled
             let newProviderEnabled = preferences.providerEnabled
+            let newBudgetOverrides = preferences.budgetOverrides
 
             if newInterval != lastInterval {
                 lastInterval = newInterval
@@ -350,6 +358,10 @@ public enum AppDependencies {
             if newResetNotificationsEnabled != lastResetNotificationsEnabled {
                 lastResetNotificationsEnabled = newResetNotificationsEnabled
                 store.updateResetNotificationsEnabled(newResetNotificationsEnabled)
+            }
+            if newBudgetOverrides != lastBudgetOverrides {
+                lastBudgetOverrides = newBudgetOverrides
+                store.updateBudgets(baseBudgets.overlaid(with: newBudgetOverrides))
             }
             if newProviderEnabled != lastProviderEnabled {
                 // Find changed providers and propagate to AggregateStore
