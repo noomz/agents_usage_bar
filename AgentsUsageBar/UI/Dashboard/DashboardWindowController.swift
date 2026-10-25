@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Hosts the one dashboard window (SPEC V50). The window is built on first open and released
-/// on close, so nothing it decoded outlives it (V20). Its frame is saved under
+/// Hosts the one dashboard window (SPEC V50). The window and its `DashboardModel` are built
+/// on first open and released on close, so nothing it decoded outlives it (V20). Its frame is saved under
 /// `frameAutosaveName` and restored on the next open.
 ///
 /// The title "Dashboard" is in `WindowActivationObserver.managedTitles`, which flips the app
@@ -13,13 +13,21 @@ public final class DashboardWindowController {
     static let title = "Dashboard"
     private static let frameAutosaveName = "Dashboard"
 
+    private let store: AggregateStore
+    private let dayKeys: DayKeyOwner
+    private let reader: HistoryReader
+
     private var window: NSWindow?
-    private var hosting: NSHostingController<DashboardRootView>?
+    private var model: DashboardModel?
 
     // Written on the MainActor; read from nonisolated deinit (mirrors WelcomeWindowController).
     nonisolated(unsafe) private var closeObserver: NSObjectProtocol?
 
-    public init() {}
+    public init(store: AggregateStore, dayKeys: DayKeyOwner, reader: HistoryReader = HistoryReader()) {
+        self.store = store
+        self.dayKeys = dayKeys
+        self.reader = reader
+    }
 
     deinit {
         if let token = closeObserver {
@@ -29,14 +37,16 @@ public final class DashboardWindowController {
 
     /// Shows `route` in the dashboard, opening the window or bringing the open one to front.
     public func show(_ route: DashboardRoute) {
-        if let window, let hosting {
-            hosting.rootView = DashboardRootView(route: route)
+        if let window, let model {
+            model.show(route)
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             return
         }
 
-        let hosting = NSHostingController(rootView: DashboardRootView(route: route))
+        let model = DashboardModel(
+            route: route, reader: reader, dayKeys: dayKeys, order: UserDefaults.standard.aubProviderOrder)
+        let hosting = NSHostingController(rootView: DashboardRootView(model: model, store: store))
         let win = NSWindow(contentViewController: hosting)
         win.title = Self.title
         win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
@@ -59,7 +69,7 @@ public final class DashboardWindowController {
         }
 
         window = win
-        self.hosting = hosting
+        self.model = model
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
     }
@@ -70,6 +80,6 @@ public final class DashboardWindowController {
         }
         closeObserver = nil
         window = nil
-        hosting = nil
+        model = nil
     }
 }
