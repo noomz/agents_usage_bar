@@ -35,8 +35,9 @@ struct ClaudeBackfillSourceTests {
         try (lines.joined(separator: "\n") + "\n").write(to: url, atomically: true, encoding: .utf8)
     }
 
-    private func source(home: URL, roots: [URL]) -> ClaudeBackfillSource {
-        ClaudeBackfillSource(pricing: Self.pricing, dayKeys: Self.dayKeys, roots: { roots }, home: home)
+    private func source(home: URL, roots: [URL], owners: [String: String] = [:]) -> ClaudeBackfillSource {
+        ClaudeBackfillSource(
+            pricing: Self.pricing, dayKeys: Self.dayKeys, roots: { roots }, sessionAccounts: { owners }, home: home)
     }
 
     @Test("usage lands on its local day across roots, each request counted once, a day without usage is a zero (V10, V30, I10)")
@@ -100,5 +101,27 @@ struct ClaudeBackfillSourceTests {
             AccountInfo(billingModel: .metered),
         ])
         #expect(accounts.allSatisfy { $0.costTodayUSD == nil && $0.quotaWindows == nil })
+    }
+
+
+    @Test("tokens join accounts by session through the hook feed; a session not in it stays unattributed (V9)")
+    func accountTokensBySession() async throws {
+        let home = try makeHome()
+        // Both instances share one projects dir, so only the session names the account.
+        let shared = home.appending(path: ".ccs/shared/context-groups/default/projects")
+        try write([line("2026-10-21T01:00:00.000Z", request: "r1", input: 100, output: 0)],
+                  to: shared.appending(path: "proj/s1.jsonl"))
+        try write([line("2026-10-21T02:00:00.000Z", request: "r2", input: 30, output: 0)],
+                  to: shared.appending(path: "proj/s2/subagents/agent-a.jsonl"))
+        try write([line("2026-10-21T03:00:00.000Z", request: "r3", input: 7, output: 0)],
+                  to: shared.appending(path: "proj/s3.jsonl"))
+
+        let owners = ["s1": "personal", "s2": "work"]
+        let record = try #require(try await source(home: home, roots: [shared], owners: owners)
+            .records(for: ["2026-10-21"])["2026-10-21"])
+
+        #expect(record.tokens == 137)
+        #expect(record.accounts.map(\.key) == ["personal", "work"])
+        #expect(record.accounts.map(\.tokens) == [100, 30])
     }
 }

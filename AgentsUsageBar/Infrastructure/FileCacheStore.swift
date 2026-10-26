@@ -239,8 +239,9 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
         for id: ProviderID,
         now: Date,
         deltaTokens: Int,
-        deltaCostUSD: Decimal
-    ) -> (tokens: Int, costUSD: Decimal) {
+        deltaCostUSD: Decimal,
+        deltaSessionTokens: [String: Int] = [:]
+    ) -> (tokens: Int, costUSD: Decimal, sessionTokens: [String: Int]) {
         queue.sync(flags: .barrier) {
             let envelope = _loadEnvelope() ?? CacheEnvelope(providers: [:], baselines: [:], transcripts: [:])
             let today = dayKeys.key(for: now)
@@ -250,15 +251,18 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
             // Same day → add the delta to the running total.
             let newTokens: Int
             let newCost: Decimal
+            let newSessions: [String: Int]
             if existing == nil || !dayKeys.isSameDay(existing!.date, as: now) {
                 newTokens = deltaTokens
                 newCost = deltaCostUSD
+                newSessions = deltaSessionTokens
             } else {
                 newTokens = existing!.tokens + deltaTokens
                 newCost = existing!.costUSD + deltaCostUSD
+                newSessions = existing!.sessionTokens.merging(deltaSessionTokens, uniquingKeysWith: +)
             }
 
-            let record = DailyUsageRecord(date: today, tokens: newTokens, costUSD: newCost)
+            let record = DailyUsageRecord(date: today, tokens: newTokens, costUSD: newCost, sessionTokens: newSessions)
             var updated = envelope.dailyUsage
             updated[id] = record
             _writeEnvelope(CacheEnvelope(
@@ -268,7 +272,7 @@ public final class FileCacheStore: CacheStore, @unchecked Sendable {
                 transcripts: envelope.transcripts,
                 dailyUsage: updated
             ))
-            return (newTokens, newCost)
+            return (newTokens, newCost, newSessions)
         }
     }
 

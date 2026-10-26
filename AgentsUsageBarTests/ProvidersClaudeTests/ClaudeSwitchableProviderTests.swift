@@ -229,4 +229,44 @@ struct ClaudeSwitchableProviderTests {
         #expect(snapshot.accountInfo == AccountInfo(billingModel: .subscription, plan: "pro"))
         #expect(snapshot.costEstimated == (snapshot.costTodayUSD != nil))
     }
+
+
+    @Test("hook mode gives each account its sessions' tokens; a session not in the feed stays unattributed (V9)")
+    func hookAccountTokensBySession() async throws {
+        let hookDir = try makeTempDir()
+        let projects = try makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: hookDir)
+            try? FileManager.default.removeItem(at: projects)
+        }
+        let now = Date()
+        let stamp = ISO8601DateFormatter().string(from: now.addingTimeInterval(-1))
+        func line(_ request: String, _ input: Int) -> String {
+            #"{"type":"assistant","timestamp":"\#(stamp)","requestId":"\#(request)","message":{"model":"claude-test","role":"assistant","usage":{"input_tokens":\#(input),"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}"#
+        }
+        func transcript(_ path: String, _ text: String) throws {
+            let url = projects.appendingPathComponent(path)
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data((text + "\n").utf8).write(to: url)
+        }
+        // One shared projects dir; only the feed's transcript_path names each session's account.
+        try transcript("p/s1.jsonl", line("r1", 100))
+        try transcript("p/s2/subagents/agent-a.jsonl", line("r2", 30))
+        try transcript("p/s3.jsonl", line("r3", 7))
+        try writeSession("s1", json: #"{ "session_id": "s1", "transcript_path": "/u/.ccs/instances/personal/projects/p/s1.jsonl", "cost": { "total_cost_usd": 1 } }"#,
+                         mtime: now, in: hookDir)
+        try writeSession("s2", json: #"{ "session_id": "s2", "transcript_path": "/u/.ccs/instances/work/projects/p/s2.jsonl", "cost": { "total_cost_usd": 2 } }"#,
+                         mtime: now, in: hookDir)
+
+        let facade = ClaudeSwitchableProvider(
+            jsonl: makeJSONLProvider(rootsEmptyDir: projects),
+            hookProvider: ClaudeHookProvider(feedDir: hookDir),
+            source: { .hook }
+        )
+        let snap = try await facade.fetch(now: now)
+
+        #expect(snap.tokensToday == 137)
+        #expect(snap.accounts?.map(\.name) == ["personal", "work"])
+        #expect(snap.accounts?.map(\.tokensToday) == [100, 30])
+    }
 }

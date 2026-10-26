@@ -11,6 +11,7 @@ struct ClaudeBackfillSource: BackfillSource {
     private let pricing: ClaudeModelPricing
     private let dayKeys: DayKeyOwner
     private let roots: @Sendable () -> [URL]
+    private let sessionAccounts: @Sendable () -> [String: String]
     private let home: URL
     private let reader = TranscriptReader()
     private let scanner = TranscriptDirectoryScanner()
@@ -19,11 +20,13 @@ struct ClaudeBackfillSource: BackfillSource {
         pricing: ClaudeModelPricing,
         dayKeys: DayKeyOwner,
         roots: @escaping @Sendable () -> [URL] = { ClaudeRoots.defaultRoots },
+        sessionAccounts: @escaping @Sendable () -> [String: String] = { ClaudeHookProvider.sessionAccounts() },
         home: URL = FileManager.default.homeDirectoryForCurrentUser
     ) {
         self.pricing = pricing
         self.dayKeys = dayKeys
         self.roots = roots
+        self.sessionAccounts = sessionAccounts
         self.home = home
     }
 
@@ -33,7 +36,9 @@ struct ClaudeBackfillSource: BackfillSource {
 
     /// One record per key. Files are read one at a time; a file untouched since before the
     /// first day cannot hold it. Records are deduplicated by request id across files, since ccs
-    /// roots can reach one transcript through several paths.
+    /// roots can reach one transcript through several paths. Sessions still in the hook feed
+    /// give each owning account its tokens, keyed by account name (V9); the rest stay
+    /// unattributed.
     func records(for keys: [String]) async throws -> [String: DayRecord] {
         guard let first = keys.min() else { return [:] }
         let wanted = Set(keys)
@@ -41,7 +46,10 @@ struct ClaudeBackfillSource: BackfillSource {
         var tokens: [String: Int] = [:]
         var cost: [String: Decimal] = [:]
         var seenRequestIDs: Set<String> = []
+        let owners = sessionAccounts()
+        var accountTokens: [String: [String: Int]] = [:]
         for file in files.sorted(by: { $0.path < $1.path }) {
+            let owner = owners[ClaudeRoots.sessionID(of: file)]
             let read = try await reader.readDelta(from: file, startOffset: 0, previousLastModified: nil)
             for record in read.records {
                 let key = dayKeys.wallKey(for: record.timestamp)
@@ -50,6 +58,7 @@ struct ClaudeBackfillSource: BackfillSource {
                     guard seenRequestIDs.insert(requestID).inserted else { continue }
                 }
                 tokens[key, default: 0] += record.totalTokens
+                if let owner { accountTokens[key, default: [:]][owner, default: 0] += record.totalTokens }
                 cost[key, default: 0] += pricing.cost(
                     inputTokens: record.inputTokens,
                     outputTokens: record.outputTokens,
@@ -62,7 +71,11 @@ struct ClaudeBackfillSource: BackfillSource {
         return Dictionary(uniqueKeysWithValues: keys.map { key in
             (key, DayRecord(
                 provider: provider, tokens: tokens[key] ?? 0, costUSD: Money(cost[key] ?? 0),
-                costEstimated: true, origin: .backfilled))
+                costEstimated: true,
+                accounts: (accountTokens[key] ?? [:]).sorted { $0.key < $1.key }.map { name, tokens in
+                    DayAccount(key: name, label: name, billingModel: .subscription, tokens: tokens)
+                },
+                origin: .backfilled))
         })
     }
 

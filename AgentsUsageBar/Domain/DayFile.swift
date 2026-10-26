@@ -107,6 +107,8 @@ public struct DayAccount: Sendable, Equatable, Codable {
     public var billingModelAssumed: Bool
     /// Only when the provider reports per-account cost (V9).
     public var costUSD: Money?
+    /// Only when the provider reports per-account tokens (V9). Nil in files written before.
+    public var tokens: Int?
     public var quota: [String: QuotaDay]
 
     public init(
@@ -116,6 +118,7 @@ public struct DayAccount: Sendable, Equatable, Codable {
         plan: String? = nil,
         billingModelAssumed: Bool = false,
         costUSD: Money? = nil,
+        tokens: Int? = nil,
         quota: [String: QuotaDay] = [:]
     ) {
         self.key = key
@@ -124,6 +127,7 @@ public struct DayAccount: Sendable, Equatable, Codable {
         self.plan = plan
         self.billingModelAssumed = billingModelAssumed
         self.costUSD = costUSD
+        self.tokens = tokens
         self.quota = quota
     }
 }

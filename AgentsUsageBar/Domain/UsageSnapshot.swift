@@ -77,6 +77,8 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         public let name: String
         /// Today's cost reported by this account's sessions. `nil` = no data today.
         public let costTodayUSD: Decimal?
+        /// Today's tokens from this account's sessions (V9). `nil` = not attributed.
+        public var tokensToday: Int?
         /// Max utilization across this account's 5h/7d windows (notifications).
         /// The child glance bar uses `displayedQuota` (5h when present).
         public let quota: Quota?
@@ -88,7 +90,7 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
         public var id: String { name }
 
         private enum CodingKeys: String, CodingKey {
-            case name, costTodayUSD, quota, quotaWindows
+            case name, costTodayUSD, tokensToday, quota, quotaWindows
         }
 
         public init(
@@ -96,10 +98,12 @@ public struct UsageSnapshot: Sendable, Equatable, Codable {
             costTodayUSD: Decimal?,
             quota: Quota?,
             quotaWindows: [QuotaWindow]?,
+            tokensToday: Int? = nil,
             accountInfo: AccountInfo? = nil
         ) {
             self.name = name
             self.costTodayUSD = costTodayUSD
+            self.tokensToday = tokensToday
             self.quota = quota
             self.quotaWindows = quotaWindows
             self.accountInfo = accountInfo

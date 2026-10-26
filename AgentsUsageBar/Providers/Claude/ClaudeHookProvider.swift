@@ -137,11 +137,7 @@ public actor ClaudeHookProvider: UsageProvider {
             // latest payload Claude Code pushed, so it carries the freshest cost AND the
             // session's current account attribution; older copies are ignored here and
             // age out via the 48h cleanup.
-            let entries: [(account: String, url: URL, mtime: Date)] = Dictionary(
-                grouping: allEntries, by: { $0.url.lastPathComponent }
-            ).values.compactMap { copies in
-                copies.max { $0.mtime < $1.mtime }
-            }
+            let entries = Self.newestCopies(allEntries)
 
             if entries.isEmpty {
                 throw ClaudeHookError.noFeedData
@@ -408,6 +404,34 @@ public actor ClaudeHookProvider: UsageProvider {
             }
         }
         return entries
+    }
+
+    /// One entry per session file name, the newest copy (see the dedupe note in `fetch`).
+    private static func newestCopies(
+        _ entries: [(account: String, url: URL, mtime: Date)]
+    ) -> [(account: String, url: URL, mtime: Date)] {
+        Dictionary(grouping: entries, by: { $0.url.lastPathComponent }).values.compactMap { copies in
+            copies.max { $0.mtime < $1.mtime }
+        }
+    }
+
+    /// Session ID to owning account for every session still in the feed (V9), attributed
+    /// as `fetch` does: newest copy, `transcript_path` before the feed directory. Empty when
+    /// the feed is missing. The feed keeps about 48h, so older sessions are absent.
+    public static func sessionAccounts(feedDir: URL = defaultFeedDir) -> [String: String] {
+        guard let entries = try? enumerate(feedDir: feedDir, fileManager: .default) else { return [:] }
+        var accounts: [String: String] = [:]
+        for entry in newestCopies(entries) {
+            let payload = (try? Data(contentsOf: entry.url)).flatMap { try? ClaudeHookPayload.decode($0) }
+            let session = payload?.sessionId ?? entry.url.deletingPathExtension().lastPathComponent
+            accounts[session] = account(fromTranscriptPath: payload?.transcriptPath) ?? entry.account
+        }
+        return accounts
+    }
+
+    /// `sessionAccounts(feedDir:)` for this provider's feed.
+    public nonisolated func sessionAccounts() -> [String: String] {
+        Self.sessionAccounts(feedDir: feedDir)
     }
 
     /// Deletes session files whose mtime is older than the 48h cleanup horizon.

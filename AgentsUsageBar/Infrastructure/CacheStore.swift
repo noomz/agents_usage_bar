@@ -47,10 +47,23 @@ public struct DailyUsageRecord: Sendable, Codable, Equatable {
     /// Running USD cost accumulated across today's polls.
     public let costUSD: Decimal
 
-    public init(date: String, tokens: Int, costUSD: Decimal) {
+    /// Today's tokens per transcript session, so accounts can be joined at read time (V9).
+    /// Empty in caches written before it existed.
+    public let sessionTokens: [String: Int]
+
+    public init(date: String, tokens: Int, costUSD: Decimal, sessionTokens: [String: Int] = [:]) {
         self.date = date
         self.tokens = tokens
         self.costUSD = costUSD
+        self.sessionTokens = sessionTokens
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        date = try container.decode(String.self, forKey: .date)
+        tokens = try container.decode(Int.self, forKey: .tokens)
+        costUSD = try container.decode(Decimal.self, forKey: .costUSD)
+        sessionTokens = try container.decodeIfPresent([String: Int].self, forKey: .sessionTokens) ?? [:]
     }
 }
 
@@ -121,8 +134,9 @@ public protocol CacheStore: Sendable {
         for id: ProviderID,
         now: Date,
         deltaTokens: Int,
-        deltaCostUSD: Decimal
-    ) -> (tokens: Int, costUSD: Decimal)
+        deltaCostUSD: Decimal,
+        deltaSessionTokens: [String: Int]
+    ) -> (tokens: Int, costUSD: Decimal, sessionTokens: [String: Int])
 }
 
 extension CacheStore {
@@ -142,8 +156,9 @@ extension CacheStore {
         for id: ProviderID,
         now: Date,
         deltaTokens: Int,
-        deltaCostUSD: Decimal
-    ) -> (tokens: Int, costUSD: Decimal) {
-        (deltaTokens, deltaCostUSD)
+        deltaCostUSD: Decimal,
+        deltaSessionTokens: [String: Int] = [:]
+    ) -> (tokens: Int, costUSD: Decimal, sessionTokens: [String: Int]) {
+        (deltaTokens, deltaCostUSD, deltaSessionTokens)
     }
 }

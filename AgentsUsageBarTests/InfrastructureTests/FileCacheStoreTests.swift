@@ -188,4 +188,21 @@ struct FileCacheStoreTests {
         let codex = store.accumulateDailyUsage(for: ProviderID(rawValue: "codex"), now: now, deltaTokens: 7, deltaCostUSD: Decimal(string: "0.02")!)
         #expect(codex.tokens == 7) // independent of claude's 100
     }
+
+
+    @Test("session tokens add per session within a day and reset at rollover; an old cache reads empty (V9)")
+    func accumulatesSessionTokens() throws {
+        let store = try makeTempStore()
+        let day1 = Date()
+        _ = store.accumulateDailyUsage(for: .claude, now: day1, deltaTokens: 10, deltaCostUSD: 0, deltaSessionTokens: ["s1": 10])
+        let same = store.accumulateDailyUsage(for: .claude, now: day1, deltaTokens: 7, deltaCostUSD: 0,
+                                              deltaSessionTokens: ["s1": 5, "s2": 2])
+        #expect(same.sessionTokens == ["s1": 15, "s2": 2])
+        let rolled = store.accumulateDailyUsage(for: .claude, now: day1.addingTimeInterval(86_400 * 2), deltaTokens: 1,
+                                                deltaCostUSD: 0, deltaSessionTokens: ["s3": 1])
+        #expect(rolled.sessionTokens == ["s3": 1])
+
+        let old = #"{"date":"2026-10-26","tokens":3,"costUSD":1}"#
+        #expect(try JSONDecoder().decode(DailyUsageRecord.self, from: Data(old.utf8)).sessionTokens.isEmpty)
+    }
 }
