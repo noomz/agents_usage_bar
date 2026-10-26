@@ -10,10 +10,18 @@ struct DashboardProviderDetailView: View {
     @Bindable var model: DashboardModel
     let id: ProviderID
     @State private var tab: Detail.Tab = .cost
-    @State private var account: String?
+    @State private var choice: AccountChoice = .all
+
+    /// The account picker: every account, every account split (V68), or one account.
+    private enum AccountChoice: Hashable {
+        case all, split
+        case account(String)
+    }
 
     var body: some View {
-        let detail = Detail(id: id, days: model.days, range: model.range.statsRange(today: model.today), account: account)
+        let detail = Detail(
+            id: id, days: model.days, range: model.range.statsRange(today: model.today),
+            account: { if case .account(let key) = choice { key } else { nil } }(), split: choice == .split)
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 title(detail)
@@ -45,10 +53,12 @@ struct DashboardProviderDetailView: View {
             Text(id.displayHint).font(.title2.bold())
             Spacer()
             if detail.accounts.count > 1 {
-                Picker("Account", selection: Binding(get: { detail.account }, set: { account = $0 })) {
-                    Text("All accounts").tag(String?.none)
+                Picker("Account", selection: $choice) {
+                    Text("All accounts").tag(AccountChoice.all)
+                    Text("Split by account").tag(AccountChoice.split)
+                    Divider()
                     ForEach(detail.accounts) { account in
-                        Text(accountName(account)).tag(String?.some(account.key))
+                        Text(accountName(account)).tag(AccountChoice.account(account.key))
                     }
                 }
                 .frame(maxWidth: 240)
@@ -101,6 +111,29 @@ struct DashboardProviderDetailView: View {
 
     private var color: Color { DashboardPalette.color(id) }
 
+    /// A shade of the provider colour per account, grey for unattributed (V68).
+    private func shade(_ part: Detail.Part, _ detail: Detail) -> Color {
+        switch part {
+        case .whole: return color
+        case .unattributed: return .gray
+        case .account(let key):
+            return DashboardPalette.shade(color, detail.accounts.firstIndex { $0.key == key } ?? 0, of: detail.accounts.count)
+        }
+    }
+
+    /// Swatches naming each split part (V68).
+    private func splitLegend(_ detail: Detail, unattributed: Bool) -> some View {
+        let parts = detail.accounts.map { Detail.Part.account($0.key) } + (unattributed ? [.unattributed] : [])
+        return HStack(spacing: 12) {
+            ForEach(parts, id: \.self) { part in
+                HStack(spacing: 4) {
+                    RoundedRectangle(cornerRadius: 2).fill(shade(part, detail)).frame(width: 10, height: 10)
+                    Text(detail.label(part)).font(.caption)
+                }
+            }
+        }
+    }
+
     // MARK: - Charts
 
     @ViewBuilder
@@ -137,9 +170,10 @@ struct DashboardProviderDetailView: View {
             Chart {
                 gapBands(detail)
                 ForEach(points) { point in
+                    let fill = shade(point.part, detail)
                     BarMark(x: day(point.key), y: .value("Amount", point.amount))
                         .position(by: .value("Series", point.series.rawValue))
-                        .foregroundStyle(point.series == .spend ? AnyShapeStyle(color) : AnyShapeStyle(DashboardPalette.hatch(color)))
+                        .foregroundStyle(point.series == .spend ? AnyShapeStyle(fill) : AnyShapeStyle(DashboardPalette.hatch(fill)))
                         .opacity(point.estimated || point.backfilled ? 0.55 : 1)
                 }
             }
@@ -153,6 +187,7 @@ struct DashboardProviderDetailView: View {
                 }
             }
             .frame(height: 260)
+            if detail.split { splitLegend(detail, unattributed: points.contains { $0.part == .unattributed }) }
             DashboardNote(costNote(detail))
         }
     }
@@ -160,6 +195,7 @@ struct DashboardProviderDetailView: View {
     private func costNote(_ detail: Detail) -> String {
         var parts: [String] = []
         if detail.stats.hasSpend && detail.stats.hasValue { parts.append("solid = spend · hatched = value (~$, never added to spend)") }
+        if detail.split { parts.append("stacked by account · unattributed = cost no single account reports") }
         parts.append("lighter = estimated (~$) or backfilled · grey band = no data")
         return parts.joined(separator: " · ")
     }
@@ -215,10 +251,14 @@ struct DashboardProviderDetailView: View {
                     Chart {
                         gapBands(detail)
                         ForEach(bars) { bar in
+                            let band = DashboardPalette.band(DashboardQuotaCell.band(peak: bar.peak))
+                            let account = bar.account ?? ""
                             BarMark(x: day(bar.key), yStart: .value("End of day", bar.endOfDay), yEnd: .value("Peak", bar.peak))
-                                .foregroundStyle(DashboardPalette.band(DashboardQuotaCell.band(peak: bar.peak)))
+                                .position(by: .value("Account", account))
+                                .foregroundStyle(bar.account.map { shade(.account($0), detail) } ?? band)
                             PointMark(x: day(bar.key), y: .value("Peak", bar.peak))
-                                .foregroundStyle(DashboardPalette.band(DashboardQuotaCell.band(peak: bar.peak)))
+                                .position(by: .value("Account", account))
+                                .foregroundStyle(band)
                                 .symbolSize(16)
                         }
                     }
@@ -235,7 +275,12 @@ struct DashboardProviderDetailView: View {
                     .frame(height: 160)
                 }
             }
-            DashboardNote("bar = end of day → peak · colour = peak band (under 80% · 80% · 95% · 100%) · grey band = no data")
+            if detail.split {
+                splitLegend(detail, unattributed: false)
+                DashboardNote("one bar per account: end of day → peak · dot = peak band (under 80% · 80% · 95% · 100%) · grey band = no data")
+            } else {
+                DashboardNote("bar = end of day → peak · colour = peak band (under 80% · 80% · 95% · 100%) · grey band = no data")
+            }
         }
     }
 

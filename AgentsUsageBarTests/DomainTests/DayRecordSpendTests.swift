@@ -127,3 +127,52 @@ struct MonthSpendTests {
         #expect(SpendTotal.month(days, today: "2026-03-01", scope: .total) == SpendTotal(amount: 2))
     }
 }
+
+/// SPEC V68 — a day's cost broken into accounts, never prorated (V12).
+@Suite("DayRecord.costSegments")
+struct DayRecordCostSegmentTests {
+    private func account(_ key: String, _ model: BillingModel, cost: Decimal? = nil) -> DayAccount {
+        DayAccount(key: key, label: key, billingModel: model, costUSD: cost.map(Money.init))
+    }
+
+    private func record(cost: Decimal?, _ accounts: [DayAccount]) -> DayRecord {
+        DayRecord(provider: ProviderID(rawValue: "demo"), costUSD: cost.map(Money.init), accounts: accounts, origin: .observed)
+    }
+
+    @Test("each ccs account with its own cost gets a segment; they sum to the day (V68)")
+    func perAccountCost() {
+        let segments = record(cost: 7, [account("work-demo", .subscription, cost: 5), account("default", .subscription, cost: 2)])
+            .costSegments
+        #expect(segments == [
+            DayCostSegment(account: "work-demo", billingModel: .subscription, amount: Money(5)),
+            DayCostSegment(account: "default", billingModel: .subscription, amount: Money(2)),
+        ])
+    }
+
+    @Test("a lone account of a billing model takes that model's cost (V68)")
+    func loneAccountTakesTotal() {
+        let segments = record(cost: 4, [account("a1b2c3d4e5f6", .metered)]).costSegments
+        #expect(segments == [DayCostSegment(account: "a1b2c3d4e5f6", billingModel: .metered, amount: Money(4))])
+    }
+
+    @Test("a backfilled day with several accounts and no account cost is all unattributed (V62, V68)")
+    func backfilledIsUnattributed() {
+        let segments = record(cost: 9, [account("default", .subscription), account("work-demo", .subscription)]).costSegments
+        #expect(segments == [DayCostSegment(account: nil, billingModel: .subscription, amount: Money(9))])
+    }
+
+    @Test("known account costs keep their part and the rest is unattributed, not prorated (V12, V68)")
+    func remainderUnattributed() {
+        let segments = record(cost: 10, [account("default", .subscription, cost: 3), account("work-demo", .subscription)])
+            .costSegments
+        #expect(segments == [
+            DayCostSegment(account: "default", billingModel: .subscription, amount: Money(3)),
+            DayCostSegment(account: nil, billingModel: .subscription, amount: Money(7)),
+        ])
+    }
+
+    @Test("a mixed record without per-account cost has no segments, as costSplit is unknown (V26)")
+    func unknownMixed() {
+        #expect(record(cost: 5, [account("m", .metered), account("s", .subscription)]).costSegments.isEmpty)
+    }
+}

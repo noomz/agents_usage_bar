@@ -150,4 +150,58 @@ struct DashboardProviderDetailTests {
         #expect(work.events.contains { $0.account == "work-demo" })
         #expect(work.events.contains { $0.account == nil })
     }
+
+    private func claudeDay(_ key: String, origin: RecordOrigin = .observed, work: Decimal?, personal: Decimal?, cost: Decimal) -> DayFile {
+        DayFile(date: key, timeZone: "UTC", records: [DayRecord(
+            provider: .claude, tokens: 1_000, costUSD: Money(cost), costEstimated: true,
+            accounts: [
+                DayAccount(key: "work-demo", label: "work-demo", billingModel: .subscription, costUSD: work.map(Money.init),
+                           quota: ["5h": QuotaDay(peak: 0.9, endOfDay: 0.2)]),
+                DayAccount(key: "default", label: "default", billingModel: .subscription, costUSD: personal.map(Money.init),
+                           quota: ["5h": QuotaDay(peak: 0.4, endOfDay: 0.1)]),
+            ],
+            origin: origin)])
+    }
+
+    @Test("split stacks value by account, backfilled days unattributed; tokens stay whole (V54, V62, V68)")
+    func splitCost() {
+        let days = [
+            claudeDay("2026-10-24", origin: .backfilled, work: nil, personal: nil, cost: 9),
+            claudeDay(Self.today, work: 5, personal: 2, cost: 7),
+        ]
+        let split = DashboardProviderDetail(id: .claude, days: days, range: Self.range, split: true)
+        #expect(split.split)
+        let points = split.costPoints
+        #expect(points.map(\.part) == [.unattributed, .account("work-demo"), .account("default")])
+        #expect(points.map(\.amount) == [9, 5, 2])
+        #expect(points.allSatisfy { $0.series == .value })
+        #expect(points.first?.backfilled == true)
+        #expect(split.label(.account("work-demo")) == "work-demo")
+        #expect(split.tokenPoints.count == 2)
+        // Split totals match All: nothing is lost or prorated.
+        let all = DashboardProviderDetail(id: .claude, days: days, range: Self.range)
+        #expect(all.costPoints.map(\.amount).reduce(0, +) == points.map(\.amount).reduce(0, +))
+        #expect(all.costPoints.allSatisfy { $0.part == .whole })
+    }
+
+    @Test("split draws one quota bar per account per day (V54, V68)")
+    func splitQuota() {
+        let days = [claudeDay(Self.today, work: 5, personal: 2, cost: 7)]
+        let split = DashboardProviderDetail(id: .claude, days: days, range: Self.range, split: true)
+        let bars = split.quotaBars("5h")
+        #expect(bars.map(\.account) == ["work-demo", "default"])
+        #expect(bars.map(\.peak) == [0.9, 0.4])
+    }
+
+    @Test("split needs every account shown and more than one seen (V68)")
+    func splitOnlyWithSeveralAccounts() {
+        #expect(!detail(.claude, account: "work-demo").split)
+        #expect(!DashboardProviderDetail(id: .claude, days: Self.days, range: Self.range, account: "work-demo", split: true).split)
+        let lone = [DayFile(date: Self.today, timeZone: "UTC", records: [DayRecord(
+            provider: .codex, costUSD: Money(4),
+            accounts: [DayAccount(key: "a1b2c3d4e5f6", label: "plus", billingModel: .metered)], origin: .observed)])]
+        let codex = DashboardProviderDetail(id: .codex, days: lone, range: Self.range, split: true)
+        #expect(!codex.split)
+        #expect(codex.costPoints.map(\.part) == [.whole])
+    }
 }

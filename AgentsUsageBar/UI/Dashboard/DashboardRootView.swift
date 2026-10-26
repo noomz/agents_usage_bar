@@ -70,6 +70,13 @@ enum DashboardPalette {
         }
     }
 
+    /// Shade `index` of `count` of a provider colour, lightest last, for account splits (V68).
+    static func shade(_ color: Color, _ index: Int, of count: Int) -> Color {
+        guard count > 1 else { return color }
+        let fraction = 0.55 * Double(index) / Double(count - 1)
+        return Color(nsColor: NSColor(color).blended(withFraction: fraction, of: .white) ?? NSColor(color))
+    }
+
     /// Provider names and colours for `chartForegroundStyleScale`.
     static var providerScale: (domain: [String], range: [Color]) {
         (ProviderID.allKnown.map(\.displayHint), ProviderID.allKnown.map(color))

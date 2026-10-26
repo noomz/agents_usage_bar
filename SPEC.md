@@ -141,7 +141,7 @@ V60|The global hotkey is off by default. The user records it in Settings. It nee
 ### Launch state
 
 V61|Building the dependency graph changes no persisted state. Launch-time migration and pruning of `today.json`, notification state, and `history/` run in `Dependencies.startBackgroundServices()`, which the hosted test bundle never runs. A test that starts services injects an in-memory store, so tests never write the real `app.agents-usage-bar` defaults or Application Support.
-V68|Account split: an account's cost segment is its own `costUSD`. On a day with one account of a billing model, that account takes the provider's cost for that model. Any cost left over is one `unattributed` segment per provider, so a backfilled day with several accounts (V62) is all `unattributed`. Cost is never prorated across accounts (V12). Spend and value segments never stack together (V26). Segments are shades of the provider colour, named by the newest account label (V22). Tokens are never split by account.
+V68|Account split: an account's cost segment is its own `costUSD`. On a day with one account of a billing model, that account takes the provider's cost for that model. Any cost left over is one `unattributed` segment per provider, so a backfilled day with several accounts (V62) is all `unattributed`. Cost is never prorated across accounts (V12). Spend and value segments never stack together (V26). Account segments are shades of the provider colour, named by the newest account label (V22); `unattributed` is grey. Tokens are never split by account.
 
 ## §T
 
@@ -180,7 +180,7 @@ T31|x|S7: Notification-click deep links, teaser and budget ranges.|V51,V58,V67
 T32|x|S7 gate: CI green, install, teaser, hotkey, and a notification click each open the right view.|C7
 T33|x|Fix trend cells: no-record gap vs recorded-no-value `?`, bucket rule, legend entry; golden test with a backfilled subscription day and a nil-cost metered day.|V42,V45,V64
 T34|x|Round `Money` to 6 decimal places at its one initializer; tests for a noisy Double-derived amount, decode of a noisy stored string, and encode output.|V65,I16
-T35|.|Split: provider detail account picker gains Split; cost chart stacks by account with `unattributed`; Quota draws one series per account per window. Tests on synthetic history: ccs per-account cost, a single-account Codex day, a backfilled day.|V12,V26,V54,V62,V68
+T35|x|Split: provider detail account picker gains Split; cost chart stacks by account with `unattributed`; Quota draws one series per account per window. Tests on synthetic history: ccs per-account cost, a single-account Codex day, a backfilled day.|V12,V26,V54,V62,V68
 T36|.|Split: Overview "Split accounts" toggle for Spend per day and the quota band strip.|V26,V53,V68
 T37|.|Split gate: CI green, install, check split views against real history for Claude and Codex.|C7
 
