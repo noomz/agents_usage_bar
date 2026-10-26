@@ -82,6 +82,7 @@ struct AgentsUsageBarApp: App {
                 .environment(dependencies.store)
                 .environment(\.clockService, dependencies.clock)   // B5: only INJECT; key declared in Plan 01.06
                 .environment(\.preferences, dependencies.preferences)  // Plan 05-02: preferences overlay (D-01/D-02)
+                .environment(\.popoverTeaserSource, PopoverTeaserSource(reader: HistoryReader(), dayKeys: dependencies.dayKeys))
                 // Plan 05-03 D-04: apply theme live at root so all windows flip in unison.
                 .preferredColorScheme(dependencies.preferences.theme.colorScheme)
         } label: {

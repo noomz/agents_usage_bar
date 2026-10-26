@@ -172,7 +172,7 @@ T25|x|S6: Provider detail.|V26,V54,V56
 T26|x|S6: Calendar.|V2,V55,V56
 T27|x|S6: Export… using the S2 renderer.|V47,V57
 T28|x|S6 gate: CI green, install, open via each S6 entry point, check every section against real history, export.|C7
-T29|.|S7: Popover teaser.|V20,V59
+T29|x|S7: Popover teaser.|V20,V59
 T30|.|S7: Optional global hotkey in Settings.|V60,C5
 T31|.|S7: Notification-click deep links.|V58
 T32|.|S7 gate: CI green, install, teaser, hotkey, and a notification click each open the right view.|C7

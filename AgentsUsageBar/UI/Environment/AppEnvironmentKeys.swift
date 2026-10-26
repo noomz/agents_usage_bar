@@ -26,6 +26,18 @@ private struct UserPreferencesStoreKey: EnvironmentKey {
     }()
 }
 
+private struct PopoverTeaserSourceKey: EnvironmentKey {
+    static let defaultValue: PopoverTeaserSource? = nil
+}
+
+extension EnvironmentValues {
+    /// Where the popover teaser reads history (SPEC V59). Nil hides the teaser.
+    var popoverTeaserSource: PopoverTeaserSource? {
+        get { self[PopoverTeaserSourceKey.self] }
+        set { self[PopoverTeaserSourceKey.self] = newValue }
+    }
+}
+
 public extension EnvironmentValues {
     /// The `UserPreferencesStore` instance injected at the app root.
     /// Plans 05-03/04/06 read user-mutable knobs (theme, refreshInterval, etc.) from here.

@@ -24,6 +24,7 @@
 		AA1D60000000000000000D0A /* DashboardCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000D0B /* DashboardCalendarView.swift */; };
 		AA1D60000000000000000E0A /* DashboardCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000E0B /* DashboardCalendar.swift */; };
 		AA1D60000000000000000F0A /* DashboardCalendarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000F0B /* DashboardCalendarTests.swift */; };
+		AA1D80000000000000000B0A /* PopoverTeaserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D80000000000000000B0B /* PopoverTeaserTests.swift */; };
 		AA1D60000000000000000B0A /* DashboardProviderDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000B0B /* DashboardProviderDetailView.swift */; };
 		AA1D60000000000000000A0A /* DashboardProviderDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000A0B /* DashboardProviderDetail.swift */; };
 		AA1D6000000000000000090A /* DashboardOverviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000090B /* DashboardOverviewTests.swift */; };
@@ -34,6 +35,7 @@
 		AA000001000000000000004A /* ProviderID.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000004B /* ProviderID.swift */; };
 		AA000001000000000000005A /* ProviderState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000005B /* ProviderState.swift */; };
 		AA000001000000000000006A /* PopoverRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000006B /* PopoverRootView.swift */; };
+		AA1D80000000000000000A0A /* PopoverTeaser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D80000000000000000A0B /* PopoverTeaser.swift */; };
 		AA000001000000000000007A /* ProviderRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000007B /* ProviderRowView.swift */; };
 		AA000001000000000000008A /* FooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000008B /* FooterView.swift */; };
 		AA000001000000000000009A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000009B /* Assets.xcassets */; };
@@ -482,6 +484,7 @@
 		AA1D60000000000000000D0B /* DashboardCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardCalendarView.swift; sourceTree = "<group>"; };
 		AA1D60000000000000000E0B /* DashboardCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardCalendar.swift; sourceTree = "<group>"; };
 		AA1D60000000000000000F0B /* DashboardCalendarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardCalendarTests.swift; sourceTree = "<group>"; };
+		AA1D80000000000000000B0B /* PopoverTeaserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverTeaserTests.swift; sourceTree = "<group>"; };
 		AA1D60000000000000000B0B /* DashboardProviderDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardProviderDetailView.swift; sourceTree = "<group>"; };
 		AA1D60000000000000000A0B /* DashboardProviderDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardProviderDetail.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000090B /* DashboardOverviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardOverviewTests.swift; sourceTree = "<group>"; };
@@ -492,6 +495,7 @@
 		AA000001000000000000004B /* ProviderID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderID.swift; sourceTree = "<group>"; };
 		AA000001000000000000005B /* ProviderState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderState.swift; sourceTree = "<group>"; };
 		AA000001000000000000006B /* PopoverRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverRootView.swift; sourceTree = "<group>"; };
+		AA1D80000000000000000A0B /* PopoverTeaser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverTeaser.swift; sourceTree = "<group>"; };
 		AA000001000000000000007B /* ProviderRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderRowView.swift; sourceTree = "<group>"; };
 		AA000001000000000000008B /* FooterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FooterView.swift; sourceTree = "<group>"; };
 		AA000001000000000000009B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -1443,6 +1447,7 @@
 			isa = PBXGroup;
 			children = (
 				AA000001000000000000006B /* PopoverRootView.swift */,
+				AA1D80000000000000000A0B /* PopoverTeaser.swift */,
 				AA000001000000000000007B /* ProviderRowView.swift */,
 				AA000001000000000000008B /* FooterView.swift */,
 				AA060600000000000000005B /* TotalsHeaderView.swift */,
@@ -1578,6 +1583,7 @@
 				AA1D6000000000000000090B /* DashboardOverviewTests.swift */,
 				AA1D6000000000000000110B /* DashboardExportTests.swift */,
 				AA1D60000000000000000F0B /* DashboardCalendarTests.swift */,
+				AA1D80000000000000000B0B /* PopoverTeaserTests.swift */,
 				AA1D60000000000000000C0B /* DashboardProviderDetailTests.swift */,
 				AA060600000000000000010B /* QuotaBarTests.swift */,
 				AA060600000000000000011B /* RelativeTimestampLabelTests.swift */,
@@ -2078,6 +2084,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA000001000000000000004A /* ProviderID.swift in Sources */,
 				AA000001000000000000005A /* ProviderState.swift in Sources */,
 				AA000001000000000000006A /* PopoverRootView.swift in Sources */,
+				AA1D80000000000000000A0A /* PopoverTeaser.swift in Sources */,
 				AA000001000000000000007A /* ProviderRowView.swift in Sources */,
 				AA000001000000000000008A /* FooterView.swift in Sources */,
 				AA020200000000000000001A /* UsageSnapshot.swift in Sources */,
@@ -2458,6 +2465,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA1D6000000000000000090A /* DashboardOverviewTests.swift in Sources */,
 				AA1D6000000000000000110A /* DashboardExportTests.swift in Sources */,
 				AA1D60000000000000000F0A /* DashboardCalendarTests.swift in Sources */,
+				AA1D80000000000000000B0A /* PopoverTeaserTests.swift in Sources */,
 				AA1D60000000000000000C0A /* DashboardProviderDetailTests.swift in Sources */,
 				AA070100000000000000012A /* CLISettingsTests.swift in Sources */,
 				AA070100000000000000013A /* CLIInstallerTests.swift in Sources */,
