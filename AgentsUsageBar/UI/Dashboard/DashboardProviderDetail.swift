@@ -177,9 +177,11 @@ struct DashboardProviderDetail {
         (stats.tokens, stats.records.contains { $0?.tokens == nil })
     }
 
-    /// Window names seen in range, sorted.
+    /// Window names seen in range, sorted. With split on, the accounts' own names: a record
+    /// keys `<label> <window>` while each account keys its bare window (V69).
     var quotaWindows: [String] {
-        Set(stats.records.compactMap { $0 }.flatMap(\.quota.keys)).sorted()
+        let records = split ? accounts.flatMap(\.stats.records) : stats.records
+        return Set(records.compactMap { $0 }.flatMap(\.quota.keys)).sorted()
     }
 
     /// One bar per day, or with split on, one per account per day (V68).
