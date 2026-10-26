@@ -99,9 +99,13 @@ public actor ClaudeSwitchableProvider: UsageProvider {
                 async let readBox = { [jsonl] in try? await jsonl.fetchWithSessions(now: now) }()
                 let hookSnap = try await hookProvider.fetch(now: now)
                 let read = await readBox
+                let sessions = read?.sessionTokens
                 let owners = hookProvider.sessionAccounts()
+                // Accounts with a session active today; without its tokens they are unknown.
+                let activeToday = Set(hookProvider.sessionAccounts(
+                    modifiedSince: TodayHelper.startOfDay(now, calendar: .current)).values)
                 var accountTokens: [String: Int] = [:]
-                for (session, tokens) in read?.sessionTokens ?? [:] {
+                for (session, tokens) in sessions ?? [:] {
                     guard let owner = owners[session] else { continue }
                     accountTokens[owner, default: 0] += tokens
                 }
@@ -117,9 +121,14 @@ public actor ClaudeSwitchableProvider: UsageProvider {
                     tooltipLabel: hookSnap.tooltipLabel,
                     accounts: hookSnap.accounts?.map { account in
                         var account = account
-                        // A read that worked knows an account with no sessions has 0, so a
-                        // session that moved owner leaves its old account (V9).
-                        account.tokensToday = read == nil ? nil : accountTokens[account.name] ?? 0
+                        // A read that worked knows an account with no session today has 0, so
+                        // a session that moved owner leaves its old account; one with a session
+                        // today but no tokens read stays unknown (V7, V9).
+                        if let tokens = accountTokens[account.name] {
+                            account.tokensToday = tokens
+                        } else {
+                            account.tokensToday = sessions == nil || activeToday.contains(account.name) ? nil : 0
+                        }
                         return account
                     }
                 )

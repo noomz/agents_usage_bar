@@ -418,11 +418,11 @@ public actor ClaudeHookProvider: UsageProvider {
     /// Session ID to owning account for every session still in the feed (V9), attributed
     /// as `fetch` does: newest copy, unreadable payloads skipped, `transcript_path` before the
     /// feed directory. Empty when the feed is missing. The feed keeps about 48h, so older
-    /// sessions are absent.
-    public static func sessionAccounts(feedDir: URL = defaultFeedDir) -> [String: String] {
+    /// sessions are absent; `modifiedSince` keeps only sessions whose newest copy is newer.
+    public static func sessionAccounts(feedDir: URL = defaultFeedDir, modifiedSince: Date? = nil) -> [String: String] {
         guard let entries = try? enumerate(feedDir: feedDir, fileManager: .default) else { return [:] }
         var accounts: [String: String] = [:]
-        for entry in newestCopies(entries) {
+        for entry in newestCopies(entries) where modifiedSince.map({ entry.mtime >= $0 }) ?? true {
             guard let data = try? Data(contentsOf: entry.url),
                   let payload = try? ClaudeHookPayload.decode(data)
             else { continue }
@@ -432,9 +432,9 @@ public actor ClaudeHookProvider: UsageProvider {
         return accounts
     }
 
-    /// `sessionAccounts(feedDir:)` for this provider's feed.
-    public nonisolated func sessionAccounts() -> [String: String] {
-        Self.sessionAccounts(feedDir: feedDir)
+    /// `sessionAccounts(feedDir:modifiedSince:)` for this provider's feed.
+    public nonisolated func sessionAccounts(modifiedSince: Date? = nil) -> [String: String] {
+        Self.sessionAccounts(feedDir: feedDir, modifiedSince: modifiedSince)
     }
 
     /// Deletes session files whose mtime is older than the 48h cleanup horizon.

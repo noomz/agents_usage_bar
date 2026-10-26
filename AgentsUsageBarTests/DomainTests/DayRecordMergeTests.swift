@@ -238,4 +238,23 @@ struct DayRecordMergeTests {
         #expect(record.accounts.map(\.tokens) == [50, 0])
         #expect(record.tokenSegments.map(\.tokens).reduce(0, +) == 50)
     }
+
+
+    @Test("an account that drops out of a sample with account tokens goes to 0 (V9, B15)")
+    func accountLeavingSampleGoesToZero() {
+        func poll(_ owners: [String: Int]) -> UsageSnapshot {
+            var sample = Self.sample("claude", tokens: 50)
+            sample.accounts = owners.keys.sorted().map {
+                UsageSnapshot.AccountUsage(name: $0, costTodayUSD: nil, quota: nil, quotaWindows: nil, tokensToday: owners[$0])
+            }
+            return sample
+        }
+        // personal owned S, then S's newest copy moved under work and personal left the feed.
+        let record = fold(poll(["personal": 50]), poll(["work": 50]))
+        #expect(record.accounts.map(\.key) == ["personal", "work"])
+        #expect(record.accounts.map(\.tokens) == [0, 50])
+        // A sample without account tokens (session reads) leaves them as they were.
+        let kept = fold(poll(["personal": 50]), Self.sample("claude", tokens: 50))
+        #expect(kept.accounts.first { $0.key == "personal" }?.tokens == 50)
+    }
 }
