@@ -45,9 +45,10 @@ struct DashboardProviderDetail {
 
     struct TokenPoint: Identifiable, Equatable {
         let key: String
+        var part: Part = .whole
         let tokens: Int
         let backfilled: Bool
-        var id: String { key }
+        var id: String { "\(key) \(part)" }
     }
 
     /// One day of one window: a bar from the end-of-day fraction up to the peak (V54).
@@ -110,12 +111,12 @@ struct DashboardProviderDetail {
 
     /// A record seen through one account, or nil when the account was not seen that day.
     /// Tokens, cost, and balance carry over only when the account is the record's only one
-    /// or reports its own cost (V9); otherwise they are unknown.
+    /// or reports its own tokens or cost (V9); otherwise they are unknown.
     static func narrow(_ record: DayRecord, to key: String) -> DayRecord? {
         guard let account = record.accounts.first(where: { $0.key == key }) else { return nil }
         let alone = record.accounts.count == 1
         var narrowed = record
-        narrowed.tokens = alone ? record.tokens : nil
+        narrowed.tokens = alone ? record.tokens : account.tokens
         narrowed.costUSD = account.costUSD ?? (alone ? record.costUSD : nil)
         narrowed.balanceUSD = alone ? record.balanceUSD : nil
         narrowed.quota = account.quota
@@ -165,10 +166,18 @@ struct DashboardProviderDetail {
         }
     }
 
+    /// Known tokens per day; with split on, one point per account part, stacked (V68).
     var tokenPoints: [TokenPoint] {
-        zip(range.keys, stats.records).compactMap { key, record in
-            guard let record, let tokens = record.tokens else { return nil }
-            return TokenPoint(key: key, tokens: tokens, backfilled: record.origin == .backfilled)
+        zip(range.keys, stats.records).flatMap { key, record -> [TokenPoint] in
+            guard let record else { return [] }
+            let backfilled = record.origin == .backfilled
+            guard split else {
+                return record.tokens.map { [TokenPoint(key: key, tokens: $0, backfilled: backfilled)] } ?? []
+            }
+            return record.tokenSegments.map { segment in
+                TokenPoint(key: key, part: segment.account.map(Part.account) ?? .unattributed,
+                           tokens: segment.tokens, backfilled: backfilled)
+            }
         }
     }
 

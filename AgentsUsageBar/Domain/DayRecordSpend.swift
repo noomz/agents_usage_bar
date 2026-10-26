@@ -58,6 +58,29 @@ extension DayRecord {
     }
 }
 
+extension DayRecord {
+    /// `tokens` broken into accounts (V68): a lone account takes the record's tokens;
+    /// otherwise each account with its own tokens (V9) gets them, and what is left is one
+    /// unattributed segment, so a day recorded before account tokens is all unattributed.
+    /// Nothing is prorated (V12). Unknown tokens have no segments.
+    public var tokenSegments: [DayTokenSegment] {
+        guard let tokens else { return [] }
+        if accounts.count == 1 { return [DayTokenSegment(account: accounts[0].key, tokens: tokens)] }
+        var segments = accounts.compactMap { account in
+            account.tokens.map { DayTokenSegment(account: account.key, tokens: $0) }
+        }
+        let rest = tokens - segments.reduce(0) { $0 + $1.tokens }
+        if rest > 0 { segments.append(DayTokenSegment(account: nil, tokens: rest)) }
+        return segments
+    }
+}
+
+/// One account's part of a day's tokens (V68). A nil account is unattributed.
+public struct DayTokenSegment: Sendable, Equatable {
+    public var account: String?
+    public var tokens: Int
+}
+
 /// One account's part of a day's spend or value (V68). A nil account is unattributed.
 public struct DayCostSegment: Sendable, Equatable {
     public var account: String?

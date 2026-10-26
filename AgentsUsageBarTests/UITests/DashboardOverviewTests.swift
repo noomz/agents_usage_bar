@@ -179,8 +179,10 @@ struct DashboardOverviewTests {
         // Series are named by the newest account label (V22).
         #expect(split.seriesName(.codex, .account("a1")) == "Codex · pro")
         #expect(split.seriesName(.codex, .unattributed) == "Codex · unattributed")
-        // Tokens stay per provider.
-        #expect(split.tokensPerDay == whole.tokensPerDay)
+        // Tokens split too; accounts without their own tokens leave one unattributed part
+        // per provider day, and the totals match (V68).
+        #expect(split.tokensPerDay.filter { $0.provider == .claude }.map(\.part) == [.unattributed])
+        #expect(split.tokensPerDay.map(\.amount).reduce(0, +) == whole.tokensPerDay.map(\.amount).reduce(0, +))
     }
 
     @Test("split accounts: one quota row per account window, gap when the account was not seen (V53, V68)")
@@ -286,5 +288,22 @@ struct DashboardOverviewTests {
 
         model.show(DashboardRoute())
         #expect(model.focus == nil)
+    }
+
+
+    @Test("split accounts stacks tokens by account, rest unattributed, totals unchanged (V53, V68)")
+    func splitTokens() {
+        let range = DashboardRange.days7.statsRange(today: Self.today)
+        let day = DayFile(date: Self.today, timeZone: "UTC", records: [DayRecord(
+            provider: .claude, tokens: 300, accounts: [
+                DayAccount(key: "work-demo", label: "work-demo", billingModel: .subscription, tokens: 200),
+                DayAccount(key: "default", label: "default", billingModel: .subscription, tokens: 60),
+            ], origin: .observed)])
+        let split = DashboardOverview(days: [day], range: range, split: true)
+        #expect(split.tokensPerDay.map(\.part) == [.account("work-demo"), .account("default"), .unattributed])
+        #expect(split.tokensPerDay.map(\.amount) == [200, 60, 40])
+        #expect(split.seriesName(.claude, .account("work-demo")) == "\(ProviderID.claude.displayHint) · work-demo")
+        let whole = DashboardOverview(days: [day], range: range)
+        #expect(whole.tokensPerDay.map(\.amount) == [300])
     }
 }
