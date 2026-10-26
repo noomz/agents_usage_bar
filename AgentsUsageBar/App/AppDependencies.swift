@@ -40,6 +40,9 @@ public final class Dependencies {
     public let welcomeWindowController: WelcomeWindowController
     /// The one dashboard window (SPEC V50), shown by `agentsusagebar://dashboard` URLs.
     public let dashboardWindowController: DashboardWindowController
+    /// The optional global shortcut that opens the dashboard (SPEC V60); registered from
+    /// `startBackgroundServices()`, never by the hosted test bundle.
+    public let dashboardHotkey = DashboardHotkeyRegistrar()
     /// Notification FSM state, migrated and pruned by `startBackgroundServices()`.
     public let notificationState: any NotificationStateStorage
     public let dayKeys: DayKeyOwner
@@ -79,6 +82,8 @@ public final class Dependencies {
     public private(set) var backgroundServicesStarted = false
     /// Long-lived `observePreferences` loop (D-04 hot-reload), owned for the app lifetime.
     public private(set) var preferencesObservation: Task<Void, Never>?
+    /// Keeps the dashboard shortcut in step with Settings, owned for the app lifetime.
+    public private(set) var hotkeyObservation: Task<Void, Never>?
 
     /// Starts everything that must be live from app launch, not from first popover open
     /// (issue #18): notification delegate, preferences hot-reload, poll loop, Welcome window.
@@ -109,6 +114,9 @@ public final class Dependencies {
             await AppDependencies.observePreferences(
                 preferences, scheduler: scheduler, store: store,
                 baseBudgets: ConfigStore(env: ProcessInfoEnvReader()).load().budgets)
+        }
+        hotkeyObservation = Task { [preferences, dashboardHotkey] in
+            await dashboardHotkey.follow(preferences)
         }
         await scheduler.start()
         // Plan 05-05 — Welcome window on first launch (D-10); no-op once hasSeenWelcome.

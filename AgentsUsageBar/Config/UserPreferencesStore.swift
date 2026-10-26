@@ -16,6 +16,7 @@ public enum AUBDefaultsKey {
     public static let claudeSource    = "aub.provider.claude.source"  // String (ClaudeUsageSource.rawValue)
     public static let paceWarningsEnabled = "aub.paceWarningsEnabled"  // Bool (default true)
     public static let resetNotificationsEnabled = "aub.resetNotificationsEnabled"  // Bool (default true)
+    public static let dashboardHotkey = "aub.dashboardHotkey"  // Data (JSON DashboardHotkey); absent = off
     /// Per-provider enabled flag: "aub.provider.<providerID.rawValue>.enabled"
     public static func providerEnabled(_ id: ProviderID) -> String {
         "aub.provider.\(id.rawValue).enabled"
@@ -104,6 +105,9 @@ public final class UserPreferencesStore {
     /// zero = no budget even when config sets one.
     public private(set) var budgetOverrides: [BudgetScope: Double] = [:]
 
+    /// The global shortcut that opens the dashboard (SPEC V60). Nil, the default, is off.
+    public private(set) var dashboardHotkey: DashboardHotkey?
+
     // MARK: - Private
 
     private let defaults: UserDefaults
@@ -182,6 +186,14 @@ public final class UserPreferencesStore {
         }
     }
 
+    public func setDashboardHotkey(_ v: DashboardHotkey?) {
+        if let v, let data = try? JSONEncoder().encode(v) {
+            defaults.set(data, forKey: AUBDefaultsKey.dashboardHotkey)
+        } else {
+            defaults.removeObject(forKey: AUBDefaultsKey.dashboardHotkey)
+        }
+    }
+
     // MARK: - Private load
 
     private func loadAll() {
@@ -227,5 +239,8 @@ public final class UserPreferencesStore {
             }
         }
         budgetOverrides = budgets
+
+        dashboardHotkey = defaults.data(forKey: AUBDefaultsKey.dashboardHotkey)
+            .flatMap { try? JSONDecoder().decode(DashboardHotkey.self, from: $0) }
     }
 }
