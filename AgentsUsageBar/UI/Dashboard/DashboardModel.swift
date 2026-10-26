@@ -18,6 +18,8 @@ final class DashboardModel {
     var range: DashboardRange = .days14
     /// Providers switched off by the chips, shared by Overview and the Calendar heatmap (V53).
     var excluded: Set<ProviderID> = []
+    /// Overview's "Split accounts" toggle, off by default (V53, V68).
+    var splitAccounts = false
     /// Calendar's selected day; nil is today.
     var selectedDay: String?
     var calendarMetric: DashboardCalendar.Metric = .spend
@@ -84,7 +86,8 @@ final class DashboardModel {
     }
 
     var overview: DashboardOverview {
-        DashboardOverview(days: days, range: range.statsRange(today: today), excluded: excluded, order: order)
+        DashboardOverview(
+            days: days, range: range.statsRange(today: today), excluded: excluded, order: order, split: splitAccounts)
     }
 
     /// Every retained day, whatever the range (V52).

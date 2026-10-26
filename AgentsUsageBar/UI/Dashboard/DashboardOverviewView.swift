@@ -3,7 +3,8 @@ import SwiftUI
 
 /// The Overview section (SPEC V53): tiles, month budget bars, spend per day stacked by
 /// provider (metered only), an event lane, a quota band strip, and tokens per day. The range
-/// and provider chips are shared state on the model. Markers follow V56.
+/// and provider chips are shared state on the model. Markers follow V56. "Split accounts"
+/// breaks spend per day and the quota strip into accounts (V68).
 struct DashboardOverviewView: View {
     @Bindable var model: DashboardModel
     let budgets: [DashboardBudget]
@@ -14,7 +15,13 @@ struct DashboardOverviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 DashboardRangeHeader(model: model)
-                chips
+                HStack {
+                    chips
+                    Spacer()
+                    Toggle("Split accounts", isOn: $model.splitAccounts)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                }
                 tiles(overview)
                 if !budgets.isEmpty { budgetSection }
                 DashboardSection("Spend per day") { spendChart(overview) }
@@ -95,11 +102,11 @@ struct DashboardOverviewView: View {
                     BarMark(
                         x: .value("Day", DashboardRange.date(forKey: day.key), unit: .day),
                         y: .value("Spend", day.amount))
-                        .foregroundStyle(by: .value("Provider", day.provider.displayHint))
+                        .foregroundStyle(by: .value("Provider", overview.seriesName(day.provider, day.part)))
                         .opacity(day.estimated || day.backfilled ? 0.55 : 1)
                 }
             }
-            .chartForegroundStyleScale(domain: DashboardPalette.providerScale.domain, range: DashboardPalette.providerScale.range)
+            .chartForegroundStyleScale(domain: spendScale(overview).domain, range: spendScale(overview).range)
             .chartXScale(domain: overview.range.chartDomain)
             .chartYAxis {
                 AxisMarks { value in
@@ -110,8 +117,25 @@ struct DashboardOverviewView: View {
                 }
             }
             .frame(height: 200)
-            DashboardNote("lighter = estimated (~$) or backfilled · grey band = no data")
+            DashboardNote(
+                (overview.splitAccounts.isEmpty ? "" : "split by account · unattributed = spend no single account reports · ")
+                    + "lighter = estimated (~$) or backfilled · grey band = no data")
         }
+    }
+
+    /// Provider colours, or with split on, a shade of the provider colour per account and grey
+    /// for unattributed (V68). Only series drawn in range are kept, so the legend names them.
+    private func spendScale(_ overview: DashboardOverview) -> (domain: [String], range: [Color]) {
+        guard !overview.splitAccounts.isEmpty else { return DashboardPalette.providerScale }
+        let drawn = Set(overview.spendPerDay.map { overview.seriesName($0.provider, $0.part) })
+        let entries = overview.spendProviders.flatMap { p -> [(String, Color)] in
+            let color = DashboardPalette.color(p.id)
+            guard let accounts = overview.splitAccounts[p.id] else { return [(p.id.displayHint, color)] }
+            return accounts.enumerated().map { index, account in
+                (overview.seriesName(p.id, .account(account.key)), DashboardPalette.shade(color, index, of: accounts.count))
+            } + [(overview.seriesName(p.id, .unattributed), .gray)]
+        }.filter { drawn.contains($0.0) }
+        return (entries.map(\.0), entries.map(\.1))
     }
 
     private func eventLane(_ overview: DashboardOverview) -> some View {
@@ -132,10 +156,12 @@ struct DashboardOverviewView: View {
             ForEach(overview.quotaRows) { row in
                 HStack(spacing: 6) {
                     Button { model.section = .provider(row.provider) } label: {
-                        Text("\(row.provider.displayHint) \(row.window)").font(.caption)
+                        Text([row.provider.displayHint, row.account?.label, row.window].compactMap { $0 }.joined(separator: " "))
+                            .font(.caption)
+                            .lineLimit(1)
                     }
                     .buttonStyle(.link)
-                    .frame(width: 130, alignment: .leading)
+                    .frame(width: overview.splitAccounts.isEmpty ? 130 : 200, alignment: .leading)
                     HStack(spacing: 1) {
                         ForEach(Array(row.cells.enumerated()), id: \.offset) { _, cell in
                             quotaCell(cell)

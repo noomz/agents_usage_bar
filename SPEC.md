@@ -181,7 +181,7 @@ T32|x|S7 gate: CI green, install, teaser, hotkey, and a notification click each 
 T33|x|Fix trend cells: no-record gap vs recorded-no-value `?`, bucket rule, legend entry; golden test with a backfilled subscription day and a nil-cost metered day.|V42,V45,V64
 T34|x|Round `Money` to 6 decimal places at its one initializer; tests for a noisy Double-derived amount, decode of a noisy stored string, and encode output.|V65,I16
 T35|x|Split: provider detail account picker gains Split; cost chart stacks by account with `unattributed`; Quota draws one series per account per window. Tests on synthetic history: ccs per-account cost, a single-account Codex day, a backfilled day.|V12,V26,V54,V62,V68
-T36|.|Split: Overview "Split accounts" toggle for Spend per day and the quota band strip.|V26,V53,V68
+T36|x|Split: Overview "Split accounts" toggle for Spend per day and the quota band strip.|V26,V53,V68
 T37|.|Split gate: CI green, install, check split views against real history for Claude and Codex.|C7
 
 ## §B

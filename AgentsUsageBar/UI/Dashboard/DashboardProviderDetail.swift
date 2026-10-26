@@ -79,21 +79,14 @@ struct DashboardProviderDetail {
         let byKey = Dictionary(days.map { ($0.date, $0) }, uniquingKeysWith: { first, _ in first })
         let records = range.keys.map { byKey[$0]?.records.first { $0.provider == id } }
 
-        var order: [String] = []
-        var newest: [String: DayAccount] = [:]
-        for account in records.compactMap({ $0 }).flatMap(\.accounts) {
-            if newest[account.key] == nil { order.append(account.key) }
-            newest[account.key] = account
-        }
-        accounts = order.compactMap { key in
-            newest[key].map {
-                Account(
-                    key: key, label: $0.label, billingModel: $0.billingModel, plan: $0.plan,
-                    stats: ProviderStats(id: id, records: records.map { $0.flatMap { Self.narrow($0, to: key) } }))
-            }
+        let seen = Self.newestAccounts(records)
+        accounts = seen.map { newest in
+            Account(
+                key: newest.key, label: newest.label, billingModel: newest.billingModel, plan: newest.plan,
+                stats: ProviderStats(id: id, records: records.map { $0.flatMap { Self.narrow($0, to: newest.key) } }))
         }
 
-        let selected = account.flatMap { key in order.contains(key) ? key : nil }
+        let selected = account.flatMap { key in seen.contains { $0.key == key } ? key : nil }
         self.account = selected
         self.split = split && selected == nil && accounts.count > 1
         stats = accounts.first { $0.key == selected }?.stats ?? ProviderStats(id: id, records: records)
@@ -102,6 +95,17 @@ struct DashboardProviderDetail {
         events = days.filter { keys.contains($0.date) }.flatMap(\.events)
             .filter { $0.provider == id && (selected == nil || $0.account == nil || $0.account == selected) }
             .sorted { $0.time > $1.time }
+    }
+
+    /// Every account in `records`, in first-seen order, each as its newest entry (V22).
+    static func newestAccounts(_ records: [DayRecord?]) -> [DayAccount] {
+        var order: [String] = []
+        var newest: [String: DayAccount] = [:]
+        for account in records.compactMap({ $0 }).flatMap(\.accounts) {
+            if newest[account.key] == nil { order.append(account.key) }
+            newest[account.key] = account
+        }
+        return order.compactMap { newest[$0] }
     }
 
     /// A record seen through one account, or nil when the account was not seen that day.

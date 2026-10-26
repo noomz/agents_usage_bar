@@ -139,6 +139,63 @@ struct DashboardOverviewTests {
         #expect(DashboardQuotaCell.band(peak: 1.0) == .exceeded)
     }
 
+    /// Codex: two metered accounts today (one reports cost), one account yesterday. Claude:
+    /// two subscription accounts today, each with a 5h window.
+    private static let splitDays: [DayFile] = [
+        DayFile(date: "2026-10-24", timeZone: "UTC", records: [
+            DayRecord(provider: .codex, tokens: 100, costUSD: Money(4),
+                      accounts: [DayAccount(key: "a1", label: "plus", billingModel: .metered)], origin: .observed),
+        ]),
+        DayFile(date: today, timeZone: "UTC", records: [
+            DayRecord(provider: .codex, tokens: 200, costUSD: Money(5), accounts: [
+                DayAccount(key: "a1", label: "pro", billingModel: .metered, costUSD: Money(3)),
+                DayAccount(key: "b2", label: "team", billingModel: .metered),
+            ], origin: .observed),
+            DayRecord(provider: .claude, tokens: 300, costUSD: Money(7), costEstimated: true, accounts: [
+                DayAccount(key: "work-demo", label: "work-demo", billingModel: .subscription,
+                           quota: ["5h": QuotaDay(peak: 0.9, endOfDay: 0.2)]),
+                DayAccount(key: "default", label: "default", billingModel: .subscription,
+                           quota: ["5h": QuotaDay(peak: 0.4, endOfDay: 0.1)]),
+            ], origin: .observed),
+        ]),
+    ]
+
+    @Test("split accounts stacks metered spend by account, rest unattributed, totals unchanged (V26, V53, V68)")
+    func splitSpend() {
+        let range = DashboardRange.days7.statsRange(today: Self.today)
+        let whole = DashboardOverview(days: Self.splitDays, range: range)
+        #expect(whole.splitAccounts.isEmpty)
+        #expect(whole.spendPerDay.allSatisfy { $0.part == .whole })
+
+        let split = DashboardOverview(days: Self.splitDays, range: range, split: true)
+        let codex = split.spendPerDay.filter { $0.provider == .codex }
+        #expect(codex.map(\.key) == ["2026-10-24", Self.today, Self.today])
+        #expect(codex.map(\.part) == [.account("a1"), .account("a1"), .unattributed])
+        #expect(codex.map(\.amount) == [4, 3, 2])
+        // Claude is subscription only: value never enters spend per day (V26).
+        #expect(!split.spendPerDay.contains { $0.provider == .claude })
+        #expect(split.spendPerDay.map(\.amount).reduce(0, +) == whole.spendPerDay.map(\.amount).reduce(0, +))
+        #expect(split.spend == whole.spend)
+        // Series are named by the newest account label (V22).
+        #expect(split.seriesName(.codex, .account("a1")) == "Codex · pro")
+        #expect(split.seriesName(.codex, .unattributed) == "Codex · unattributed")
+        // Tokens stay per provider.
+        #expect(split.tokensPerDay == whole.tokensPerDay)
+    }
+
+    @Test("split accounts: one quota row per account window, gap when the account was not seen (V53, V68)")
+    func splitQuotaStrip() {
+        let range = DashboardRange.days7.statsRange(today: Self.today)
+        let split = DashboardOverview(days: Self.splitDays, range: range, split: true)
+        let claude = split.quotaRows.filter { $0.provider == .claude }
+        #expect(claude.map(\.account?.label) == ["work-demo", "default"])
+        #expect(claude.map(\.window) == ["5h", "5h"])
+        #expect(claude.map { $0.cells.last } == [.band(.warning), .band(.normal)])
+        #expect(claude.allSatisfy { $0.cells.dropLast().allSatisfy { $0 == .gap } })
+        let whole = DashboardOverview(days: Self.splitDays, range: range)
+        #expect(whole.quotaRows.allSatisfy { $0.account == nil })
+    }
+
     @Test("a spend provider without a record is a no-data band; estimated bars are marked (V56)")
     func spendMarkers() {
         var days = Self.days
