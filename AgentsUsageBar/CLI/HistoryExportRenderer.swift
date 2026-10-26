@@ -17,13 +17,26 @@ public enum HistoryExportRenderer {
     public struct Scope: Sendable {
         public var range: StatsRange
         public var provider: ProviderID?
+        /// Providers switched off by the dashboard chips (V57); the CLI excludes none.
+        public var excluded: Set<ProviderID>
         /// Whether a provider is enabled; an enabled provider with no record on a day is a gap.
         public var isEnabled: @Sendable (ProviderID) -> Bool
 
-        public init(range: StatsRange, provider: ProviderID? = nil, isEnabled: @escaping @Sendable (ProviderID) -> Bool = { _ in true }) {
+        public init(
+            range: StatsRange,
+            provider: ProviderID? = nil,
+            excluded: Set<ProviderID> = [],
+            isEnabled: @escaping @Sendable (ProviderID) -> Bool = { _ in true }
+        ) {
             self.range = range
             self.provider = provider
+            self.excluded = excluded
             self.isEnabled = isEnabled
+        }
+
+        func contains(_ id: ProviderID?) -> Bool {
+            guard let id else { return provider == nil }
+            return (provider == nil || id == provider) && !excluded.contains(id)
         }
     }
 
@@ -266,7 +279,7 @@ public enum HistoryExportRenderer {
     /// provider never configured is not a gap every day. Today is the one unsealed day (V16).
     static func exportDays(_ days: [DayFile], scope: Scope) -> [Day] {
         let byKey = Dictionary(days.map { ($0.date, $0) }, uniquingKeysWith: { first, _ in first })
-        let inScope: (ProviderID?) -> Bool = { scope.provider == nil || $0 == scope.provider }
+        let inScope = scope.contains
         let seen = Set(scope.range.keys.flatMap { byKey[$0]?.records.map(\.provider) ?? [] })
         let tracked = seen.union(scope.provider.map { [$0] } ?? []).filter { inScope($0) && scope.isEnabled($0) }
         return scope.range.keys.map { key in

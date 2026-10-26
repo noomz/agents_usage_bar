@@ -16,6 +16,7 @@ public final class DashboardWindowController {
     private let store: AggregateStore
     private let dayKeys: DayKeyOwner
     private let reader: HistoryReader
+    private let preferences: UserPreferencesStore
 
     private var window: NSWindow?
     private var model: DashboardModel?
@@ -23,9 +24,13 @@ public final class DashboardWindowController {
     // Written on the MainActor; read from nonisolated deinit (mirrors WelcomeWindowController).
     nonisolated(unsafe) private var closeObserver: NSObjectProtocol?
 
-    public init(store: AggregateStore, dayKeys: DayKeyOwner, reader: HistoryReader = HistoryReader()) {
+    public init(
+        store: AggregateStore, dayKeys: DayKeyOwner, preferences: UserPreferencesStore,
+        reader: HistoryReader = HistoryReader()
+    ) {
         self.store = store
         self.dayKeys = dayKeys
+        self.preferences = preferences
         self.reader = reader
     }
 
@@ -46,7 +51,9 @@ public final class DashboardWindowController {
 
         let model = DashboardModel(
             route: route, reader: reader, dayKeys: dayKeys, order: UserDefaults.standard.aubProviderOrder)
-        let hosting = NSHostingController(rootView: DashboardRootView(model: model, store: store))
+        let hosting = NSHostingController(
+            rootView: DashboardRootView(model: model, store: store, onExport: { [weak self] in self?.export() }))
+        hosting.sceneBridgingOptions = [.toolbars]
         let win = NSWindow(contentViewController: hosting)
         win.title = Self.title
         win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
@@ -72,6 +79,14 @@ public final class DashboardWindowController {
         self.model = model
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
+    }
+
+    /// Export… from the toolbar or File ▸ Export… ⌘E (V57). Does nothing while the window is
+    /// closed or its history is not loaded.
+    public func export() {
+        guard let window, let model, model.isLoaded, !model.days.isEmpty else { return }
+        let enabled = preferences.providerEnabled
+        DashboardExporter.run(model: model, window: window, isEnabled: { enabled[$0] ?? true })
     }
 
     private func release() {

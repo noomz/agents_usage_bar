@@ -19,6 +19,8 @@
 		AA1D6000000000000000060A /* DashboardModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000060B /* DashboardModel.swift */; };
 		AA1D6000000000000000070A /* DashboardSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000070B /* DashboardSidebarView.swift */; };
 		AA1D6000000000000000080A /* DashboardOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000080B /* DashboardOverviewView.swift */; };
+		AA1D6000000000000000100A /* DashboardExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000100B /* DashboardExporter.swift */; };
+		AA1D6000000000000000110A /* DashboardExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000110B /* DashboardExportTests.swift */; };
 		AA1D60000000000000000D0A /* DashboardCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000D0B /* DashboardCalendarView.swift */; };
 		AA1D60000000000000000E0A /* DashboardCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000E0B /* DashboardCalendar.swift */; };
 		AA1D60000000000000000F0A /* DashboardCalendarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D60000000000000000F0B /* DashboardCalendarTests.swift */; };
@@ -475,6 +477,8 @@
 		AA1D6000000000000000060B /* DashboardModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModel.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000070B /* DashboardSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardSidebarView.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000080B /* DashboardOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardOverviewView.swift; sourceTree = "<group>"; };
+		AA1D6000000000000000100B /* DashboardExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardExporter.swift; sourceTree = "<group>"; };
+		AA1D6000000000000000110B /* DashboardExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardExportTests.swift; sourceTree = "<group>"; };
 		AA1D60000000000000000D0B /* DashboardCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardCalendarView.swift; sourceTree = "<group>"; };
 		AA1D60000000000000000E0B /* DashboardCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardCalendar.swift; sourceTree = "<group>"; };
 		AA1D60000000000000000F0B /* DashboardCalendarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardCalendarTests.swift; sourceTree = "<group>"; };
@@ -1460,6 +1464,7 @@
 				AA1D6000000000000000020B /* DashboardWindowController.swift */,
 				AA1D6000000000000000030B /* DashboardRootView.swift */,
 				AA1D6000000000000000080B /* DashboardOverviewView.swift */,
+				AA1D6000000000000000100B /* DashboardExporter.swift */,
 				AA1D60000000000000000D0B /* DashboardCalendarView.swift */,
 				AA1D60000000000000000E0B /* DashboardCalendar.swift */,
 				AA1D60000000000000000B0B /* DashboardProviderDetailView.swift */,
@@ -1571,6 +1576,7 @@
 			children = (
 				AA1D6000000000000000040B /* DashboardRouteTests.swift */,
 				AA1D6000000000000000090B /* DashboardOverviewTests.swift */,
+				AA1D6000000000000000110B /* DashboardExportTests.swift */,
 				AA1D60000000000000000F0B /* DashboardCalendarTests.swift */,
 				AA1D60000000000000000C0B /* DashboardProviderDetailTests.swift */,
 				AA060600000000000000010B /* QuotaBarTests.swift */,
@@ -2059,6 +2065,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA1D6000000000000000020A /* DashboardWindowController.swift in Sources */,
 				AA1D6000000000000000030A /* DashboardRootView.swift in Sources */,
 				AA1D6000000000000000080A /* DashboardOverviewView.swift in Sources */,
+				AA1D6000000000000000100A /* DashboardExporter.swift in Sources */,
 				AA1D60000000000000000D0A /* DashboardCalendarView.swift in Sources */,
 				AA1D60000000000000000E0A /* DashboardCalendar.swift in Sources */,
 				AA1D60000000000000000B0A /* DashboardProviderDetailView.swift in Sources */,
@@ -2449,6 +2456,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA070100000000000000011A /* AUBCommandParseTests.swift in Sources */,
 				AA1D6000000000000000040A /* DashboardRouteTests.swift in Sources */,
 				AA1D6000000000000000090A /* DashboardOverviewTests.swift in Sources */,
+				AA1D6000000000000000110A /* DashboardExportTests.swift in Sources */,
 				AA1D60000000000000000F0A /* DashboardCalendarTests.swift in Sources */,
 				AA1D60000000000000000C0A /* DashboardProviderDetailTests.swift in Sources */,
 				AA070100000000000000012A /* CLISettingsTests.swift in Sources */,

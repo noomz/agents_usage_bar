@@ -94,6 +94,39 @@ final class DashboardModel {
         DashboardBudget.all(days: days, today: today, budgets: config)
     }
 
+    /// What Export… covers (V57): Overview its range and chips, provider detail that provider
+    /// and range, Calendar every retained day.
+    func exportScope(isEnabled: @escaping @Sendable (ProviderID) -> Bool) -> HistoryExportRenderer.Scope {
+        let range = self.range.statsRange(today: today)
+        switch section {
+        case .overview:
+            return .init(range: range, excluded: excluded, isEnabled: isEnabled)
+        case .provider(let id):
+            return .init(range: range, provider: id, isEnabled: isEnabled)
+        case .calendar:
+            let oldest = days.map(\.date).min()
+            let all = (try? StatsRange.resolve(today: today, days: nil, since: nil, until: nil, oldest: oldest).get())
+                ?? StatsRange(keys: [today], today: today)
+            return .init(range: all, isEnabled: isEnabled)
+        }
+    }
+
+    /// Renders the held days with the `aub stats` renderer, so the bytes match the CLI for
+    /// the same scope (V47). Reads nothing (V20).
+    func export(
+        _ format: DashboardExportFormat,
+        isEnabled: @escaping @Sendable (ProviderID) -> Bool,
+        exportedAt: Date
+    ) throws -> String {
+        let scope = exportScope(isEnabled: isEnabled)
+        switch format {
+        case .json:
+            return try HistoryExportRenderer.json(days, scope: scope, exportedAt: exportedAt)
+        case .csv(let table):
+            return HistoryExportRenderer.csv(days, scope: scope, table: table)
+        }
+    }
+
     func toggle(_ provider: ProviderID) {
         if excluded.contains(provider) {
             excluded.remove(provider)

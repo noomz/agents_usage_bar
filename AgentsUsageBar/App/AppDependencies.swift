@@ -70,7 +70,7 @@ public final class Dependencies {
         self.notificationState = notificationState
         self.dayKeys = dayKeys
         self.history = history
-        dashboardWindowController = DashboardWindowController(store: store, dayKeys: dayKeys)
+        dashboardWindowController = DashboardWindowController(store: store, dayKeys: dayKeys, preferences: preferences)
     }
 
     // MARK: - Issue #18 — launch-time startup
