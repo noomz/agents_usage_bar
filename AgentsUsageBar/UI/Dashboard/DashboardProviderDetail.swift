@@ -2,7 +2,8 @@ import Foundation
 
 /// What provider detail shows for one provider, range, and account (SPEC V54). Selecting an
 /// account narrows every tab to it: its cost, its quota windows, and the days it was seen.
-/// Totals the provider does not report per account stay unknown, never split (V12).
+/// Totals the provider does not report per account stay unknown, never split (V12). Split
+/// keeps every account and breaks cost and quota into accounts (V68).
 struct DashboardProviderDetail {
     enum Tab: Hashable, CaseIterable {
         case cost, tokens, quota, accounts
@@ -25,13 +26,21 @@ struct DashboardProviderDetail {
         var id: String { key }
     }
 
+    /// Whose cost a point is: the whole day, or with split on, one account or the rest (V68).
+    enum Part: Hashable {
+        case whole
+        case account(String)
+        case unattributed
+    }
+
     struct CostPoint: Identifiable, Equatable {
         let key: String
         let series: Series
+        var part: Part = .whole
         let amount: Double
         let estimated: Bool
         let backfilled: Bool
-        var id: String { "\(key) \(series.rawValue)" }
+        var id: String { "\(key) \(series.rawValue) \(part)" }
     }
 
     struct TokenPoint: Identifiable, Equatable {
@@ -47,12 +56,16 @@ struct DashboardProviderDetail {
         let window: String
         let peak: Double
         let endOfDay: Double
-        var id: String { "\(key) \(window)" }
+        /// With split on, the account the bar belongs to (V68).
+        var account: String?
+        var id: String { "\(key) \(window) \(account ?? "")" }
     }
 
     let range: StatsRange
     /// The selected account key, nil for every account. A key not seen in range is dropped.
     let account: String?
+    /// Split by account: only with every account shown and more than one seen (V68).
+    let split: Bool
     /// The provider's days in range, narrowed to `account`. Nil is a gap.
     let stats: ProviderStats
     /// Every account seen in range, for the picker, in first-seen order.
@@ -61,7 +74,7 @@ struct DashboardProviderDetail {
     /// provider-level events stay and other accounts' events go.
     let events: [UsageEvent]
 
-    init(id: ProviderID, days: [DayFile], range: StatsRange, account: String? = nil) {
+    init(id: ProviderID, days: [DayFile], range: StatsRange, account: String? = nil, split: Bool = false) {
         self.range = range
         let byKey = Dictionary(days.map { ($0.date, $0) }, uniquingKeysWith: { first, _ in first })
         let records = range.keys.map { byKey[$0]?.records.first { $0.provider == id } }
@@ -82,6 +95,7 @@ struct DashboardProviderDetail {
 
         let selected = account.flatMap { key in order.contains(key) ? key : nil }
         self.account = selected
+        self.split = split && selected == nil && accounts.count > 1
         stats = accounts.first { $0.key == selected }?.stats ?? ProviderStats(id: id, records: records)
 
         let keys = Set(range.keys)
@@ -115,10 +129,12 @@ struct DashboardProviderDetail {
         }
     }
 
-    /// Known spend and value per day, two series (V54).
+    /// Known spend and value per day, two series (V54); with split on, one point per account
+    /// part, stacked within its series (V68).
     var costPoints: [CostPoint] {
         zip(range.keys, stats.records).flatMap { key, record -> [CostPoint] in
             guard let record else { return [] }
+            if self.split { return splitPoints(key, record) }
             let split = record.costSplit
             let series: [(Series, Money?)] = [
                 (.spend, stats.hasSpend ? split.spend : nil),
@@ -131,6 +147,17 @@ struct DashboardProviderDetail {
                         estimated: split.estimated, backfilled: record.origin == .backfilled)
                 }
             }
+        }
+    }
+
+    private func splitPoints(_ key: String, _ record: DayRecord) -> [CostPoint] {
+        record.costSegments.compactMap { segment in
+            let series: Series = segment.billingModel == .metered ? .spend : .value
+            guard series == .spend ? stats.hasSpend : stats.hasValue else { return nil }
+            return CostPoint(
+                key: key, series: series, part: segment.account.map(Part.account) ?? .unattributed,
+                amount: NSDecimalNumber(decimal: segment.amount.amount).doubleValue,
+                estimated: record.costEstimated, backfilled: record.origin == .backfilled)
         }
     }
 
@@ -151,10 +178,25 @@ struct DashboardProviderDetail {
         Set(stats.records.compactMap { $0 }.flatMap(\.quota.keys)).sorted()
     }
 
+    /// One bar per day, or with split on, one per account per day (V68).
     func quotaBars(_ window: String) -> [QuotaBar] {
-        zip(range.keys, stats.records).compactMap { key, record in
+        guard split else { return Self.quotaBars(window, stats, account: nil, keys: range.keys) }
+        return accounts.flatMap { Self.quotaBars(window, $0.stats, account: $0.key, keys: range.keys) }
+    }
+
+    private static func quotaBars(_ window: String, _ stats: ProviderStats, account: String?, keys: [String]) -> [QuotaBar] {
+        zip(keys, stats.records).compactMap { key, record in
             guard let quota = record?.quota[window] else { return nil }
-            return QuotaBar(key: key, window: window, peak: quota.peak, endOfDay: quota.endOfDay)
+            return QuotaBar(key: key, window: window, peak: quota.peak, endOfDay: quota.endOfDay, account: account)
+        }
+    }
+
+    /// The newest label for an account key (V22).
+    func label(_ part: Part) -> String {
+        switch part {
+        case .whole: return ""
+        case .account(let key): return accounts.first { $0.key == key }?.label ?? key
+        case .unattributed: return "unattributed"
         }
     }
 

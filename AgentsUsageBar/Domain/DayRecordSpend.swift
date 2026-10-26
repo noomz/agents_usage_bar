@@ -37,6 +37,32 @@ extension DayRecord {
         }
         return others.isEmpty ? costUSD : nil
     }
+
+    /// `costSplit` broken into accounts (V68). A lone account of a billing model takes that
+    /// model's cost; otherwise an account with its own cost gets it, and what is left is one
+    /// unattributed segment. Nothing is prorated (V12). An unknown model total has no segments.
+    public var costSegments: [DayCostSegment] {
+        let split = costSplit
+        return [(BillingModel.metered, split.spend), (.subscription, split.value)].flatMap { model, total in
+            guard let total else { return [DayCostSegment]() }
+            let group = accounts.filter { $0.billingModel == model }
+            if group.count == 1 { return [DayCostSegment(account: group[0].key, billingModel: model, amount: total)] }
+            var segments = group.compactMap { account in
+                account.costUSD.map { DayCostSegment(account: account.key, billingModel: model, amount: $0) }
+            }
+            let rest = total.amount - segments.reduce(Decimal(0)) { $0 + $1.amount.amount }
+            if rest > 0 { segments.append(DayCostSegment(account: nil, billingModel: model, amount: Money(rest))) }
+            return segments
+        }
+    }
+}
+
+/// One account's part of a day's spend or value (V68). A nil account is unattributed.
+public struct DayCostSegment: Sendable, Equatable {
+    public var account: String?
+    /// Metered is spend, subscription is value; the two never stack (V26).
+    public var billingModel: BillingModel
+    public var amount: Money
 }
 
 /// A summed amount: the known part, whether any of it is estimated, and whether any day
