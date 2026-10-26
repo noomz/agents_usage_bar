@@ -50,22 +50,29 @@ enum DashboardQuotaCell: Equatable {
 }
 
 /// What the Overview shows for a range and chip selection (V53). Local runtimes are left
-/// out: they have presence only and are never drawn as $0 (V56).
+/// out: they have presence only and are never drawn as $0 (V56). Split accounts breaks
+/// spend per day and the quota strip into accounts (V68); tokens stay per provider.
 struct DashboardOverview {
+    typealias Part = DashboardProviderDetail.Part
+
     struct DayAmount: Identifiable, Equatable {
         let key: String
         let provider: ProviderID
+        /// With split on, the account the amount belongs to, or the rest (V68).
+        var part: Part = .whole
         let amount: Double
         let estimated: Bool
         let backfilled: Bool
-        var id: String { "\(key) \(provider.rawValue)" }
+        var id: String { "\(key) \(provider.rawValue) \(part)" }
     }
 
     struct QuotaRow: Identifiable, Equatable {
         let provider: ProviderID
+        /// With split on, the account the row belongs to (V68).
+        var account: DayAccount?
         let window: String
         let cells: [DashboardQuotaCell]
-        var id: String { "\(provider.rawValue) \(window)" }
+        var id: String { "\(provider.rawValue) \(account?.key ?? "") \(window)" }
     }
 
     let range: StatsRange
@@ -74,11 +81,18 @@ struct DashboardOverview {
     /// Usage events in range for the selected providers. Total-budget events have no
     /// provider and always show.
     let events: [UsageEvent]
+    /// With split on, the accounts of each provider with more than one in range, in
+    /// first-seen order with newest labels (V22, V68). Other providers stay whole.
+    let splitAccounts: [ProviderID: [DayAccount]]
 
-    init(days: [DayFile], range: StatsRange, excluded: Set<ProviderID> = [], order: [ProviderID] = []) {
+    init(days: [DayFile], range: StatsRange, excluded: Set<ProviderID> = [], order: [ProviderID] = [], split: Bool = false) {
         self.range = range
         providers = ProviderStats.collect(days, range: range, includeLocal: false, order: order)
             .filter { !excluded.contains($0.id) }
+        splitAccounts = split ? providers.reduce(into: [:]) { result, p in
+            let accounts = DashboardProviderDetail.newestAccounts(p.records)
+            if accounts.count > 1 { result[p.id] = accounts }
+        } : [:]
         let keys = Set(range.keys)
         events = days.filter { keys.contains($0.date) }.flatMap(\.events)
             .filter { $0.provider.map { !excluded.contains($0) } ?? true }
@@ -120,14 +134,36 @@ struct DashboardOverview {
 
     /// Metered spend per day per provider, for the stacked chart. A day without a known
     /// amount draws nothing: a gap shows in `spendGapKeys`, an unknown amount stays empty.
+    /// A split provider has one amount per metered account part (V68).
     var spendPerDay: [DayAmount] {
         spendProviders.flatMap { p in
-            zip(range.keys, p.records).compactMap { key, record in
-                guard let record, let spend = record.costSplit.spend else { return nil }
-                return DayAmount(
-                    key: key, provider: p.id, amount: NSDecimalNumber(decimal: spend.amount).doubleValue,
-                    estimated: record.costEstimated, backfilled: record.origin == .backfilled)
+            zip(range.keys, p.records).flatMap { key, record -> [DayAmount] in
+                guard let record else { return [] }
+                let parts: [(Part, Money)]
+                if splitAccounts[p.id] != nil {
+                    parts = record.costSegments.filter { $0.billingModel == .metered }
+                        .map { ($0.account.map(Part.account) ?? .unattributed, $0.amount) }
+                } else {
+                    parts = record.costSplit.spend.map { [(.whole, $0)] } ?? []
+                }
+                return parts.map { part, spend in
+                    DayAmount(
+                        key: key, provider: p.id, part: part, amount: NSDecimalNumber(decimal: spend.amount).doubleValue,
+                        estimated: record.costEstimated, backfilled: record.origin == .backfilled)
+                }
             }
+        }
+    }
+
+    /// The chart series an amount belongs to: the provider, or with split on, the provider
+    /// and the account's newest label (V68).
+    func seriesName(_ provider: ProviderID, _ part: Part) -> String {
+        switch part {
+        case .whole: return provider.displayHint
+        case .unattributed: return "\(provider.displayHint) · unattributed"
+        case .account(let key):
+            let label = splitAccounts[provider]?.first { $0.key == key }?.label ?? key
+            return "\(provider.displayHint) · \(label)"
         }
     }
 
@@ -155,17 +191,25 @@ struct DashboardOverview {
         return range.keys.indices.filter { i in providers.contains { $0.records[i] == nil } }.map { range.keys[$0] }
     }
 
-    /// One row per provider window seen in range, one cell per day (V53).
+    /// One row per provider window seen in range, one cell per day (V53). A split provider
+    /// has one row per account window; a day the account was not seen is a gap (V68).
     var quotaRows: [QuotaRow] {
-        providers.flatMap { p in
-            let windows = Set(p.records.compactMap { $0 }.flatMap(\.quota.keys)).sorted()
-            return windows.map { window in
-                QuotaRow(provider: p.id, window: window, cells: p.records.map { record in
-                    guard let record else { return .gap }
-                    guard let quota = record.quota[window] else { return .noValue }
-                    return .band(DashboardQuotaCell.band(peak: quota.peak))
-                })
+        providers.flatMap { p -> [QuotaRow] in
+            guard let accounts = splitAccounts[p.id] else { return Self.quotaRows(p.id, nil, p.records) }
+            return accounts.flatMap { account in
+                Self.quotaRows(p.id, account, p.records.map { $0.flatMap { DashboardProviderDetail.narrow($0, to: account.key) } })
             }
+        }
+    }
+
+    private static func quotaRows(_ provider: ProviderID, _ account: DayAccount?, _ records: [DayRecord?]) -> [QuotaRow] {
+        let windows = Set(records.compactMap { $0 }.flatMap(\.quota.keys)).sorted()
+        return windows.map { window in
+            QuotaRow(provider: provider, account: account, window: window, cells: records.map { record in
+                guard let record else { return .gap }
+                guard let quota = record.quota[window] else { return .noValue }
+                return .band(DashboardQuotaCell.band(peak: quota.peak))
+            })
         }
     }
 }
