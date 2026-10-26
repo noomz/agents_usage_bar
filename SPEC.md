@@ -186,7 +186,7 @@ T36|x|Split: Overview "Split accounts" toggle for Spend per day and the quota ba
 T37|x|Split gate: CI green, install, check split views against real history for Claude and Codex.|C7
 T38|x|Account tokens: `AccountUsage` gains today's tokens. A transcript's session ID is `<project>/<id>.jsonl` or `<project>/<id>/subagents/*.jsonl`; the hook feed maps session ID to account by `transcript_path` (newest copy wins). Hook mode groups today's JSONL tokens by session to account; a session not in the feed stays unattributed; session-reads mode leaves account tokens nil. Claude backfill groups the same way through feed files still on disk, else nil. `DayAccount.tokens?` merges max (V7). Tests: two accounts in one shared projects dir, subagent transcript, session missing from feed, old file without the field reads nil.|V7,V9,V18,V62,I16
 T39|x|Split Tokens: provider detail Split and Overview Split accounts stack tokens by account with `unattributed`. Tests: per-account tokens, lone account, pre-T38 day all unattributed, totals match unsplit.|V12,V53,V54,V68
-T40|~|Account tokens gate: CI green, install, run across a poll, confirm today's file has account tokens and split Tokens shows per account.|C7
+T40|x|Account tokens gate: CI green, install, run across a poll, confirm today's file has account tokens and split Tokens shows per account.|C7
 
 ## §B
 
