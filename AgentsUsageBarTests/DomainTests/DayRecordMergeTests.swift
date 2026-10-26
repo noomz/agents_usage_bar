@@ -207,11 +207,11 @@ struct DayRecordMergeTests {
     }
 
 
-    @Test("account tokens keep the highest; a backfill top-up raises them; an old file reads nil (V7, V9, V18)")
+    @Test("account tokens take the newest known value; a backfill top-up keeps the higher; an old file reads nil (V9, V18, V31)")
     func accountTokens() throws {
         let low = DayAccount(key: "work", label: "work", billingModel: .subscription, tokens: 50)
         let high = DayAccount(key: "work", label: "work", billingModel: .subscription, tokens: 80)
-        #expect(high.merging(low).tokens == 80)
+        #expect(high.merging(low).tokens == 50)
         #expect(low.merging(DayAccount(key: "work", label: "work", billingModel: .subscription)).tokens == 50)
 
         let observed = DayRecord(provider: .claude, tokens: 100, accounts: [low], origin: .observed)
@@ -220,5 +220,22 @@ struct DayRecordMergeTests {
 
         let old = #"{"key":"work","label":"work","billingModel":"subscription","billingModelAssumed":false,"quota":{}}"#
         #expect(try JSONDecoder().decode(DayAccount.self, from: Data(old.utf8)).tokens == nil)
+    }
+
+
+    @Test("a session that changes owner between polls moves its tokens, never counted twice (V9, B15)")
+    func ownerChangeMovesTokens() {
+        func poll(work: Int, personal: Int) -> UsageSnapshot {
+            var sample = Self.sample("claude", tokens: 50)
+            sample.accounts = [
+                UsageSnapshot.AccountUsage(name: "personal", costTodayUSD: nil, quota: nil, quotaWindows: nil, tokensToday: personal),
+                UsageSnapshot.AccountUsage(name: "work", costTodayUSD: nil, quota: nil, quotaWindows: nil, tokensToday: work),
+            ]
+            return sample
+        }
+        let record = fold(poll(work: 50, personal: 0), poll(work: 0, personal: 50))
+        #expect(record.accounts.map(\.key) == ["personal", "work"])
+        #expect(record.accounts.map(\.tokens) == [50, 0])
+        #expect(record.tokenSegments.map(\.tokens).reduce(0, +) == 50)
     }
 }

@@ -416,15 +416,18 @@ public actor ClaudeHookProvider: UsageProvider {
     }
 
     /// Session ID to owning account for every session still in the feed (V9), attributed
-    /// as `fetch` does: newest copy, `transcript_path` before the feed directory. Empty when
-    /// the feed is missing. The feed keeps about 48h, so older sessions are absent.
+    /// as `fetch` does: newest copy, unreadable payloads skipped, `transcript_path` before the
+    /// feed directory. Empty when the feed is missing. The feed keeps about 48h, so older
+    /// sessions are absent.
     public static func sessionAccounts(feedDir: URL = defaultFeedDir) -> [String: String] {
         guard let entries = try? enumerate(feedDir: feedDir, fileManager: .default) else { return [:] }
         var accounts: [String: String] = [:]
         for entry in newestCopies(entries) {
-            let payload = (try? Data(contentsOf: entry.url)).flatMap { try? ClaudeHookPayload.decode($0) }
-            let session = payload?.sessionId ?? entry.url.deletingPathExtension().lastPathComponent
-            accounts[session] = account(fromTranscriptPath: payload?.transcriptPath) ?? entry.account
+            guard let data = try? Data(contentsOf: entry.url),
+                  let payload = try? ClaudeHookPayload.decode(data)
+            else { continue }
+            let session = payload.sessionId ?? entry.url.deletingPathExtension().lastPathComponent
+            accounts[session] = account(fromTranscriptPath: payload.transcriptPath) ?? entry.account
         }
         return accounts
     }

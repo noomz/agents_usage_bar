@@ -117,7 +117,9 @@ public actor ClaudeSwitchableProvider: UsageProvider {
                     tooltipLabel: hookSnap.tooltipLabel,
                     accounts: hookSnap.accounts?.map { account in
                         var account = account
-                        account.tokensToday = accountTokens[account.name]
+                        // A read that worked knows an account with no sessions has 0, so a
+                        // session that moved owner leaves its old account (V9).
+                        account.tokensToday = read == nil ? nil : accountTokens[account.name] ?? 0
                         return account
                     }
                 )

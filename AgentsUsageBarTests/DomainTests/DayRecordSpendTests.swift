@@ -49,6 +49,16 @@ struct DayRecordSpendTests {
         #expect(over.costSegments.map(\.account) == ["a", "b"])
     }
 
+    @Test("account token segments never add up past the record's tokens (V68, B15)")
+    func tokenSegmentsClamp() {
+        var over = record(cost: nil, [account("a", .subscription), account("b", .subscription)])
+        over.tokens = 100
+        over.accounts[0].tokens = 70
+        over.accounts[1].tokens = 50
+        #expect(over.tokenSegments.map(\.account) == ["a", "b"])
+        #expect(over.tokenSegments.map(\.tokens) == [70, 30])
+    }
+
     @Test("a mixed record without per-account cost is unknown, not guessed (V7, V26)")
     func mixedWithoutSplitIsUnknown() {
         let split = record(cost: 7, [account("a", .metered), account("b", .subscription)]).costSplit

@@ -126,11 +126,13 @@ extension DayAccount {
     public static let defaultKey = "default"
 
     /// Folds a newer sample of the same account: the newest label, billing model, and plan
-    /// (V22, V25), the highest cost (V7), and per-window peak and end-of-day quota (V8).
+    /// (V22, V25), the highest cost (V7), the newest known tokens, which each poll recomputes
+    /// for the whole day from current session owners (V9), and per-window peak and end-of-day
+    /// quota (V8).
     func merging(_ newer: DayAccount) -> DayAccount {
         var account = newer
         account.costUSD = highestKnown(costUSD, newer.costUSD)
-        account.tokens = highestKnown(tokens, newer.tokens)
+        account.tokens = newer.tokens ?? tokens
         account.quota = quota.merging(newer.quota.mapValues { (value: $0.peak, resetsAt: $0.peakResetsAt) })
         return account
     }
