@@ -62,14 +62,19 @@ extension DayRecord {
     /// `tokens` broken into accounts (V68): a lone account takes the record's tokens;
     /// otherwise each account with its own tokens (V9) gets them, and what is left is one
     /// unattributed segment, so a day recorded before account tokens is all unattributed.
-    /// Nothing is prorated (V12). Unknown tokens have no segments.
+    /// Account segments never add up past `tokens`: in account order, each is cut to what is
+    /// left. Nothing is prorated (V12). Unknown tokens have no segments.
     public var tokenSegments: [DayTokenSegment] {
         guard let tokens else { return [] }
         if accounts.count == 1 { return [DayTokenSegment(account: accounts[0].key, tokens: tokens)] }
-        var segments = accounts.compactMap { account in
-            account.tokens.map { DayTokenSegment(account: account.key, tokens: $0) }
+        var rest = tokens
+        var segments: [DayTokenSegment] = []
+        for account in accounts {
+            guard let own = account.tokens, rest > 0 else { continue }
+            let part = min(own, rest)
+            segments.append(DayTokenSegment(account: account.key, tokens: part))
+            rest -= part
         }
-        let rest = tokens - segments.reduce(0) { $0 + $1.tokens }
         if rest > 0 { segments.append(DayTokenSegment(account: nil, tokens: rest)) }
         return segments
     }

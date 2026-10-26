@@ -440,4 +440,29 @@ struct ClaudeHookProviderTests {
         #expect(FileManager.default.fileExists(atPath: fresh.path))
         #expect(!FileManager.default.fileExists(atPath: old.path))
     }
+
+
+    @Test("sessionAccounts: transcript_path wins, directory without it, unreadable payloads skipped, newest copy (V9)")
+    func sessionAccountsAttribution() throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let work = dir.appendingPathComponent("work", isDirectory: true)
+        let personal = dir.appendingPathComponent("personal", isDirectory: true)
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: personal, withIntermediateDirectories: true)
+        let now = Date()
+        // Captured under work/, but the transcript names personal.
+        try writeSession("s1", json: #"{ "session_id": "s1", "transcript_path": "/u/.ccs/instances/personal/projects/p/s1.jsonl" }"#,
+                         mtime: now, in: work)
+        // No transcript_path: the directory names the account.
+        try writeSession("s2", json: #"{ "session_id": "s2" }"#, mtime: now, in: work)
+        // Unreadable: skipped, as fetch skips it.
+        try writeSession("s3", json: "{ not json", mtime: now, in: personal)
+        // Two copies: the newer one wins.
+        try writeSession("s4", json: #"{ "session_id": "s4" }"#, mtime: now.addingTimeInterval(-60), in: work)
+        try writeSession("s4", json: #"{ "session_id": "s4" }"#, mtime: now, in: personal)
+
+        #expect(ClaudeHookProvider.sessionAccounts(feedDir: dir) == ["s1": "personal", "s2": "work", "s4": "personal"])
+        #expect(ClaudeHookProvider.sessionAccounts(feedDir: dir.appendingPathComponent("missing")).isEmpty)
+    }
 }

@@ -4,7 +4,7 @@ import SwiftUI
 /// The Overview section (SPEC V53): tiles, month budget bars, spend per day stacked by
 /// provider (metered only), an event lane, a quota band strip, and tokens per day. The range
 /// and provider chips are shared state on the model. Markers follow V56. "Split accounts"
-/// breaks spend per day and the quota strip into accounts (V68).
+/// breaks spend per day, the quota strip, and tokens per day into accounts (V68).
 struct DashboardOverviewView: View {
     @Bindable var model: DashboardModel
     let budgets: [DashboardBudget]

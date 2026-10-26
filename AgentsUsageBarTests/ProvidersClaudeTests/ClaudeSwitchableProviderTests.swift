@@ -269,4 +269,34 @@ struct ClaudeSwitchableProviderTests {
         #expect(snap.accounts?.map(\.name) == ["personal", "work"])
         #expect(snap.accounts?.map(\.tokensToday) == [100, 30])
     }
+
+
+    @Test("hook mode gives an account with no sessions a known 0, so a moved session leaves it (V9, B15)")
+    func hookAccountWithoutSessionsIsZero() async throws {
+        let hookDir = try makeTempDir()
+        let projects = try makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: hookDir)
+            try? FileManager.default.removeItem(at: projects)
+        }
+        let now = Date()
+        let stamp = ISO8601DateFormatter().string(from: now.addingTimeInterval(-1))
+        let url = projects.appendingPathComponent("p/s1.jsonl")
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data((#"{"type":"assistant","timestamp":"\#(stamp)","requestId":"r1","message":{"model":"claude-test","role":"assistant","usage":{"input_tokens":10,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}"# + "\n").utf8).write(to: url)
+        try writeSession("s1", json: #"{ "session_id": "s1", "transcript_path": "/u/.ccs/instances/personal/projects/p/s1.jsonl", "cost": { "total_cost_usd": 1 } }"#,
+                         mtime: now, in: hookDir)
+        // work has a payload but no transcript of its own today.
+        try writeSession("s9", json: #"{ "session_id": "s9", "transcript_path": "/u/.ccs/instances/work/projects/p/s9.jsonl", "cost": { "total_cost_usd": 0 } }"#,
+                         mtime: now, in: hookDir)
+
+        let facade = ClaudeSwitchableProvider(
+            jsonl: makeJSONLProvider(rootsEmptyDir: projects),
+            hookProvider: ClaudeHookProvider(feedDir: hookDir),
+            source: { .hook }
+        )
+        let snap = try await facade.fetch(now: now)
+        #expect(snap.accounts?.map(\.name) == ["personal", "work"])
+        #expect(snap.accounts?.map(\.tokensToday) == [10, 0])
+    }
 }

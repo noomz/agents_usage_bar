@@ -1,9 +1,9 @@
 import Foundation
 
 /// What provider detail shows for one provider, range, and account (SPEC V54). Selecting an
-/// account narrows every tab to it: its cost, its quota windows, and the days it was seen.
+/// account narrows every tab to it: its cost, tokens, quota windows, and the days it was seen.
 /// Totals the provider does not report per account stay unknown, never split (V12). Split
-/// keeps every account and breaks cost and quota into accounts (V68).
+/// keeps every account and breaks cost, tokens, and quota into accounts (V68).
 struct DashboardProviderDetail {
     enum Tab: Hashable, CaseIterable {
         case cost, tokens, quota, accounts
@@ -26,7 +26,8 @@ struct DashboardProviderDetail {
         var id: String { key }
     }
 
-    /// Whose cost a point is: the whole day, or with split on, one account or the rest (V68).
+    /// Whose cost or tokens a point is: the whole day, or with split on, one account or the
+    /// rest (V68).
     enum Part: Hashable {
         case whole
         case account(String)
