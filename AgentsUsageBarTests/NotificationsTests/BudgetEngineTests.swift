@@ -85,6 +85,8 @@ struct BudgetEngineTests {
         #expect(decisions.map(\.id) == ["budget:total:2026-10:limit", "budget:claude:2026-10:warn"])
         #expect(decisions.map(\.title) == ["Monthly budget reached", "Claude budget at 80%"])
         #expect(decisions.allSatisfy { !$0.snoozable })
+        // V58: a budget click opens Overview on This month.
+        #expect(decisions.allSatisfy { $0.route == DashboardRoute(range: .thisMonth) })
         #expect(decisions[1].body == "$8.00 of $10.00 spent this month.")
     }
 }

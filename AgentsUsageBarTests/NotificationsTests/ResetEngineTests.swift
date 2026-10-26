@@ -113,6 +113,7 @@ struct ResetEngineTests {
         #expect(result.count == 1)
         #expect(result[0].id.hasPrefix("claude:2026-09-09:reset:5h:"))
         #expect(result[0].windowName == "5h")
+        #expect(result[0].route == DashboardRoute(day: "2026-09-09", provider: .claude, event: .reset, window: "5h"))
         #expect(result[0].title == "Claude 5h limit reset")
         #expect(result[0].body == "Usage is available again.")
     }

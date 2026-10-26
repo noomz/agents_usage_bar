@@ -51,6 +51,9 @@ public actor UNNotificationManager: NotificationManager {
     /// into `AggregateStore.snoozeToday(providerID:on:)`.
     public static let snoozeActionID = "snooze.today"
 
+    /// `userInfo` key holding the dashboard URL a click opens (SPEC V67).
+    public static let routeURLKey = "url"
+
     // MARK: - Dependencies
 
     private let center: any UNUserNotificationCenterProtocol
@@ -126,6 +129,7 @@ public actor UNNotificationManager: NotificationManager {
             content.title = d.title
             content.body = d.body
             content.sound = .default
+            content.userInfo = [Self.routeURLKey: d.route.url.absoluteString]
             if d.snoozable {
                 content.categoryIdentifier = Self.usageWarningCategoryID    // Plan 02.05 / Pitfall 6
             }
@@ -144,6 +148,9 @@ public actor UNNotificationManager: NotificationManager {
             content.categoryIdentifier = Self.usageWarningCategoryID    // Plan 02.05 / Pitfall 6
             // Coalesced stable ID: day-string derived from injected clock (B8) + highest band suffix.
             let dayString = dayKeys.key(for: clock.now())
+            // V67: a coalesced click opens the day with no provider and the band highlighted.
+            let route = DashboardRoute(day: dayString, event: highestBand.eventKind)
+            content.userInfo = [Self.routeURLKey: route.url.absoluteString]
             let coalescedID = "coalesced:\(dayString):\(suffix)"
             request = UNNotificationRequest(identifier: coalescedID, content: content, trigger: nil)
         }

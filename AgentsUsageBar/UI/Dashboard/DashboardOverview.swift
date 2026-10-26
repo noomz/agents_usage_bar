@@ -2,10 +2,10 @@ import Foundation
 
 /// The one range picker shared by Overview and provider detail (SPEC V52). Calendar ignores
 /// it and shows every retained day.
-enum DashboardRange: String, CaseIterable, Identifiable, Sendable {
+public enum DashboardRange: String, CaseIterable, Identifiable, Sendable {
     case days7, days14, days30, days90, thisMonth
 
-    var id: Self { self }
+    public var id: Self { self }
 
     var title: String {
         switch self {

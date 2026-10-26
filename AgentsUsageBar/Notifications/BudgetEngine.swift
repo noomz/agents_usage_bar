@@ -92,7 +92,8 @@ public enum BudgetEngine {
                 providerID: scope.providerID ?? ProviderID(rawValue: "budget"),
                 displayName: name,
                 band: limit ? .exceeded : .warning,
-                snoozable: false
+                snoozable: false,
+                route: DashboardRoute(range: .thisMonth)
             )
         }
     }

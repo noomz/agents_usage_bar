@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import UserNotifications
 @testable import AgentsUsageBar
 
 /// Plan 02.05 — covers `NotificationActionHandler.handle(actionID:identifier:now:)` routing.
@@ -39,6 +40,34 @@ struct NotificationActionHandlerTests {
             notificationState: state
         )
         return (store, state)
+    }
+
+    // MARK: - Click deep links (V58, V67)
+
+    @Test("clicking a notification opens its route; snooze does not")
+    func handle_defaultAction_opensRoute() {
+        let (store, _) = makeStore()
+        var opened: [DashboardRoute] = []
+        let handler = NotificationActionHandler(
+            store: store, clock: VirtualClock(fixed: Self.now), openRoute: { opened.append($0) })
+        let route = DashboardRoute(day: "2026-05-13", provider: .claude, event: .band95)
+        handler.handle(
+            actionID: UNNotificationDefaultActionIdentifier, identifier: "claude:2026-05-13:crit95",
+            url: route.url.absoluteString, now: Self.now)
+        handler.handle(
+            actionID: UNNotificationManager.snoozeActionID, identifier: "claude:2026-05-13:crit95",
+            url: route.url.absoluteString, now: Self.now)
+        #expect(opened == [route])
+    }
+
+    @Test("clicking a notification with no route URL opens Overview")
+    func handle_defaultAction_noURL_opensOverview() {
+        let (store, _) = makeStore()
+        var opened: [DashboardRoute] = []
+        let handler = NotificationActionHandler(
+            store: store, clock: VirtualClock(fixed: Self.now), openRoute: { opened.append($0) })
+        handler.handle(actionID: UNNotificationDefaultActionIdentifier, identifier: "x", url: nil, now: Self.now)
+        #expect(opened == [DashboardRoute()])
     }
 
     // MARK: - Routing

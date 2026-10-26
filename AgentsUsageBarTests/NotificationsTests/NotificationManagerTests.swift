@@ -128,6 +128,22 @@ struct NotificationManagerTests {
         #expect(req.identifier == "coalesced:2026-05-11:warn80")
         #expect(req.content.title == "2 providers crossed 80%")
         #expect(req.content.body == "OpenRouter, Codex")
+        // V67: the coalesced click opens the day with no provider and the band highlighted.
+        #expect(req.content.userInfo[UNNotificationManager.routeURLKey] as? String
+                == "agentsusagebar://dashboard?day=2026-05-11&event=band80")
+    }
+
+    @Test("single decision carries its route URL in userInfo (V67)")
+    func singleDecisionCarriesRouteURL() async throws {
+        let center = FakeUNUserNotificationCenter()
+        let manager = center.makeManager()
+        let route = DashboardRoute(day: "2026-05-11", provider: .openrouter, event: .band80)
+        let d1 = NotificationDecision(
+            id: "openrouter:2026-05-11:warn80", title: "OpenRouter at 82%", body: "",
+            providerID: .openrouter, displayName: "OpenRouter", band: .warning, route: route)
+        await manager.schedule([d1])
+        let req = try #require(center.addCalls.first)
+        #expect(req.content.userInfo[UNNotificationManager.routeURLKey] as? String == route.url.absoluteString)
     }
 
     @Test("three decisions → ONE add() with title '3 providers crossed 80%' (B8 clock fixed)")

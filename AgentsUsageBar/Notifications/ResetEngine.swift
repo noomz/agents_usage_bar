@@ -127,7 +127,8 @@ public struct ResetEngine: Sendable {
             providerID: snap.providerID,
             displayName: displayName,
             band: .warning,
-            windowName: window.name
+            windowName: window.name,
+            route: DashboardRoute(day: today, provider: snap.providerID, event: .reset, window: window.name)
         )
     }
 }

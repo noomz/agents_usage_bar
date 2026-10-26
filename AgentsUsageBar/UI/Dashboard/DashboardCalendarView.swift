@@ -31,7 +31,7 @@ struct DashboardCalendarView: View {
             }
             .frame(minWidth: 420)
             Divider()
-            DashboardDayPanel(panel: calendar.panel(model.selectedDay ?? model.today))
+            DashboardDayPanel(panel: calendar.panel(model.selectedDay ?? model.today), focus: model.focus)
                 .frame(width: 340)
         }
     }
@@ -175,6 +175,8 @@ struct DashboardBudgetRing: View {
 /// end-of-day bars, accounts, and events (V55). Today is "in progress".
 struct DashboardDayPanel: View {
     let panel: DashboardCalendar.Panel
+    /// The deep link that opened this day, if any (V58).
+    var focus: DashboardRoute?
 
     var body: some View {
         ScrollView {
@@ -212,6 +214,11 @@ struct DashboardDayPanel: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            if focus?.outlines(card.provider, on: panel.key) == true {
+                RoundedRectangle(cornerRadius: 8).strokeBorder(Color.accentColor, lineWidth: 2)
+            }
+        }
         .opacity(card.record?.origin == .backfilled ? 0.75 : 1)
     }
 
@@ -286,6 +293,12 @@ struct DashboardDayPanel: View {
                     if event.carriedOver { DashboardBadge(text: "carried over") }
                 }
                 .font(.caption)
+                .padding(.horizontal, 4)
+                .background {
+                    if focus?.highlights(event, on: panel.key) == true {
+                        RoundedRectangle(cornerRadius: 4).fill(Color.accentColor.opacity(0.25))
+                    }
+                }
             }
         }
     }

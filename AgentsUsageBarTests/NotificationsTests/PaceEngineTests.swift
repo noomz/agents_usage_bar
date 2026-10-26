@@ -101,6 +101,7 @@ struct PaceEngineTests {
         #expect(result.count == 1)
         #expect(result[0].id == "claude:2026-09-09:pace:5h")
         #expect(result[0].windowName == "5h")
+        #expect(result[0].route == DashboardRoute(day: "2026-09-09", provider: .claude, event: .pace, window: "5h"))
         #expect(result[0].title.contains("5h"))
         #expect(result[0].body.contains("runs out"))
     }
