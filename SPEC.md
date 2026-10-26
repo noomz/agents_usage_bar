@@ -176,7 +176,7 @@ T28|x|S6 gate: CI green, install, open via each S6 entry point, check every sect
 T29|x|S7: Popover teaser.|V20,V59
 T30|x|S7: Optional global hotkey in Settings.|V60,C5
 T31|x|S7: Notification-click deep links, teaser and budget ranges.|V51,V58,V67
-T32|.|S7 gate: CI green, install, teaser, hotkey, and a notification click each open the right view.|C7
+T32|x|S7 gate: CI green, install, teaser, hotkey, and a notification click each open the right view.|C7
 T33|x|Fix trend cells: no-record gap vs recorded-no-value `?`, bucket rule, legend entry; golden test with a backfilled subscription day and a nil-cost metered day.|V42,V45,V64
 T34|x|Round `Money` to 6 decimal places at its one initializer; tests for a noisy Double-derived amount, decode of a noisy stored string, and encode output.|V65,I16
 
