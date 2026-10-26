@@ -63,11 +63,19 @@ struct HistoryBackfill: Sendable {
             logger.error("history backfill \(source.provider.rawValue, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
             return
         }
-        let accounts = await store.backfillAccounts(await source.accounts(), of: source.provider)
+        let known = await source.accounts()
+        let accounts = await store.backfillAccounts(known, of: source.provider)
         for key in keys {
             var record = records[key] ?? DayRecord(
                 provider: source.provider, tokens: 0, costUSD: Money(0), origin: .backfilled)
-            record.accounts = accounts
+            // A source's own accounts carry tokens by account name (V9); the known list
+            // supplies keys, labels, and billing (V62).
+            let sourced = record.accounts
+            record.accounts = zip(known, accounts).map { usage, account in
+                var account = account
+                account.tokens = sourced.first { $0.key == usage.name }?.tokens
+                return account
+            }
             await store.backfill(record, on: key)
         }
     }

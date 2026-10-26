@@ -205,4 +205,20 @@ struct DayRecordMergeTests {
         #expect(fold(noCost).costEstimated == false)
         #expect(fold(estimated, Self.sample("codex", cost: 2)).costEstimated == true)
     }
+
+
+    @Test("account tokens keep the highest; a backfill top-up raises them; an old file reads nil (V7, V9, V18)")
+    func accountTokens() throws {
+        let low = DayAccount(key: "work", label: "work", billingModel: .subscription, tokens: 50)
+        let high = DayAccount(key: "work", label: "work", billingModel: .subscription, tokens: 80)
+        #expect(high.merging(low).tokens == 80)
+        #expect(low.merging(DayAccount(key: "work", label: "work", billingModel: .subscription)).tokens == 50)
+
+        let observed = DayRecord(provider: .claude, tokens: 100, accounts: [low], origin: .observed)
+        let backfill = DayRecord(provider: .claude, tokens: 120, accounts: [high], origin: .backfilled)
+        #expect(observed.toppedUp(by: backfill).accounts.map(\.tokens) == [80])
+
+        let old = #"{"key":"work","label":"work","billingModel":"subscription","billingModelAssumed":false,"quota":{}}"#
+        #expect(try JSONDecoder().decode(DayAccount.self, from: Data(old.utf8)).tokens == nil)
+    }
 }

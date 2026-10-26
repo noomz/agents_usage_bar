@@ -103,8 +103,8 @@ extension DayRecord {
         return record
     }
 
-    /// The record with a backfill's `tokens` and `costUSD` max-merged in (V7, V31). A cost the
-    /// backfill raised takes its estimated flag; everything else stays as it was.
+    /// The record with a backfill's `tokens`, `costUSD`, and account tokens max-merged in (V7,
+    /// V9, V31). A cost the backfill raised takes its estimated flag; everything else stays.
     func toppedUp(by backfill: DayRecord) -> DayRecord {
         var record = self
         record.tokens = highestKnown(tokens, backfill.tokens)
@@ -113,6 +113,10 @@ extension DayRecord {
             record.costEstimated = backfill.costEstimated
         }
         record.costUSD = cost
+        for account in backfill.accounts {
+            guard let index = record.accounts.firstIndex(where: { $0.key == account.key }) else { continue }
+            record.accounts[index].tokens = highestKnown(record.accounts[index].tokens, account.tokens)
+        }
         return record
     }
 }
@@ -126,6 +130,7 @@ extension DayAccount {
     func merging(_ newer: DayAccount) -> DayAccount {
         var account = newer
         account.costUSD = highestKnown(costUSD, newer.costUSD)
+        account.tokens = highestKnown(tokens, newer.tokens)
         account.quota = quota.merging(newer.quota.mapValues { (value: $0.peak, resetsAt: $0.peakResetsAt) })
         return account
     }
@@ -224,6 +229,7 @@ extension UsageSnapshot {
                 billingModel: info?.billingModel ?? fallback,
                 plan: info?.plan,
                 costUSD: account.costTodayUSD.map(Money.init),
+                tokens: account.tokensToday,
                 quota: [:].merging(Self.quotaFractions(windows: account.quotaWindows, quota: account.quota))
             )
         }

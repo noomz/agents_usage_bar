@@ -341,4 +341,21 @@ struct HistoryBackfillTests {
         #expect(try Data(contentsOf: dir.appending(path: "2026-10-20.json")) == garbage)
         #expect(await read("2026-07-23", in: dir) == nil)
     }
+
+
+    @Test("a source's account tokens land on the known account by name; others stay nil (V9, V62)")
+    func accountTokensByName() async throws {
+        let dir = makeDirectory()
+        var usage = used("claude", tokens: 9, cost: 1)
+        usage.accounts = [DayAccount(key: "work", label: "work", billingModel: .subscription, tokens: 4)]
+        let accounts = ["default", "work"].map {
+            UsageSnapshot.AccountUsage(name: $0, costTodayUSD: nil, quota: nil, quotaWindows: nil,
+                                       accountInfo: AccountInfo(billingModel: .subscription, plan: "max"))
+        }
+        await firstPoll(makeStore(dir, [FakeSource("claude", reach: 1, usage: ["2026-10-21": usage], accounts: accounts)]))
+
+        let stored = try #require(await read("2026-10-21", in: dir)?.records.first)
+        #expect(stored.accounts.map(\.key) == ["default", "work"])
+        #expect(stored.accounts.map(\.tokens) == [nil, 4])
+    }
 }

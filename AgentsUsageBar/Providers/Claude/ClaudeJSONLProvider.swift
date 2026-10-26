@@ -131,15 +131,21 @@ public actor ClaudeJSONLProvider: UsageProvider {
     /// JSONL fan-out errors propagate (rethrow) — plan 02.06 RetryPolicy handles degradation.
     /// OAuth errors are silently swallowed — `quotaWindows == nil` and local data still rendered.
     public func fetch(now: Date) async throws -> UsageSnapshot {
+        try await fetchWithSessions(now: now).snapshot
+    }
+
+    /// `fetch(now:)` plus today's tokens per transcript session (`ClaudeRoots.sessionID`),
+    /// which hook mode joins to accounts (V9).
+    public func fetchWithSessions(now: Date) async throws -> (snapshot: UsageSnapshot, sessionTokens: [String: Int]) {
         // No OAuth and no transcript root on disk: nothing to read. Report "not
         // configured" instead of a healthy $0 row; the next tick re-checks.
         let roots = self.roots()
         if oauth == nil, !roots.contains(where: { FileManager.default.fileExists(atPath: $0.path) }) {
             lastStatus = .unauthenticated
-            return UsageSnapshot(
+            return (UsageSnapshot(
                 providerID: id, asOf: now, tokensToday: 0, costTodayUSD: 0,
                 balanceUSD: nil, quota: nil, raw: ["providerStatus": "unauthenticated"]
-            )
+            ), [:])
         }
         do {
             let today = TodayHelper.startOfDay(now, calendar: .current)
@@ -187,6 +193,7 @@ public actor ClaudeJSONLProvider: UsageProvider {
             var seenRequestIDs: Set<String> = []      // RESEARCH §A9 cross-file dedup
             var todayTokens = 0
             var todayCost: Decimal = 0
+            var sessionTokens: [String: Int] = [:]
 
             try await withThrowingTaskGroup(
                 of: (URL, TranscriptReader.ReadResult).self
@@ -218,6 +225,7 @@ public actor ClaudeJSONLProvider: UsageProvider {
                             guard seenRequestIDs.insert(rid).inserted else { continue }
                         }
                         todayTokens += record.totalTokens
+                        sessionTokens[ClaudeRoots.sessionID(of: fileURL), default: 0] += record.totalTokens
                         todayCost += pricing.cost(
                             inputTokens: record.inputTokens,
                             outputTokens: record.outputTokens,
@@ -244,11 +252,12 @@ public actor ClaudeJSONLProvider: UsageProvider {
             //     between the two writes drops a delta (slight under-count) rather than
             //     re-counting it. Non-persistent test caches pass the delta through
             //     unchanged (see CacheStore.accumulateDailyUsage default).
-            let (todayTokensTotal, todayCostTotal) = cache.accumulateDailyUsage(
+            let (todayTokensTotal, todayCostTotal, sessionTokensTotal) = cache.accumulateDailyUsage(
                 for: id,
                 now: now,
                 deltaTokens: todayTokens,
-                deltaCostUSD: todayCost
+                deltaCostUSD: todayCost,
+                deltaSessionTokens: sessionTokens
             )
 
             // 6. Build quotaWindows + primary quota from OAuth result.
@@ -317,7 +326,7 @@ public actor ClaudeJSONLProvider: UsageProvider {
             )
 
             lastStatus = .ok(lastSuccess: now)
-            return snap
+            return (snap, sessionTokensTotal)
 
         } catch {
             let providerError = ProviderError.from(error)

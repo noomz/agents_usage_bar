@@ -84,6 +84,7 @@ public actor ClaudeSwitchableProvider: UsageProvider {
     /// no cumulative token totals, so the row would render "—" tokens forever. We run the
     /// JSONL delegate concurrently and graft ONLY its `tokensToday` onto the hook snapshot
     /// (cost/quota stay hook-real; a JSONL failure degrades tokens to nil, never the fetch).
+    /// Each account gets the tokens of its sessions in the feed; the rest stay unattributed (V9).
     public func fetch(now: Date) async throws -> UsageSnapshot {
         let useHook = source() == .hook
         let delegate: any UsageProvider = useHook ? hookProvider : jsonl
@@ -95,22 +96,30 @@ public actor ClaudeSwitchableProvider: UsageProvider {
         do {
             var snapshot: UsageSnapshot
             if useHook {
-                async let tokensBox: Int?? = { [jsonl] in
-                    (try? await jsonl.fetch(now: now))?.tokensToday
-                }()
+                async let readBox = { [jsonl] in try? await jsonl.fetchWithSessions(now: now) }()
                 let hookSnap = try await hookProvider.fetch(now: now)
-                let tokens = (await tokensBox) ?? nil
+                let read = await readBox
+                let owners = hookProvider.sessionAccounts()
+                var accountTokens: [String: Int] = [:]
+                for (session, tokens) in read?.sessionTokens ?? [:] {
+                    guard let owner = owners[session] else { continue }
+                    accountTokens[owner, default: 0] += tokens
+                }
                 snapshot = UsageSnapshot(
                     providerID: hookSnap.providerID,
                     asOf: hookSnap.asOf,
-                    tokensToday: tokens,
+                    tokensToday: read?.snapshot.tokensToday,
                     costTodayUSD: hookSnap.costTodayUSD,
                     balanceUSD: hookSnap.balanceUSD,
                     quota: hookSnap.quota,
                     raw: hookSnap.raw,
                     quotaWindows: hookSnap.quotaWindows,
                     tooltipLabel: hookSnap.tooltipLabel,
-                    accounts: hookSnap.accounts
+                    accounts: hookSnap.accounts?.map { account in
+                        var account = account
+                        account.tokensToday = accountTokens[account.name]
+                        return account
+                    }
                 )
             } else {
                 snapshot = try await delegate.fetch(now: now)

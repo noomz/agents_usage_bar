@@ -37,6 +37,17 @@ public enum ClaudeRoots {
         return roots
     }
 
+    /// The session a transcript belongs to (V9): `<project>/<id>.jsonl`, or a subagent's
+    /// `<project>/<id>/subagents/<agent>.jsonl`. ccs instances share one projects dir, so
+    /// the session ID, not the root, joins a transcript to its account.
+    public static func sessionID(of transcript: URL) -> String {
+        let parent = transcript.deletingLastPathComponent()
+        guard parent.lastPathComponent == "subagents" else {
+            return transcript.deletingPathExtension().lastPathComponent
+        }
+        return parent.deletingLastPathComponent().lastPathComponent
+    }
+
     /// Enumerates `<parent>/<child>/projects/` directories that exist on disk.
     /// Used to discover all CCS context-groups and instances at boot.
     private static func enumerateProjectsChildren(of parent: URL, fileManager fm: FileManager) -> [URL] {
