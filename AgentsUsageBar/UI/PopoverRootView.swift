@@ -27,7 +27,9 @@ import SwiftUI
 public struct PopoverRootView: View {
     @Environment(AggregateStore.self) private var store
     @Environment(\.clockService) private var clock
+    @Environment(\.popoverTeaserSource) private var teaserSource
     @State private var window: NSWindow?
+    @State private var teaser: PopoverTeaser?
     /// Starts `true`: the view mounts because the popover is opening.
     @State private var isVisible = true
 
@@ -39,6 +41,10 @@ public struct PopoverRootView: View {
             Divider()
             ProviderListView(isVisible: isVisible)
             Divider()
+            if let teaser {
+                PopoverTeaserView(teaser: teaser)
+                Divider()
+            }
             FooterView()
         }
         .frame(width: 360)
@@ -52,6 +58,11 @@ public struct PopoverRootView: View {
         .task(id: isVisible) {
             guard isVisible else { return }
             await store.refresh(now: clock.now())
+        }
+        // V20: history is read on popover open only, never on the poll path.
+        .task(id: isVisible) {
+            guard isVisible, let teaserSource else { return }
+            teaser = await teaserSource.load()
         }
     }
 
