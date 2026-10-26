@@ -60,13 +60,13 @@ struct PopoverTeaserSource: Sendable {
     }
 }
 
-/// The teaser strip. Clicking it opens the dashboard (V51).
+/// The teaser strip. Clicking it opens Overview on 14 days (V51, V58).
 struct PopoverTeaserView: View {
     let teaser: PopoverTeaser
 
     var body: some View {
         Button {
-            Task { try? await DashboardRoute().open() }
+            Task { try? await DashboardRoute(range: .days14).open() }
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {

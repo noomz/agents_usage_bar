@@ -21,6 +21,9 @@ final class DashboardModel {
     /// Calendar's selected day; nil is today.
     var selectedDay: String?
     var calendarMetric: DashboardCalendar.Metric = .spend
+    /// The Calendar day a deep link opened, naming the card to outline and the events to
+    /// highlight on that day (V58). Nil when no link named a day.
+    private(set) var focus: DashboardRoute?
 
     private(set) var days: [DayFile] = []
     private(set) var today: String
@@ -43,6 +46,8 @@ final class DashboardModel {
 
     /// Selects the view a route names (V51). It only shows a view and changes nothing.
     func show(_ route: DashboardRoute) {
+        if let range = route.range { self.range = range }
+        focus = nil
         switch route.destination {
         case .overview:
             section = .overview
@@ -51,6 +56,7 @@ final class DashboardModel {
         case .calendar(let day, _):
             section = .calendar
             selectedDay = day
+            focus = route
         }
     }
 
@@ -133,5 +139,22 @@ final class DashboardModel {
         } else {
             excluded.insert(provider)
         }
+    }
+}
+
+extension DashboardRoute {
+    /// True when this link outlines `provider`'s card on `day` (V58).
+    func outlines(_ provider: ProviderID, on day: String) -> Bool {
+        self.day == day && self.provider == provider
+    }
+
+    /// True when this link highlights `event` on `day`: same kind, same window when the link
+    /// names one, and the link's provider when it names one. A coalesced band link names no
+    /// provider, so the band is highlighted on every card (V67).
+    func highlights(_ event: UsageEvent, on day: String) -> Bool {
+        guard self.day == day, let kind = self.event, event.kind == kind else { return false }
+        if let window, event.window != window { return false }
+        if let provider, event.provider != provider { return false }
+        return true
     }
 }

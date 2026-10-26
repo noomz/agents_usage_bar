@@ -195,4 +195,39 @@ struct DashboardOverviewTests {
         model.show(DashboardRoute())
         #expect(model.section == .overview)
     }
+
+    @Test("a route's range sets the shared range; a day route outlines and highlights (V58)")
+    @MainActor
+    func routeRangeAndFocus() throws {
+        let model = DashboardModel(
+            route: DashboardRoute(range: .thisMonth), reader: HistoryReader(directory: URL(filePath: "/nonexistent")),
+            dayKeys: DayKeyOwner(), order: [])
+        #expect(model.section == .overview)
+        #expect(model.range == .thisMonth)
+        #expect(model.focus == nil)
+
+        model.show(DashboardRoute(day: "2026-10-01", provider: .claude, event: .pace, window: "5h"))
+        #expect(model.range == .thisMonth)
+        let focus = try #require(model.focus)
+        let at = Date(timeIntervalSince1970: 0)
+        let pace5h = UsageEvent(time: at, provider: .claude, kind: .pace, window: "5h", fraction: 0.5, notified: true)
+        #expect(focus.outlines(.claude, on: "2026-10-01"))
+        #expect(!focus.outlines(.codex, on: "2026-10-01"))
+        #expect(!focus.outlines(.claude, on: "2026-10-02"))
+        #expect(focus.highlights(pace5h, on: "2026-10-01"))
+        #expect(!focus.highlights(pace5h, on: "2026-10-02"))
+        var other = pace5h; other.window = "7d"
+        #expect(!focus.highlights(other, on: "2026-10-01"))
+        other = pace5h; other.provider = .codex
+        #expect(!focus.highlights(other, on: "2026-10-01"))
+
+        // A coalesced band link names no provider: the band is highlighted on every card.
+        model.show(DashboardRoute(day: "2026-10-01", event: .band80))
+        let band = UsageEvent(time: at, provider: .codex, kind: .band80, fraction: 0.8, notified: true)
+        #expect(model.focus?.highlights(band, on: "2026-10-01") == true)
+        #expect(model.focus?.outlines(.codex, on: "2026-10-01") == false)
+
+        model.show(DashboardRoute())
+        #expect(model.focus == nil)
+    }
 }

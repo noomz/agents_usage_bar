@@ -278,7 +278,8 @@ public struct PaceEngine: Sendable {
             providerID: snap.providerID,
             displayName: displayName,
             band: .warning,
-            windowName: window.name
+            windowName: window.name,
+            route: DashboardRoute(day: today, provider: snap.providerID, event: .pace, window: window.name)
         )
     }
 

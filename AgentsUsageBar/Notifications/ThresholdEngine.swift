@@ -203,7 +203,8 @@ public struct ThresholdEngine: Sendable {
             body: body,
             providerID: snap.providerID,
             displayName: displayName,
-            band: newBand
+            band: newBand,
+            route: DashboardRoute(day: today, provider: snap.providerID, event: newBand.eventKind)
         )
     }
 

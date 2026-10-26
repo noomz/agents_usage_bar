@@ -37,6 +37,14 @@ struct DashboardRouteTests {
         #expect(route("agentsusagebar://dashboard?day=") == DashboardRoute())
     }
 
+    @Test("range, event, and window parse; unknown values are dropped (V51)")
+    func rangeEventWindow() {
+        let r = route("agentsusagebar://dashboard?day=2026-10-24&provider=claude&event=pace&window=5h")
+        #expect(r == DashboardRoute(day: "2026-10-24", provider: .claude, event: .pace, window: "5h"))
+        #expect(route("agentsusagebar://dashboard?range=thisMonth") == DashboardRoute(range: .thisMonth))
+        #expect(route("agentsusagebar://dashboard?range=forever&event=boom&window=") == DashboardRoute())
+    }
+
     @Test("other schemes and hosts are not dashboard URLs")
     func notDashboard() {
         #expect(route("agentsusagebar://settings") == nil)
@@ -45,7 +53,11 @@ struct DashboardRouteTests {
 
     @Test("url round-trips through init(url:)")
     func roundTrip() {
-        for r in [DashboardRoute(), DashboardRoute(provider: .openrouter), DashboardRoute(day: "2026-10-01", provider: .claude)] {
+        for r in [
+            DashboardRoute(), DashboardRoute(provider: .openrouter), DashboardRoute(day: "2026-10-01", provider: .claude),
+            DashboardRoute(range: .days14),
+            DashboardRoute(day: "2026-10-01", provider: .codex, event: .reset, window: "7d sonnet"),
+        ] {
             #expect(DashboardRoute(url: r.url) == r)
         }
         #expect(DashboardRoute().url.absoluteString == "agentsusagebar://dashboard")

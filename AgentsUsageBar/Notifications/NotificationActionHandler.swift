@@ -1,7 +1,8 @@
 import Foundation
 import UserNotifications
 
-/// Routes user notification actions (currently only `snooze.today`) into `AggregateStore`.
+/// Routes user notification actions into `AggregateStore` (`snooze.today`) and opens the
+/// dashboard view a notification names when its body is clicked (SPEC V58, V67).
 ///
 /// ## Wiring (Plan 02.05)
 /// `AppDependencies.makeProduction()` constructs the handler and stores it on the
@@ -24,11 +25,17 @@ public final class NotificationActionHandler: NSObject, UNUserNotificationCenter
 
     private let store: AggregateStore
     private let clock: any Clock
+    private let openRoute: @MainActor (DashboardRoute) -> Void
     private let logger = AppLogger.logger(category: "notify")
 
-    public init(store: AggregateStore, clock: any Clock) {
+    public init(
+        store: AggregateStore,
+        clock: any Clock,
+        openRoute: @escaping @MainActor (DashboardRoute) -> Void = { route in Task { try? await route.open() } }
+    ) {
         self.store = store
         self.clock = clock
+        self.openRoute = openRoute
         super.init()
     }
 
@@ -41,9 +48,10 @@ public final class NotificationActionHandler: NSObject, UNUserNotificationCenter
     ) {
         let actionID = response.actionIdentifier
         let identifier = response.notification.request.identifier
+        let url = response.notification.request.content.userInfo[UNNotificationManager.routeURLKey] as? String
         Task { @MainActor [weak self] in
             guard let self else { return }
-            self.handle(actionID: actionID, identifier: identifier, now: self.clock.now())
+            self.handle(actionID: actionID, identifier: identifier, url: url, now: self.clock.now())
         }
         // Snooze writes are fire-and-forget — the OS does not block UI on this callback.
         // Resolve immediately so Notification Center returns control to the user.
@@ -64,7 +72,12 @@ public final class NotificationActionHandler: NSObject, UNUserNotificationCenter
     /// Pure routing logic — tests call this directly because `UNNotificationResponse` is not
     /// publicly constructible. The `userNotificationCenter(_:didReceive:...)` delegate method
     /// is a thin wrapper that extracts the action + identifier and delegates here.
-    public func handle(actionID: String, identifier: String, now: Date) {
+    public func handle(actionID: String, identifier: String, url: String? = nil, now: Date) {
+        if actionID == UNNotificationDefaultActionIdentifier {
+            // V67: a click opens the notification's route; one without a route opens Overview.
+            openRoute(url.flatMap(URL.init(string:)).flatMap(DashboardRoute.init(url:)) ?? DashboardRoute())
+            return
+        }
         guard actionID == UNNotificationManager.snoozeActionID else {
             // Unknown actions are no-ops by design.
             return

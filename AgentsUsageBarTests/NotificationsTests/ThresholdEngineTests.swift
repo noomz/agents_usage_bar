@@ -76,6 +76,8 @@ struct ThresholdEngineTests {
         let result = engine.decisions(for: [snap], now: Self.noon_2026_05_11_PT, snoozedUntil: [:])
         try #require(result.count == 1)
         #expect(result[0].id == "openrouter:2026-05-11:warn80")
+        // V58: a click opens Calendar on the day with the provider outlined and the band highlighted.
+        #expect(result[0].route == DashboardRoute(day: "2026-05-11", provider: .openrouter, event: .band80))
     }
 
     @Test("single-decision title format includes integer percentage (fraction 0.82 → 'OpenRouter at 82%')")

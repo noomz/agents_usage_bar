@@ -43,6 +43,9 @@ public struct NotificationDecision: Sendable, Equatable {
     /// False for a budget notification, which has no snooze action (SPEC V66).
     public let snoozable: Bool
 
+    /// The dashboard view a click on this notification opens (SPEC V58, V67).
+    public let route: DashboardRoute
+
     public init(
         id: String,
         title: String,
@@ -51,7 +54,8 @@ public struct NotificationDecision: Sendable, Equatable {
         displayName: String,
         band: ThresholdBand,
         windowName: String? = nil,
-        snoozable: Bool = true
+        snoozable: Bool = true,
+        route: DashboardRoute = DashboardRoute()
     ) {
         self.id = id
         self.title = title
@@ -61,6 +65,7 @@ public struct NotificationDecision: Sendable, Equatable {
         self.band = band
         self.windowName = windowName
         self.snoozable = snoozable
+        self.route = route
     }
 }
 
