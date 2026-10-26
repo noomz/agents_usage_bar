@@ -13,6 +13,7 @@
 		AA000001000000000000001A /* AgentsUsageBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000001B /* AgentsUsageBarApp.swift */; };
 		AA000001000000000000002A /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001000000000000002B /* AppDependencies.swift */; };
 		AA1D6000000000000000010A /* DashboardRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000010B /* DashboardRoute.swift */; };
+		AA1D80000000000000000C0A /* DashboardHotkey.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D80000000000000000C0B /* DashboardHotkey.swift */; };
 		AA1D6000000000000000020A /* DashboardWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000020B /* DashboardWindowController.swift */; };
 		AA1D6000000000000000030A /* DashboardRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000030B /* DashboardRootView.swift */; };
 		AA1D6000000000000000050A /* DashboardOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D6000000000000000050B /* DashboardOverview.swift */; };
@@ -117,6 +118,7 @@
 		AA050200000000000000011A /* ConfigStorePrecedenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050200000000000000011B /* ConfigStorePrecedenceTests.swift */; };
 		/* Plan 05-03 — SettingsGeneralTabTests + AggregateStoreUpdateWarningFractionTests test sources */
 		AA050302000000000000010A /* SettingsGeneralTabTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050302000000000000010B /* SettingsGeneralTabTests.swift */; };
+		AA1D80000000000000000D0A /* DashboardHotkeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1D80000000000000000D0B /* DashboardHotkeyTests.swift */; };
 		AA050302000000000000011A /* AggregateStoreUpdateWarningFractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050302000000000000011B /* AggregateStoreUpdateWarningFractionTests.swift */; };
 		AA050303000000000000010A /* AggregateStoreProviderEnabledTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA050303000000000000010B /* AggregateStoreProviderEnabledTests.swift */; };
 		/* Plan 01.03 — Config sources */
@@ -473,6 +475,7 @@
 		AA000001000000000000001B /* AgentsUsageBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsUsageBarApp.swift; sourceTree = "<group>"; };
 		AA000001000000000000002B /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000010B /* DashboardRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRoute.swift; sourceTree = "<group>"; };
+		AA1D80000000000000000C0B /* DashboardHotkey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHotkey.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000020B /* DashboardWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardWindowController.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000030B /* DashboardRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRootView.swift; sourceTree = "<group>"; };
 		AA1D6000000000000000050B /* DashboardOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardOverview.swift; sourceTree = "<group>"; };
@@ -561,6 +564,7 @@
 		AA050200000000000000011B /* ConfigStorePrecedenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStorePrecedenceTests.swift; sourceTree = "<group>"; };
 		/* Plan 05-03 — SettingsGeneralTabTests + AggregateStoreUpdateWarningFractionTests file references */
 		AA050302000000000000010B /* SettingsGeneralTabTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsGeneralTabTests.swift; sourceTree = "<group>"; };
+		AA1D80000000000000000D0B /* DashboardHotkeyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHotkeyTests.swift; sourceTree = "<group>"; };
 		AA050302000000000000011B /* AggregateStoreUpdateWarningFractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreUpdateWarningFractionTests.swift; sourceTree = "<group>"; };
 		AA050303000000000000010B /* AggregateStoreProviderEnabledTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregateStoreProviderEnabledTests.swift; sourceTree = "<group>"; };
 		/* Plan 05-04 Task 1 — DetectionProbe + OnboardingCopy file references */
@@ -980,6 +984,7 @@
 				AA000001000000000000001B /* AgentsUsageBarApp.swift */,
 				AA000001000000000000002B /* AppDependencies.swift */,
 				AA1D6000000000000000010B /* DashboardRoute.swift */,
+				AA1D80000000000000000C0B /* DashboardHotkey.swift */,
 				AA080800000000000000001B /* AppEnvironment.swift */,
 				/* Plan 05-01 — WindowActivationObserver */
 				AA050100000000000000001B /* WindowActivationObserver.swift */,
@@ -1621,6 +1626,7 @@
 				AA050400000000000000012B /* SettingsProvidersTabTests.swift */,
 				/* Plan 05-03 Task 2 — SettingsGeneralTabTests */
 				AA050302000000000000010B /* SettingsGeneralTabTests.swift */,
+				AA1D80000000000000000D0B /* DashboardHotkeyTests.swift */,
 			);
 			path = SettingsTests;
 			sourceTree = "<group>";
@@ -2068,6 +2074,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA000001000000000000001A /* AgentsUsageBarApp.swift in Sources */,
 				AA000001000000000000002A /* AppDependencies.swift in Sources */,
 				AA1D6000000000000000010A /* DashboardRoute.swift in Sources */,
+				AA1D80000000000000000C0A /* DashboardHotkey.swift in Sources */,
 				AA1D6000000000000000020A /* DashboardWindowController.swift in Sources */,
 				AA1D6000000000000000030A /* DashboardRootView.swift in Sources */,
 				AA1D6000000000000000080A /* DashboardOverviewView.swift in Sources */,
@@ -2449,6 +2456,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA050500050000000000011A /* WelcomeRootViewTests.swift in Sources */,
 				/* Plan 05-03 — SettingsGeneralTab + AggregateStore.updateWarningFraction tests */
 				AA050302000000000000010A /* SettingsGeneralTabTests.swift in Sources */,
+				AA1D80000000000000000D0A /* DashboardHotkeyTests.swift in Sources */,
 				AA050302000000000000011A /* AggregateStoreUpdateWarningFractionTests.swift in Sources */,
 				/* Plan 05-03 — AggregateStore.setProviderEnabled tests (D-04) */
 				AA050303000000000000010A /* AggregateStoreProviderEnabledTests.swift in Sources */,

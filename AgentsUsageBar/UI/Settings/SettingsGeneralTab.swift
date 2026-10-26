@@ -1,3 +1,4 @@
+import Carbon.HIToolbox
 import SwiftUI
 import ServiceManagement
 import os
@@ -93,6 +94,18 @@ struct SettingsGeneralTab: View {
                     .multilineTextAlignment(.trailing)
                 }
                 Text("Warns when this month's spend reaches the warning threshold and again at 100%. Subscription usage never counts. Empty uses config.toml; 0 turns a budget off.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            // MARK: Dashboard shortcut (SPEC V60)
+            Section("Dashboard") {
+                LabeledContent("Open dashboard") {
+                    DashboardHotkeyRecorder(
+                        hotkey: preferences.dashboardHotkey,
+                        onChange: { preferences.setDashboardHotkey($0) })
+                }
+                Text("A shortcut that opens the dashboard from any app. Off until you record one. Needs no Accessibility permission.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -195,5 +208,48 @@ struct SettingsGeneralTab: View {
         if let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") {
             NSWorkspace.shared.open(url)
         }
+    }
+}
+
+/// Records the dashboard shortcut (SPEC V60). It listens with a local key monitor, which
+/// sees only this app's own key presses and needs no Accessibility permission. Escape
+/// cancels; a key without Command, Option, or Control is ignored.
+private struct DashboardHotkeyRecorder: View {
+    let hotkey: DashboardHotkey?
+    let onChange: (DashboardHotkey?) -> Void
+
+    @State private var monitor: Any?
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Button(monitor != nil ? "Type a shortcut…" : (hotkey?.display ?? "Record Shortcut")) {
+                monitor == nil ? startRecording() : stopRecording()
+            }
+            .monospaced(hotkey != nil && monitor == nil)
+            if hotkey != nil, monitor == nil {
+                Button("Clear") { onChange(nil) }
+            }
+        }
+        .onDisappear { stopRecording() }
+    }
+
+    private func startRecording() {
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.keyCode == UInt16(kVK_Escape) {
+                stopRecording()
+                return nil
+            }
+            guard let recorded = DashboardHotkey(
+                keyCode: event.keyCode, flags: event.modifierFlags, characters: event.charactersIgnoringModifiers)
+            else { return nil }
+            onChange(recorded)
+            stopRecording()
+            return nil
+        }
+    }
+
+    private func stopRecording() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
     }
 }
