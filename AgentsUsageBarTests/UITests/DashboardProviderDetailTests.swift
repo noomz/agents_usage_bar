@@ -154,6 +154,8 @@ struct DashboardProviderDetailTests {
     private func claudeDay(_ key: String, origin: RecordOrigin = .observed, work: Decimal?, personal: Decimal?, cost: Decimal) -> DayFile {
         DayFile(date: key, timeZone: "UTC", records: [DayRecord(
             provider: .claude, tokens: 1_000, costUSD: Money(cost), costEstimated: true,
+            // Real shape (V69): the record keys `<label> <window>`, each account its bare window.
+            quota: ["work-demo 5h": QuotaDay(peak: 0.9, endOfDay: 0.2), "default 5h": QuotaDay(peak: 0.4, endOfDay: 0.1)],
             accounts: [
                 DayAccount(key: "work-demo", label: "work-demo", billingModel: .subscription, costUSD: work.map(Money.init),
                            quota: ["5h": QuotaDay(peak: 0.9, endOfDay: 0.2)]),
@@ -188,9 +190,28 @@ struct DashboardProviderDetailTests {
     func splitQuota() {
         let days = [claudeDay(Self.today, work: 5, personal: 2, cost: 7)]
         let split = DashboardProviderDetail(id: .claude, days: days, range: Self.range, split: true)
+        #expect(split.quotaWindows == ["5h"])
         let bars = split.quotaBars("5h")
         #expect(bars.map(\.account) == ["work-demo", "default"])
         #expect(bars.map(\.peak) == [0.9, 0.4])
+    }
+
+    @Test("split takes window names from account quota, not the record's (V69)")
+    func splitWindowsFromAccounts() {
+        let days = [DayFile(date: Self.today, timeZone: "UTC", records: [DayRecord(
+            provider: .codex, quota: ["quota": QuotaDay(peak: 0.5, endOfDay: 0.2)],
+            accounts: [
+                DayAccount(key: "a", label: "a", billingModel: .subscription,
+                           quota: ["primary": QuotaDay(peak: 0.3, endOfDay: 0.1), "secondary": QuotaDay(peak: 0.6, endOfDay: 0.6)]),
+                DayAccount(key: "b", label: "b", billingModel: .subscription,
+                           quota: ["primary": QuotaDay(peak: 0.7, endOfDay: 0.2)]),
+            ],
+            origin: .observed)])]
+        let split = DashboardProviderDetail(id: .codex, days: days, range: Self.range, split: true)
+        #expect(split.quotaWindows == ["primary", "secondary"])
+        #expect(split.quotaBars("primary").map(\.account) == ["a", "b"])
+        #expect(split.quotaBars("secondary").map(\.peak) == [0.6])
+        #expect(DashboardProviderDetail(id: .codex, days: days, range: Self.range).quotaWindows == ["quota"])
     }
 
     @Test("split needs every account shown and more than one seen (V68)")
