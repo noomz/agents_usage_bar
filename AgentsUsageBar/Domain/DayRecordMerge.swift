@@ -90,11 +90,20 @@ extension DayRecord {
         record.costEstimated = costEstimated || (sample.costTodayUSD != nil && sample.costEstimated)
         record.balanceUSD = sample.balanceUSD.map(Money.init) ?? balanceUSD
         record.quota = quota.merging(sample.quotaFractions)
-        for account in sample.dayAccounts(accountKey: accountKey) {
+        let sampled = sample.dayAccounts(accountKey: accountKey)
+        for account in sampled {
             if let index = record.accounts.firstIndex(where: { $0.key == account.key }) {
                 record.accounts[index] = record.accounts[index].merging(account)
             } else {
                 record.accounts.append(account)
+            }
+        }
+        // A sample with account tokens names every account that owns a session; one it
+        // leaves out owns none now, so a session that moved owner leaves it (V9).
+        if sampled.contains(where: { $0.tokens != nil }) {
+            let keys = Set(sampled.map(\.key))
+            for index in record.accounts.indices where !keys.contains(record.accounts[index].key) {
+                if record.accounts[index].tokens != nil { record.accounts[index].tokens = 0 }
             }
         }
         record.accounts.sort { $0.key < $1.key }

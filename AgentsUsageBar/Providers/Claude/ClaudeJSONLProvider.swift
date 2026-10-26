@@ -135,8 +135,8 @@ public actor ClaudeJSONLProvider: UsageProvider {
     }
 
     /// `fetch(now:)` plus today's tokens per transcript session (`ClaudeRoots.sessionID`),
-    /// which hook mode joins to accounts (V9).
-    public func fetchWithSessions(now: Date) async throws -> (snapshot: UsageSnapshot, sessionTokens: [String: Int]) {
+    /// which hook mode joins to accounts (V9). Nil sessions when nothing was read.
+    public func fetchWithSessions(now: Date) async throws -> (snapshot: UsageSnapshot, sessionTokens: [String: Int]?) {
         // No OAuth and no transcript root on disk: nothing to read. Report "not
         // configured" instead of a healthy $0 row; the next tick re-checks.
         let roots = self.roots()
@@ -145,7 +145,7 @@ public actor ClaudeJSONLProvider: UsageProvider {
             return (UsageSnapshot(
                 providerID: id, asOf: now, tokensToday: 0, costTodayUSD: 0,
                 balanceUSD: nil, quota: nil, raw: ["providerStatus": "unauthenticated"]
-            ), [:])
+            ), nil)
         }
         do {
             let today = TodayHelper.startOfDay(now, calendar: .current)
