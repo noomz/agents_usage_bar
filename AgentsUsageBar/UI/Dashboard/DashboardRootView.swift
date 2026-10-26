@@ -5,6 +5,8 @@ import SwiftUI
 struct DashboardRootView: View {
     @Bindable var model: DashboardModel
     let store: AggregateStore
+    /// Export… (V57); the window controller owns the save panel.
+    var onExport: () -> Void = {}
 
     var body: some View {
         NavigationSplitView {
@@ -12,6 +14,13 @@ struct DashboardRootView: View {
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260)
         } detail: {
             detail
+        }
+        .toolbar {
+            ToolbarItem {
+                Button("Export…", systemImage: "square.and.arrow.up", action: onExport)
+                    .help("Export the current view's history as JSON or CSV")
+                    .disabled(!model.isLoaded || model.days.isEmpty)
+            }
         }
         .task { await model.load() }
         .onChange(of: store.lastTick) {

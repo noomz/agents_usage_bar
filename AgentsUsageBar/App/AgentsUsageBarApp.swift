@@ -133,6 +133,11 @@ struct AgentsUsageBarApp: App {
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }
+            // SPEC V57 — File ▸ Export… exports the open dashboard's current scope.
+            CommandGroup(replacing: .importExport) {
+                Button("Export…") { dependencies.dashboardWindowController.export() }
+                    .keyboardShortcut("e", modifiers: .command)
+            }
         }
     }
 }
