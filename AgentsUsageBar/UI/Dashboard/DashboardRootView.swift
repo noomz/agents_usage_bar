@@ -87,12 +87,13 @@ enum DashboardPalette {
         (ProviderID.allKnown.map(\.displayHint), ProviderID.allKnown.map(color))
     }
 
-    /// Diagonal hatching on a half-strength fill: the value series beside solid spend (V54).
+    /// Darker diagonal stripes on a full-strength fill: the value series beside solid spend (V54).
     /// The stripe wraps at the tile corners so the pattern tiles without gaps.
     static func hatch(_ color: Color) -> ImagePaint {
-        let stroke = NSColor(color)
+        let fill = NSColor(color)
+        let stroke = fill.blended(withFraction: 0.45, of: .black) ?? fill
         let image = NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in
-            stroke.withAlphaComponent(0.5).setFill()
+            fill.setFill()
             rect.fill()
             let line = NSBezierPath()
             for offset in [-rect.width, 0, rect.width] {
