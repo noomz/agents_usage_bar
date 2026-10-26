@@ -174,7 +174,7 @@ struct DashboardProviderDetailView: View {
                     BarMark(x: day(point.key), y: .value("Amount", point.amount))
                         .position(by: .value("Series", point.series.rawValue))
                         .foregroundStyle(point.series == .spend ? AnyShapeStyle(fill) : AnyShapeStyle(DashboardPalette.hatch(fill)))
-                        .opacity(point.estimated || point.backfilled ? 0.55 : 1)
+                        .opacity(point.backfilled ? 0.55 : point.estimated ? 0.8 : 1)
                 }
             }
             .chartXScale(domain: detail.range.chartDomain)

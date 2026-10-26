@@ -70,11 +70,16 @@ enum DashboardPalette {
         }
     }
 
-    /// Shade `index` of `count` of a provider colour, lightest last, for account splits (V68).
+    /// Shade `index` of `count` of a provider colour for account splits (V68): darkest first,
+    /// lightest last, spread from 40% toward black to 60% toward white so neighbours stay apart.
     static func shade(_ color: Color, _ index: Int, of count: Int) -> Color {
         guard count > 1 else { return color }
-        let fraction = 0.55 * Double(index) / Double(count - 1)
-        return Color(nsColor: NSColor(color).blended(withFraction: fraction, of: .white) ?? NSColor(color))
+        let base = NSColor(color)
+        let fraction = -0.4 + 1.0 * Double(index) / Double(count - 1)
+        let shaded = fraction < 0
+            ? base.blended(withFraction: -fraction, of: .black)
+            : base.blended(withFraction: fraction, of: .white)
+        return Color(nsColor: shaded ?? base)
     }
 
     /// Provider names and colours for `chartForegroundStyleScale`.
@@ -82,16 +87,19 @@ enum DashboardPalette {
         (ProviderID.allKnown.map(\.displayHint), ProviderID.allKnown.map(color))
     }
 
-    /// Diagonal hatching on a faint fill: the value series beside solid spend (V54).
+    /// Diagonal hatching on a half-strength fill: the value series beside solid spend (V54).
+    /// The stripe wraps at the tile corners so the pattern tiles without gaps.
     static func hatch(_ color: Color) -> ImagePaint {
         let stroke = NSColor(color)
-        let image = NSImage(size: NSSize(width: 6, height: 6), flipped: false) { rect in
-            stroke.withAlphaComponent(0.2).setFill()
+        let image = NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in
+            stroke.withAlphaComponent(0.5).setFill()
             rect.fill()
             let line = NSBezierPath()
-            line.move(to: NSPoint(x: rect.minX, y: rect.minY))
-            line.line(to: NSPoint(x: rect.maxX, y: rect.maxY))
-            line.lineWidth = 1.5
+            for offset in [-rect.width, 0, rect.width] {
+                line.move(to: NSPoint(x: rect.minX + offset, y: rect.minY))
+                line.line(to: NSPoint(x: rect.maxX + offset, y: rect.maxY))
+            }
+            line.lineWidth = 2.5
             stroke.setStroke()
             line.stroke()
             return true
