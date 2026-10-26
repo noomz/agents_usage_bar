@@ -294,7 +294,7 @@ struct DashboardProviderDetailView: View {
                 ForEach(Array(detail.events.enumerated()), id: \.offset) { _, event in
                     GridRow {
                         Text(event.time.formatted(date: .abbreviated, time: .shortened))
-                        Label(Self.kindTitle(event.kind), systemImage: DashboardPalette.symbol(event.kind))
+                        Label(DashboardPalette.title(event.kind), systemImage: DashboardPalette.symbol(event.kind))
                         Text(event.window ?? "")
                         Text(event.notified ? "yes" : "no").foregroundStyle(event.notified ? .primary : .secondary)
                         Text(event.carriedOver ? "yes" : "")
@@ -302,20 +302,6 @@ struct DashboardProviderDetailView: View {
                     .font(.callout.monospacedDigit())
                 }
             }
-        }
-    }
-
-    private static func kindTitle(_ kind: UsageEventKind) -> String {
-        switch kind {
-        case .band80: return "80% band"
-        case .band95: return "95% band"
-        case .band100: return "100% band"
-        case .pace: return "Pace warning"
-        case .reset: return "Quota reset"
-        case .authLost: return "Auth lost"
-        case .authRecovered: return "Auth recovered"
-        case .budgetWarning: return "Budget warning"
-        case .budgetLimit: return "Budget 100%"
         }
     }
 }

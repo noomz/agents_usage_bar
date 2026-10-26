@@ -169,7 +169,7 @@ T22|x|S5 gate: CI green, install, set a low budget, confirm the event, the notif
 T23|x|S6: Dashboard window, activation switching, URL scheme in `Info.plist`, route handling, `aub dashboard`, popover footer button.|V50,V51,I14
 T24|x|S6: Sidebar, shared range, and Overview.|V20,V26,V52,V53,V56
 T25|x|S6: Provider detail.|V26,V54,V56
-T26|.|S6: Calendar.|V2,V55,V56
+T26|x|S6: Calendar.|V2,V55,V56
 T27|.|S6: Export… using the S2 renderer.|V47,V57
 T28|.|S6 gate: CI green, install, open via each S6 entry point, check every section against real history, export.|C7
 T29|.|S7: Popover teaser.|V20,V59

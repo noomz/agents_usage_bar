@@ -37,9 +37,7 @@ struct DashboardRootView: View {
                 DashboardProviderDetailView(model: model, id: id)
                     .id(id)
             case .calendar:
-                Text("Calendar")
-                    .font(.title2)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                DashboardCalendarView(model: model, budgets: model.budgets(store.budgets), warningFraction: store.warningFraction)
             }
         }
     }
@@ -83,6 +81,20 @@ enum DashboardPalette {
             return true
         }
         return ImagePaint(image: Image(nsImage: image))
+    }
+
+    static func title(_ kind: UsageEventKind) -> String {
+        switch kind {
+        case .band80: return "80% band"
+        case .band95: return "95% band"
+        case .band100: return "100% band"
+        case .pace: return "Pace warning"
+        case .reset: return "Quota reset"
+        case .authLost: return "Auth lost"
+        case .authRecovered: return "Auth recovered"
+        case .budgetWarning: return "Budget warning"
+        case .budgetLimit: return "Budget 100%"
+        }
     }
 
     static func symbol(_ kind: UsageEventKind) -> String {
@@ -131,6 +143,33 @@ struct DashboardRangeHeader: View {
         let first = DashboardRange.date(forKey: range.keys[0]).formatted(date: .abbreviated, time: .omitted)
         let last = DashboardRange.date(forKey: range.keys[range.keys.count - 1]).formatted(date: .abbreviated, time: .omitted)
         return "\(first) – \(last)" + (range.isTodayOpen ? " · today in progress" : "")
+    }
+}
+
+/// Provider chips: switching one off filters Overview and the Calendar heatmap, one shared
+/// selection (V53).
+struct DashboardChips: View {
+    @Bindable var model: DashboardModel
+    let ids: [ProviderID]
+
+    var body: some View {
+        HStack {
+            ForEach(ids, id: \.self) { id in
+                let on = !model.excluded.contains(id)
+                let color = DashboardPalette.color(id)
+                Button { model.toggle(id) } label: {
+                    HStack(spacing: 4) {
+                        Circle().fill(color).frame(width: 8, height: 8)
+                        Text(id.displayHint)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(on ? color.opacity(0.18) : .clear, in: Capsule())
+                    .overlay(Capsule().stroke(color.opacity(on ? 0.6 : 0.2)))
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 

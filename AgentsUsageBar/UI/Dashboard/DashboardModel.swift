@@ -18,8 +18,9 @@ final class DashboardModel {
     var range: DashboardRange = .days14
     /// Providers switched off by the chips, shared by Overview and the Calendar heatmap (V53).
     var excluded: Set<ProviderID> = []
-    /// The day a route asked for, for Calendar.
-    private(set) var focusDay: String?
+    /// Calendar's selected day; nil is today.
+    var selectedDay: String?
+    var calendarMetric: DashboardCalendar.Metric = .spend
 
     private(set) var days: [DayFile] = []
     private(set) var today: String
@@ -49,7 +50,7 @@ final class DashboardModel {
             section = .provider(id)
         case .calendar(let day, _):
             section = .calendar
-            focusDay = day
+            selectedDay = day
         }
     }
 
@@ -78,6 +79,11 @@ final class DashboardModel {
 
     var overview: DashboardOverview {
         DashboardOverview(days: days, range: range.statsRange(today: today), excluded: excluded, order: order)
+    }
+
+    /// Every retained day, whatever the range (V52).
+    var calendar: DashboardCalendar {
+        DashboardCalendar(days: days, today: today, metric: calendarMetric, excluded: excluded, order: order)
     }
 
     var sidebar: DashboardSidebar {

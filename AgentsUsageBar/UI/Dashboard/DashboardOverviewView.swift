@@ -35,28 +35,11 @@ struct DashboardOverviewView: View {
 
     // MARK: - Header, chips, tiles
 
-    /// One chip per provider with a record in range; switching one off filters Overview and
-    /// the Calendar heatmap (V53).
+    /// One chip per provider with a record in range (V53).
     private var chips: some View {
-        let ids = DashboardOverview(days: model.days, range: model.range.statsRange(today: model.today), order: model.order)
-            .providers.map(\.id)
-        return HStack {
-            ForEach(ids, id: \.self) { id in
-                let on = !model.excluded.contains(id)
-                let color = DashboardPalette.color(id)
-                Button { model.toggle(id) } label: {
-                    HStack(spacing: 4) {
-                        Circle().fill(color).frame(width: 8, height: 8)
-                        Text(id.displayHint)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(on ? color.opacity(0.18) : .clear, in: Capsule())
-                    .overlay(Capsule().stroke(color.opacity(on ? 0.6 : 0.2)))
-                }
-                .buttonStyle(.plain)
-            }
-        }
+        DashboardChips(model: model, ids: DashboardOverview(
+            days: model.days, range: model.range.statsRange(today: model.today), order: model.order
+        ).providers.map(\.id))
     }
 
     private func tiles(_ overview: DashboardOverview) -> some View {
