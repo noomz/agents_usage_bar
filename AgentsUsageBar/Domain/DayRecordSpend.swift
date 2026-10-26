@@ -32,10 +32,11 @@ extension DayRecord {
     private func share(of group: [DayAccount], others: [DayAccount]) -> Money? {
         guard !group.isEmpty else { return nil }
         let costs = group.compactMap(\.costUSD)
-        if costs.count == group.count {
-            return Money(costs.reduce(Decimal(0)) { $0 + $1.amount })
-        }
-        return others.isEmpty ? costUSD : nil
+        guard costs.count == group.count else { return others.isEmpty ? costUSD : nil }
+        let sum = Money(costs.reduce(Decimal(0)) { $0 + $1.amount })
+        // One billing model: a backfill top-up no account owns stays in the total (V31, V68).
+        guard others.isEmpty, let costUSD else { return sum }
+        return max(sum, costUSD)
     }
 
     /// `costSplit` broken into accounts (V68). A lone account of a billing model takes that

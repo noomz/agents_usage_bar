@@ -37,6 +37,18 @@ struct DayRecordSpendTests {
         #expect(split.value == Money(5))
     }
 
+    @Test("a topped-up record keeps cost no account owns as unattributed (V31, V68)")
+    func toppedUpLeftoverUnattributed() {
+        let topped = record(cost: 10, [account("a", .subscription, cost: 4), account("b", .subscription, cost: 3)])
+        #expect(topped.costSplit.value == Money(10))
+        #expect(topped.costSegments.map(\.account) == ["a", "b", nil])
+        #expect(topped.costSegments.map(\.amount) == [Money(4), Money(3), Money(3)])
+        // Per-account maxes can sum past the record's max: the higher total wins, nothing overshoots.
+        let over = record(cost: 6, [account("a", .subscription, cost: 4), account("b", .subscription, cost: 3)])
+        #expect(over.costSplit.value == Money(7))
+        #expect(over.costSegments.map(\.account) == ["a", "b"])
+    }
+
     @Test("a mixed record without per-account cost is unknown, not guessed (V7, V26)")
     func mixedWithoutSplitIsUnknown() {
         let split = record(cost: 7, [account("a", .metered), account("b", .subscription)]).costSplit
