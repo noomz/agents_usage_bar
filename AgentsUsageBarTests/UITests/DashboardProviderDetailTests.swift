@@ -165,7 +165,7 @@ struct DashboardProviderDetailTests {
             origin: origin)])
     }
 
-    @Test("split stacks value by account, backfilled days unattributed; tokens stay whole (V54, V62, V68)")
+    @Test("split stacks value by account, backfilled days unattributed (V54, V62, V68)")
     func splitCost() {
         let days = [
             claudeDay("2026-10-24", origin: .backfilled, work: nil, personal: nil, cost: 9),
@@ -179,7 +179,8 @@ struct DashboardProviderDetailTests {
         #expect(points.allSatisfy { $0.series == .value })
         #expect(points.first?.backfilled == true)
         #expect(split.label(.account("work-demo")) == "work-demo")
-        #expect(split.tokenPoints.count == 2)
+        // No account tokens here: each day's tokens are one unattributed part (V68).
+        #expect(split.tokenPoints.map(\.part) == [.unattributed, .unattributed])
         // Split totals match All: nothing is lost or prorated.
         let all = DashboardProviderDetail(id: .claude, days: days, range: Self.range)
         #expect(all.costPoints.map(\.amount).reduce(0, +) == points.map(\.amount).reduce(0, +))
@@ -224,5 +225,35 @@ struct DashboardProviderDetailTests {
         let codex = DashboardProviderDetail(id: .codex, days: lone, range: Self.range, split: true)
         #expect(!codex.split)
         #expect(codex.costPoints.map(\.part) == [.whole])
+    }
+
+
+    @Test("split stacks tokens by account; a lone account takes the day; a pre-T38 day is unattributed; totals match (V68)")
+    func splitTokens() {
+        let accounts = [
+            DayAccount(key: "work-demo", label: "work-demo", billingModel: .subscription, tokens: 70),
+            DayAccount(key: "default", label: "default", billingModel: .subscription, tokens: 20),
+        ]
+        let days = [
+            // Recorded before account tokens existed.
+            DayFile(date: "2026-10-23", timeZone: "UTC", records: [DayRecord(
+                provider: .claude, tokens: 50, accounts: accounts.map { var a = $0; a.tokens = nil; return a },
+                origin: .observed)]),
+            // A lone account takes the record's tokens.
+            DayFile(date: "2026-10-24", timeZone: "UTC", records: [DayRecord(
+                provider: .claude, tokens: 40, accounts: [accounts[0]], origin: .observed)]),
+            DayFile(date: Self.today, timeZone: "UTC", records: [DayRecord(
+                provider: .claude, tokens: 100, accounts: accounts, origin: .observed)]),
+        ]
+        let split = DashboardProviderDetail(id: .claude, days: days, range: Self.range, split: true)
+        #expect(split.tokenPoints.map(\.part) == [
+            .unattributed, .account("work-demo"), .account("work-demo"), .account("default"), .unattributed,
+        ])
+        #expect(split.tokenPoints.map(\.tokens) == [50, 40, 70, 20, 10])
+        let all = DashboardProviderDetail(id: .claude, days: days, range: Self.range)
+        #expect(all.tokenPoints.map(\.tokens).reduce(0, +) == split.tokenPoints.map(\.tokens).reduce(0, +))
+        // One account narrows Tokens to its own (V54, V9).
+        let work = DashboardProviderDetail(id: .claude, days: days, range: Self.range, account: "work-demo")
+        #expect(work.tokenPoints.map(\.tokens) == [40, 70])
     }
 }

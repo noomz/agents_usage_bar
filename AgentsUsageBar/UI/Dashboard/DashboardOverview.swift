@@ -51,7 +51,7 @@ enum DashboardQuotaCell: Equatable {
 
 /// What the Overview shows for a range and chip selection (V53). Local runtimes are left
 /// out: they have presence only and are never drawn as $0 (V56). Split accounts breaks
-/// spend per day and the quota strip into accounts (V68); tokens stay per provider.
+/// spend per day, the quota strip, and tokens per day into accounts (V68).
 struct DashboardOverview {
     typealias Part = DashboardProviderDetail.Part
 
@@ -173,14 +173,19 @@ struct DashboardOverview {
         return range.keys.indices.filter { i in providers.contains { $0.records[i] == nil } }.map { range.keys[$0] }
     }
 
-    /// Known tokens per day per provider.
+    /// Known tokens per day per provider; a split provider has one amount per account part (V68).
     var tokensPerDay: [DayAmount] {
         providers.flatMap { p in
-            zip(range.keys, p.records).compactMap { key, record in
-                guard let record, let tokens = record.tokens else { return nil }
-                return DayAmount(
-                    key: key, provider: p.id, amount: Double(tokens),
-                    estimated: false, backfilled: record.origin == .backfilled)
+            zip(range.keys, p.records).flatMap { key, record -> [DayAmount] in
+                guard let record else { return [] }
+                let parts: [(Part, Int)] = splitAccounts[p.id] != nil
+                    ? record.tokenSegments.map { ($0.account.map(Part.account) ?? .unattributed, $0.tokens) }
+                    : record.tokens.map { [(.whole, $0)] } ?? []
+                return parts.map { part, tokens in
+                    DayAmount(
+                        key: key, provider: p.id, part: part, amount: Double(tokens),
+                        estimated: false, backfilled: record.origin == .backfilled)
+                }
             }
         }
     }

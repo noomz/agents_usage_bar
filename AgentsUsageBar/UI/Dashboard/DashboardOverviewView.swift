@@ -123,17 +123,27 @@ struct DashboardOverviewView: View {
         }
     }
 
+    private func spendScale(_ overview: DashboardOverview) -> (domain: [String], range: [Color]) {
+        splitScale(overview, overview.spendProviders.map(\.id), overview.spendPerDay)
+    }
+
+    private func tokenScale(_ overview: DashboardOverview) -> (domain: [String], range: [Color]) {
+        splitScale(overview, overview.providers.map(\.id), overview.tokensPerDay)
+    }
+
     /// Provider colours, or with split on, a shade of the provider colour per account and grey
     /// for unattributed (V68). Only series drawn in range are kept, so the legend names them.
-    private func spendScale(_ overview: DashboardOverview) -> (domain: [String], range: [Color]) {
+    private func splitScale(
+        _ overview: DashboardOverview, _ providers: [ProviderID], _ amounts: [DashboardOverview.DayAmount]
+    ) -> (domain: [String], range: [Color]) {
         guard !overview.splitAccounts.isEmpty else { return DashboardPalette.providerScale }
-        let drawn = Set(overview.spendPerDay.map { overview.seriesName($0.provider, $0.part) })
-        let entries = overview.spendProviders.flatMap { p -> [(String, Color)] in
-            let color = DashboardPalette.color(p.id)
-            guard let accounts = overview.splitAccounts[p.id] else { return [(p.id.displayHint, color)] }
+        let drawn = Set(amounts.map { overview.seriesName($0.provider, $0.part) })
+        let entries = providers.flatMap { id -> [(String, Color)] in
+            let color = DashboardPalette.color(id)
+            guard let accounts = overview.splitAccounts[id] else { return [(id.displayHint, color)] }
             return accounts.enumerated().map { index, account in
-                (overview.seriesName(p.id, .account(account.key)), DashboardPalette.shade(color, index, of: accounts.count))
-            } + [(overview.seriesName(p.id, .unattributed), .gray)]
+                (overview.seriesName(id, .account(account.key)), DashboardPalette.shade(color, index, of: accounts.count))
+            } + [(overview.seriesName(id, .unattributed), .gray)]
         }.filter { drawn.contains($0.0) }
         return (entries.map(\.0), entries.map(\.1))
     }
@@ -197,11 +207,11 @@ struct DashboardOverviewView: View {
                 BarMark(
                     x: .value("Day", DashboardRange.date(forKey: day.key), unit: .day),
                     y: .value("Tokens", day.amount))
-                    .foregroundStyle(by: .value("Provider", day.provider.displayHint))
+                    .foregroundStyle(by: .value("Provider", overview.seriesName(day.provider, day.part)))
                     .opacity(day.backfilled ? 0.55 : 1)
             }
         }
-        .chartForegroundStyleScale(domain: DashboardPalette.providerScale.domain, range: DashboardPalette.providerScale.range)
+        .chartForegroundStyleScale(domain: tokenScale(overview).domain, range: tokenScale(overview).range)
         .chartXScale(domain: overview.range.chartDomain)
         .frame(height: 140)
     }

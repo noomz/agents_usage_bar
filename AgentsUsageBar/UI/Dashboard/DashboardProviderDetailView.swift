@@ -228,13 +228,15 @@ struct DashboardProviderDetailView: View {
                 gapBands(detail)
                 ForEach(points) { point in
                     BarMark(x: day(point.key), y: .value("Tokens", point.tokens))
-                        .foregroundStyle(color)
+                        .foregroundStyle(shade(point.part, detail))
                         .opacity(point.backfilled ? 0.55 : 1)
                 }
             }
             .chartXScale(domain: detail.range.chartDomain)
             .frame(height: 260)
-            DashboardNote("lighter = backfilled · grey band = no data")
+            if detail.split { splitLegend(detail, unattributed: points.contains { $0.part == .unattributed }) }
+            DashboardNote((detail.split ? "stacked by account · unattributed = tokens no single account reports · " : "")
+                + "lighter = backfilled · grey band = no data")
         }
     }
 
