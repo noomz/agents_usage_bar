@@ -347,6 +347,29 @@ struct CompactTextRendererTests {
         #expect(Array(names.prefix(6)) == ["Codex", "Grok", "Claude", "personal", "work●", "OpenRouter"])
     }
 
+    @Test("grok management spend is not shown as no limit (V70)")
+    func grokManagementSpendNotNoLimit() {
+        let snap = UsageSnapshot(
+            providerID: .grok,
+            asOf: CLIReportFixture.asOf,
+            tokensToday: nil,
+            costTodayUSD: Decimal(string: "1.25"),
+            balanceUSD: Decimal(string: "12.50"),
+            quota: nil,
+            raw: ["source": "management"]
+        )
+        var grok = CLIReportFixture.grok()
+        grok.status = .ok(lastSuccess: CLIReportFixture.asOf)
+        grok.snapshot = snap
+        let report = UsageReport(
+            asOf: CLIReportFixture.asOf, source: .live, providers: [grok]
+        )
+        let text = Self.render(report)
+        #expect(!text.contains("no limit"))
+        #expect(text.contains("spent"))
+        #expect(!text.contains("no cost data"))
+    }
+
     @Test("text gauge rows carry no trailing spaces with colour on")
     func textGaugeNoTrailingSpaces() {
         var noLimit = CLIReportFixture.codex()

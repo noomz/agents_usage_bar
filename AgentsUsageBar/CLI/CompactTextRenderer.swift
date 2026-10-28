@@ -195,6 +195,14 @@ public enum CompactTextRenderer {
             guard let q = snap.quota else { return (.text("no limit"), "", nil) }
             return (.bar(q.fraction), "credits", nil)
         }
+        if p.id == .grok, snap.quota == nil, snap.quotaWindows?.contains(where: { $0.utilization != nil }) != true {
+            if let cost = snap.costTodayUSD {
+                return (.text("\(CLIFormat.usd(cost)) spent"), "", nil)
+            }
+            if let left = snap.balanceUSD {
+                return (.text("\(CLIFormat.usd(left)) left"), "", nil)
+            }
+        }
         let windows = (snap.quotaWindows ?? []).filter { $0.utilization != nil }
         if let w = windows.max(by: { $0.utilization! < $1.utilization! }) {
             return (.bar(w.utilization!), windowLabel(w, p, snap), resetColumn(w.resetsAt, now: now))
@@ -241,6 +249,13 @@ public enum CompactTextRenderer {
     static func money(_ p: ProviderReport, _ snap: UsageSnapshot) -> String? {
         switch p.id {
         case .grok:
+            if snap.quota != nil || snap.quotaWindows?.contains(where: { $0.utilization != nil }) == true {
+                return spent(snap.costTodayUSD) ?? snap.balanceUSD.map { "\(CLIFormat.usd($0)) left" } ?? "no cost data"
+            }
+            if snap.costTodayUSD != nil {
+                return snap.balanceUSD.map { "\(CLIFormat.usd($0)) left" }
+            }
+            if let left = snap.balanceUSD { return "\(CLIFormat.usd(left)) left" }
             return "no cost data"
         case .openrouter:
             return snap.balanceUSD.map { "\(CLIFormat.usd($0)) left" }

@@ -239,6 +239,7 @@
 		AA071000000000000000004A /* GrokBillingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000004B /* GrokBillingProvider.swift */; };
 		AA071000000000000000005A /* GrokBillingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000005B /* GrokBillingError.swift */; };
 		AA071000000000000000006A /* GrokBillingResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000006B /* GrokBillingResponse.swift */; };
+		AA071000000000000000007A /* GrokManagementClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000007B /* GrokManagementClient.swift */; };
 		AA030600000000000000012A /* GeminiOAuthProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000012B /* GeminiOAuthProviderTests.swift */; };
 		AA030600000000000000013A /* GeminiOAuthProviderDegradedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA030600000000000000013B /* GeminiOAuthProviderDegradedTests.swift */; };
 		/* Plan 03-08 Task 1 — AppConfig codex + gemini + ConfigStore tests */
@@ -248,6 +249,7 @@
 		AA071000000000000000011A /* GrokCredentialLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000011B /* GrokCredentialLoaderTests.swift */; };
 		AA071000000000000000012A /* GrokBillingResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000012B /* GrokBillingResponseTests.swift */; };
 		AA071000000000000000013A /* GrokBillingProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000013B /* GrokBillingProviderTests.swift */; };
+		AA071000000000000000016A /* GrokManagementClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000016B /* GrokManagementClientTests.swift */; };
 		AA071000000000000000014A /* AppConfigGrokTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000014B /* AppConfigGrokTests.swift */; };
 		AA071000000000000000015A /* ConfigStoreGrokTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000015B /* ConfigStoreGrokTests.swift */; };
 		AA120E57DC44B1F7A6998313 /* ConfigStoreOllamaCloudTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA125A056E3E64FD3ED4E2D9 /* ConfigStoreOllamaCloudTests.swift */; };
@@ -711,10 +713,12 @@
 		AA071000000000000000004B /* GrokBillingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokBillingProvider.swift; sourceTree = "<group>"; };
 		AA071000000000000000005B /* GrokBillingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokBillingError.swift; sourceTree = "<group>"; };
 		AA071000000000000000006B /* GrokBillingResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokBillingResponse.swift; sourceTree = "<group>"; };
+		AA071000000000000000007B /* GrokManagementClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokManagementClient.swift; sourceTree = "<group>"; };
 		AA071000000000000000010B /* ProviderIDGrokTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderIDGrokTests.swift; sourceTree = "<group>"; };
 		AA071000000000000000011B /* GrokCredentialLoaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokCredentialLoaderTests.swift; sourceTree = "<group>"; };
 		AA071000000000000000012B /* GrokBillingResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokBillingResponseTests.swift; sourceTree = "<group>"; };
 		AA071000000000000000013B /* GrokBillingProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokBillingProviderTests.swift; sourceTree = "<group>"; };
+		AA071000000000000000016B /* GrokManagementClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokManagementClientTests.swift; sourceTree = "<group>"; };
 		AA071000000000000000014B /* AppConfigGrokTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigGrokTests.swift; sourceTree = "<group>"; };
 		AA071000000000000000015B /* ConfigStoreGrokTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStoreGrokTests.swift; sourceTree = "<group>"; };
 		AA125A056E3E64FD3ED4E2D9 /* ConfigStoreOllamaCloudTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStoreOllamaCloudTests.swift; sourceTree = "<group>"; };
@@ -1201,6 +1205,7 @@
 				AA071000000000000000002B /* GrokCredentialLoader.swift */,
 				AA071000000000000000003B /* GrokBillingClient.swift */,
 				AA071000000000000000004B /* GrokBillingProvider.swift */,
+				AA071000000000000000007B /* GrokManagementClient.swift */,
 				AA071000000000000000031B /* Models */,
 			);
 			path = Grok;
@@ -1811,6 +1816,7 @@
 				AA071000000000000000011B /* GrokCredentialLoaderTests.swift */,
 				AA071000000000000000012B /* GrokBillingResponseTests.swift */,
 				AA071000000000000000013B /* GrokBillingProviderTests.swift */,
+				AA071000000000000000016B /* GrokManagementClientTests.swift */,
 			);
 			path = ProvidersGrokTests;
 			sourceTree = "<group>";
@@ -2215,6 +2221,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA071000000000000000004A /* GrokBillingProvider.swift in Sources */,
 				AA071000000000000000005A /* GrokBillingError.swift in Sources */,
 				AA071000000000000000006A /* GrokBillingResponse.swift in Sources */,
+				AA071000000000000000007A /* GrokManagementClient.swift in Sources */,
 				/* Plan 03-07 — UI dashboard button + environment key */
 				AA030700000000000000001A /* ProviderDashboardURL.swift in Sources */,
 				AA030700000000000000002A /* OpenDashboardURLEnvironmentKey.swift in Sources */,
@@ -2398,6 +2405,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA071000000000000000011A /* GrokCredentialLoaderTests.swift in Sources */,
 				AA071000000000000000012A /* GrokBillingResponseTests.swift in Sources */,
 				AA071000000000000000013A /* GrokBillingProviderTests.swift in Sources */,
+				AA071000000000000000016A /* GrokManagementClientTests.swift in Sources */,
 				AA071000000000000000014A /* AppConfigGrokTests.swift in Sources */,
 				AA071000000000000000015A /* ConfigStoreGrokTests.swift in Sources */,
 				AA120E57DC44B1F7A6998313 /* ConfigStoreOllamaCloudTests.swift in Sources */,

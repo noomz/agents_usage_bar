@@ -46,6 +46,7 @@ public final class AggregateStore {
     /// to render the "Total excludes quota-only providers" footnote when
     /// `hasAnyQuotaOnlyProvider` is true.
     private let hasTokensByID: [ProviderID: Bool]
+    private let hasCostByID: [ProviderID: Bool]
     private let clock: any Clock
     private let dayKeys: DayKeyOwner
     private let cache: any CacheStore
@@ -131,12 +132,15 @@ public final class AggregateStore {
         // pass over the registry. Both maps are keyed by ProviderID and used
         // by orthogonal subsystems (UI overlay + rollupTotals exclusion).
         var hasTokens: [ProviderID: Bool] = [:]
+        var hasCost: [ProviderID: Bool] = [:]
         for p in registry {
             names[p.id] = p.displayName
             hasTokens[p.id] = p.capabilities.hasTokens
+            hasCost[p.id] = p.capabilities.hasCost
         }
         self.displayNamesByID = names
         self.hasTokensByID = hasTokens
+        self.hasCostByID = hasCost
 
         // UI-07: seed from cache synchronously before any view reads occur.
         var loaded = cache.loadAll()
@@ -590,11 +594,13 @@ public final class AggregateStore {
         var totalTokens = 0
         var totalCost: Decimal = 0
         for (id, state) in providers {
-            // D-07: skip quota-only providers entirely (no tokens, no cost).
-            if hasTokensByID[id] == false { continue }
             guard let snap = state.snapshot else { continue }
-            totalTokens += snap.tokensToday ?? 0
-            if let cost = snap.costTodayUSD {
+            // D-07: quota-only providers contribute no tokens. Cost still
+            // counts when the snapshot has it (Grok management USD, V70).
+            if hasTokensByID[id] != false {
+                totalTokens += snap.tokensToday ?? 0
+            }
+            if hasCostByID[id] != false, let cost = snap.costTodayUSD {
                 totalCost += cost
             }
         }

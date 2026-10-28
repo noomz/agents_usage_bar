@@ -1,17 +1,16 @@
 import Foundation
 import os
 
-/// Grok Build TUI usage row. Billing-quota only — session files do not persist
-/// billed tokens, so `tokensToday` and `costTodayUSD` are always nil (D-07 /
-/// Gemini shape). `capabilities.hasTokens == false` excludes the row from
-/// today-total rollup.
+/// Grok usage row: CLI SuperGrok quota plus xAI Management API spend/balance (V70).
+/// `hasTokens` stays false (no token count from either API). `hasCost` is true so
+/// management today-USD rolls into the header when present.
 public actor GrokBillingProvider: UsageProvider {
 
     public nonisolated let id: ProviderID = .grok
     public nonisolated let displayName: String = "Grok"
     public nonisolated let capabilities: ProviderCapabilities = ProviderCapabilities(
         hasQuota: true,
-        hasCost: false,
+        hasCost: true,
         hasTokens: false,
         isLocal: false
     )
@@ -19,13 +18,19 @@ public actor GrokBillingProvider: UsageProvider {
     public static let degradedNote = ThresholdEngine.degradedTag
 
     private let client: any GrokBillingClientProtocol
+    private let management: (any GrokManagementClientProtocol)?
     private let clock: any Clock
     private let logger = AppLogger.logger(category: "grok")
     private var lastStatus: ProviderStatus = .error(ProviderError.notYetFetched)
     private var lastGoodSnapshot: UsageSnapshot?
 
-    public init(client: any GrokBillingClientProtocol, clock: any Clock) {
+    public init(
+        client: any GrokBillingClientProtocol,
+        management: (any GrokManagementClientProtocol)? = nil,
+        clock: any Clock
+    ) {
         self.client = client
+        self.management = management
         self.clock = clock
     }
 
@@ -34,25 +39,73 @@ public actor GrokBillingProvider: UsageProvider {
     }
 
     public func fetch(now: Date) async throws -> UsageSnapshot {
-        do {
-            let billing = try await client.fetchCredits()
-            if isEmpty(billing) {
-                logger.warning("grok billing empty payload — keeping last good snapshot")
-                return retainLastGoodOrMute(now: now, error: GrokBillingError.emptyPayload)
-            }
-            let snap = buildSnapshot(from: billing, now: now)
+        let cli = await loadCLI()
+        let mgmt = await loadManagement(now: now)
+
+        if let billing = cli.billing, !isEmpty(billing) {
+            let snap = buildSnapshot(from: billing, management: mgmt.snapshot, now: now)
             lastGoodSnapshot = snap
             lastStatus = .ok(lastSuccess: now)
             let percent = billing.normalizedPercent.map { String(Int(($0 * 100).rounded())) } ?? "nil"
             logger.notice("grok billing percent=\(percent, privacy: .public) period=\(billing.periodLabel ?? "nil", privacy: .public)")
             return snap
+        }
+
+        if let mgmtSnap = mgmt.snapshot {
+            let snap = buildSnapshot(from: nil, management: mgmtSnap, now: now)
+            lastGoodSnapshot = snap
+            lastStatus = .ok(lastSuccess: now)
+            logger.notice("grok management spend present")
+            return snap
+        }
+
+        if cli.failedHard {
+            return degrade(now: now, error: cli.error ?? GrokBillingError.billingEndpointFailed(status: 0))
+        }
+        return retainLastGoodOrMute(
+            now: now,
+            error: mgmt.error ?? cli.error ?? GrokBillingError.emptyPayload
+        )
+    }
+
+    private struct CLILoad {
+        var billing: GrokBillingResponse?
+        var error: Error?
+        var failedHard: Bool
+    }
+
+    private struct ManagementLoad {
+        var snapshot: GrokManagementSnapshot?
+        var error: Error?
+    }
+
+    private func loadCLI() async -> CLILoad {
+        do {
+            let billing = try await client.fetchCredits()
+            if isEmpty(billing) {
+                logger.warning("grok billing empty payload — keeping last good snapshot")
+                return CLILoad(billing: nil, error: GrokBillingError.emptyPayload, failedHard: false)
+            }
+            return CLILoad(billing: billing, error: nil, failedHard: false)
         } catch GrokBillingError.noCredentials {
-            return retainLastGoodOrMute(now: now, error: GrokBillingError.noCredentials)
+            return CLILoad(billing: nil, error: GrokBillingError.noCredentials, failedHard: false)
         } catch GrokBillingError.unauthorized {
             logger.warning("grok billing unauthorized — keeping last good snapshot if any")
-            return retainLastGoodOrMute(now: now, error: GrokBillingError.unauthorized(status: 401))
+            return CLILoad(billing: nil, error: GrokBillingError.unauthorized(status: 401), failedHard: false)
         } catch {
-            return degrade(now: now, error: error)
+            return CLILoad(billing: nil, error: error, failedHard: true)
+        }
+    }
+
+    private func loadManagement(now: Date) async -> ManagementLoad {
+        guard let management else {
+            return ManagementLoad(snapshot: nil, error: nil)
+        }
+        do {
+            return ManagementLoad(snapshot: try await management.fetch(now: now), error: nil)
+        } catch {
+            logger.warning("grok management failed: \(String(describing: error), privacy: .public)")
+            return ManagementLoad(snapshot: nil, error: error)
         }
     }
 
@@ -81,16 +134,21 @@ public actor GrokBillingProvider: UsageProvider {
         }
     }
 
-    private func buildSnapshot(from billing: GrokBillingResponse, now: Date) -> UsageSnapshot {
-        let quota = billing.makeQuota()
+    private func buildSnapshot(
+        from billing: GrokBillingResponse?,
+        management: GrokManagementSnapshot?,
+        now: Date
+    ) -> UsageSnapshot {
+        let quota = billing?.makeQuota()
         var raw: [String: String] = [:]
-        if let tier = billing.subscriptionTier { raw["subscriptionTier"] = tier }
-        if let period = billing.periodLabel ?? billing.currentPeriod { raw["period"] = period }
-        if let product = billing.productLabel { raw["product"] = product }
-        if let prepaid = billing.prepaidBalance { raw["prepaidBalance"] = String(prepaid) }
+        if let tier = billing?.subscriptionTier { raw["subscriptionTier"] = tier }
+        if let period = billing?.periodLabel ?? billing?.currentPeriod { raw["period"] = period }
+        if let product = billing?.productLabel { raw["product"] = product }
+        if let prepaid = billing?.prepaidBalance { raw["prepaidBalance"] = String(prepaid) }
+        if management != nil { raw["source"] = "management" }
 
         let window: [QuotaWindow]?
-        if let percent = billing.normalizedPercent {
+        if let billing, let percent = billing.normalizedPercent {
             window = [
                 QuotaWindow(
                     name: "billing",
@@ -102,23 +160,25 @@ public actor GrokBillingProvider: UsageProvider {
             window = nil
         }
 
-        let balance: Decimal?
-        if let prepaid = billing.prepaidBalance, prepaid > 0 {
-            balance = Decimal(prepaid)
+        let cliBalance: Decimal?
+        if let prepaid = billing?.prepaidBalance, prepaid > 0 {
+            cliBalance = Decimal(prepaid)
         } else {
-            balance = nil
+            cliBalance = nil
         }
+        let balance = management?.remainingUSD ?? cliBalance
 
         var tooltipParts: [String] = []
-        if let product = billing.productLabel { tooltipParts.append(product) }
-        if let period = billing.periodLabel { tooltipParts.append(period.capitalized) }
-        if let tier = billing.subscriptionTier { tooltipParts.append(tier) }
+        if let product = billing?.productLabel { tooltipParts.append(product) }
+        if let period = billing?.periodLabel { tooltipParts.append(period.capitalized) }
+        if let tier = billing?.subscriptionTier { tooltipParts.append(tier) }
+        if billing == nil, management != nil { tooltipParts.append("API") }
 
         return UsageSnapshot(
             providerID: id,
             asOf: now,
             tokensToday: nil,
-            costTodayUSD: nil,
+            costTodayUSD: management?.costTodayUSD,
             balanceUSD: balance,
             quota: quota,
             raw: raw,
@@ -139,7 +199,7 @@ public actor GrokBillingProvider: UsageProvider {
                 providerID: cached.providerID,
                 asOf: cached.asOf,
                 tokensToday: nil,
-                costTodayUSD: nil,
+                costTodayUSD: cached.costTodayUSD,
                 balanceUSD: cached.balanceUSD,
                 quota: cached.quota,
                 raw: raw,

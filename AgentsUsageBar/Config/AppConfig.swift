@@ -285,10 +285,11 @@ extension GeminiConfig {
 
 // MARK: - GrokConfig
 
-/// Per-provider configuration for xAI Grok Build TUI billing.
+/// Per-provider configuration for xAI Grok: CLI billing plus Management API credits (I17).
 ///
 /// `[grok] enabled` and `[grok] api_url` are TOML knobs.
 /// `XAI_API_KEY` is env-only (not TOML) — the normal path is `~/.grok/auth.json`.
+/// Management: `XAI_MANAGEMENT_KEY` else `[grok] management_key`, plus `XAI_TEAM_ID` else `[grok] team_id`.
 public struct GrokConfig: Sendable, Equatable {
     /// Whether the Grok provider is enabled. Default: `true`.
     public let enabled: Bool
@@ -300,16 +301,40 @@ public struct GrokConfig: Sendable, Equatable {
     /// Override via `GROK_CLI_CHAT_PROXY_BASE_URL` or `[grok] api_url`.
     public let apiURL: URL
 
-    public init(enabled: Bool, apiKey: Secret?, apiURL: URL) {
+    /// xAI Management API key. Env `XAI_MANAGEMENT_KEY` else TOML `[grok] management_key`.
+    public let managementKey: Secret?
+
+    /// xAI team id. Env `XAI_TEAM_ID` else TOML `[grok] team_id`.
+    public let teamID: String?
+
+    public init(
+        enabled: Bool,
+        apiKey: Secret?,
+        apiURL: URL,
+        managementKey: Secret? = nil,
+        teamID: String? = nil
+    ) {
         self.enabled = enabled
         self.apiKey = apiKey
         self.apiURL = apiURL
+        self.managementKey = managementKey
+        self.teamID = teamID
     }
 }
 
 extension GrokConfig {
     func withEnabled(_ enabled: Bool) -> GrokConfig {
-        GrokConfig(enabled: enabled, apiKey: apiKey, apiURL: apiURL)
+        GrokConfig(
+            enabled: enabled,
+            apiKey: apiKey,
+            apiURL: apiURL,
+            managementKey: managementKey,
+            teamID: teamID
+        )
+    }
+
+    var hasManagementAPI: Bool {
+        managementKey != nil && teamID != nil
     }
 }
 

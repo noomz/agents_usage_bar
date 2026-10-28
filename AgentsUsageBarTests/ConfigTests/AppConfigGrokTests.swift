@@ -16,11 +16,15 @@ struct AppConfigGrokTests {
         let original = GrokConfig(
             enabled: true,
             apiKey: Secret("fake-xai-key"),
-            apiURL: URL(string: "https://example.test/v1")!
+            apiURL: URL(string: "https://example.test/v1")!,
+            managementKey: Secret("fake-mgmt"),
+            teamID: "team-1"
         )
         let disabled = original.withEnabled(false)
         #expect(disabled.enabled == false)
         #expect(disabled.apiURL == original.apiURL)
         #expect(disabled.apiKey?.description == "<redacted>")
+        #expect(disabled.managementKey?.description == "<redacted>")
+        #expect(disabled.teamID == "team-1")
     }
 }

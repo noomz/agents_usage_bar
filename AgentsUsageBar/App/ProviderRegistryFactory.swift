@@ -213,7 +213,13 @@ public enum ProviderRegistryFactory {
             let grokCreds = grokLoader.loadCredentials() ?? config.grok.apiKey.map {
                 GrokCredentialLoader.Result(token: $0, source: .apiKey)
             }
-            if grokCreds != nil {
+            let grokManagement: GrokManagementClient?
+            if let key = config.grok.managementKey, let teamID = config.grok.teamID {
+                grokManagement = GrokManagementClient(http: http, bearer: key, teamID: teamID)
+            } else {
+                grokManagement = nil
+            }
+            if grokCreds != nil || grokManagement != nil {
                 let grokAPIKey = config.grok.apiKey
                 let grokClient = GrokBillingClient(
                     http: http,
@@ -222,7 +228,11 @@ public enum ProviderRegistryFactory {
                     },
                     baseURL: config.grok.apiURL
                 )
-                registry.append(GrokBillingProvider(client: grokClient, clock: clock))
+                registry.append(GrokBillingProvider(
+                    client: grokClient,
+                    management: grokManagement,
+                    clock: clock
+                ))
                 grokRegistered = true
             } else {
                 grokRegistered = false

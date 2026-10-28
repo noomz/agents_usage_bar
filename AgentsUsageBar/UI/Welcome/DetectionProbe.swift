@@ -196,7 +196,7 @@ public enum DetectionProbe {
     }
 
     private static func probeGrok(config: AppConfig, fileManager: FileManager) -> DetectionResult {
-        if config.grok.apiKey != nil { return .detected }
+        if config.grok.apiKey != nil || config.grok.hasManagementAPI { return .detected }
         let home = GrokRoots.home(fileManager: fileManager)
         let authPath = GrokRoots.authJSON(home: home).path
         let sessionsPath = GrokRoots.sessionsDirectory(home: home).path

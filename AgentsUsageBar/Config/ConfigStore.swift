@@ -233,6 +233,24 @@ public final class ConfigStore: @unchecked Sendable {
             grokAPIURL = defaults.grok.apiURL
         }
 
+        let grokManagementKey: Secret?
+        if let envKey = env.value(forKey: "XAI_MANAGEMENT_KEY") {
+            grokManagementKey = Secret(envKey)
+        } else if case .string(let s) = grokSection["management_key"], !s.isEmpty {
+            grokManagementKey = Secret(s)
+        } else {
+            grokManagementKey = nil
+        }
+
+        let grokTeamID: String?
+        if let envID = env.value(forKey: "XAI_TEAM_ID") {
+            grokTeamID = envID
+        } else if case .string(let s) = grokSection["team_id"], !s.isEmpty {
+            grokTeamID = s
+        } else {
+            grokTeamID = nil
+        }
+
         // --- Plan 04-02 — ollama section (toml > defaults; NO env override per CONTEXT Discretion) ---
 
         // ollama.enabled: TOML only.
@@ -354,7 +372,9 @@ public final class ConfigStore: @unchecked Sendable {
             grok: GrokConfig(
                 enabled: grokEnabled,
                 apiKey: grokAPIKey,
-                apiURL: grokAPIURL
+                apiURL: grokAPIURL,
+                managementKey: grokManagementKey,
+                teamID: grokTeamID
             ),
             ollama: OllamaConfig(enabled: ollamaEnabled),
             ollamaCloud: OllamaCloudConfig(

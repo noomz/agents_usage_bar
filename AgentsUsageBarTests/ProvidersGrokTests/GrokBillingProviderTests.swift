@@ -2,6 +2,26 @@ import Foundation
 import Testing
 @testable import AgentsUsageBar
 
+actor FakeGrokManagementClient: GrokManagementClientProtocol {
+    private let snapshot: GrokManagementSnapshot
+    private let error: Error?
+
+    init(_ snapshot: GrokManagementSnapshot) {
+        self.snapshot = snapshot
+        self.error = nil
+    }
+
+    init(error: Error) {
+        self.snapshot = GrokManagementSnapshot(remainingUSD: nil, costTodayUSD: nil)
+        self.error = error
+    }
+
+    func fetch(now: Date) async throws -> GrokManagementSnapshot {
+        if let error { throw error }
+        return snapshot
+    }
+}
+
 actor FakeGrokBillingClient: GrokBillingClientProtocol {
     enum Step {
         case ok(GrokBillingResponse)
@@ -136,17 +156,49 @@ struct GrokBillingProviderTests {
         }
     }
 
-    @Test func capabilities_exclude_from_today_totals() {
-        // Structural lock: hasTokens false is what AggregateStore.rollupTotals keys on.
+    @Test func capabilities_tokens_false_cost_true() {
         let provider = GrokBillingProvider(
             client: FakeGrokBillingClient([]),
             clock: SystemClock()
         )
         #expect(provider.capabilities.hasTokens == false)
-        #expect(provider.capabilities.hasCost == false)
+        #expect(provider.capabilities.hasCost == true)
         #expect(provider.capabilities.isLocal == false)
         #expect(provider.id == .grok)
         #expect(provider.displayName == "Grok")
+    }
+
+    @Test func empty_cli_with_management_spend_is_not_no_limit() async throws {
+        let cli = FakeGrokBillingClient([.ok(GrokBillingResponse())])
+        let mgmt = FakeGrokManagementClient(
+            GrokManagementSnapshot(remainingUSD: Decimal(string: "12.50"), costTodayUSD: Decimal(string: "1.25"))
+        )
+        let provider = GrokBillingProvider(client: cli, management: mgmt, clock: SystemClock())
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.quota == nil)
+        #expect(snap.costTodayUSD == Decimal(string: "1.25"))
+        #expect(snap.balanceUSD == Decimal(string: "12.50"))
+        #expect(snap.raw["source"] == "management")
+        #expect(snap.tooltipLabel == "API")
+        if case .ok = await provider.status() {
+            // ok
+        } else {
+            Issue.record("expected .ok when management data exists")
+        }
+    }
+
+    @Test func cli_quota_overlays_management_spend() async throws {
+        let billing = GrokBillingResponse(creditUsagePercent: 41, periodLabel: "weekly")
+        let cli = FakeGrokBillingClient([.ok(billing)])
+        let mgmt = FakeGrokManagementClient(
+            GrokManagementSnapshot(remainingUSD: 8, costTodayUSD: 2)
+        )
+        let provider = GrokBillingProvider(client: cli, management: mgmt, clock: SystemClock())
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.raw["period"] == "weekly")
+        #expect(snap.quota != nil)
+        #expect(snap.costTodayUSD == 2)
+        #expect(snap.balanceUSD == 8)
     }
 
     @Test func client_source_never_reveals_secret() throws {
