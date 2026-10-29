@@ -1,9 +1,8 @@
 import Foundation
 import os
 
-/// Grok usage row: CLI SuperGrok quota plus xAI Management API spend/balance (V70).
-/// `hasTokens` stays false (no token count from either API). `hasCost` is true so
-/// management today-USD rolls into the header when present.
+/// Grok usage row: CLI SuperGrok quota, xAI Management API balance, and today's
+/// Pi/Hermes `xai` JSONL spend. SuperGrok % still comes only from CLI billing (V70).
 public actor GrokBillingProvider: UsageProvider {
 
     public nonisolated let id: ProviderID = .grok
@@ -11,15 +10,21 @@ public actor GrokBillingProvider: UsageProvider {
     public nonisolated let capabilities: ProviderCapabilities = ProviderCapabilities(
         hasQuota: true,
         hasCost: true,
-        hasTokens: false,
+        hasTokens: true,
         isLocal: false
     )
 
     public static let degradedNote = ThresholdEngine.degradedTag
+    private static let jsonlOffsetPrefix = "grok:"
+    private static let xaiCatalog = PiLocalCatalog(names: [PiProviderName(rawValue: "xai")])
 
     private let client: any GrokBillingClientProtocol
     private let management: (any GrokManagementClientProtocol)?
     private let clock: any Clock
+    private let scanner: TranscriptDirectoryScanner?
+    private let reader: PiSessionReader?
+    private let sessionRoots: (@Sendable () -> [URL])?
+    private let cache: (any CacheStore)?
     private let logger = AppLogger.logger(category: "grok")
     private var lastStatus: ProviderStatus = .error(ProviderError.notYetFetched)
     private var lastGoodSnapshot: UsageSnapshot?
@@ -52,10 +57,10 @@ public actor GrokBillingProvider: UsageProvider {
         self.client = client
         self.management = management
         self.clock = clock
-        _ = scanner
-        _ = reader
-        _ = sessionRoots
-        _ = cache
+        self.scanner = scanner
+        self.reader = reader
+        self.sessionRoots = sessionRoots
+        self.cache = cache
     }
 
     public func status() -> ProviderStatus {
@@ -65,9 +70,10 @@ public actor GrokBillingProvider: UsageProvider {
     public func fetch(now: Date) async throws -> UsageSnapshot {
         let cli = await loadCLI()
         let mgmt = await loadManagement(now: now)
+        let jsonl = await loadJSONL(now: now)
 
         if let billing = cli.billing, !isEmpty(billing) {
-            let snap = buildSnapshot(from: billing, management: mgmt.snapshot, now: now)
+            let snap = buildSnapshot(from: billing, management: mgmt.snapshot, jsonl: jsonl, now: now)
             lastGoodSnapshot = snap
             lastStatus = .ok(lastSuccess: now)
             let percent = billing.normalizedPercent.map { String(Int(($0 * 100).rounded())) } ?? "nil"
@@ -76,10 +82,18 @@ public actor GrokBillingProvider: UsageProvider {
         }
 
         if let mgmtSnap = mgmt.snapshot {
-            let snap = buildSnapshot(from: nil, management: mgmtSnap, now: now)
+            let snap = buildSnapshot(from: nil, management: mgmtSnap, jsonl: jsonl, now: now)
             lastGoodSnapshot = snap
             lastStatus = .ok(lastSuccess: now)
             logger.notice("grok management spend present")
+            return snap
+        }
+
+        if jsonl.contributed {
+            let snap = buildSnapshot(from: nil, management: nil, jsonl: jsonl, now: now)
+            lastGoodSnapshot = snap
+            lastStatus = .ok(lastSuccess: now)
+            logger.notice("grok pi-jsonl xai spend present")
             return snap
         }
 
@@ -101,6 +115,14 @@ public actor GrokBillingProvider: UsageProvider {
     private struct ManagementLoad {
         var snapshot: GrokManagementSnapshot?
         var error: Error?
+    }
+
+    private struct JSONLLoad {
+        var contributed: Bool
+        var tokens: Int
+        var costUSD: Decimal
+
+        static let skipped = JSONLLoad(contributed: false, tokens: 0, costUSD: 0)
     }
 
     private func loadCLI() async -> CLILoad {
@@ -133,6 +155,70 @@ public actor GrokBillingProvider: UsageProvider {
         }
     }
 
+    private func loadJSONL(now: Date) async -> JSONLLoad {
+        guard let scanner, let reader, let sessionRoots, let cache else {
+            return .skipped
+        }
+        let roots = sessionRoots()
+        let todayStart = TodayHelper.startOfDay(now)
+        let priorOffsets = cache.allTranscriptOffsets()
+        let grokOffsets = priorOffsets.filter { $0.key.hasPrefix(Self.jsonlOffsetPrefix) }
+        let scanFloor = grokOffsets.values.map(\.lastModified).min()
+            .map { $0.addingTimeInterval(-1) }
+        let candidateFiles = scanner.scanRoots(roots, modifiedSince: scanFloor)
+
+        var newOffsets: [String: TranscriptOffset] = [:]
+        var acc = PiLocalUsage.Acc()
+
+        do {
+            try await withThrowingTaskGroup(of: (URL, PiSessionReader.ReadResult).self) { group in
+                for fileURL in candidateFiles {
+                    let key = Self.jsonlOffsetPrefix + fileURL.absoluteString
+                    let priorOffset = priorOffsets[key]?.byteOffset ?? 0
+                    let priorMTime = priorOffsets[key]?.lastModified
+                    group.addTask {
+                        let result = try reader.readDelta(
+                            from: fileURL,
+                            startOffset: priorOffset,
+                            previousLastModified: priorMTime
+                        )
+                        return (fileURL, result)
+                    }
+                }
+
+                for try await (fileURL, result) in group {
+                    let key = Self.jsonlOffsetPrefix + fileURL.absoluteString
+                    newOffsets[key] = TranscriptOffset(
+                        url: key,
+                        byteOffset: result.newOffset,
+                        lastModified: result.lastModified
+                    )
+                    PiLocalUsage.reduce(
+                        records: result.records,
+                        catalog: Self.xaiCatalog,
+                        todayStart: todayStart,
+                        into: &acc
+                    )
+                }
+            }
+
+            cache.setTranscriptOffsets(Array(newOffsets.values))
+            let (todayTokensTotal, todayCostTotal, _) = cache.accumulateDailyUsage(
+                for: id,
+                now: now,
+                deltaTokens: acc.tokens,
+                deltaCostUSD: acc.costUSD,
+                deltaSessionTokens: [:]
+            )
+            let contributed = !acc.providers.isEmpty || todayTokensTotal > 0 || todayCostTotal > 0
+            guard contributed else { return .skipped }
+            return JSONLLoad(contributed: true, tokens: todayTokensTotal, costUSD: todayCostTotal)
+        } catch {
+            logger.warning("grok pi-jsonl failed: \(String(describing: error), privacy: .public)")
+            return .skipped
+        }
+    }
+
     /// True when the payload cannot drive a quota bar or reset countdown.
     private func isEmpty(_ billing: GrokBillingResponse) -> Bool {
         billing.makeQuota() == nil
@@ -161,6 +247,7 @@ public actor GrokBillingProvider: UsageProvider {
     private func buildSnapshot(
         from billing: GrokBillingResponse?,
         management: GrokManagementSnapshot?,
+        jsonl: JSONLLoad,
         now: Date
     ) -> UsageSnapshot {
         let quota = billing?.makeQuota()
@@ -169,7 +256,10 @@ public actor GrokBillingProvider: UsageProvider {
         if let period = billing?.periodLabel ?? billing?.currentPeriod { raw["period"] = period }
         if let product = billing?.productLabel { raw["product"] = product }
         if let prepaid = billing?.prepaidBalance { raw["prepaidBalance"] = String(prepaid) }
-        if management != nil { raw["source"] = "management" }
+        var sources: [String] = []
+        if management != nil { sources.append("management") }
+        if jsonl.contributed { sources.append("pi-jsonl") }
+        if !sources.isEmpty { raw["source"] = sources.joined(separator: ",") }
 
         let window: [QuotaWindow]?
         if let billing, let percent = billing.normalizedPercent {
@@ -191,6 +281,8 @@ public actor GrokBillingProvider: UsageProvider {
             cliBalance = nil
         }
         let balance = management?.remainingUSD ?? cliBalance
+        let tokensToday: Int? = jsonl.contributed ? jsonl.tokens : nil
+        let costTodayUSD: Decimal? = jsonl.contributed ? jsonl.costUSD : management?.costTodayUSD
 
         var tooltipParts: [String] = []
         if let product = billing?.productLabel { tooltipParts.append(product) }
@@ -201,8 +293,8 @@ public actor GrokBillingProvider: UsageProvider {
         return UsageSnapshot(
             providerID: id,
             asOf: now,
-            tokensToday: nil,
-            costTodayUSD: management?.costTodayUSD,
+            tokensToday: tokensToday,
+            costTodayUSD: costTodayUSD,
             balanceUSD: balance,
             quota: quota,
             raw: raw,
@@ -222,7 +314,7 @@ public actor GrokBillingProvider: UsageProvider {
             return UsageSnapshot(
                 providerID: cached.providerID,
                 asOf: cached.asOf,
-                tokensToday: nil,
+                tokensToday: cached.tokensToday,
                 costTodayUSD: cached.costTodayUSD,
                 balanceUSD: cached.balanceUSD,
                 quota: cached.quota,

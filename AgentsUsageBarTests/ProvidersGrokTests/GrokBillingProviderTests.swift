@@ -206,7 +206,6 @@ struct GrokBillingProviderTests {
         defer { try? FileManager.default.removeItem(at: root) }
         try writeGrokJSONL(
             to: root.appendingPathComponent("s.jsonl"),
-            now: now,
             lines: [
                 grokAssistantLine(now: now, provider: "xai", tokens: 1000, cost: "1.25"),
             ]
@@ -236,7 +235,6 @@ struct GrokBillingProviderTests {
         defer { try? FileManager.default.removeItem(at: root) }
         try writeGrokJSONL(
             to: root.appendingPathComponent("s.jsonl"),
-            now: now,
             lines: [
                 grokAssistantLine(now: now, provider: "xai", tokens: 1000, cost: "1.25"),
                 grokAssistantLine(now: now, provider: "openrouter", tokens: 500, cost: "9.99"),
@@ -265,7 +263,6 @@ struct GrokBillingProviderTests {
         let fileURL = root.appendingPathComponent("s.jsonl")
         try writeGrokJSONL(
             to: fileURL,
-            now: now,
             lines: [
                 grokAssistantLine(now: now, provider: "xai", tokens: 10, cost: "0.01"),
             ]
@@ -306,8 +303,7 @@ private func makeGrokJSONLRoot() throws -> URL {
     return tmp
 }
 
-private func writeGrokJSONL(to dest: URL, now: Date, lines: [String]) throws {
-    _ = now
+private func writeGrokJSONL(to dest: URL, lines: [String]) throws {
     let body = lines.joined(separator: "\n") + "\n"
     try body.write(to: dest, atomically: true, encoding: .utf8)
 }

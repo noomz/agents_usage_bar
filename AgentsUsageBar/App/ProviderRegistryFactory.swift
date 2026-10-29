@@ -231,7 +231,13 @@ public enum ProviderRegistryFactory {
                 registry.append(GrokBillingProvider(
                     client: grokClient,
                     management: grokManagement,
-                    clock: clock
+                    clock: clock,
+                    scanner: TranscriptDirectoryScanner(),
+                    reader: PiSessionReader(),
+                    sessionRoots: {
+                        PiSessionRoots.sessionDirectories(environment: ProcessInfo.processInfo.environment)
+                    },
+                    cache: cache
                 ))
                 grokRegistered = true
             } else {
