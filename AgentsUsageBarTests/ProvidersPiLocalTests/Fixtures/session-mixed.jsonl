@@ -1,0 +1,4 @@
+{"type":"message","id":"1","parentId":null,"timestamp":"<TS>","message":{"role":"assistant","provider":"DRM-SWAP","model":"qwen3.8-27b","usage":{"input":33189,"output":293,"cacheRead":0,"cacheWrite":0,"reasoning":0,"totalTokens":33482,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}}}}
+{"type":"message","id":"2","parentId":"1","timestamp":"<TS>","message":{"role":"assistant","provider":"openrouter","model":"openai/gpt-4.1","usage":{"input":10,"output":10,"cacheRead":0,"cacheWrite":0,"totalTokens":20,"cost":{"input":0.01,"output":0.02,"cacheRead":0,"cacheWrite":0,"total":0.03}}}}
+{"type":"compaction","id":"4","parentId":"2","timestamp":"<TS>","summary":"n","firstKeptEntryId":"1","tokensBefore":1,"usage":{"input":999,"output":1,"totalTokens":1000,"cost":{"total":1}}}
+{"type":"branch_summary","id":"5","parentId":"4","timestamp":"<TS>","fromId":"1","summary":"n","usage":{"input":50,"output":50,"totalTokens":100,"cost":{"total":1}}}

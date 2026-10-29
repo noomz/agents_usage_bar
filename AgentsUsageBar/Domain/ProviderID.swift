@@ -79,10 +79,13 @@ extension ProviderID {
     /// local session files do not persist billed tokens.
     public static let grok = ProviderID(rawValue: "grok")
 
+    /// Pi session JSONL local-llama spend row. Not a localhost runtime.
+    public static let piLocal = ProviderID(rawValue: "pi-local")
+
     /// Plan 05-02 — Ordered array of all known providers in display order.
     /// Used by `UserPreferencesStore.loadAll()` and `SettingsProvidersTab` row enumeration.
     public static let allKnown: [ProviderID] = [
-        .openrouter, .claude, .codex, .gemini, .grok, .ollama, .ollamaCloud, .lmstudio, .lmstudioLlamaCpp, .llamacpp
+        .openrouter, .claude, .codex, .gemini, .grok, .piLocal, .ollama, .ollamaCloud, .lmstudio, .lmstudioLlamaCpp, .llamacpp
     ]
 
     /// The provider a user-typed token names: a known id or `engine.<slug>`, else nil.
@@ -129,6 +132,7 @@ extension ProviderID {
         case "codex":      return "Codex"
         case "gemini":     return "Gemini"
         case "grok":       return "Grok"
+        case "pi-local":   return "Local Llama"
         case "ollama":     return "Ollama"
         case "ollama-cloud": return "Ollama Cloud"
         case "lmstudio":   return "LM Studio"

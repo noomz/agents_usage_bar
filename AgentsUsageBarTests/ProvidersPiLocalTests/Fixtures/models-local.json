@@ -1,0 +1,16 @@
+{
+  "providers": {
+    "DRM-SWAP": {
+      "baseUrl": "http://drm:8080/v1"
+    },
+    "ollama": {
+      "baseUrl": "http://localhost:11434/v1"
+    },
+    "openrouter": {
+      "baseUrl": "https://openrouter.ai/api/v1"
+    },
+    "anthropic": {
+      "baseUrl": "http://127.0.0.1:4000"
+    }
+  }
+}
