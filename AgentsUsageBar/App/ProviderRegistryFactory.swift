@@ -210,8 +210,9 @@ public enum ProviderRegistryFactory {
         let grokRegistered: Bool
         if config.grok.enabled {
             let grokLoader = GrokCredentialLoader()
-            let grokCreds = grokLoader.loadCredentials() ?? config.grok.apiKey.map {
-                GrokCredentialLoader.Result(token: $0, source: .apiKey)
+            var grokCandidates = grokLoader.loadCandidates()
+            if let tomlKey = config.grok.apiKey {
+                grokCandidates.append(GrokCredentialLoader.Result(token: tomlKey, source: .apiKey))
             }
             let grokManagement: GrokManagementClient?
             if let key = config.grok.managementKey, let teamID = config.grok.teamID {
@@ -219,12 +220,15 @@ public enum ProviderRegistryFactory {
             } else {
                 grokManagement = nil
             }
-            if grokCreds != nil || grokManagement != nil {
-                let grokAPIKey = config.grok.apiKey
+            if !grokCandidates.isEmpty || grokManagement != nil {
                 let grokClient = GrokBillingClient(
                     http: http,
-                    loadBearer: {
-                        GrokCredentialLoader().loadCredentials()?.token ?? grokAPIKey
+                    loadCandidates: {
+                        var list = GrokCredentialLoader().loadCandidates()
+                        if let tomlKey = config.grok.apiKey {
+                            list.append(GrokCredentialLoader.Result(token: tomlKey, source: .apiKey))
+                        }
+                        return list
                     },
                     baseURL: config.grok.apiURL
                 )

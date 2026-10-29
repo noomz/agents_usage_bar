@@ -12,10 +12,8 @@ public actor GrokBillingClient: GrokBillingClientProtocol {
 
     private let http: any HTTPClient
     private let endpoint: URL
-    /// Reloads `~/.grok/auth.json` (or env fallback) each request so a CLI token
-    /// rotation is picked up without restarting the menu bar app.
-    private let loadBearer: @Sendable () -> Secret?
-    private var bearer: Secret?
+    /// Reloads Grok CLI / Pi OAuth / env candidates each request.
+    private let loadCandidates: @Sendable () -> [GrokCredentialLoader.Result]
 
     public init(
         http: any HTTPClient,
@@ -24,8 +22,7 @@ public actor GrokBillingClient: GrokBillingClientProtocol {
     ) {
         self.http = http
         self.endpoint = Self.creditsURL(from: baseURL)
-        self.loadBearer = { bearer }
-        self.bearer = bearer
+        self.loadCandidates = { [GrokCredentialLoader.Result(token: bearer, source: .session)] }
     }
 
     public init(
@@ -35,39 +32,52 @@ public actor GrokBillingClient: GrokBillingClientProtocol {
     ) {
         self.http = http
         self.endpoint = Self.creditsURL(from: baseURL)
-        self.loadBearer = loadBearer
-        self.bearer = loadBearer()
+        self.loadCandidates = {
+            loadBearer().map { [GrokCredentialLoader.Result(token: $0, source: .session)] } ?? []
+        }
+    }
+
+    public init(
+        http: any HTTPClient,
+        loadCandidates: @escaping @Sendable () -> [GrokCredentialLoader.Result],
+        baseURL: URL = GrokBillingClient.defaultBaseURL
+    ) {
+        self.http = http
+        self.endpoint = Self.creditsURL(from: baseURL)
+        self.loadCandidates = loadCandidates
     }
 
     public func fetchCredits() async throws -> GrokBillingResponse {
-        if let fresh = loadBearer() {
-            bearer = fresh
-        }
-        guard let token = bearer else {
+        let candidates = loadCandidates()
+        guard !candidates.isEmpty else {
             throw GrokBillingError.noCredentials
         }
-        do {
-            return try await getCredits(bearer: token)
-        } catch GrokBillingError.unauthorized {
-            // Grok CLI rewrites auth.json in the background; retry once with a
-            // freshly loaded key before giving up.
-            if let retried = loadBearer(), retried != token {
-                bearer = retried
-                return try await getCredits(bearer: retried)
+        var lastUnauthorized: GrokBillingError?
+        for cred in candidates {
+            do {
+                return try await getCredits(cred)
+            } catch let error as GrokBillingError {
+                if case .unauthorized = error {
+                    lastUnauthorized = error
+                    continue
+                }
+                throw error
             }
-            throw GrokBillingError.unauthorized(status: 401)
         }
+        throw lastUnauthorized ?? GrokBillingError.unauthorized(status: 401)
     }
 
-    private func getCredits(bearer: Secret) async throws -> GrokBillingResponse {
+    private func getCredits(_ cred: GrokCredentialLoader.Result) async throws -> GrokBillingResponse {
+        var headers: [String: String] = ["Accept": "application/json"]
+        if cred.usesGrokCLIHeaders {
+            headers["X-XAI-Token-Auth"] = "xai-grok-cli"
+            headers["x-grok-client-mode"] = "cli"
+        }
         do {
             return try await http.get(
                 endpoint,
-                bearer: bearer,
-                extraHeaders: [
-                    "X-XAI-Token-Auth": "xai-grok-cli",
-                    "x-grok-client-mode": "cli",
-                ],
+                bearer: cred.token,
+                extraHeaders: headers,
                 useSnakeCaseConversion: false,
                 as: GrokBillingResponse.self
             )
