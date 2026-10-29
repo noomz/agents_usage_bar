@@ -23,4 +23,8 @@ struct ProviderIDGrokTests {
     @Test func grok_is_not_local() {
         #expect(ProviderID.localIDs.contains(.grok) == false)
     }
+
+    @Test func contributesToTodayTotal() {
+        #expect(ProviderID.grok.contributesToTodayTotal)
+    }
 }

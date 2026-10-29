@@ -29,9 +29,33 @@ public actor GrokBillingProvider: UsageProvider {
         management: (any GrokManagementClientProtocol)? = nil,
         clock: any Clock
     ) {
+        self.init(
+            client: client,
+            management: management,
+            clock: clock,
+            scanner: nil,
+            reader: nil,
+            sessionRoots: nil,
+            cache: nil
+        )
+    }
+
+    init(
+        client: any GrokBillingClientProtocol,
+        management: (any GrokManagementClientProtocol)? = nil,
+        clock: any Clock,
+        scanner: TranscriptDirectoryScanner?,
+        reader: PiSessionReader?,
+        sessionRoots: (@Sendable () -> [URL])?,
+        cache: (any CacheStore)?
+    ) {
         self.client = client
         self.management = management
         self.clock = clock
+        _ = scanner
+        _ = reader
+        _ = sessionRoots
+        _ = cache
     }
 
     public func status() -> ProviderStatus {

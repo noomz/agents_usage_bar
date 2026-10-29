@@ -71,7 +71,7 @@ struct GrokBillingProviderTests {
         #expect(snap.balanceUSD == Decimal(12.5))
         #expect(snap.tooltipLabel == "supergrok")
         #expect(snap.quotaUsageCaption == "43% used")
-        #expect(provider.capabilities.hasTokens == false)
+        #expect(provider.capabilities.hasTokens == true)
         #expect(provider.capabilities.hasQuota == true)
         if case .ok = await provider.status() {
             // ok
@@ -156,12 +156,12 @@ struct GrokBillingProviderTests {
         }
     }
 
-    @Test func capabilities_tokens_false_cost_true() {
+    @Test func capabilities_tokens_true_cost_true() {
         let provider = GrokBillingProvider(
             client: FakeGrokBillingClient([]),
             clock: SystemClock()
         )
-        #expect(provider.capabilities.hasTokens == false)
+        #expect(provider.capabilities.hasTokens == true)
         #expect(provider.capabilities.hasCost == true)
         #expect(provider.capabilities.isLocal == false)
         #expect(provider.id == .grok)
@@ -201,6 +201,93 @@ struct GrokBillingProviderTests {
         #expect(snap.balanceUSD == 8)
     }
 
+    @Test func pi_jsonl_xai_beats_management_zero() async throws {
+        let root = try makeGrokJSONLRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeGrokJSONL(
+            to: root.appendingPathComponent("s.jsonl"),
+            now: now,
+            lines: [
+                grokAssistantLine(now: now, provider: "xai", tokens: 1000, cost: "1.25"),
+            ]
+        )
+        let cache = FakeCacheStore()
+        let provider = GrokBillingProvider(
+            client: FakeGrokBillingClient([.ok(GrokBillingResponse())]),
+            management: FakeGrokManagementClient(
+                GrokManagementSnapshot(remainingUSD: 0, costTodayUSD: 0)
+            ),
+            clock: SystemClock(),
+            scanner: TranscriptDirectoryScanner(),
+            reader: PiSessionReader(),
+            sessionRoots: { [root] },
+            cache: cache
+        )
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.tokensToday == 1000)
+        #expect(snap.costTodayUSD == Decimal(string: "1.25"))
+        #expect(snap.balanceUSD == 0)
+        #expect(snap.raw["source"]?.contains("pi-jsonl") == true)
+        #expect(snap.quota == nil)
+    }
+
+    @Test func pi_jsonl_ignores_openrouter_and_drm_swap() async throws {
+        let root = try makeGrokJSONLRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeGrokJSONL(
+            to: root.appendingPathComponent("s.jsonl"),
+            now: now,
+            lines: [
+                grokAssistantLine(now: now, provider: "xai", tokens: 1000, cost: "1.25"),
+                grokAssistantLine(now: now, provider: "openrouter", tokens: 500, cost: "9.99"),
+                grokAssistantLine(now: now, provider: "DRM-SWAP", tokens: 33482, cost: "0"),
+            ]
+        )
+        let provider = GrokBillingProvider(
+            client: FakeGrokBillingClient([.ok(GrokBillingResponse())]),
+            management: FakeGrokManagementClient(
+                GrokManagementSnapshot(remainingUSD: 0, costTodayUSD: 0)
+            ),
+            clock: SystemClock(),
+            scanner: TranscriptDirectoryScanner(),
+            reader: PiSessionReader(),
+            sessionRoots: { [root] },
+            cache: FakeCacheStore()
+        )
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.tokensToday == 1000)
+        #expect(snap.costTodayUSD == Decimal(string: "1.25"))
+    }
+
+    @Test func grok_offset_key_does_not_overwrite_pi_local_url_key() async throws {
+        let root = try makeGrokJSONLRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let fileURL = root.appendingPathComponent("s.jsonl")
+        try writeGrokJSONL(
+            to: fileURL,
+            now: now,
+            lines: [
+                grokAssistantLine(now: now, provider: "xai", tokens: 10, cost: "0.01"),
+            ]
+        )
+        let cache = FakeCacheStore()
+        let prior = TranscriptOffset(url: fileURL.absoluteString, byteOffset: 42, lastModified: now)
+        cache.setTranscriptOffset(prior)
+        let provider = GrokBillingProvider(
+            client: FakeGrokBillingClient([.ok(GrokBillingResponse())]),
+            clock: SystemClock(),
+            scanner: TranscriptDirectoryScanner(),
+            reader: PiSessionReader(),
+            sessionRoots: { [root] },
+            cache: cache
+        )
+        _ = try await provider.fetch(now: now)
+        #expect(cache.transcriptOffset(forURL: fileURL.absoluteString)?.byteOffset == 42)
+        let grokKey = "grok:" + fileURL.absoluteString
+        #expect(cache.transcriptOffset(forURL: grokKey) != nil)
+        #expect(cache.transcriptOffset(forURL: grokKey)?.byteOffset != 42)
+    }
+
     @Test func client_source_never_reveals_secret() throws {
         let url = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -210,4 +297,30 @@ struct GrokBillingProviderTests {
         let source = try String(contentsOf: url, encoding: .utf8)
         #expect(source.contains("revealForRequest") == false)
     }
+}
+
+private func makeGrokJSONLRoot() throws -> URL {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("GrokBillingProviderTests-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    return tmp
+}
+
+private func writeGrokJSONL(to dest: URL, now: Date, lines: [String]) throws {
+    _ = now
+    let body = lines.joined(separator: "\n") + "\n"
+    try body.write(to: dest, atomically: true, encoding: .utf8)
+}
+
+private func grokAssistantLine(now: Date, provider: String, tokens: Int, cost: String) -> String {
+    let ts = grokISO(now)
+    return """
+    {"type":"message","timestamp":"\(ts)","message":{"role":"assistant","provider":"\(provider)","model":"grok-3","usage":{"totalTokens":\(tokens),"cost":{"total":\(cost)}}}}
+    """.trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+private func grokISO(_ date: Date) -> String {
+    let f = ISO8601DateFormatter()
+    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return f.string(from: date)
 }
