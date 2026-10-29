@@ -217,6 +217,13 @@ public enum DetectionProbe {
         if fileManager.fileExists(atPath: authPath) || fileManager.fileExists(atPath: sessionsPath) {
             return .detected
         }
+        let piAuth = PiSessionRoots.agentDirectory(
+            environment: ProcessInfo.processInfo.environment,
+            home: fileManager.homeDirectoryForCurrentUser.path
+        ).appendingPathComponent("auth.json")
+        if GrokCredentialLoader(piAuthPath: piAuth).loadCandidates().contains(where: { $0.source == .piOAuth }) {
+            return .detected
+        }
         return .notDetected
     }
 
