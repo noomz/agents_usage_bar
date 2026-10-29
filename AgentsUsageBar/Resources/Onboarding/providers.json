@@ -51,6 +51,16 @@
       "docsURL": "https://grok.com/?_s=usage"
     },
     {
+      "providerID": "pi-local",
+      "displayName": "Local Llama",
+      "detectionDescription": "Detected when Pi session files exist under ~/.pi/agent/sessions or $PI_CODING_AGENT_DIR/sessions.",
+      "envSnippet": "# Optional: only if the Pi agent dir was relocated.\nexport PI_CODING_AGENT_DIR=<path-to-pi-agent-dir>",
+      "envNote": "Restart Agents Usage Bar to apply environment variable changes. No API key.",
+      "tomlSnippet": "# No TOML section. Toggle in Settings → Providers → Local Llama.",
+      "tomlNote": "Usage is read from Pi JSONL. The llama.cpp row is a separate /health probe.",
+      "docsURL": "https://pi.dev"
+    },
+    {
       "providerID": "ollama",
       "displayName": "Ollama",
       "detectionDescription": "Start Ollama — detected via HTTP probe on localhost:11434.",

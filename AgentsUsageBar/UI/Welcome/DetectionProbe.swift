@@ -70,6 +70,7 @@ public enum DetectionProbe {
         let codexResult = probeCodexFS(fileManager: fileManager)
         let geminiResult = probeGeminiFS(fileManager: fileManager)
         let grokResult = probeGrok(config: config, fileManager: fileManager)
+        let piLocalResult = probePiLocalFS(fileManager: fileManager)
         let ollamaCloudResult = probeOllamaCloud(config: config, fileManager: fileManager)
 
         // Per-provider port/URL values (Sendable: Int, URL, Optional<Int>)
@@ -105,6 +106,8 @@ public enum DetectionProbe {
             group.addTask { (.gemini, geminiResult) }
 
             group.addTask { (.grok, grokResult) }
+
+            group.addTask { (.piLocal, piLocalResult) }
 
             group.addTask { (.ollamaCloud, ollamaCloudResult) }
 
@@ -193,6 +196,17 @@ public enum DetectionProbe {
             fileManager: fileManager
         ) else { return .notDetected }
         return .detected
+    }
+
+    private static func probePiLocalFS(fileManager: FileManager) -> DetectionResult {
+        let roots = PiSessionRoots.sessionDirectories(
+            environment: ProcessInfo.processInfo.environment,
+            home: fileManager.homeDirectoryForCurrentUser.path
+        )
+        if roots.contains(where: { fileManager.fileExists(atPath: $0.path) }) {
+            return .detected
+        }
+        return .notDetected
     }
 
     private static func probeGrok(config: AppConfig, fileManager: FileManager) -> DetectionResult {

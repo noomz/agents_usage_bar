@@ -248,6 +248,26 @@ public enum ProviderRegistryFactory {
             ))
         }
 
+        let piLocalEnabled = preferences.providerEnabled[.piLocal] ?? true
+        if piLocalEnabled {
+            registry.append(PiLocalJSONLProvider(
+                scanner: TranscriptDirectoryScanner(),
+                reader: PiSessionReader(),
+                sessionRoots: { PiSessionRoots.sessionDirectories(environment: ProcessInfo.processInfo.environment) },
+                loadCatalog: { PiLocalCatalog.load(urls: PiSessionRoots.modelsJSONFiles(environment: ProcessInfo.processInfo.environment)) },
+                cache: cache,
+                clock: clock
+            ))
+            let roots = PiSessionRoots.sessionDirectories(environment: ProcessInfo.processInfo.environment)
+            if !roots.contains(where: { FileManager.default.fileExists(atPath: $0.path) }) {
+                placeholders.append(PlaceholderSeed(
+                    providerID: .piLocal,
+                    displayName: "Local Llama",
+                    status: .unauthenticated
+                ))
+            }
+        }
+
         if config.ollama.enabled {
             registry.append(OllamaProvider(http: localhostHTTP, clock: clock))
             placeholders.append(PlaceholderSeed(
