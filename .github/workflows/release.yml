@@ -138,19 +138,22 @@ jobs:
       # (Installer.xpc, Downloader.xpc, Autoupdate, Updater.app) correctly.
       # Never invoke codesign with the recursive-deep-sign flag — it corrupts
       # XPC signatures (Pitfall 2).
-      # DEVELOPMENT_TEAM is passed as a build-setting env var that
-      # ExportOptions.plist resolves via $(DEVELOPMENT_TEAM).
+      # -exportArchive does not expand $(VARS) inside the export options plist,
+      # so the real team ID is written into a copy here. Signing is manual
+      # because the runner has no Xcode account for automatic signing; it uses
+      # the Developer ID identity imported above.
       - name: Export app (Developer ID)
         if: steps.gate.outputs.signed == 'true'
         env:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: |
           set -euo pipefail
+          cp ExportOptions.plist build/ExportOptions.plist
+          plutil -replace teamID -string "$DEVELOPMENT_TEAM" build/ExportOptions.plist
           xcodebuild -exportArchive \
             -archivePath build/AgentsUsageBar.xcarchive \
             -exportPath build/export \
-            -exportOptionsPlist ExportOptions.plist \
-            DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM}"
+            -exportOptionsPlist build/ExportOptions.plist
 
       # ---- UNSIGNED lane: build + ad-hoc sign ---------------------------
       # No Developer ID available. Build Release without Apple signing, then

@@ -50,7 +50,7 @@ The free/unsigned lane needs only `SPARKLE_ED_PRIVATE_KEY`. The `DEVELOPER_ID_CE
 
 `SPARKLE_ED_PRIVATE_KEY` is the private half; the **public** half is pinned in [`Info.plist`](../AgentsUsageBar/Resources/Info.plist) as `SUPublicEDKey` (see Step 3).
 
-`DEVELOPMENT_TEAM` is referenced from `ExportOptions.plist` as `$(DEVELOPMENT_TEAM)` so Xcode's "automatic" Developer ID signing knows which team's cert to use.
+`DEVELOPMENT_TEAM` fills the `teamID` placeholder in `ExportOptions.plist`. `xcodebuild -exportArchive` does not expand `$(DEVELOPMENT_TEAM)` itself, so the release workflow writes the real value into a copy with `plutil` before export. Export signing is manual, with the imported Developer ID Application identity.
 
 You **also** need to enable **GitHub Pages** so the `appcast.xml` Sparkle reads is served — see Step 5.
 
@@ -229,7 +229,7 @@ rm -rf /tmp/sparkle /tmp/sparkle-spm.zip
 
 > **Skip this step for a free/unsigned release.** The unsigned lane ad-hoc-signs and never reads `ExportOptions.plist`.
 
-`ExportOptions.plist` consumes this so Xcode's automatic signing knows which team's Developer ID cert to use.
+The release workflow writes it into a copy of `ExportOptions.plist` (`teamID`) so the manual Developer ID export picks your team's cert.
 
 ### 4a. Find your team ID
 
