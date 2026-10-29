@@ -210,6 +210,6 @@ extension ProviderID {
     /// D-07: whether this id's snapshot contributes to the Today total.
     /// Matches production `UsageProvider.capabilities.hasTokens` for known ids.
     public var contributesToTodayTotal: Bool {
-        self == .claude || self == .codex || self == .piLocal
+        self == .claude || self == .codex || self == .piLocal || self == .grok
     }
 }
