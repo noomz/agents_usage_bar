@@ -30,12 +30,52 @@ public struct PopoverRootView: View {
     @Environment(\.popoverTeaserSource) private var teaserSource
     @State private var window: NSWindow?
     @State private var teaser: PopoverTeaser?
+    @State private var maxHeight = (NSScreen.main?.visibleFrame.height ?? 800) * 0.8
     /// Starts `true`: the view mounts because the popover is opening.
     @State private var isVisible = true
 
     public init() {}
 
     public var body: some View {
+        ViewThatFits(in: .vertical) {
+            content
+                .fixedSize(horizontal: false, vertical: true)
+            ScrollView(.vertical) {
+                content
+            }
+        }
+        .frame(width: 360)
+        .frame(maxHeight: maxHeight)
+        .textSelection(.disabled)
+        .background(HostingWindowReader { window = $0 })
+        .onChange(of: window) { _, window in
+            updateMaxHeight(for: window)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didChangeScreenNotification)) { notification in
+            guard let window, notification.object as? NSWindow === window else { return }
+            updateMaxHeight(for: window)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
+            updateMaxHeight(for: window)
+        }
+        .task(id: window.map(ObjectIdentifier.init)) {
+            await trackVisibility(of: window)
+        }
+        // POLL-03: refresh on every popover open (coalesced if within 5s of last tick).
+        // Kept out of the row clock's task so a slow fetch never stalls the timestamps.
+        .task(id: isVisible) {
+            guard isVisible else { return }
+            updateMaxHeight(for: window)
+            await store.refresh(now: clock.now())
+        }
+        // V20: history is read on popover open only, never on the poll path.
+        .task(id: isVisible) {
+            guard isVisible, let teaserSource else { return }
+            teaser = await teaserSource.load()
+        }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 0) {
             TotalsHeaderView()
             Divider()
@@ -47,23 +87,11 @@ public struct PopoverRootView: View {
             }
             FooterView()
         }
-        .frame(width: 360)
-        .textSelection(.disabled)
-        .background(HostingWindowReader { window = $0 })
-        .task(id: window.map(ObjectIdentifier.init)) {
-            await trackVisibility(of: window)
-        }
-        // POLL-03: refresh on every popover open (coalesced if within 5s of last tick).
-        // Kept out of the row clock's task so a slow fetch never stalls the timestamps.
-        .task(id: isVisible) {
-            guard isVisible else { return }
-            await store.refresh(now: clock.now())
-        }
-        // V20: history is read on popover open only, never on the poll path.
-        .task(id: isVisible) {
-            guard isVisible, let teaserSource else { return }
-            teaser = await teaserSource.load()
-        }
+    }
+
+    private func updateMaxHeight(for window: NSWindow?) {
+        guard let screen = window?.screen ?? NSScreen.main else { return }
+        maxHeight = screen.visibleFrame.height * 0.8
     }
 
     private func trackVisibility(of window: NSWindow?) async {
