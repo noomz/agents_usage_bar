@@ -37,15 +37,15 @@ public struct PopoverRootView: View {
     public init() {}
 
     public var body: some View {
-        ViewThatFits(in: .vertical) {
+        ScrollView(.vertical) {
             content
-                .fixedSize(horizontal: false, vertical: true)
-            ScrollView(.vertical) {
-                content
-            }
         }
+        .scrollBounceBehavior(.basedOnSize)
         .frame(width: 360)
         .frame(maxHeight: maxHeight)
+        // The panel takes its height from the hosting view's min and max size, so the
+        // root height must not depend on the proposal or the panel keeps its old height.
+        .fixedSize(horizontal: false, vertical: true)
         .textSelection(.disabled)
         .background(HostingWindowReader { window = $0 })
         .onChange(of: window) { _, window in
