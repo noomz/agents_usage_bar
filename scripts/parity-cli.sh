@@ -143,6 +143,23 @@ for table in days accounts events quota; do
 done
 add stats-csv-provider-as-value -- stats --csv claude
 
+# @tty runs under a pseudo-terminal, which turns colour on and exercises terminal detection.
+for theme in compact classic; do
+  add "tty-usage-$theme" -- @tty usage --cached --theme "$theme"
+  add "tty-quota-$theme" -- @tty quota --cached --theme "$theme"
+done
+add tty-usage-w60 COLUMNS=60 -- @tty usage --cached --theme compact
+add tty-usage-no-color -- @tty usage --cached --no-color
+add tty-usage-no-color-env NO_COLOR=1 -- @tty usage --cached
+add tty-usage-dumb TERM=dumb -- @tty usage --cached
+add tty-usage-all -- @tty usage --cached --provider all
+add tty-stats -- @tty stats
+add tty-stats-all -- @tty stats --provider all
+add tty-stats-90 -- @tty stats --days 90
+add tty-stats-claude -- @tty stats claude
+add tty-stats-codex -- @tty stats codex --days 30
+add tty-stats-ollama -- @tty stats ollama
+
 add themes -- themes
 add themes-json -- themes --json
 add themes-flag -- themes --theme classic
@@ -158,8 +175,8 @@ for key in refresh-interval threshold theme cli-theme provider-order pace-warnin
   claude-source open-at-login has-seen-welcome provider.claude.enabled provider.gemini.enabled \
   provider.ollama-cloud.enabled provider.lms-llamacpp.enabled provider.pi-local.enabled; do
   add "settings-get-$key" -- settings get "$key"
-  add "settings-get-json-$key" -- settings get "$key" --json
 done
+add settings-get-json -- settings get theme --json
 
 add help-long -- --help
 add help-short -- -h
@@ -229,7 +246,12 @@ run_side() { # dir binary env... -- args...
   while [[ "$1" != "--" ]]; do envs+=("$1"); shift; done
   shift
   mkdir -p "$dir"
-  env -u COLUMNS -u NO_COLOR -u AUB_THEME ${envs[@]+"${envs[@]}"} "$bin" "$@" >"$dir/stdout" 2>"$dir/stderr" </dev/null
+  local launcher=("$bin")
+  if [[ "${1:-}" == "@tty" ]]; then
+    shift
+    launcher=(script -q /dev/null "$bin")
+  fi
+  env -u COLUMNS -u NO_COLOR -u AUB_THEME ${envs[@]+"${envs[@]}"} "${launcher[@]}" "$@" >"$dir/stdout" 2>"$dir/stderr" </dev/null
   echo "$?" >"$dir/code"
   normalize "$dir/stdout"
 }
