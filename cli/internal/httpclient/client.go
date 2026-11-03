@@ -54,7 +54,6 @@ func New(timeout time.Duration) *HTTP {
 	return &HTTP{client: &http.Client{Transport: transport, Timeout: total}}
 }
 
-// GetJSON implements Client.
 func (c *HTTP) GetJSON(ctx context.Context, rawURL string, bearer *secret.Secret, headers map[string]string, out any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
@@ -63,7 +62,6 @@ func (c *HTTP) GetJSON(ctx context.Context, rawURL string, bearer *secret.Secret
 	return c.do(req, bearer, headers, out)
 }
 
-// PostJSON implements Client.
 func (c *HTTP) PostJSON(ctx context.Context, rawURL string, body any, bearer *secret.Secret, headers map[string]string, out any) error {
 	data, err := json.Marshal(body)
 	if err != nil {

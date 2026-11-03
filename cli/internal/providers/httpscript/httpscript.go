@@ -111,12 +111,10 @@ func (c *Client) answer(method, rawURL string, bearer *secret.Secret, headers ma
 	return nil
 }
 
-// GetJSON implements httpclient.Client.
 func (c *Client) GetJSON(_ context.Context, rawURL string, bearer *secret.Secret, headers map[string]string, out any) error {
 	return c.answer("GET", rawURL, bearer, headers, out)
 }
 
-// PostJSON implements httpclient.Client.
 func (c *Client) PostJSON(_ context.Context, rawURL string, _ any, bearer *secret.Secret, headers map[string]string, out any) error {
 	return c.answer("POST", rawURL, bearer, headers, out)
 }

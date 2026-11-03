@@ -30,7 +30,6 @@ type DayFile struct {
 // RecordOrigin says whether a record came from polls that day or was rebuilt later.
 type RecordOrigin string
 
-// The origins.
 const (
 	OriginObserved   RecordOrigin = "observed"
 	OriginBackfilled RecordOrigin = "backfilled"
@@ -73,7 +72,6 @@ type DayAccount struct {
 // UsageEventKind names a usage event.
 type UsageEventKind string
 
-// The kinds.
 const (
 	EventBand80        UsageEventKind = "band80"
 	EventBand95        UsageEventKind = "band95"
@@ -184,7 +182,6 @@ type SpendTotal struct {
 	Incomplete bool
 }
 
-// Add folds another total in.
 func (t *SpendTotal) Add(o SpendTotal) {
 	if o.Amount != nil {
 		sum := *o.Amount
@@ -203,7 +200,6 @@ type CostColumn struct {
 	Applies func(DayCostSplit) bool
 }
 
-// The two columns of a cost split.
 var (
 	SpendColumn = CostColumn{
 		Amount:  func(s DayCostSplit) *Money { return s.Spend },
@@ -337,7 +333,6 @@ func (d *DayFile) RecordFor(id ProviderID) *DayRecord {
 	return nil
 }
 
-// SortedKeys returns map keys in byte order.
 func SortedKeys[V any](m map[string]V) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {

@@ -16,7 +16,6 @@ type Command interface{ isCommand() }
 // FilterKind selects providers.
 type FilterKind int
 
-// The filters.
 const (
 	FilterEnabled FilterKind = iota
 	FilterAll
@@ -32,7 +31,7 @@ type ProviderFilter struct {
 // Freshness says where a usage report's data may come from.
 type Freshness int
 
-// The choices. FreshnessAuto is what no flag means: the cache, or a live fetch while the cache has
+// FreshnessAuto is what no flag means: the cache, or a live fetch while the cache has
 // no provider rows, which is always on a standalone install.
 const (
 	FreshnessAuto Freshness = iota
@@ -50,17 +49,14 @@ type UsageCmd struct {
 	Theme     *domain.CLITheme
 }
 
-// StatsFormat is the text table or an export.
 type StatsFormat struct {
 	JSON bool
 	// CSV is the table name, empty when not exporting CSV.
 	CSV CSVTable
 }
 
-// IsText reports the text table.
 func (f StatsFormat) IsText() bool { return !f.JSON && f.CSV == "" }
 
-// StatsCmd is `aub stats`.
 type StatsCmd struct {
 	Filter  ProviderFilter
 	Days    *int
@@ -70,7 +66,6 @@ type StatsCmd struct {
 	Format  StatsFormat
 }
 
-// DashboardCmd is `aub dashboard [provider]`.
 type DashboardCmd struct {
 	Provider *domain.ProviderID
 }
@@ -78,38 +73,31 @@ type DashboardCmd struct {
 // SettingsVerb is list, get, or set.
 type SettingsVerb int
 
-// The verbs.
 const (
 	SettingsList SettingsVerb = iota
 	SettingsGet
 	SettingsSet
 )
 
-// SettingsCmd is `aub settings`.
 type SettingsCmd struct {
 	Verb       SettingsVerb
 	Key, Value string
 	JSON       bool
 }
 
-// ThemesCmd is `aub themes`.
 type ThemesCmd struct {
 	JSON  bool
 	Theme *domain.CLITheme
 }
 
-// InstallCmd is `aub install`.
 type InstallCmd struct {
 	Prefix *string
 }
 
-// UninstallCmd is `aub uninstall`.
 type UninstallCmd struct{}
 
-// VersionCmd is `aub version`.
 type VersionCmd struct{}
 
-// HelpCmd is `aub help`.
 type HelpCmd struct{}
 
 func (UsageCmd) isCommand()     {}

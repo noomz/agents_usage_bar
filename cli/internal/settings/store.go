@@ -43,16 +43,12 @@ func Default(layout paths.Layout) Store {
 // Memory is an in-process Store for tests.
 type Memory map[string]any
 
-// Get implements Store.
 func (m Memory) Get(key string) (any, bool) { v, ok := m[key]; return v, ok }
 
-// All implements Store.
 func (m Memory) All() map[string]any { return m }
 
-// Set implements Store.
 func (m Memory) Set(key string, value any) error { m[key] = value; return nil }
 
-// Delete implements Store.
 func (m Memory) Delete(key string) error { delete(m, key); return nil }
 
 // JSONFile stores values in one flat JSON object, replaced atomically.
@@ -86,7 +82,7 @@ func (f *JSONFile) read() (map[string]any, error) {
 	return m, nil
 }
 
-// All implements Store. An unreadable file reads as empty, like an absent preference; a write
+// An unreadable file reads as empty, like an absent preference; a write
 // reports it instead of replacing it.
 func (f *JSONFile) All() map[string]any {
 	m, err := f.read()
@@ -96,7 +92,6 @@ func (f *JSONFile) All() map[string]any {
 	return m
 }
 
-// Get implements Store.
 func (f *JSONFile) Get(key string) (any, bool) {
 	v, ok := f.All()[key]
 	return v, ok
@@ -131,12 +126,10 @@ func (f *JSONFile) update(change func(map[string]any)) error {
 	return os.Rename(tmp.Name(), f.Path)
 }
 
-// Set implements Store.
 func (f *JSONFile) Set(key string, value any) error {
 	return f.update(func(m map[string]any) { m[key] = value })
 }
 
-// Delete implements Store.
 func (f *JSONFile) Delete(key string) error {
 	return f.update(func(m map[string]any) { delete(m, key) })
 }
@@ -151,7 +144,6 @@ type Defaults struct {
 
 const defaultsTool = "/usr/bin/defaults"
 
-// All implements Store.
 func (d *Defaults) All() map[string]any {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -169,13 +161,12 @@ func (d *Defaults) All() map[string]any {
 	return d.loaded
 }
 
-// Get implements Store.
 func (d *Defaults) Get(key string) (any, bool) {
 	v, ok := d.All()[key]
 	return v, ok
 }
 
-// Set implements Store. Doubles go through a plist literal because `defaults write -float`
+// Doubles go through a plist literal because `defaults write -float`
 // would store a 32-bit value (0.7 reads back as 0.699999988).
 func (d *Defaults) Set(key string, value any) error {
 	args := []string{"write", d.Domain, key}
@@ -198,7 +189,7 @@ func (d *Defaults) Set(key string, value any) error {
 	return nil
 }
 
-// Delete implements Store. An absent key is already deleted.
+// An absent key is already deleted.
 func (d *Defaults) Delete(key string) error {
 	_ = exec.Command(defaultsTool, "delete", d.Domain, key).Run()
 	d.invalidate()

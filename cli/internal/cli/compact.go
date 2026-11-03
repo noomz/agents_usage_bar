@@ -15,7 +15,6 @@ import (
 // View is which text view a theme renders.
 type View int
 
-// The views.
 const (
 	ViewUsage View = iota
 	ViewQuota

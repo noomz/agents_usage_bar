@@ -53,7 +53,6 @@ func (q Quota) Fraction() float64 {
 // QuotaBand is the remaining-fraction band shared by the bars and the classic renderer.
 type QuotaBand int
 
-// The bands.
 const (
 	BandNone QuotaBand = iota
 	BandCritical
@@ -112,7 +111,6 @@ type PeriodSpend struct {
 // BillingModel is how an account pays.
 type BillingModel string
 
-// The billing models.
 const (
 	BillingMetered      BillingModel = "metered"
 	BillingSubscription BillingModel = "subscription"
@@ -221,7 +219,6 @@ func (s UsageSnapshot) QuotaGlance() QuotaGlance {
 // GlancePeriod is a canonical Claude window.
 type GlancePeriod string
 
-// The canonical windows.
 const (
 	PeriodFiveHours GlancePeriod = "5h"
 	PeriodSevenDays GlancePeriod = "7d"
@@ -334,10 +331,8 @@ func activeConstraint(five, seven *GlanceWindow) *GlanceWindow {
 	return nil
 }
 
-// HasAnyWindow reports either canonical window.
 func (g QuotaGlance) HasAnyWindow() bool { return g.FiveHours != nil || g.SevenDays != nil }
 
-// Window returns the canonical window for a period.
 func (g QuotaGlance) Window(p GlancePeriod) *GlanceWindow {
 	if p == PeriodFiveHours {
 		return g.FiveHours
@@ -368,7 +363,6 @@ type Capabilities struct {
 // ProviderErrorKind classifies a fetch failure.
 type ProviderErrorKind string
 
-// The kinds.
 const (
 	ErrAuth            ProviderErrorKind = "auth"
 	ErrPaymentRequired ProviderErrorKind = "paymentRequired"
@@ -405,7 +399,6 @@ func (e HTTPError) Error() string { return "HTTP " + strconv.Itoa(e.Status) }
 // NetworkErrorCode is the URLError equivalent used by the localhost classifier.
 type NetworkErrorCode int
 
-// The codes the classifier distinguishes.
 const (
 	NetworkOther NetworkErrorCode = iota
 	NetworkCannotConnect

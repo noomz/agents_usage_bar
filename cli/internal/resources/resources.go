@@ -5,17 +5,11 @@ package resources
 
 import _ "embed"
 
-// ClaudePricing is Pricing/claude-models.json.
-//
 //go:embed claude-models.json
 var ClaudePricing []byte
 
-// CodexPricing is Pricing/codex-models.json.
-//
 //go:embed codex-models.json
 var CodexPricing []byte
 
-// Providers is Onboarding/providers.json.
-//
 //go:embed providers.json
 var Providers []byte

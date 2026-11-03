@@ -19,7 +19,6 @@ import (
 	"github.com/noomz/agents_usage_bar/cli/internal/swiftjson"
 )
 
-// Store is the cache seam providers and the usage session see.
 type Store interface {
 	// LoadAll returns every persisted provider row. A missing or unreadable cache is empty.
 	LoadAll() map[domain.ProviderID]domain.ProviderState
@@ -38,7 +37,6 @@ type Store interface {
 
 // Cursors is the cursor and daily-total state, valid only inside WithCursors.
 type Cursors interface {
-	// AllTranscriptOffsets returns every cursor.
 	AllTranscriptOffsets() map[string]domain.TranscriptOffset
 	// SetTranscriptOffsets upserts cursors keyed by URL in one write.
 	SetTranscriptOffsets(offsets []domain.TranscriptOffset)
@@ -82,7 +80,6 @@ func (f *File) lock() (unlock func()) {
 	return func() { file.Close() }
 }
 
-// WithCursors implements Store.
 func (f *File) WithCursors(body func(Cursors)) {
 	defer f.lock()()
 	body(fileCursors{f})
@@ -198,7 +195,6 @@ func pairs(raw json.RawMessage, visit func(key string, value any) error) error {
 	return nil
 }
 
-// LoadAll implements Store.
 func (f *File) LoadAll() map[domain.ProviderID]domain.ProviderState {
 	f.mu.Lock()
 	e, ok := f.load()
@@ -249,7 +245,6 @@ func baselineTree(b domain.BaselineRecord) any {
 	}
 }
 
-// Baseline implements Store.
 func (f *File) Baseline(id domain.ProviderID) *domain.BaselineRecord {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -263,7 +258,6 @@ func (f *File) Baseline(id domain.ProviderID) *domain.BaselineRecord {
 	return nil
 }
 
-// MaintainBaseline implements Store.
 func (f *File) MaintainBaseline(id domain.ProviderID, now time.Time, currentValue float64) {
 	defer f.lock()()
 	f.mu.Lock()
@@ -307,7 +301,6 @@ func decodeOffsets(raw json.RawMessage) map[string]domain.TranscriptOffset {
 	return out
 }
 
-// AllTranscriptOffsets implements Cursors.
 func (c fileCursors) AllTranscriptOffsets() map[string]domain.TranscriptOffset {
 	f := c.f
 	f.mu.Lock()
@@ -319,7 +312,6 @@ func (c fileCursors) AllTranscriptOffsets() map[string]domain.TranscriptOffset {
 	return decodeOffsets(e.transcripts)
 }
 
-// SetTranscriptOffsets implements Cursors.
 func (c fileCursors) SetTranscriptOffsets(offsets []domain.TranscriptOffset) {
 	if len(offsets) == 0 {
 		return
@@ -353,7 +345,6 @@ func dailyTree(d domain.DailyUsageRecord) any {
 	}
 }
 
-// AccumulateDailyUsage implements Cursors.
 func (c fileCursors) AccumulateDailyUsage(id domain.ProviderID, now time.Time, deltaTokens int, deltaCostUSD decimal.Decimal, deltaSessionTokens map[string]int) domain.DailyUsageRecord {
 	f := c.f
 	f.mu.Lock()
@@ -393,29 +384,23 @@ func (c fileCursors) AccumulateDailyUsage(id domain.ProviderID, now time.Time, d
 // Noop is an empty, write-discarding Store for tests and for providers with no cache.
 type Noop struct{}
 
-// LoadAll implements Store.
 func (Noop) LoadAll() map[domain.ProviderID]domain.ProviderState {
 	return map[domain.ProviderID]domain.ProviderState{}
 }
 
-// Baseline implements Store.
 func (Noop) Baseline(domain.ProviderID) *domain.BaselineRecord { return nil }
 
-// MaintainBaseline implements Store.
 func (Noop) MaintainBaseline(domain.ProviderID, time.Time, float64) {}
 
-// WithCursors implements Store.
 func (Noop) WithCursors(body func(Cursors)) { body(Noop{}) }
 
-// SetTranscriptOffsets implements Cursors.
 func (Noop) SetTranscriptOffsets([]domain.TranscriptOffset) {}
 
-// AllTranscriptOffsets implements Cursors.
 func (Noop) AllTranscriptOffsets() map[string]domain.TranscriptOffset {
 	return map[string]domain.TranscriptOffset{}
 }
 
-// AccumulateDailyUsage implements Cursors: the delta passes through unchanged.
+// AccumulateDailyUsage passes the delta through unchanged.
 func (Noop) AccumulateDailyUsage(_ domain.ProviderID, _ time.Time, deltaTokens int, deltaCostUSD decimal.Decimal, deltaSessionTokens map[string]int) domain.DailyUsageRecord {
 	return domain.DailyUsageRecord{Tokens: deltaTokens, CostUSD: deltaCostUSD, SessionTokens: deltaSessionTokens}
 }

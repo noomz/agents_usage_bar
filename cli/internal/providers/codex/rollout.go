@@ -156,7 +156,6 @@ type credits struct {
 // swiftInt decodes as JSONDecoder decodes Int: 98.0 and 1e3 are integers, 98.5 is an error.
 type swiftInt int
 
-// UnmarshalJSON implements json.Unmarshaler.
 func (i *swiftInt) UnmarshalJSON(data []byte) error {
 	var n json.Number
 	if err := json.Unmarshal(data, &n); err != nil {

@@ -20,10 +20,8 @@ func New(value string) Secret { return Secret{value: value} }
 // Reveal returns the plaintext. Call it only while building a request.
 func (s Secret) Reveal() string { return s.value }
 
-// String redacts.
 func (Secret) String() string { return redacted }
 
-// GoString redacts %#v.
 func (Secret) GoString() string { return redacted }
 
 // Format redacts every verb, including %x and %q.
@@ -32,7 +30,6 @@ func (Secret) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte(redacted)) }
 // MarshalJSON redacts.
 func (Secret) MarshalJSON() ([]byte, error) { return []byte(`"` + redacted + `"`), nil }
 
-// MarshalText redacts.
 func (Secret) MarshalText() ([]byte, error) { return []byte(redacted), nil }
 
 // LogValue redacts structured logs.

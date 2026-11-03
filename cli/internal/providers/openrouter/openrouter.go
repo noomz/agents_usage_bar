@@ -96,13 +96,10 @@ func Build(env provider.Env) provider.Provider {
 	}
 }
 
-// ID implements provider.Provider.
 func (p *Provider) ID() domain.ProviderID { return domain.OpenRouter }
 
-// DisplayName implements provider.Provider.
 func (p *Provider) DisplayName() string { return "OpenRouter" }
 
-// Capabilities implements provider.Provider.
 func (p *Provider) Capabilities() domain.Capabilities {
 	return domain.Capabilities{HasQuota: true, HasCost: true}
 }
@@ -141,7 +138,6 @@ func (p *Provider) todayCost(now time.Time, usage float64) float64 {
 	return usage - b.Value
 }
 
-// Fetch implements provider.Provider.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	credits, key, err := p.get(ctx)
 	if err != nil {

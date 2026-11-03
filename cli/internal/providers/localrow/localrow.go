@@ -22,13 +22,11 @@ func New(id domain.ProviderID, name string, base map[string]string) *Row {
 	return &Row{id: id, name: name, base: base}
 }
 
-// ID implements provider.Provider.
 func (r *Row) ID() domain.ProviderID { return r.id }
 
-// DisplayName implements provider.Provider.
 func (r *Row) DisplayName() string { return r.name }
 
-// Capabilities implements provider.Provider: local rows report no quota, cost, or tokens.
+// Local rows report no quota, cost, or tokens.
 func (r *Row) Capabilities() domain.Capabilities { return domain.Capabilities{IsLocal: true} }
 
 func (r *Row) raw(extra map[string]string) map[string]string {

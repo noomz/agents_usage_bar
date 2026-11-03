@@ -132,18 +132,14 @@ func Build(env provider.Env) provider.Provider {
 	return &Provider{env: env}
 }
 
-// ID implements provider.Provider.
 func (*Provider) ID() domain.ProviderID { return domain.PiLocal }
 
-// DisplayName implements provider.Provider.
 func (*Provider) DisplayName() string { return "Local Llama" }
 
-// Capabilities implements provider.Provider.
 func (*Provider) Capabilities() domain.Capabilities {
 	return domain.Capabilities{HasCost: true, HasTokens: true}
 }
 
-// Fetch implements provider.Provider.
 func (p *Provider) Fetch(_ context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	roots := SessionDirs(p.env.Getenv, p.env.Paths.Home)
 	catalog := LoadCatalog(ModelsFiles(p.env.Getenv, p.env.Paths.Home))

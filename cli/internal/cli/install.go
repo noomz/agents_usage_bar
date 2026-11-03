@@ -17,7 +17,6 @@ type InstallError string
 
 func (e InstallError) Error() string { return string(e) }
 
-// The install failures.
 const (
 	errAuthorizationCancelled InstallError = "administrator authorization cancelled"
 	errNoWritableDestination  InstallError = "no writable bin directory found"
@@ -179,13 +178,12 @@ func dirOf(path string) string { return filepath.Dir(path) }
 // SystemFS is the real file system.
 type SystemFS struct{}
 
-// HomeDirectory implements FileSystem.
 func (SystemFS) HomeDirectory() string {
 	home, _ := os.UserHomeDir()
 	return home
 }
 
-// ExecutablePath implements FileSystem: this binary with symlinks resolved.
+// ExecutablePath is this binary with symlinks resolved.
 func (SystemFS) ExecutablePath() string {
 	exe, err := os.Executable()
 	if err != nil {
@@ -197,45 +195,37 @@ func (SystemFS) ExecutablePath() string {
 	return exe
 }
 
-// PathEnvironment implements FileSystem.
 func (SystemFS) PathEnvironment() string { return os.Getenv("PATH") }
 
-// DirectoryExists implements FileSystem.
 func (SystemFS) DirectoryExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
 }
 
-// IsWritableDirectory implements FileSystem.
 func (SystemFS) IsWritableDirectory(path string) bool {
 	return syscall.Access(path, 2) == nil
 }
 
-// FileExists implements FileSystem. A dangling symlink does not exist.
+// A dangling symlink does not exist.
 func (SystemFS) FileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// IsSymlink implements FileSystem.
 func (SystemFS) IsSymlink(path string) bool {
 	info, err := os.Lstat(path)
 	return err == nil && info.Mode()&os.ModeSymlink != 0
 }
 
-// SymlinkDestination implements FileSystem.
 func (SystemFS) SymlinkDestination(path string) (string, error) { return os.Readlink(path) }
 
-// CreateDirectory implements FileSystem.
 func (SystemFS) CreateDirectory(path string) error { return os.MkdirAll(path, 0o700) }
 
-// CreateSymlink implements FileSystem.
 func (SystemFS) CreateSymlink(path, destination string) error { return os.Symlink(destination, path) }
 
-// RemoveItem implements FileSystem.
 func (SystemFS) RemoveItem(path string) error { return os.Remove(path) }
 
-// RunPrivileged implements FileSystem: an administrator prompt on macOS. Elsewhere there is no
+// RunPrivileged is an administrator prompt on macOS. Elsewhere there is no
 // system prompt to use, so the caller is told to pick a writable --prefix.
 func (SystemFS) RunPrivileged(script string) error {
 	if runtime.GOOS != "darwin" {

@@ -395,7 +395,6 @@ func (a *App) runExport(c StatsCmd, keys []string, reader history.Reader, owner 
 // ThemeSource says what chose the active theme. The text is the `source` field in JSON.
 type ThemeSource string
 
-// The sources.
 const (
 	ThemeFromFlag    ThemeSource = "flag"
 	ThemeFromEnv     ThemeSource = "env"

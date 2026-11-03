@@ -43,13 +43,10 @@ func Build(env provider.Env) provider.Provider {
 	return &Provider{env: env, management: management}
 }
 
-// ID implements provider.Provider.
 func (*Provider) ID() domain.ProviderID { return domain.Grok }
 
-// DisplayName implements provider.Provider.
 func (*Provider) DisplayName() string { return "Grok" }
 
-// Capabilities implements provider.Provider.
 func (*Provider) Capabilities() domain.Capabilities {
 	return domain.Capabilities{HasQuota: true, HasCost: true, HasTokens: true}
 }
@@ -146,7 +143,7 @@ func (p *Provider) loadJSONL(now time.Time) jsonlLoad {
 	return jsonlLoad{contributed: true, tokens: total.Tokens, costUSD: total.CostUSD}
 }
 
-// Fetch implements provider.Provider. CLI billing, management, and JSONL fail independently; an
+// CLI billing, management, and JSONL fail independently; an
 // outage of all three mutes the row rather than failing it, and no snapshot carries over
 // between fetches because one process fetches once.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {

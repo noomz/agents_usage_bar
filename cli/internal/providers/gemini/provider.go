@@ -85,7 +85,6 @@ func isOAuthPersonal(path string) bool {
 	return auth["selectedType"] == "oauth-personal"
 }
 
-// Provider implements provider.Provider.
 type Provider struct {
 	env       provider.Env
 	credsPath string
@@ -101,13 +100,10 @@ func Build(env provider.Env) provider.Provider {
 	return &Provider{env: env, credsPath: credsPath}
 }
 
-// ID implements provider.Provider.
 func (p *Provider) ID() domain.ProviderID { return domain.Gemini }
 
-// DisplayName implements provider.Provider.
 func (p *Provider) DisplayName() string { return "Gemini" }
 
-// Capabilities implements provider.Provider.
 func (p *Provider) Capabilities() domain.Capabilities { return domain.Capabilities{HasQuota: true} }
 
 // bearer returns the file's access token while it is unexpired.
@@ -141,7 +137,7 @@ func (p *Provider) fetchQuota(ctx context.Context, bearer secret.Secret) (quotaR
 	return response, err
 }
 
-// Fetch implements provider.Provider. No credentials is a muted row. A token that is expired or
+// No credentials is a muted row. A token that is expired or
 // rejected is an error. Any other failure is a degraded row, so a flaky v1internal never reports
 // as a provider error to the session.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {

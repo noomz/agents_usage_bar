@@ -56,7 +56,6 @@ func (r rates) cost(u tokenUsage) decimal.Decimal {
 		Add(column(u.OutputTokens, r.Default.Output))
 }
 
-// Provider implements provider.Provider.
 type Provider struct {
 	env                              provider.Env
 	sessionsRoot, authPath, proxyDir string
@@ -79,18 +78,15 @@ func Build(env provider.Env) provider.Provider {
 	return p
 }
 
-// ID implements provider.Provider.
 func (p *Provider) ID() domain.ProviderID { return domain.Codex }
 
-// DisplayName implements provider.Provider.
 func (p *Provider) DisplayName() string { return "Codex" }
 
-// Capabilities implements provider.Provider.
 func (p *Provider) Capabilities() domain.Capabilities {
 	return domain.Capabilities{HasQuota: true, HasCost: true, HasTokens: true}
 }
 
-// Fetch implements provider.Provider. Rollout tokens and cost always win. Two or more logins
+// Rollout tokens and cost always win. Two or more logins
 // take quota from one wham/usage per login. Otherwise live rollout windows win, a windowless
 // rollout overlays wham/usage, and with no rollout wham/usage is the whole row.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {

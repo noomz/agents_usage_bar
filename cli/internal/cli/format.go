@@ -214,7 +214,6 @@ func usd(amount decimal.Decimal) string {
 	return sign + s.Prefix + groupDigits(integer, s.Group) + s.Decimal + fraction + s.Suffix
 }
 
-// tokenCount is a grouped integer such as 1,204,331.
 func tokenCount(n int) string {
 	sign := ""
 	if n < 0 {

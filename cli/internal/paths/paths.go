@@ -47,13 +47,11 @@ func xdg(value, home string, fallback ...string) string {
 	return filepath.Join(append([]string{home}, fallback...)...)
 }
 
-// CacheFile is the live cache the app writes.
 func (l Layout) CacheFile() string { return filepath.Join(l.DataDir, "today.json") }
 
 // HistoryDir holds one yyyy-MM-dd.json per day.
 func (l Layout) HistoryDir() string { return filepath.Join(l.DataDir, "history") }
 
-// ConfigFile is config.toml.
 func (l Layout) ConfigFile() string { return filepath.Join(l.ConfigDir, "config.toml") }
 
 // SettingsFile stores settings on systems without UserDefaults.

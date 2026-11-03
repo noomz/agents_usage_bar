@@ -78,7 +78,6 @@ func (p *Provider) url(route string) string {
 	return fmt.Sprintf("http://localhost:%d%s", p.port, route)
 }
 
-// Fetch implements provider.Provider.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	var health healthResponse
 	var models modelsResponse

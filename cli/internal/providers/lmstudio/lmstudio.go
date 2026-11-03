@@ -70,7 +70,6 @@ func (p *Provider) get(ctx context.Context, path string) (modelsResponse, error)
 	return r, err
 }
 
-// Fetch implements provider.Provider.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	r, err := p.get(ctx, "/api/v0/models")
 	if err == nil {

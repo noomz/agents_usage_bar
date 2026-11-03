@@ -70,18 +70,14 @@ func defaultRoots(home string) []string {
 	return roots
 }
 
-// ID implements provider.Provider.
 func (*Provider) ID() domain.ProviderID { return domain.Claude }
 
-// DisplayName implements provider.Provider.
 func (*Provider) DisplayName() string { return "Claude Code" }
 
-// Capabilities implements provider.Provider.
 func (*Provider) Capabilities() domain.Capabilities {
 	return domain.Capabilities{HasQuota: true, HasCost: true, HasTokens: true}
 }
 
-// Fetch implements provider.Provider.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	if p.useHook {
 		return p.fetchHook(ctx, now)

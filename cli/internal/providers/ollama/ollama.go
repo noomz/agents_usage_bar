@@ -69,7 +69,6 @@ func installedCount(r tagsResponse, err error) int {
 	return len(r.Models)
 }
 
-// Fetch implements provider.Provider.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	var ps psResponse
 	var tags tagsResponse

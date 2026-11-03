@@ -10,7 +10,6 @@ import (
 // ProviderID is a provider's stable identifier. Its text appears in caches and settings keys.
 type ProviderID string
 
-// The known providers.
 const (
 	OpenRouter       ProviderID = "openrouter"
 	Claude           ProviderID = "claude"
@@ -156,7 +155,6 @@ func OrderProviders[T any](items []T, id func(T) ProviderID, preference []Provid
 // CLITheme is a built-in terminal layout.
 type CLITheme string
 
-// The themes, in listing order.
 const (
 	ThemeCompact CLITheme = "compact"
 	ThemeClassic CLITheme = "classic"

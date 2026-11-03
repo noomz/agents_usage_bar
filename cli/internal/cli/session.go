@@ -15,7 +15,6 @@ import (
 // ReportSource says where a report's data came from.
 type ReportSource string
 
-// The sources.
 const (
 	SourceLive   ReportSource = "live"
 	SourceCached ReportSource = "cached"

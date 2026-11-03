@@ -26,14 +26,12 @@ type ProcessCatalog interface {
 // StaticCatalog is a fixed list.
 type StaticCatalog []RunningProcess
 
-// Processes implements ProcessCatalog.
 func (s StaticCatalog) Processes() []RunningProcess { return s }
 
 // SystemCatalog lists the running processes. A process it may not inspect keeps whatever is
 // readable, or is skipped when that is nothing.
 type SystemCatalog struct{}
 
-// Processes implements ProcessCatalog.
 func (SystemCatalog) Processes() []RunningProcess { return osProcesses() }
 
 // parseCmdline reads NUL-separated argv and drops empty arguments, as the app does.

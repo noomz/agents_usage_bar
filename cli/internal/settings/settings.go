@@ -10,7 +10,6 @@ import (
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 )
 
-// The `aub.*` keys the app reads.
 const (
 	KeyRefreshInterval   = "aub.refreshInterval"
 	KeyThreshold         = "aub.threshold"
@@ -124,7 +123,6 @@ type CLI struct {
 	CustomEngines func() []domain.ProviderID
 }
 
-// List returns every setting.
 func (c CLI) List() []Entry {
 	rows := catalog()
 	out := make([]Entry, len(rows))
@@ -143,7 +141,6 @@ func find(key string) (spec, bool) {
 	return spec{}, false
 }
 
-// Get returns one setting.
 func (c CLI) Get(key string) (Entry, error) {
 	s, ok := find(key)
 	if !ok {
@@ -244,7 +241,6 @@ func (c CLI) setProviderOrder(s spec, key, value string) (SetResult, error) {
 	return SetResult{Key: s.cli, Value: joined}, nil
 }
 
-// StoredTheme is the stored cli-theme, ok=false when unset or unreadable.
 func (c CLI) StoredTheme() (domain.CLITheme, bool) {
 	return StoredTheme(c.Store)
 }

@@ -28,7 +28,6 @@ func pow10(n int) *big.Int {
 	return new(big.Int).Exp(bigTen, big.NewInt(int64(n)), nil)
 }
 
-// FromInt converts exactly.
 func FromInt(n int64) Decimal {
 	return compact(big.NewInt(n), 0)
 }
@@ -225,10 +224,8 @@ func (d Decimal) Div(o Decimal) Decimal {
 	return compact(m, e)
 }
 
-// IsZero reports d == 0.
 func (d Decimal) IsZero() bool { return d.mant == nil || d.mant.Sign() == 0 }
 
-// Sign is -1, 0, or 1.
 func (d Decimal) Sign() int { return d.mantissa().Sign() }
 
 func (d Decimal) rat() *big.Rat {
@@ -239,7 +236,6 @@ func (d Decimal) rat() *big.Rat {
 	return r.Quo(r, new(big.Rat).SetInt(pow10(-d.exp)))
 }
 
-// Cmp compares exactly.
 func (d Decimal) Cmp(o Decimal) int { return d.rat().Cmp(o.rat()) }
 
 // Float64 is for ratios only, such as a sparkline height. Never for money.

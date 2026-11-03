@@ -126,13 +126,11 @@ func newProvider(http httpclient.Client, loadConfig func() config.OllamaCloud, l
 	}
 }
 
-// ID implements provider.Provider.
 func (p *Provider) ID() domain.ProviderID { return domain.OllamaCloud }
 
-// DisplayName implements provider.Provider.
 func (p *Provider) DisplayName() string { return "Ollama Cloud" }
 
-// Capabilities implements provider.Provider: quota only, never today's totals.
+// Quota only, never today's totals.
 func (p *Provider) Capabilities() domain.Capabilities { return domain.Capabilities{HasQuota: true} }
 
 func (p *Provider) usage(ctx context.Context, c *credential, now time.Time) (usageResponse, error) {
@@ -170,7 +168,7 @@ func (p *Provider) fetchPlan(ctx context.Context, c *credential, now time.Time) 
 	return out.Plan, nil
 }
 
-// Fetch implements provider.Provider. A rejected credential fails with a fix-it hint and never
+// A rejected credential fails with a fix-it hint and never
 // falls back to another credential or sends a second request.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	cfg := p.loadConfig()

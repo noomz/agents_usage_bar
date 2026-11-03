@@ -18,7 +18,6 @@ const exportSchemaVersion = 1
 // CSVTable names one CSV table.
 type CSVTable string
 
-// The tables.
 const (
 	CSVDays     CSVTable = "days"
 	CSVAccounts CSVTable = "accounts"

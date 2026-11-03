@@ -85,7 +85,6 @@ type Ollama struct {
 // CredentialSource says where an API key came from.
 type CredentialSource string
 
-// The sources.
 const (
 	SourceEnv    CredentialSource = "env"
 	SourceConfig CredentialSource = "config"
