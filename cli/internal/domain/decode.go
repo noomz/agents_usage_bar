@@ -390,7 +390,6 @@ func decodeSnapshot(v any) (UsageSnapshot, error) {
 		Quota:        r.optQuota("quota"),
 		Raw:          r.reqStringMap("raw"),
 		QuotaWindows: r.optWindows("quotaWindows"),
-		TooltipLabel: r.optString("tooltipLabel"),
 	}
 	if items, ok := r.optArray("accounts"); ok {
 		s.Accounts = make([]AccountUsage, 0, len(items))

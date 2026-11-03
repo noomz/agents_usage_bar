@@ -175,6 +175,8 @@ add themes-env-empty AUB_THEME= -- themes
 add settings -- settings
 add settings-json -- settings --json
 add settings-list-theme-flag -- settings --theme classic
+add err-settings-list-verb -- settings list
+add err-settings-list-verb-json -- settings list --json
 for key in refresh-interval threshold theme cli-theme provider-order pace-warnings reset-notifications \
   claude-source open-at-login has-seen-welcome provider.claude.enabled provider.gemini.enabled \
   provider.ollama-cloud.enabled provider.lms-llamacpp.enabled provider.pi-local.enabled; do

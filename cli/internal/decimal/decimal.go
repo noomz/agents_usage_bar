@@ -225,14 +225,6 @@ func (d Decimal) Div(o Decimal) Decimal {
 	return compact(m, e)
 }
 
-// Neg returns -d.
-func (d Decimal) Neg() Decimal {
-	if d.IsZero() {
-		return d
-	}
-	return Decimal{mant: new(big.Int).Neg(d.mant), exp: d.exp}
-}
-
 // IsZero reports d == 0.
 func (d Decimal) IsZero() bool { return d.mant == nil || d.mant.Sign() == 0 }
 

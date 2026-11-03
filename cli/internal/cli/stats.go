@@ -326,7 +326,6 @@ func collectStats(days []domain.DayFile, r StatsRange, includeLocal bool, only *
 
 const noHistoryText = "No history yet. The app records from first launch; backfill runs in the background"
 
-// segment is a run of text in one style. A band of -1 means no band.
 type segmentStyle int
 
 const (
@@ -521,7 +520,7 @@ func peakCell(peak *peakValue) cell {
 
 var sparks = []string{"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"}
 
-// trendCellText: `$` then spend scaled to the row's highest bucket, `%` then the quota peak on
+// trendText: `$` then spend scaled to the row's highest bucket, `%` then the quota peak on
 // an absolute scale, or presence for a local row. `·` is a gap, `!` a bucket holding one.
 func trendText(p providerStats, bucketSize int, l *legend) cell {
 	cells := p.trend(bucketSize)

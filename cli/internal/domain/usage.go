@@ -119,13 +119,6 @@ const (
 	BillingLocal        BillingModel = "local"
 )
 
-// AccountInfo is billing and identity at poll time. It lives in memory only.
-type AccountInfo struct {
-	BillingModel BillingModel
-	Plan         *string
-	AccountID    *string
-}
-
 // AccountUsage is one account's slice of an aggregated provider row.
 type AccountUsage struct {
 	Name         string
@@ -133,7 +126,6 @@ type AccountUsage struct {
 	TokensToday  *int
 	Quota        *Quota
 	QuotaWindows []QuotaWindow
-	AccountInfo  *AccountInfo
 }
 
 // DisplayedQuota prefers the 5-hour session window, so the bar matches its reset caption.
@@ -167,10 +159,6 @@ type UsageSnapshot struct {
 	QuotaWindows   []QuotaWindow
 	Accounts       []AccountUsage
 	PeriodSpendUSD *PeriodSpend
-	TooltipLabel   *string
-	// AccountInfo and CostEstimated feed history in the app and are not cached.
-	AccountInfo   *AccountInfo
-	CostEstimated bool
 }
 
 // DisplayedQuota is the glance-bar quota: the 5-hour window when one exists, else Quota.
@@ -544,28 +532,6 @@ type ProviderState struct {
 	Snapshot           *UsageSnapshot
 	Status             ProviderStatus
 	LastSuccess        *time.Time
-}
-
-// ApplyingSnapshot is the state after a successful fetch. A sentinel in raw classifies an
-// outage without counting as a success.
-func (s ProviderState) ApplyingSnapshot(snap UsageSnapshot, now time.Time) ProviderState {
-	switch snap.Raw[RawProviderStatus] {
-	case StatusSentinelUnauth:
-		next := s
-		next.Snapshot = nil
-		next.Status = Unauthenticated()
-		return next
-	case StatusSentinelNotRunning:
-		next := s
-		next.PlaceholderMessage = nil
-		next.Snapshot = &snap
-		next.Status = NotRunning()
-		return next
-	}
-	t := now
-	return ProviderState{
-		ID: s.ID, DisplayName: s.DisplayName, Snapshot: &snap, Status: OK(now), LastSuccess: &t,
-	}
 }
 
 // ApplyingError keeps the prior snapshot and marks it stale, or errored with no prior success.

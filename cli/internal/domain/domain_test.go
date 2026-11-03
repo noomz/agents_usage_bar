@@ -175,23 +175,10 @@ func TestProviderOrder(t *testing.T) {
 }
 
 func TestProviderStateTransitions(t *testing.T) {
-	now := time.Unix(5000, 0)
 	last := time.Unix(1000, 0)
 	msg := "hint"
 	seed := ProviderState{ID: Ollama, DisplayName: "Ollama", PlaceholderMessage: &msg}
 
-	running := seed.ApplyingSnapshot(UsageSnapshot{Raw: map[string]string{}}, now)
-	if running.Status.Kind != StatusOK || running.PlaceholderMessage != nil || !running.LastSuccess.Equal(now) {
-		t.Errorf("%+v", running)
-	}
-	stopped := seed.ApplyingSnapshot(UsageSnapshot{Raw: map[string]string{RawProviderStatus: StatusSentinelNotRunning}}, now)
-	if stopped.Status.Kind != StatusNotRunning || stopped.LastSuccess != nil || stopped.PlaceholderMessage != nil || stopped.Snapshot == nil {
-		t.Errorf("%+v", stopped)
-	}
-	unauth := seed.ApplyingSnapshot(UsageSnapshot{Raw: map[string]string{RawProviderStatus: StatusSentinelUnauth}}, now)
-	if unauth.Status.Kind != StatusUnauthenticated || unauth.Snapshot != nil || unauth.PlaceholderMessage == nil {
-		t.Errorf("%+v", unauth)
-	}
 	cold := seed.ApplyingError(HTTPError{Status: 500})
 	if cold.Status.Kind != StatusError || cold.PlaceholderMessage == nil {
 		t.Errorf("%+v", cold)
