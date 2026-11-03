@@ -73,6 +73,8 @@ type Env struct {
 	Getenv func(string) string
 	// Processes lists running processes, for finding local engines.
 	Processes ProcessCatalog
+	// Keychain reads a generic-password item by service, nil where no Keychain exists.
+	Keychain func(service string) ([]byte, error)
 }
 
 // Build creates a provider, or returns nil when it has nothing to read on this machine.

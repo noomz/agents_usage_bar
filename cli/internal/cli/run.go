@@ -235,6 +235,7 @@ func (a *App) session(prefs settings.Preferences, cached bool) Session {
 			Cache:         store, Clock: a.Clock, DayKeys: a.dayKeys(), Paths: a.Layout,
 			Getenv:    func(key string) string { v, _ := a.Env(key); return v },
 			Processes: provider.SystemCatalog{},
+			Keychain:  provider.KeychainFor(a.GOOS),
 		})
 		session.Providers, session.Placeholders = registry.Providers, registry.Placeholders
 	}

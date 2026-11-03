@@ -5,6 +5,7 @@ import (
 	"github.com/noomz/agents_usage_bar/cli/internal/config"
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"github.com/noomz/agents_usage_bar/cli/internal/provider"
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/claude"
 	"github.com/noomz/agents_usage_bar/cli/internal/providers/grok"
 	"github.com/noomz/agents_usage_bar/cli/internal/providers/pilocal"
 )
@@ -15,6 +16,7 @@ import (
 //
 // A known provider with no line here shows its placeholder row.
 var builds = map[domain.ProviderID]provider.Build{
+	domain.Claude:  claude.Build,
 	domain.PiLocal: pilocal.Build,
 	domain.Grok:    grok.Build,
 }
