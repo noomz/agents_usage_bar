@@ -119,12 +119,15 @@ func (a *App) execute(command Command) (int, error) {
 		}
 		return 0, nil
 	case InstallCmd:
-		path, err := a.Installer.Install(c.Prefix)
+		result, err := a.Installer.Install(c.Prefix)
 		if err != nil {
 			return 0, err
 		}
-		fmt.Fprintln(a.Stdout, "Installed aub → "+path)
-		if hint := a.Installer.PathHint(dirOf(path)); hint != nil {
+		if result.Replaced != nil {
+			fmt.Fprintln(a.Stdout, "Replaced aub → "+*result.Replaced)
+		}
+		fmt.Fprintln(a.Stdout, "Installed aub → "+result.Link)
+		if hint := a.Installer.PathHint(dirOf(result.Link)); hint != nil {
 			fmt.Fprintln(a.Stdout, *hint)
 		}
 		return 0, nil

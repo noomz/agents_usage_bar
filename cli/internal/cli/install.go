@@ -81,34 +81,63 @@ func (i *Installer) PathHint(directory string) *string {
 	return &hint
 }
 
-// Install links into prefix, or the default directory, replacing links this tool owns.
-func (i *Installer) Install(prefix *string) (string, error) {
+// InstallResult is where the link went. Replaced is the old target of a symlink that pointed at
+// something other than this executable, nil when nothing foreign was replaced.
+type InstallResult struct {
+	Link     string
+	Replaced *string
+}
+
+// foreignTarget is the link's target when the link exists and points somewhere else.
+func (i *Installer) foreignTarget(link, exe string) *string {
+	if !i.FS.IsSymlink(link) {
+		return nil
+	}
+	dest, err := i.FS.SymlinkDestination(link)
+	if err != nil || filepath.Clean(absoluteFrom(filepath.Dir(link), dest)) == filepath.Clean(exe) {
+		return nil
+	}
+	return &dest
+}
+
+func absoluteFrom(dir, dest string) string {
+	if filepath.IsAbs(dest) {
+		return dest
+	}
+	return filepath.Join(dir, dest)
+}
+
+// Install links into prefix, or the default directory, replacing any symlink there. A regular
+// file stops a direct install. The administrator path uses `ln -sf`, which replaces one, as Swift
+// does.
+func (i *Installer) Install(prefix *string) (InstallResult, error) {
 	exe := i.FS.ExecutablePath()
 	dir := i.defaultDirectory()
 	if prefix != nil {
 		dir = *prefix
 	}
 	if err := i.Uninstall(); err != nil {
-		return "", err
+		return InstallResult{}, err
 	}
 	link := filepath.Join(dir, binaryName)
+	result := InstallResult{Link: link, Replaced: i.foreignTarget(link, exe)}
 	if !i.FS.DirectoryExists(dir) {
 		if err := i.FS.CreateDirectory(dir); err != nil {
-			return link, i.installPrivileged(dir, exe)
+			return result, i.installPrivileged(dir, exe)
 		}
 	}
 	if !i.FS.IsWritableDirectory(dir) {
-		return link, i.installPrivileged(dir, exe)
+		return result, i.installPrivileged(dir, exe)
 	}
 	if i.FS.FileExists(link) || i.FS.IsSymlink(link) {
 		if !i.FS.IsSymlink(link) {
-			return "", InstallError("refusing to clobber regular file: " + link)
+			return InstallResult{}, InstallError("refusing to clobber regular file: " + link)
 		}
 		if err := i.FS.RemoveItem(link); err != nil {
-			return "", err
+			return InstallResult{}, err
 		}
 	}
-	return link, i.FS.CreateSymlink(link, exe)
+	return result, i.FS.CreateSymlink(link, exe)
 }
 
 // Uninstall removes links in the known directories that point at this executable.
@@ -123,10 +152,7 @@ func (i *Installer) Uninstall() error {
 		if err != nil {
 			continue
 		}
-		if !filepath.IsAbs(dest) {
-			dest = filepath.Join(dir, dest)
-		}
-		if filepath.Clean(dest) == filepath.Clean(exe) {
+		if filepath.Clean(absoluteFrom(dir, dest)) == filepath.Clean(exe) {
 			if err := i.FS.RemoveItem(link); err != nil {
 				return err
 			}
