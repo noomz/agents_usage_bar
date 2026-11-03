@@ -242,3 +242,40 @@ func TestWritesKeepTheAppsProviderRowsVerbatim(t *testing.T) {
 		t.Fatalf("%s", data)
 	}
 }
+
+func TestUnusableFileIsNeverWritten(t *testing.T) {
+	for name, body := range map[string]string{
+		"newer schema": `{"schemaVersion":4,"providers":[],"baselines":["openrouter",{"value":1}],"transcripts":{},"dailyUsage":[],"futureSection":{"a":1}}`,
+		"truncated":    `{"schemaVersion":3,"providers":[],"base`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			s, path := newStore(t)
+			write(t, path, body)
+			stamp := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+			if err := os.Chtimes(path, stamp, stamp); err != nil {
+				t.Fatal(err)
+			}
+			s.MaintainBaseline(domain.OpenRouter, day1, 10)
+			s.WithCursors(func(c Cursors) {
+				if len(c.AllTranscriptOffsets()) != 0 {
+					t.Error("cursors from an unusable file")
+				}
+				c.SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/a", ByteOffset: 1, LastModified: day1}})
+				if got := c.AccumulateDailyUsage(domain.Claude, day1, 7, decimal.MustParse("0.5"), map[string]int{"s": 7}); got.Tokens != 7 || got.SessionTokens["s"] != 7 {
+					t.Errorf("delta must pass through: %+v", got)
+				}
+			})
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(data) != body || !info.ModTime().Equal(stamp) {
+				t.Fatalf("file changed: %s", data)
+			}
+		})
+	}
+}

@@ -131,3 +131,48 @@ func TestDegradedClaudeRowKeepsLocalTokens(t *testing.T) {
 		t.Fatalf("%s", out)
 	}
 }
+
+func TestUnusableStoreSurvivesEveryLiveCommandAndStillReports(t *testing.T) {
+	t.Cleanup(func() { activeStyle = styleUS })
+	for name, body := range map[string]string{
+		"newer schema": `{"schemaVersion":4,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":[],"futureSection":{"a":1}}`,
+		"truncated":    `{"schemaVersion":3,"providers":[],"base`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			h := newHarness(t)
+			recordingServer(t, h)
+			store := h.Layout.CacheFile()
+			transcript := filepath.Join(h.Layout.Home, ".claude", "projects", "p", "s.jsonl")
+			stamp := h.Clock.Now().UTC().Format(time.RFC3339)
+			line := `{"type":"assistant","timestamp":"` + stamp + `","message":{"model":"m","role":"assistant","usage":{"input_tokens":25}}}` + "\n"
+			for path, content := range map[string]string{store: body, transcript: line} {
+				if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			old := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+			if err := os.Chtimes(store, old, old); err != nil {
+				t.Fatal(err)
+			}
+			files := []credentialFile{{store, body, old}}
+			for _, args := range [][]string{{}, {"usage", "--live"}, {"quota", "--live"}} {
+				if _, _, code := h.run(args...); code != 0 {
+					t.Fatalf("%v: code=%d", args, code)
+				}
+				if changed := changedFiles(t, files); len(changed) != 0 {
+					t.Fatalf("%v changed the store", args)
+				}
+			}
+			out, _, code := h.run("usage", "claude", "--live", "--json")
+			if code != 0 || !strings.Contains(out, `"tokensToday" : 25`) {
+				t.Fatalf("code=%d: %s", code, out)
+			}
+			if changed := changedFiles(t, files); len(changed) != 0 {
+				t.Fatal("--json changed the store")
+			}
+		})
+	}
+}

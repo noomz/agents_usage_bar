@@ -94,25 +94,30 @@ type fileCursors struct{ f *File }
 // envelope keeps sections raw so a run that only needs one section does not decode 1 MB of
 // transcript cursors, and a write leaves `providers` exactly as the app wrote it.
 type envelope struct {
-	schema      int
 	providers   json.RawMessage
 	baselines   json.RawMessage
 	transcripts json.RawMessage
 	dailyUsage  json.RawMessage
 }
 
-func (f *File) load() *envelope {
+// load returns ok=false for a file that exists but cannot be used: corrupt, unreadable, or from a
+// newer schema. Such a file is never written, because a newer app owns its contents. A missing
+// file is an empty, writable envelope.
+func (f *File) load() (e *envelope, ok bool) {
 	data, err := os.ReadFile(f.path)
+	if errors.Is(err, os.ErrNotExist) {
+		return &envelope{}, true
+	}
 	if err != nil {
-		return nil
+		return nil, false
 	}
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal(data, &top); err != nil {
-		return nil
+		return nil, false
 	}
 	var schema int
 	if err := json.Unmarshal(top["schemaVersion"], &schema); err != nil {
-		return nil
+		return nil, false
 	}
 	// Later schemas add sections, so each version requires what it had when written.
 	required := map[int][]string{
@@ -121,14 +126,14 @@ func (f *File) load() *envelope {
 		3: {"providers", "baselines", "transcripts", "dailyUsage"},
 	}[schema]
 	if required == nil {
-		return nil
+		return nil, false
 	}
 	for _, key := range required {
 		if _, ok := top[key]; !ok {
-			return nil
+			return nil, false
 		}
 	}
-	return &envelope{schema: schema, providers: top["providers"], baselines: top["baselines"], transcripts: top["transcripts"], dailyUsage: top["dailyUsage"]}
+	return &envelope{providers: top["providers"], baselines: top["baselines"], transcripts: top["transcripts"], dailyUsage: top["dailyUsage"]}, true
 }
 
 func (f *File) write(e *envelope) {
@@ -196,10 +201,10 @@ func pairs(raw json.RawMessage, visit func(key string, value any) error) error {
 // LoadAll implements Store.
 func (f *File) LoadAll() map[domain.ProviderID]domain.ProviderState {
 	f.mu.Lock()
-	e := f.load()
+	e, ok := f.load()
 	f.mu.Unlock()
 	states := map[domain.ProviderID]domain.ProviderState{}
-	if e == nil {
+	if !ok {
 		return states
 	}
 	err := pairs(e.providers, func(key string, value any) error {
@@ -248,8 +253,8 @@ func baselineTree(b domain.BaselineRecord) any {
 func (f *File) Baseline(id domain.ProviderID) *domain.BaselineRecord {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	e := f.load()
-	if e == nil {
+	e, ok := f.load()
+	if !ok {
 		return nil
 	}
 	if rec, ok := decodeBaselines(e.baselines)[string(id)]; ok {
@@ -263,7 +268,10 @@ func (f *File) MaintainBaseline(id domain.ProviderID, now time.Time, currentValu
 	defer f.lock()()
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	e := f.loadOrEmpty()
+	e, ok := f.load()
+	if !ok {
+		return
+	}
 	baselines := decodeBaselines(e.baselines)
 	today := f.dayKeys.KeyFor(now)
 	existing, ok := baselines[string(id)]
@@ -274,13 +282,6 @@ func (f *File) MaintainBaseline(id domain.ProviderID, now time.Time, currentValu
 	baselines[string(id)] = domain.BaselineRecord{Value: base, Date: today, LastValue: currentValue, LastUpdated: now}
 	e.baselines = json.RawMessage(pairsOf(baselines, baselineTree))
 	f.write(e)
-}
-
-func (f *File) loadOrEmpty() *envelope {
-	if e := f.load(); e != nil {
-		return e
-	}
-	return &envelope{}
 }
 
 func decodeOffsets(raw json.RawMessage) map[string]domain.TranscriptOffset {
@@ -311,8 +312,8 @@ func (c fileCursors) AllTranscriptOffsets() map[string]domain.TranscriptOffset {
 	f := c.f
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	e := f.load()
-	if e == nil {
+	e, ok := f.load()
+	if !ok {
 		return map[string]domain.TranscriptOffset{}
 	}
 	return decodeOffsets(e.transcripts)
@@ -326,7 +327,10 @@ func (c fileCursors) SetTranscriptOffsets(offsets []domain.TranscriptOffset) {
 	f := c.f
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	e := f.loadOrEmpty()
+	e, ok := f.load()
+	if !ok {
+		return
+	}
 	all := decodeOffsets(e.transcripts)
 	for _, o := range offsets {
 		all[o.URL] = o
@@ -354,7 +358,16 @@ func (c fileCursors) AccumulateDailyUsage(id domain.ProviderID, now time.Time, d
 	f := c.f
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	e := f.loadOrEmpty()
+	today := f.dayKeys.KeyFor(now)
+	next := domain.DailyUsageRecord{Date: today, Tokens: deltaTokens, CostUSD: deltaCostUSD, SessionTokens: map[string]int{}}
+	for k, v := range deltaSessionTokens {
+		next.SessionTokens[k] = v
+	}
+	// With no readable cursors the delta is the whole day, so it is already the total.
+	e, ok := f.load()
+	if !ok {
+		return next
+	}
 	records := map[string]domain.DailyUsageRecord{}
 	_ = pairs(e.dailyUsage, func(key string, value any) error {
 		rec, err := domain.DecodeDailyUsage(value)
@@ -364,11 +377,6 @@ func (c fileCursors) AccumulateDailyUsage(id domain.ProviderID, now time.Time, d
 		records[key] = rec
 		return nil
 	})
-	today := f.dayKeys.KeyFor(now)
-	next := domain.DailyUsageRecord{Date: today, Tokens: deltaTokens, CostUSD: deltaCostUSD, SessionTokens: map[string]int{}}
-	for k, v := range deltaSessionTokens {
-		next.SessionTokens[k] = v
-	}
 	if existing, ok := records[string(id)]; ok && existing.Date == today {
 		next.Tokens += existing.Tokens
 		next.CostUSD = existing.CostUSD.Add(deltaCostUSD)
