@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 )
 
 // Delta is the result of one incremental read.
@@ -31,7 +33,9 @@ func ReadDelta(path string, startOffset uint64, previousModified *time.Time) (De
 		return Delta{}, err
 	}
 	start := startOffset
-	if previousModified != nil && info.ModTime().Before(*previousModified) {
+	// A persisted mtime is a Foundation double, coarser than the filesystem's nanoseconds, so
+	// compare at that precision or an unchanged file reads as replaced.
+	if previousModified != nil && domain.RefSeconds(info.ModTime()) < domain.RefSeconds(*previousModified) {
 		start = 0
 	}
 	f, err := os.Open(path)

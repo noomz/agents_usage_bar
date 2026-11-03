@@ -1,6 +1,7 @@
 package jsonl
 
 import (
+	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"os"
 	"path/filepath"
 	"strings"
@@ -97,5 +98,42 @@ func TestScanRoots(t *testing.T) {
 	recent := ScanRoots([]string{root}, &cut)
 	if len(recent) != 1 || !strings.HasSuffix(recent[0], "new.jsonl") {
 		t.Fatalf("%v", recent)
+	}
+}
+
+func TestUnchangedFileResumesAfterItsMtimeRoundTripsThroughTheCache(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "x.jsonl")
+	if err := os.WriteFile(path, []byte("a\nb\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for i := int64(0); i < 2000; i++ {
+		mtime := time.Unix(1793000000+i, (i*499979)%1_000_000_000)
+		if err := os.Chtimes(path, mtime, mtime); err != nil {
+			t.Fatal(err)
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stored := domain.RefDate(domain.RefSeconds(info.ModTime()))
+		delta, err := ReadDelta(path, 4, &stored)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(delta.Lines) != 0 || delta.NewOffset != 4 {
+			t.Fatalf("mtime %v: reread from zero, offset %d", mtime, delta.NewOffset)
+		}
+	}
+	older := time.Unix(1793000000, 0)
+	if err := os.Chtimes(path, older, older); err != nil {
+		t.Fatal(err)
+	}
+	newer := older.Add(time.Second)
+	delta, err := ReadDelta(path, 4, &newer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(delta.Lines) != 2 {
+		t.Fatalf("a real regression must restart from zero, got %d lines", len(delta.Lines))
 	}
 }
