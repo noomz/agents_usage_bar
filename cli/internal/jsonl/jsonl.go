@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 )
 
 // Delta is the result of one incremental read.
@@ -32,10 +34,9 @@ func ReadDelta(path string, startOffset uint64, previousModified *time.Time) (De
 		return Delta{}, err
 	}
 	start := startOffset
-	// The stored mtime is a Double of seconds since 2001, about 0.12µs apart today, so half of
-	// all unchanged files read as slightly older than their cursor. Restarting those would count
-	// them again. A replaced file cannot have an mtime within a microsecond of the old one.
-	if previousModified != nil && info.ModTime().Before(previousModified.Add(-time.Microsecond)) {
+	// A persisted mtime is a Foundation double, coarser than the filesystem's nanoseconds, so
+	// compare at that precision or an unchanged file reads as replaced.
+	if previousModified != nil && domain.RefSeconds(info.ModTime()) < domain.RefSeconds(*previousModified) {
 		start = 0
 	}
 	f, err := os.Open(path)

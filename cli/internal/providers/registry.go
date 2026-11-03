@@ -6,6 +6,8 @@ import (
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"github.com/noomz/agents_usage_bar/cli/internal/provider"
 	"github.com/noomz/agents_usage_bar/cli/internal/providers/claude"
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/codex"
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/gemini"
 	"github.com/noomz/agents_usage_bar/cli/internal/providers/grok"
 	"github.com/noomz/agents_usage_bar/cli/internal/providers/pilocal"
 )
@@ -19,6 +21,8 @@ var builds = map[domain.ProviderID]provider.Build{
 	domain.Claude:  claude.Build,
 	domain.PiLocal: pilocal.Build,
 	domain.Grok:    grok.Build,
+	domain.Codex:   codex.Build,
+	domain.Gemini:  gemini.Build,
 }
 
 // engineBuild registers the llama.cpp-compatible engine row, such as llamacpp.BuildEngine.
