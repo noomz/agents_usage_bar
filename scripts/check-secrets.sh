@@ -38,8 +38,8 @@ ALLOWED_EMAILS='lazym0m3nt@gmail\.com|ci@github\.com'
 END='(\.?[^.A-Za-z0-9]|\.?$)'
 
 scan() {
-  grep -RIEn --include='*.swift' --include='*.plist' --include='*.yml' --include='*.json' --include='*.md' \
-       "$1" AgentsUsageBar/ AgentsUsageBarTests/ .github/ .scratch/ docs/ README.md 2>/dev/null || true
+  grep -RIEn --include='*.swift' --include='*.go' --include='*.tsv' --include='*.py' --include='*.plist' --include='*.yml' --include='*.json' --include='*.md' \
+       "$1" AgentsUsageBar/ AgentsUsageBarTests/ cli/ scripts/ .github/ .scratch/ docs/ README.md 2>/dev/null || true
 }
 
 FOUND=0

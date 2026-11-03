@@ -252,15 +252,19 @@ func TestNoHistoryPrintsOneLineAndCreatesNothing(t *testing.T) {
 }
 
 func TestUnreadableHistoryIsExitOne(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root reads everything")
+	}
 	h := newHarness(t)
 	if err := os.MkdirAll(h.Layout.DataDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(h.Layout.HistoryDir(), []byte("not a directory"), 0o600); err != nil {
+	if err := os.Mkdir(h.Layout.HistoryDir(), 0); err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = os.Chmod(h.Layout.HistoryDir(), 0o700) })
 	out, errOut, code := h.run("stats")
-	want := "error: cannot read usage history at " + h.Layout.HistoryDir() + "/: The file “history” couldn’t be opened.\n"
+	want := "error: cannot read usage history at " + h.Layout.HistoryDir() + "/: The file “history” couldn’t be opened because you don’t have permission to view it.\n"
 	if out != "" || errOut != want || code != 1 {
 		t.Errorf("%q %q %d", out, errOut, code)
 	}

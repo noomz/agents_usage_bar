@@ -309,7 +309,7 @@ func stringValue(v any, ok bool) (string, bool) {
 	return "", false
 }
 
-// boolValue is `bool(forKey:)`: a stored number is nonzero, a string is YES/true/a number.
+// boolValue is `bool(forKey:)`: a stored number is nonzero; a string is yes, true, or exactly 1.
 func boolValue(v any) bool {
 	switch x := v.(type) {
 	case bool:
@@ -319,12 +319,8 @@ func boolValue(v any) bool {
 	case float64:
 		return x != 0
 	case string:
-		s := strings.ToLower(strings.TrimSpace(x))
-		if s == "yes" || s == "true" {
-			return true
-		}
-		n, err := strconv.ParseFloat(s, 64)
-		return err == nil && n != 0
+		lower := strings.ToLower(x)
+		return lower == "yes" || lower == "true" || x == "1"
 	}
 	return false
 }

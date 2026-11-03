@@ -76,13 +76,28 @@ func TestDaysHonoursRange(t *testing.T) {
 	}
 }
 
-func TestUnlistableDirectoryErrors(t *testing.T) {
+func TestFileInPlaceOfDirectoryReadsAsMissing(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "history")
 	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := Reader{file}.DayKeys()
-	if err == nil || err.Error() != "The file “history” couldn’t be opened." {
+	keys, err := Reader{file}.DayKeys()
+	if err != nil || len(keys) != 0 {
+		t.Errorf("%v %v", keys, err)
+	}
+}
+
+func TestUnlistableDirectoryErrors(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root reads everything")
+	}
+	dir := filepath.Join(t.TempDir(), "history")
+	if err := os.Mkdir(dir, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+	_, err := Reader{dir}.DayKeys()
+	if err == nil || err.Error() != "The file “history” couldn’t be opened because you don’t have permission to view it." {
 		t.Errorf("%v", err)
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 )
@@ -33,7 +34,9 @@ func (e ListError) Error() string { return e.message }
 func (r Reader) DayKeys() ([]string, error) {
 	entries, err := os.ReadDir(r.Dir)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
+		// The app lists `history/` with a trailing slash, so a regular file there reads as
+		// missing: ENOTDIR surfaces as "no such file".
+		if errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
 			return nil, nil
 		}
 		name := filepath.Base(r.Dir)

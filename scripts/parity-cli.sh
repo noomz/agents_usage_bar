@@ -11,6 +11,10 @@
 #   PARITY_DIR    scratch dir for outputs (default: a new temp dir, never in the repo)
 #   PARITY_LINES  diff lines printed per case (default 40; the full diff stays on disk)
 #
+# Cases named home-* run both binaries against synthetic homes from scripts/parity-fixtures.py,
+# through HOME and CFFIXED_USER_HOME. Preferences and locale still come from the real user;
+# every subcommand here only reads them.
+#
 # Compares stdout, stderr, and exit code. Normalizes only `asOf` and `exportedAt` JSON
 # values. A case runs up to 3 times because the two binaries start at different instants:
 # a reset countdown or header clock can tick, and the app can rewrite today.json, between
@@ -237,6 +241,57 @@ add err-install-extra -- install extra
 add err-uninstall-extra -- uninstall extra
 add err-dashboard-provider -- dashboard nope
 add err-dashboard-extra -- dashboard claude codex
+
+HOMES="$OUT/homes"
+[[ -d "$HOMES" ]] && chmod -R u+rwx "$HOMES"
+rm -rf "$HOMES"
+python3 "$ROOT/scripts/parity-fixtures.py" "$HOMES" || { echo "parity: fixtures failed" >&2; exit 2; }
+
+# Foundation strips /private from paths it prints, so homes use the symlink form on both sides.
+HOME_ROOT="${HOMES#/private}"
+
+in_home() { # home-name case-suffix args...
+  local home="$1" suffix="$2"; shift 2
+  add "home-$home-$suffix" "HOME=$HOME_ROOT/$home" "CFFIXED_USER_HOME=$HOME_ROOT/$home" -- "$@"
+}
+
+for home in full variants grok-balance grok-nothing schema1 schema2 schema9 corrupt bad-row empty history-file history-noperm; do
+  for theme in compact classic; do
+    in_home "$home" "usage-$theme" usage --cached --no-color --theme "$theme"
+    in_home "$home" "quota-$theme" quota --cached --no-color --theme "$theme"
+    in_home "$home" "usage-all-$theme" usage --cached --no-color --theme "$theme" --provider all
+    in_home "$home" "quota-all-$theme" quota --cached --no-color --theme "$theme" --provider all
+  done
+  in_home "$home" usage-json usage --cached --json
+  in_home "$home" usage-json-all usage --cached --json --provider all
+  in_home "$home" quota-json-all quota --cached --json --provider all
+  in_home "$home" tty-usage @tty usage --cached
+  in_home "$home" tty-usage-classic @tty usage --cached --theme classic
+  in_home "$home" tty-quota @tty quota --cached
+  in_home "$home" themes themes
+  in_home "$home" settings settings
+  in_home "$home" settings-json settings --json
+  in_home "$home" stats stats --since 2026-09-01 --until 2026-09-14
+  in_home "$home" stats-all stats --since 2026-09-01 --until 2026-09-30 --provider all
+  in_home "$home" stats-default stats
+  in_home "$home" stats-tty @tty stats --since 2026-09-01 --until 2026-09-14
+  in_home "$home" stats-json stats --json --since 2026-09-01 --until 2026-09-03
+  in_home "$home" stats-json-default stats --json
+  for id in claude codex openrouter ollama engine.box mystery; do
+    in_home "$home" "stats-$id" stats "$id" --since 2026-09-01 --until 2026-09-14
+    in_home "$home" "stats-json-$id" stats "$id" --json --since 2026-09-20 --until 2026-09-22
+  done
+  in_home "$home" stats-claude-tty @tty stats claude --since 2026-09-01 --until 2026-09-14
+  for table in days accounts events quota; do
+    in_home "$home" "stats-csv-$table" stats --csv "$table" --since 2026-09-01 --until 2026-09-14
+  done
+done
+for width in 30 40 50 60 70 80 100 120 200; do
+  for home in full variants; do
+    add "home-$home-w$width" "HOME=$HOME_ROOT/$home" "CFFIXED_USER_HOME=$HOME_ROOT/$home" "COLUMNS=$width" -- usage --cached --no-color --theme compact --provider all
+    add "home-$home-quota-w$width" "HOME=$HOME_ROOT/$home" "CFFIXED_USER_HOME=$HOME_ROOT/$home" "COLUMNS=$width" -- quota --cached --no-color --theme compact --provider all
+  done
+done
 
 pass=0; allowed=0; failed=0; total=0
 

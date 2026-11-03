@@ -198,6 +198,32 @@ func TestDefaultsCoercions(t *testing.T) {
 	}
 }
 
+// Expected values were printed by UserDefaults on macOS.
+func TestUserDefaultsCoercionTable(t *testing.T) {
+	cases := []struct {
+		value   any
+		text    string
+		boolean bool
+		number  string
+	}{
+		{true, "1", true, "1"}, {false, "0", false, "0"}, {int64(0), "0", false, "0"}, {int64(2), "2", true, "2"},
+		{0.0, "0", false, "0"}, {0.5, "0.5", true, "0.5"}, {"YES", "YES", true, "nil"}, {"yes", "yes", true, "nil"},
+		{"Y", "Y", false, "nil"}, {"no", "no", false, "nil"}, {"true", "true", true, "nil"}, {"TRUE", "TRUE", true, "nil"},
+		{"false", "false", false, "nil"}, {"0", "0", false, "nil"}, {"1", "1", true, "nil"}, {"2", "2", false, "nil"},
+		{"0.5", "0.5", false, "nil"}, {"word", "word", false, "nil"}, {"", "", false, "nil"}, {" yes ", " yes ", false, "nil"},
+	}
+	for _, c := range cases {
+		text, _ := stringValue(c.value, true)
+		number := "nil"
+		if n, ok := doubleValue(c.value, true); ok {
+			number = strconv.FormatFloat(n, 'g', -1, 64)
+		}
+		if text != c.text || boolValue(c.value) != c.boolean || number != c.number {
+			t.Errorf("%#v: text=%q bool=%v number=%s", c.value, text, boolValue(c.value), number)
+		}
+	}
+}
+
 func TestPreferences(t *testing.T) {
 	p := LoadPreferences(Memory{
 		KeyThreshold:                      0.7,
