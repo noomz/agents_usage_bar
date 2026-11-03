@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/noomz/agents_usage_bar/cli/internal/applog"
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"github.com/noomz/agents_usage_bar/cli/internal/httpclient"
 	"github.com/noomz/agents_usage_bar/cli/internal/secret"
@@ -70,7 +71,7 @@ func (c *oauthClient) getUsage(ctx context.Context) (*usageResponse, error) {
 		token = rotated
 		if credential.source == sourceFile {
 			if err := c.creds.saveToFile(rotated); err != nil {
-				logSaveFailure()
+				applog.Logger.Error("oauth: rotated credentials could not be written back")
 			}
 		}
 	}
@@ -89,7 +90,7 @@ func (c *oauthClient) refresh(ctx context.Context, token oauthToken) (oauthToken
 	if err := c.http.PostJSON(ctx, refreshURL, body, nil, headers, &response); err != nil {
 		var status domain.HTTPError
 		if errors.As(err, &status) && (status.Status == 400 || status.Status == 401) {
-			return oauthToken{}, fmt.Errorf("refresh failed: invalid_client (run 'claude logout && claude login')")
+			return oauthToken{}, errors.New("refresh failed: invalid_client (run 'claude logout && claude login')")
 		}
 		return oauthToken{}, fmt.Errorf("refresh failed: %w", err)
 	}

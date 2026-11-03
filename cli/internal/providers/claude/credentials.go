@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/noomz/agents_usage_bar/cli/internal/applog"
 	"github.com/noomz/agents_usage_bar/cli/internal/provider"
 	"github.com/noomz/agents_usage_bar/cli/internal/secret"
 )
@@ -197,8 +196,4 @@ func writeAtomic(path string, data []byte, mode os.FileMode) error {
 		return err
 	}
 	return os.Rename(tmp.Name(), path)
-}
-
-func logSaveFailure() {
-	applog.Logger.Error("oauth: rotated credentials could not be written back")
 }
