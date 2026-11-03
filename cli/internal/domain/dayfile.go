@@ -377,6 +377,15 @@ func (o *DayKeyOwner) KeyFor(t time.Time) string {
 	return wall
 }
 
+// StartOfDay is the first instant of the day key at t, in the owner's zone.
+func (o *DayKeyOwner) StartOfDay(t time.Time) time.Time {
+	start, err := time.ParseInLocation("2006-01-02", o.KeyFor(t), o.loc)
+	if err != nil {
+		return t
+	}
+	return start
+}
+
 // AdvanceNewest raises the newest key; a lower key is ignored.
 func (o *DayKeyOwner) AdvanceNewest(key string) {
 	o.mu.Lock()

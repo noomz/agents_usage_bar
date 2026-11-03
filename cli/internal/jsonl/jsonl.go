@@ -3,6 +3,7 @@ package jsonl
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -60,6 +61,24 @@ func ReadDelta(path string, startOffset uint64, previousModified *time.Time) (De
 		data = data[i+1:]
 	}
 	return Delta{Lines: lines, NewOffset: start + consumed, LastModified: info.ModTime()}, nil
+}
+
+// FileURL is Foundation's URL(fileURLWithPath:).absoluteString, the key of every stored cursor.
+// A different encoding would miss the cursor and count the whole file again.
+func FileURL(path string) string {
+	const allowed = "-._~!$&'()*+,;=:@/"
+	var b strings.Builder
+	b.WriteString("file://")
+	for i := 0; i < len(path); i++ {
+		c := path[i]
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', strings.IndexByte(allowed, c) >= 0:
+			b.WriteByte(c)
+		default:
+			fmt.Fprintf(&b, "%%%02X", c)
+		}
+	}
+	return b.String()
 }
 
 // ScanRoots returns `*.jsonl` regular files under roots, with symlinks resolved so cache keys

@@ -99,3 +99,11 @@ func TestScanRoots(t *testing.T) {
 		t.Fatalf("%v", recent)
 	}
 }
+
+func TestFileURLMatchesFoundation(t *testing.T) {
+	got := FileURL("/tmp/a b/c[d]+&=@:,;!$'()*~#?%.jsonl")
+	want := "file:///tmp/a%20b/c%5Bd%5D+&=@:,;!$'()*~%23%3F%25.jsonl"
+	if got != want {
+		t.Fatalf("got %s", got)
+	}
+}
