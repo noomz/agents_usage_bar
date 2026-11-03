@@ -9,6 +9,7 @@ import (
 	"github.com/noomz/agents_usage_bar/cli/internal/applog"
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"github.com/noomz/agents_usage_bar/cli/internal/httpclient"
+	"github.com/noomz/agents_usage_bar/cli/internal/provider"
 	"github.com/noomz/agents_usage_bar/cli/internal/secret"
 )
 
@@ -20,7 +21,10 @@ const (
 	userAgent       = "Agents-Usage-Bar/1.0"
 )
 
-var errNoCredentials = errors.New("claude: no credentials")
+var (
+	errNoCredentials    = errors.New("claude: no credentials")
+	errRefreshForbidden = errors.New("claude: token needs a refresh this host may not perform")
+)
 
 type quotaWindowResponse struct {
 	Utilization *float64 `json:"utilization"`
@@ -48,15 +52,17 @@ type refreshBody struct {
 
 // oauthClient is the usage endpoint behind the credential lifecycle.
 type oauthClient struct {
-	http  httpclient.Client
-	creds *credentialLoader
-	now   func() time.Time
+	http          httpclient.Client
+	creds         *credentialLoader
+	now           func() time.Time
+	refreshPolicy provider.RefreshPolicy
 }
 
 // getUsage loads credentials, refreshes file tokens near expiry, and reads usage. A Keychain
 // token is never refreshed: Claude Code owns that item, so refreshing would rotate the token out
 // from under it, and this process never writes the Keychain. An environment token has no refresh
-// token. A failed refresh leaves the stored file untouched.
+// token. A failed refresh leaves the stored file untouched. Where the policy forbids a refresh,
+// the read fails and the row shows local data only, until Claude Code refreshes the file itself.
 func (c *oauthClient) getUsage(ctx context.Context) (*usageResponse, error) {
 	credential := c.creds.load()
 	if credential == nil {
@@ -64,6 +70,9 @@ func (c *oauthClient) getUsage(ctx context.Context) (*usageResponse, error) {
 	}
 	token := credential.token
 	if credential.source != sourceKeychain && needsRefresh(token, c.now()) && token.RefreshToken != nil {
+		if c.refreshPolicy != provider.RefreshAllowed {
+			return nil, errRefreshForbidden
+		}
 		rotated, err := c.refresh(ctx, token)
 		if err != nil {
 			return nil, err

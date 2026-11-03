@@ -93,6 +93,7 @@ const (
 	oauthNotSignedIn oauthKind = iota
 	oauthRefreshFailed
 	oauthRefreshDisabled
+	oauthRefreshForbidden
 	oauthTransport
 )
 
@@ -110,6 +111,8 @@ func (e oauthError) Error() string {
 		return fmt.Sprintf("Gemini token refresh failed: HTTP %d", e.status)
 	case oauthRefreshDisabled:
 		return "Gemini token refresh disabled: GEMINI_CLI_CLIENT_ID and GEMINI_CLI_CLIENT_SECRET not set"
+	case oauthRefreshForbidden:
+		return "Gemini token refresh is left to gemini-cli on this host"
 	}
 	return "Gemini token refresh transport failure"
 }
@@ -166,6 +169,9 @@ func (p *Provider) refresh(ctx context.Context, refreshToken secret.Secret) (sec
 	if p.clientID == "" || p.clientSecret == "" {
 		return secret.Secret{}, oauthError{kind: oauthRefreshDisabled}
 	}
+	if p.env.TokenRefresh != provider.RefreshAllowed {
+		return secret.Secret{}, oauthError{kind: oauthRefreshForbidden}
+	}
 	var response struct {
 		AccessToken *string `json:"access_token"`
 		ExpiresIn   *int    `json:"expires_in"`
@@ -190,7 +196,7 @@ func (p *Provider) refresh(ctx context.Context, refreshToken secret.Secret) (sec
 
 func isRefreshFailure(err error) bool {
 	var oauth oauthError
-	return errors.As(err, &oauth) && (oauth.kind == oauthRefreshFailed || oauth.kind == oauthRefreshDisabled)
+	return errors.As(err, &oauth) && (oauth.kind == oauthRefreshFailed || oauth.kind == oauthRefreshDisabled || oauth.kind == oauthRefreshForbidden)
 }
 
 // quotaBucket is one entry of retrieveUserQuota, whose keys are camelCase on the wire.

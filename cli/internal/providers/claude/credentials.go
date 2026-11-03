@@ -113,9 +113,9 @@ func needsRefresh(token oauthToken, now time.Time) bool {
 // token, so this write is the only copy of the new one.
 //
 // Swift rewrites the file as just its four known fields, which drops `scopes` and anything else
-// Claude Code keeps there. This merges instead, because Linux has no Keychain and this file is
-// Claude Code's only login. It also follows a symlinked file, keeps the file's mode, and syncs
-// before the rename, so a crash leaves the old file or the whole new one.
+// Claude Code keeps there. This merges instead, so the login keeps working. It also follows a
+// symlinked file, keeps the file's mode, and syncs before the rename, so a crash leaves the old
+// file or the whole new one.
 func (l *credentialLoader) saveToFile(token oauthToken) error {
 	path := l.path
 	if resolved, err := filepath.EvalSymlinks(path); err == nil {

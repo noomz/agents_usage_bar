@@ -29,7 +29,8 @@
 //   - Set snapshot.ProviderID and snapshot.AsOf. Leave Raw non-nil. Nil pointers and nil slices
 //     mean "not reported" and print differently from zero and empty.
 //   - Credentials are secret.Secret, revealed only inside an httpclient call. Read env through
-//     env.Getenv and files through env.Paths, so tests can redirect them.
+//     env.Getenv and files through env.Paths, so tests can redirect them. Never write a
+//     credential file, and spend a refresh token only when env.TokenRefresh allows it.
 //   - Use env.HTTP for remote hosts and env.LocalhostHTTP for localhost. Providers log through
 //     applog only; nothing may reach stdout or stderr.
 //   - Use env.Cache for transcript offsets, baselines, and the daily accumulator. Do not read
@@ -75,6 +76,8 @@ type Env struct {
 	Processes ProcessCatalog
 	// Keychain reads a generic-password item by service, nil where no Keychain exists.
 	Keychain func(service string) ([]byte, error)
+	// TokenRefresh gates every OAuth refresh grant. Set it from RefreshPolicyFor.
+	TokenRefresh RefreshPolicy
 }
 
 // Build creates a provider, or returns nil when it has nothing to read on this machine.

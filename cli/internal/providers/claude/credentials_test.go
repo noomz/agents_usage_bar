@@ -140,8 +140,8 @@ func TestSaveWritesEnvelopeAndMode(t *testing.T) {
 	}
 }
 
-// Swift drops these fields. On Linux the file is Claude Code's only login, so losing `scopes` or
-// mcpOAuth would break the login this write exists to preserve.
+// Swift drops these fields. Losing `scopes` or mcpOAuth would break the login this write exists
+// to preserve.
 func TestSavePreservesFieldsClaudeCodeOwns(t *testing.T) {
 	original := `{"claudeAiOauth":{"accessToken":"old","refreshToken":"old-r","expiresAt":1,"scopes":["user:inference","user:profile"],"rateLimitTier":"default_max"},"mcpOAuth":{"server|abc":{"accessToken":"keep-me"}},"future":{"x":1}}`
 	loader := loaderWith(t, &original, nil, nil, nil)
@@ -201,7 +201,7 @@ func oauthFor(t *testing.T, file *string, keychain []byte, env map[string]string
 	if keychain == nil {
 		keychainErr = errors.New("none")
 	}
-	return &oauthClient{http: http, creds: loaderWith(t, file, keychain, keychainErr, env), now: func() time.Time { return testNow }}
+	return &oauthClient{http: http, creds: loaderWith(t, file, keychain, keychainErr, env), now: func() time.Time { return testNow }, refreshPolicy: provider.RefreshAllowed}
 }
 
 func TestOAuthLifecycle(t *testing.T) {
@@ -359,6 +359,65 @@ func TestOAuthLifecycle(t *testing.T) {
 			if !errors.As(err, &got) || got.Status != status {
 				t.Fatalf("%v", err)
 			}
+		}
+	})
+}
+
+func TestForbiddenPolicyNeverSpendsTheRefreshToken(t *testing.T) {
+	blob := func(fields map[string]any) string {
+		data, _ := json.Marshal(map[string]any{"claudeAiOauth": fields})
+		return string(data)
+	}
+	for name, expires := range map[string]any{
+		"expired":        float64(testNow.Add(-time.Hour).UnixMilli()),
+		"near expiry":    float64(testNow.Add(time.Minute).UnixMilli()),
+		"unknown expiry": nil,
+	} {
+		t.Run(name, func(t *testing.T) {
+			file := blob(map[string]any{"accessToken": "a", "refreshToken": "r", "expiresAt": expires})
+			http := &scriptedHTTP{}
+			c := oauthFor(t, &file, nil, nil, http)
+			c.refreshPolicy = provider.RefreshForbidden
+			before, err := os.Stat(c.creds.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := c.getUsage(t.Context()); !errors.Is(err, errRefreshForbidden) {
+				t.Fatalf("err %v", err)
+			}
+			if len(http.calls) != 0 {
+				t.Fatalf("%+v", http.calls)
+			}
+			after, err := os.Stat(c.creds.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, _ := os.ReadFile(c.creds.path)
+			if string(got) != file || !after.ModTime().Equal(before.ModTime()) {
+				t.Fatal("the credential file changed")
+			}
+		})
+	}
+
+	t.Run("a fresh token still reads usage", func(t *testing.T) {
+		file := blob(map[string]any{"accessToken": "a", "refreshToken": "r", "expiresAt": float64(testNow.Add(time.Hour).UnixMilli())})
+		http := &scriptedHTTP{gets: []any{fixture(t, "oauth-usage-success.json")}}
+		c := oauthFor(t, &file, nil, nil, http)
+		c.refreshPolicy = provider.RefreshForbidden
+		if _, err := c.getUsage(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		if len(http.calls) != 1 || http.calls[0].method != "GET" {
+			t.Fatalf("%+v", http.calls)
+		}
+	})
+
+	t.Run("an environment token has nothing to spend", func(t *testing.T) {
+		http := &scriptedHTTP{gets: []any{fixture(t, "oauth-usage-success.json")}}
+		c := oauthFor(t, nil, nil, map[string]string{envTokenKey: "e"}, http)
+		c.refreshPolicy = provider.RefreshForbidden
+		if _, err := c.getUsage(t.Context()); err != nil {
+			t.Fatal(err)
 		}
 	})
 }

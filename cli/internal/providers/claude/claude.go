@@ -32,7 +32,7 @@ func Build(env provider.Env) provider.Provider {
 	loader := newCredentialLoader(env)
 	var oauth usageSource
 	if loader.load() != nil {
-		oauth = &oauthClient{http: env.HTTP, creds: loader, now: env.Clock.Now}
+		oauth = &oauthClient{http: env.HTTP, creds: loader, now: env.Clock.Now, refreshPolicy: env.TokenRefresh}
 	}
 	return &Provider{
 		useHook: env.Preferences.ClaudeSource == sourceHook,

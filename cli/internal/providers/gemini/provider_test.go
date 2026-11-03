@@ -103,8 +103,9 @@ func setup(t *testing.T, c creds, clientEnv bool) (provider.Provider, *fakeHTTP,
 	}
 	http := &fakeHTTP{queue: map[string][]any{}}
 	p := Build(provider.Env{
-		HTTP:  http,
-		Paths: paths.Layout{Home: root},
+		HTTP:         http,
+		Paths:        paths.Layout{Home: root},
+		TokenRefresh: provider.RefreshAllowed,
 		Getenv: func(key string) string {
 			if clientEnv && strings.HasPrefix(key, "GEMINI_CLI_CLIENT_") {
 				return "test-" + key
