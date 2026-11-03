@@ -38,15 +38,19 @@ type Call struct {
 }
 
 // Client answers "METHOD /path" keys from a script. The last reply for a key repeats, and an
-// unscripted key answers HTTP 599.
+// unscripted key answers HTTP 599, or connection refused on a Refusing client.
 type Client struct {
-	mu      sync.Mutex
-	replies map[string][]Reply
-	calls   []Call
+	mu       sync.Mutex
+	replies  map[string][]Reply
+	fallback Reply
+	calls    []Call
 }
 
 // New builds an empty script.
-func New() *Client { return &Client{replies: map[string][]Reply{}} }
+func New() *Client { return &Client{replies: map[string][]Reply{}, fallback: Status(599)} }
+
+// Refusing is a host where nothing is listening.
+func Refusing() *Client { return &Client{replies: map[string][]Reply{}, fallback: Refused()} }
 
 // Script appends replies for a key such as "GET /api/ps".
 func (c *Client) Script(key string, replies ...Reply) *Client {
@@ -87,7 +91,7 @@ func (c *Client) answer(method, rawURL string, bearer *secret.Secret, headers ma
 	c.mu.Lock()
 	c.calls = append(c.calls, call)
 	queue := c.replies[key]
-	reply := Status(599)
+	reply := c.fallback
 	if len(queue) > 0 {
 		reply = queue[0]
 		if len(queue) > 1 {

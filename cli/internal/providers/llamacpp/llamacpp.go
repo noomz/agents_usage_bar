@@ -108,4 +108,3 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 	}
 	return p.OK(now, raw), nil
 }
-

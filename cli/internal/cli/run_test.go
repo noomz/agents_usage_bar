@@ -17,6 +17,7 @@ import (
 	"github.com/noomz/agents_usage_bar/cli/internal/paths"
 	"github.com/noomz/agents_usage_bar/cli/internal/provider"
 	"github.com/noomz/agents_usage_bar/cli/internal/providers"
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/httpscript"
 	"github.com/noomz/agents_usage_bar/cli/internal/settings"
 )
 
@@ -39,8 +40,13 @@ func newHarness(t *testing.T) *harness {
 		Env:      func(k string) (string, bool) { v, ok := h.env[k]; return v, ok },
 		Clock:    clock.Fixed(time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)), Location: time.UTC, GOOS: "linux",
 		Terminal: func() (int, bool) { return 0, false },
-		Registry: providers.Build, Installer: &Installer{newFakeFS()},
-		OpenURL: func(u string) error { h.opened = append(h.opened, u); return nil },
+		Registry: func(env provider.Env) provider.Registry {
+			env.HTTP, env.LocalhostHTTP = httpscript.Refusing(), httpscript.Refusing()
+			env.Processes = provider.StaticCatalog{}
+			return providers.Build(env)
+		},
+		Installer: &Installer{newFakeFS()},
+		OpenURL:   func(u string) error { h.opened = append(h.opened, u); return nil },
 	}
 	return h
 }
