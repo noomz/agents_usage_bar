@@ -14,11 +14,6 @@ import (
 	"github.com/noomz/agents_usage_bar/cli/internal/providers/httpscript"
 )
 
-const (
-	claudeTokenRoute = "POST /v1/oauth/token"
-	geminiTokenRoute = "POST /token"
-)
-
 type credentialFile struct {
 	path    string
 	content string
@@ -56,18 +51,14 @@ func seedExpiredLogins(t *testing.T, h *harness) []credentialFile {
 	return files
 }
 
-func tokenServer(t *testing.T, h *harness) *httpscript.Client {
+func recordingServer(t *testing.T, h *harness) *httpscript.Client {
 	t.Helper()
 	server := httpscript.New()
-	reply := `{"access_token":"rotated","refresh_token":"rotated-r","expires_in":3600}`
-	server.Script(claudeTokenRoute, httpscript.JSON(reply))
-	server.Script(geminiTokenRoute, httpscript.JSON(reply))
 	h.Registry = func(env provider.Env) provider.Registry {
 		env.HTTP, env.LocalhostHTTP = server, httpscript.Refusing()
 		env.Processes = provider.StaticCatalog{}
 		return providers.Build(env)
 	}
-	h.env["GEMINI_CLI_CLIENT_ID"], h.env["GEMINI_CLI_CLIENT_SECRET"] = "id", "secret"
 	return server
 }
 
@@ -90,19 +81,22 @@ func changedFiles(t *testing.T, files []credentialFile) []string {
 	return changed
 }
 
-func TestNonDarwinNeverSpendsARefreshTokenOrWritesACredential(t *testing.T) {
-	for _, goos := range []string{"linux", "freebsd"} {
+func TestNoOSEverSpendsARefreshTokenOrWritesACredential(t *testing.T) {
+	t.Cleanup(func() { activeStyle = styleUS })
+	for _, goos := range []string{"darwin", "linux", "freebsd"} {
 		for _, args := range [][]string{{}, {"usage", "--live", "--json"}, {"quota", "--live", "--json"}} {
 			t.Run(goos+" "+strings.Join(args, " "), func(t *testing.T) {
 				h := newHarness(t)
 				h.GOOS = goos
 				files := seedExpiredLogins(t, h)
-				server := tokenServer(t, h)
-				if _, errOut, code := h.run(args...); code != 0 || errOut != "" {
-					t.Fatalf("code=%d err=%q", code, errOut)
+				server := recordingServer(t, h)
+				if _, _, code := h.run(args...); code != 0 {
+					t.Fatalf("code=%d", code)
 				}
-				if n := server.Count(claudeTokenRoute) + server.Count(geminiTokenRoute); n != 0 {
-					t.Fatalf("%d refresh calls", n)
+				for _, call := range server.Calls() {
+					if strings.Contains(call.Path, "token") {
+						t.Fatalf("refresh call: %s %s", call.Method, call.Path)
+					}
 				}
 				if changed := changedFiles(t, files); len(changed) != 0 {
 					t.Fatalf("changed %v", changed)
@@ -115,7 +109,7 @@ func TestNonDarwinNeverSpendsARefreshTokenOrWritesACredential(t *testing.T) {
 func TestDegradedClaudeRowKeepsLocalTokens(t *testing.T) {
 	h := newHarness(t)
 	seedExpiredLogins(t, h)
-	tokenServer(t, h)
+	recordingServer(t, h)
 	out, _, code := h.run("usage", "claude", "--live", "--json")
 	if code != 0 {
 		t.Fatalf("code=%d", code)
@@ -135,33 +129,5 @@ func TestDegradedClaudeRowKeepsLocalTokens(t *testing.T) {
 	}
 	if report.Providers[0].Status == "unauthenticated" || report.Providers[0].Status == "error" {
 		t.Fatalf("%s", out)
-	}
-}
-
-// The control arm: the same setup with the darwin rule does reach the server and rewrite the
-// file, so the zero counts above come from the rule and not from a dead fixture.
-func TestDarwinKeepsTheAppsRefreshBehavior(t *testing.T) {
-	h := newHarness(t)
-	h.GOOS = "darwin"
-	files := seedExpiredLogins(t, h)
-	server := tokenServer(t, h)
-	if _, _, code := h.run("usage", "--live", "--json"); code != 0 {
-		t.Fatalf("code=%d", code)
-	}
-	if server.Count(claudeTokenRoute) != 1 || server.Count(geminiTokenRoute) != 1 {
-		t.Fatalf("calls %+v", server.Calls())
-	}
-	if changed := changedFiles(t, files); len(changed) != 1 || changed[0] != ".claude" {
-		t.Fatalf("changed %v", changed)
-	}
-}
-
-func TestRefreshPolicyRule(t *testing.T) {
-	var zero provider.RefreshPolicy
-	if zero != provider.RefreshForbidden {
-		t.Fatal("the zero value must forbid")
-	}
-	if provider.RefreshPolicyFor("darwin") != provider.RefreshAllowed || provider.RefreshPolicyFor("linux") != provider.RefreshForbidden {
-		t.Fatal("rule")
 	}
 }

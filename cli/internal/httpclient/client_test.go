@@ -67,7 +67,7 @@ func TestDecodeFailureIsDecodeError(t *testing.T) {
 	}
 }
 
-func TestPostFormAndJSON(t *testing.T) {
+func TestPostJSON(t *testing.T) {
 	var body, contentType string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		data, _ := io.ReadAll(r.Body)
@@ -76,12 +76,6 @@ func TestPostFormAndJSON(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := New(RemoteTimeout)
-	if err := c.PostForm(context.Background(), srv.URL, [][2]string{{"grant_type", "refresh_token"}, {"token", "a&b c"}}, nil, nil); err != nil {
-		t.Fatal(err)
-	}
-	if body != "grant_type=refresh_token&token=a%26b+c" || contentType != "application/x-www-form-urlencoded" {
-		t.Errorf("%q %q", body, contentType)
-	}
 	if err := c.PostJSON(context.Background(), srv.URL, map[string]string{"ideType": "x"}, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}

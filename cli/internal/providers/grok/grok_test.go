@@ -62,10 +62,6 @@ func (f *fakeHTTP) PostJSON(_ context.Context, _ string, body any, _ *secret.Sec
 	return f.answer(f.post, out)
 }
 
-func (f *fakeHTTP) PostForm(context.Context, string, [][2]string, map[string]string, any) error {
-	return errors.New("unexpected form post")
-}
-
 func writeFile(t *testing.T, path, body string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

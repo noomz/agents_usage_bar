@@ -120,8 +120,3 @@ func (c *Client) GetJSON(_ context.Context, rawURL string, bearer *secret.Secret
 func (c *Client) PostJSON(_ context.Context, rawURL string, _ any, bearer *secret.Secret, headers map[string]string, out any) error {
 	return c.answer("POST", rawURL, bearer, headers, out)
 }
-
-// PostForm implements httpclient.Client.
-func (c *Client) PostForm(_ context.Context, rawURL string, _ [][2]string, headers map[string]string, out any) error {
-	return c.answer("POST", rawURL, nil, headers, out)
-}

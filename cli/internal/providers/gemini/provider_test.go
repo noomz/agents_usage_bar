@@ -35,7 +35,6 @@ type fakeHTTP struct {
 	mu      sync.Mutex
 	queue   map[string][]any
 	bearers []string
-	forms   [][][2]string
 	bodies  []string
 }
 
@@ -69,13 +68,6 @@ func (f *fakeHTTP) PostJSON(_ context.Context, rawURL string, body any, bearer *
 	return f.next(rawURL, out)
 }
 
-func (f *fakeHTTP) PostForm(_ context.Context, rawURL string, fields [][2]string, _ map[string]string, out any) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.forms = append(f.forms, fields)
-	return f.next(rawURL, out)
-}
-
 var testNow = time.Date(2026, 5, 15, 12, 0, 0, 0, time.UTC)
 
 type creds struct {
@@ -87,7 +79,7 @@ func credsJSON(c creds) string {
 	return fmt.Sprintf(`{"access_token":%q,"refresh_token":"file-refresh","expiry_date":%d,"token_type":"Bearer"}`, c.access, testNow.Add(c.expires).UnixMilli())
 }
 
-func setup(t *testing.T, c creds, clientEnv bool) (provider.Provider, *fakeHTTP, string) {
+func setup(t *testing.T, c creds) (provider.Provider, *fakeHTTP, string) {
 	t.Helper()
 	root := t.TempDir()
 	dir := filepath.Join(root, ".gemini")
@@ -102,24 +94,12 @@ func setup(t *testing.T, c creds, clientEnv bool) (provider.Provider, *fakeHTTP,
 		t.Fatal(err)
 	}
 	http := &fakeHTTP{queue: map[string][]any{}}
-	p := Build(provider.Env{
-		HTTP:         http,
-		Paths:        paths.Layout{Home: root},
-		TokenRefresh: provider.RefreshAllowed,
-		Getenv: func(key string) string {
-			if clientEnv && strings.HasPrefix(key, "GEMINI_CLI_CLIENT_") {
-				return "test-" + key
-			}
-			return ""
-		},
-	})
+	p := Build(provider.Env{HTTP: http, Paths: paths.Layout{Home: root}, Getenv: func(string) string { return "" }})
 	if p == nil {
 		t.Fatal("Build returned nil")
 	}
 	return p, http, credsPath
 }
-
-const refreshed = `{"access_token":"refreshed-access","expires_in":3599,"scope":"s","token_type":"Bearer"}`
 
 func TestBuildGate(t *testing.T) {
 	valid := fixture(t, "gemini-oauth-creds-fixture.json")
@@ -186,23 +166,20 @@ func TestExpiryIsEpochMilliseconds(t *testing.T) {
 
 func TestFetch(t *testing.T) {
 	cases := []struct {
-		name         string
-		creds        creds
-		clientEnv    bool
-		deleteCreds  bool
-		quota        []any
-		token        []any
-		wantErr      bool
-		status       domain.StatusKind
-		note         bool
-		noData       bool
-		bearers      []string
-		refreshCalls int
-		used         float64
-		windows      []string
+		name        string
+		creds       creds
+		deleteCreds bool
+		quota       []any
+		wantErr     bool
+		status      domain.StatusKind
+		note        bool
+		noData      bool
+		bearers     []string
+		used        float64
+		windows     []string
 	}{
 		{
-			name: "valid file token needs no refresh and no client credentials", creds: creds{"file-access", time.Hour},
+			name: "valid file token reads quota", creds: creds{"file-access", time.Hour},
 			quota:  []any{fixture(t, "gemini-quota-response-fixture.json")},
 			status: domain.StatusOK, bearers: []string{"file-access"}, used: 0.15,
 			windows: []string{"gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"},
@@ -218,63 +195,28 @@ func TestFetch(t *testing.T) {
 			status: domain.StatusOK, bearers: []string{"file-access"},
 		},
 		{
-			name: "token inside the skew refreshes in memory", creds: creds{"file-access", 59 * time.Second}, clientEnv: true,
-			token: []any{refreshed}, quota: []any{`{"buckets":[{"remainingFraction":0.5,"modelId":"m"}]}`},
-			status: domain.StatusOK, bearers: []string{"refreshed-access"}, refreshCalls: 1, used: 0.5, windows: []string{"m"},
-		},
-		{
-			name: "token just past the skew stays", creds: creds{"file-access", 61 * time.Second},
+			name: "a token with a second left stays usable", creds: creds{"file-access", time.Second},
 			quota:  []any{`{}`},
 			status: domain.StatusOK, bearers: []string{"file-access"},
 		},
 		{
-			name: "empty file token refreshes", creds: creds{"", time.Hour}, clientEnv: true,
-			token: []any{refreshed}, quota: []any{`{}`},
-			status: domain.StatusOK, bearers: []string{"refreshed-access"}, refreshCalls: 1,
-		},
-		{
-			name: "expired without client credentials throws without touching the network", creds: creds{"file-access", -time.Hour},
+			name: "empty file token throws without touching the network", creds: creds{"", time.Hour},
 			wantErr: true,
 		},
 		{
-			name: "refresh 400 throws", creds: creds{"file-access", -time.Hour}, clientEnv: true,
-			token: []any{domain.HTTPError{Status: 400}}, wantErr: true, refreshCalls: 1,
+			name: "expired token throws without touching the network", creds: creds{"file-access", -time.Hour},
+			wantErr: true,
 		},
 		{
-			name: "refresh 401 throws", creds: creds{"file-access", -time.Hour}, clientEnv: true,
-			token: []any{domain.HTTPError{Status: 401}}, wantErr: true, refreshCalls: 1,
-		},
-		{
-			name: "refresh transport failure degrades", creds: creds{"file-access", -time.Hour}, clientEnv: true,
-			token:  []any{domain.NetworkError{Code: domain.NetworkTimedOut, Err: errors.New("timeout")}},
-			status: domain.StatusError, note: true, noData: true, refreshCalls: 1,
-		},
-		{
-			name: "refresh response missing a field degrades", creds: creds{"file-access", -time.Hour}, clientEnv: true,
-			token:  []any{`{"token_type":"Bearer"}`},
-			status: domain.StatusError, note: true, noData: true, refreshCalls: 1,
+			name: "a token expiring exactly now throws", creds: creds{"file-access", 0},
+			wantErr: true,
 		},
 		{
 			name: "creds gone after registration is muted, not an error", creds: creds{"file-access", time.Hour}, deleteCreds: true,
 			status: domain.StatusUnauthenticated, noData: true,
 		},
 		{
-			name: "401 refreshes once even when the file holds the rejected token", creds: creds{"file-access", time.Hour}, clientEnv: true,
-			quota: []any{domain.HTTPError{Status: 401}, `{"buckets":[{"remainingFraction":0.75,"modelId":"m"}]}`}, token: []any{refreshed},
-			status: domain.StatusOK, bearers: []string{"file-access", "refreshed-access"}, refreshCalls: 1, used: 0.25, windows: []string{"m"},
-		},
-		{
-			name: "second 401 degrades, one retry only", creds: creds{"file-access", time.Hour}, clientEnv: true,
-			quota: []any{domain.HTTPError{Status: 401}, domain.HTTPError{Status: 401}}, token: []any{refreshed},
-			status: domain.StatusError, note: true, noData: true, bearers: []string{"file-access", "refreshed-access"}, refreshCalls: 1,
-		},
-		{
-			name: "401 with refresh failing throws", creds: creds{"file-access", time.Hour}, clientEnv: true,
-			quota: []any{domain.HTTPError{Status: 401}}, token: []any{domain.HTTPError{Status: 400}},
-			wantErr: true, bearers: []string{"file-access"}, refreshCalls: 1,
-		},
-		{
-			name: "401 without client credentials throws", creds: creds{"file-access", time.Hour},
+			name: "401 throws, one attempt only", creds: creds{"file-access", time.Hour},
 			quota:   []any{domain.HTTPError{Status: 401}},
 			wantErr: true, bearers: []string{"file-access"},
 		},
@@ -296,9 +238,8 @@ func TestFetch(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			p, http, credsPath := setup(t, tc.creds, tc.clientEnv)
+			p, http, credsPath := setup(t, tc.creds)
 			http.queue[quotaURL] = tc.quota
-			http.queue[tokenURL] = tc.token
 			if tc.deleteCreds {
 				if err := os.Remove(credsPath); err != nil {
 					t.Fatal(err)
@@ -317,9 +258,6 @@ func TestFetch(t *testing.T) {
 			}
 			if fmt.Sprint(http.bearers) != fmt.Sprint(tc.bearers) {
 				t.Fatalf("bearers = %d calls, want %d", len(http.bearers), len(tc.bearers))
-			}
-			if len(http.forms) != tc.refreshCalls {
-				t.Fatalf("refresh calls = %d, want %d", len(http.forms), tc.refreshCalls)
 			}
 			if tc.wantErr {
 				if err == nil {
@@ -368,41 +306,14 @@ func TestFetch(t *testing.T) {
 	}
 }
 
-func TestRefreshFormAndQuotaBody(t *testing.T) {
-	p, http, _ := setup(t, creds{"", time.Hour}, true)
-	http.queue[tokenURL] = []any{refreshed}
+func TestQuotaBody(t *testing.T) {
+	p, http, _ := setup(t, creds{"file-access", time.Hour})
 	http.queue[quotaURL] = []any{`{}`}
 	if _, err := p.Fetch(context.Background(), testNow); err != nil {
 		t.Fatal(err)
 	}
-	want := [][2]string{
-		{"client_id", "test-GEMINI_CLI_CLIENT_ID"},
-		{"client_secret", "test-GEMINI_CLI_CLIENT_SECRET"},
-		{"refresh_token", "file-refresh"},
-		{"grant_type", "refresh_token"},
-	}
-	if fmt.Sprint(http.forms[0]) != fmt.Sprint(want) {
-		t.Fatal("wrong refresh form")
-	}
 	if http.bodies[0] != `{"project":""}` {
 		t.Fatalf("quota body = %s", http.bodies[0])
-	}
-}
-
-func TestClientCredentialsNeedBothVariables(t *testing.T) {
-	for _, env := range []map[string]string{
-		{},
-		{"GEMINI_CLI_CLIENT_ID": "x"},
-		{"GEMINI_CLI_CLIENT_SECRET": "x"},
-		{"GEMINI_CLI_CLIENT_ID": "x", "GEMINI_CLI_CLIENT_SECRET": ""},
-		{"GEMINI_CLI_CLIENT_ID": "", "GEMINI_CLI_CLIENT_SECRET": "x"},
-	} {
-		p := &Provider{clientID: env["GEMINI_CLI_CLIENT_ID"], clientSecret: env["GEMINI_CLI_CLIENT_SECRET"]}
-		_, err := p.refresh(context.Background(), secret.New("r"))
-		var oauth oauthError
-		if !errors.As(err, &oauth) || oauth.kind != oauthRefreshDisabled {
-			t.Fatalf("env %v: err = %v", env, err)
-		}
 	}
 }
 

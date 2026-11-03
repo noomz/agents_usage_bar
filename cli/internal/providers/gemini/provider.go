@@ -1,8 +1,7 @@
 // Package gemini reports per-model quota from the Code Assist API for OAuth-personal logins.
 //
-// gemini-cli owns ~/.gemini/oauth_creds.json, so this package never writes it. An expired access
-// token is refreshed in memory and the refreshed token dies with the process. Google does not
-// rotate the refresh token, and a rotated one in the response is ignored, so the file stays valid.
+// gemini-cli owns ~/.gemini/oauth_creds.json. This package only reads it: an expired access token
+// waits for gemini-cli to refresh the file, and the row is an error until then.
 package gemini
 
 import (
@@ -22,9 +21,11 @@ import (
 
 const (
 	quotaURL = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
-	tokenURL = "https://oauth2.googleapis.com/token"
-	// refreshSkew is how close to expiry a token may be before it is refreshed.
-	refreshSkew = 60 * time.Second
+)
+
+var (
+	errNotSignedIn   = errors.New("not signed in to Gemini")
+	errTokenUnusable = errors.New("Gemini access token is expired or rejected")
 )
 
 var headers = map[string]string{"Accept": "application/json", "User-Agent": "Agents-Usage-Bar/1.0"}
@@ -32,9 +33,8 @@ var headers = map[string]string{"Accept": "application/json", "User-Agent": "Age
 // credentials is ~/.gemini/oauth_creds.json. access_token may be absent, because gemini-cli can
 // clear it after a failed refresh. expiry_date is epoch milliseconds.
 type credentials struct {
-	accessToken  *secret.Secret
-	refreshToken secret.Secret
-	expiry       time.Time
+	accessToken *secret.Secret
+	expiry      time.Time
 }
 
 // Format redacts: fmt cannot reach Secret's own Format through an unexported field.
@@ -60,8 +60,7 @@ func loadCredentials(path string) *credentials {
 		return nil
 	}
 	creds := &credentials{
-		refreshToken: secret.New(*raw.RefreshToken),
-		expiry:       time.UnixMilli(0).Add(time.Duration(*raw.ExpiryDate * float64(time.Millisecond))),
+		expiry: time.UnixMilli(0).Add(time.Duration(*raw.ExpiryDate * float64(time.Millisecond))),
 	}
 	if raw.AccessToken != nil {
 		token := secret.New(*raw.AccessToken)
@@ -86,45 +85,11 @@ func isOAuthPersonal(path string) bool {
 	return auth["selectedType"] == "oauth-personal"
 }
 
-// oauthKind classifies a failure to obtain a bearer.
-type oauthKind int
-
-const (
-	oauthNotSignedIn oauthKind = iota
-	oauthRefreshFailed
-	oauthRefreshDisabled
-	oauthRefreshForbidden
-	oauthTransport
-)
-
-type oauthError struct {
-	kind   oauthKind
-	status int
-	err    error
-}
-
-func (e oauthError) Error() string {
-	switch e.kind {
-	case oauthNotSignedIn:
-		return "not signed in to Gemini"
-	case oauthRefreshFailed:
-		return fmt.Sprintf("Gemini token refresh failed: HTTP %d", e.status)
-	case oauthRefreshDisabled:
-		return "Gemini token refresh disabled: GEMINI_CLI_CLIENT_ID and GEMINI_CLI_CLIENT_SECRET not set"
-	case oauthRefreshForbidden:
-		return "Gemini token refresh is left to gemini-cli on this host"
-	}
-	return "Gemini token refresh transport failure"
-}
-
-func (e oauthError) Unwrap() error { return e.err }
-
 // Provider implements provider.Provider.
 type Provider struct {
-	env                    provider.Env
-	credsPath              string
-	clientID, clientSecret string
-	status                 domain.ProviderStatus
+	env       provider.Env
+	credsPath string
+	status    domain.ProviderStatus
 }
 
 // Build registers Gemini when settings select oauth-personal and the credentials file is usable.
@@ -134,10 +99,7 @@ func Build(env provider.Env) provider.Provider {
 	if !isOAuthPersonal(filepath.Join(dir, "settings.json")) || loadCredentials(credsPath) == nil {
 		return nil
 	}
-	return &Provider{
-		env: env, credsPath: credsPath,
-		clientID: env.Getenv("GEMINI_CLI_CLIENT_ID"), clientSecret: env.Getenv("GEMINI_CLI_CLIENT_SECRET"),
-	}
+	return &Provider{env: env, credsPath: credsPath}
 }
 
 // ID implements provider.Provider.
@@ -152,51 +114,16 @@ func (p *Provider) Capabilities() domain.Capabilities { return domain.Capabiliti
 // Status implements provider.Provider.
 func (p *Provider) Status() domain.ProviderStatus { return p.status }
 
-// bearer returns the file's access token while it is more than refreshSkew from expiry, unless
-// it is the token just rejected with 401. Otherwise it refreshes.
-func (p *Provider) bearer(ctx context.Context, now time.Time, rejected *secret.Secret) (secret.Secret, error) {
+// bearer returns the file's access token while it is unexpired.
+func (p *Provider) bearer(now time.Time) (secret.Secret, error) {
 	creds := loadCredentials(p.credsPath)
 	if creds == nil {
-		return secret.Secret{}, oauthError{kind: oauthNotSignedIn}
+		return secret.Secret{}, errNotSignedIn
 	}
-	if t := creds.accessToken; t != nil && *t != (secret.Secret{}) && (rejected == nil || *t != *rejected) && creds.expiry.Sub(now) > refreshSkew {
+	if t := creds.accessToken; t != nil && *t != (secret.Secret{}) && now.Before(creds.expiry) {
 		return *t, nil
 	}
-	return p.refresh(ctx, creds.refreshToken)
-}
-
-func (p *Provider) refresh(ctx context.Context, refreshToken secret.Secret) (secret.Secret, error) {
-	if p.clientID == "" || p.clientSecret == "" {
-		return secret.Secret{}, oauthError{kind: oauthRefreshDisabled}
-	}
-	if p.env.TokenRefresh != provider.RefreshAllowed {
-		return secret.Secret{}, oauthError{kind: oauthRefreshForbidden}
-	}
-	var response struct {
-		AccessToken *string `json:"access_token"`
-		ExpiresIn   *int    `json:"expires_in"`
-	}
-	err := p.env.HTTP.PostForm(ctx, tokenURL, [][2]string{
-		{"client_id", p.clientID},
-		{"client_secret", p.clientSecret},
-		{"refresh_token", refreshToken.Reveal()},
-		{"grant_type", "refresh_token"},
-	}, headers, &response)
-	var status domain.HTTPError
-	switch {
-	case errors.As(err, &status):
-		return secret.Secret{}, oauthError{kind: oauthRefreshFailed, status: status.Status}
-	case err != nil:
-		return secret.Secret{}, oauthError{kind: oauthTransport, err: err}
-	case response.AccessToken == nil || response.ExpiresIn == nil:
-		return secret.Secret{}, oauthError{kind: oauthTransport, err: domain.DecodeError{Err: errors.New("token response missing a required field")}}
-	}
-	return secret.New(*response.AccessToken), nil
-}
-
-func isRefreshFailure(err error) bool {
-	var oauth oauthError
-	return errors.As(err, &oauth) && (oauth.kind == oauthRefreshFailed || oauth.kind == oauthRefreshDisabled || oauth.kind == oauthRefreshForbidden)
+	return secret.Secret{}, errTokenUnusable
 }
 
 // quotaBucket is one entry of retrieveUserQuota, whose keys are camelCase on the wire.
@@ -218,34 +145,23 @@ func (p *Provider) fetchQuota(ctx context.Context, bearer secret.Secret) (quotaR
 	return response, err
 }
 
-// Fetch implements provider.Provider. No credentials is a muted row. A refresh that cannot
-// happen is an error. Any other failure is a degraded row, so a flaky v1internal never reports
+// Fetch implements provider.Provider. No credentials is a muted row. A token that is expired or
+// rejected is an error. Any other failure is a degraded row, so a flaky v1internal never reports
 // as a provider error to the session.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
-	bearer, err := p.bearer(ctx, now, nil)
+	bearer, err := p.bearer(now)
+	if errors.Is(err, errNotSignedIn) {
+		p.status = domain.Unauthenticated()
+		return p.muted(now, false), nil
+	}
 	if err != nil {
-		var oauth oauthError
-		if errors.As(err, &oauth) && oauth.kind == oauthNotSignedIn {
-			p.status = domain.Unauthenticated()
-			return p.muted(now, false), nil
-		}
-		if isRefreshFailure(err) {
-			return domain.UsageSnapshot{}, err
-		}
-		return p.degraded(now, err), nil
+		return domain.UsageSnapshot{}, err
 	}
 
 	quota, err := p.fetchQuota(ctx, bearer)
 	var status domain.HTTPError
 	if errors.As(err, &status) && status.Status == 401 {
-		var retried secret.Secret
-		retried, err = p.bearer(ctx, now, &bearer)
-		if isRefreshFailure(err) {
-			return domain.UsageSnapshot{}, err
-		}
-		if err == nil {
-			quota, err = p.fetchQuota(ctx, retried)
-		}
+		return domain.UsageSnapshot{}, errTokenUnusable
 	}
 	if err != nil {
 		return p.degraded(now, err), nil

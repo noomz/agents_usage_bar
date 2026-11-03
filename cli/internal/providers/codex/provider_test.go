@@ -64,10 +64,6 @@ func (f *fakeHTTP) PostJSON(context.Context, string, any, *secret.Secret, map[st
 	return errors.New("unexpected POST")
 }
 
-func (f *fakeHTTP) PostForm(context.Context, string, [][2]string, map[string]string, any) error {
-	return errors.New("unexpected POST")
-}
-
 // recordingCache keeps offsets so a second fetch can resume.
 type recordingCache struct {
 	cache.Noop

@@ -202,7 +202,7 @@ These commands differ on a standalone install:
 - `aub stats` stays empty, and `aub --cached` keeps printing its hint, because only the app writes provider rows and daily history. A later poll mode will write them.
 - `aub dashboard` needs the macOS app.
 
-Outside macOS, `aub` never refreshes an OAuth token. It reads `~/.claude/.credentials.json` and the other CLI login files and never writes them. When a Claude token is within 5 minutes of expiry, the Claude row shows local tokens and cost with no quota bars until Claude Code refreshes the file. When a Gemini token is within 60 seconds of expiry, the Gemini row shows an error until `gemini` refreshes the file.
+`aub` never refreshes an OAuth token, on any platform. It reads `~/.claude/.credentials.json` and the other CLI login files and never writes them. An access token is used until its stated expiry. After that, the Claude row shows local tokens and cost with no quota bars until Claude Code refreshes the login, and the Gemini row shows an error until `gemini` refreshes it.
 
 ### Usage history export
 

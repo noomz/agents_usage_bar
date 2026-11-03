@@ -10,8 +10,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
-	"strings"
 	"syscall"
 	"time"
 
@@ -34,9 +32,6 @@ type Client interface {
 	GetJSON(ctx context.Context, rawURL string, bearer *secret.Secret, headers map[string]string, out any) error
 	// PostJSON sends body as JSON. A nil bearer sends no Authorization header.
 	PostJSON(ctx context.Context, rawURL string, body any, bearer *secret.Secret, headers map[string]string, out any) error
-	// PostForm sends fields as application/x-www-form-urlencoded, in order. The body usually
-	// carries a refresh token, which is why there is no bearer parameter.
-	PostForm(ctx context.Context, rawURL string, fields [][2]string, headers map[string]string, out any) error
 }
 
 // HTTP is the production Client.
@@ -80,20 +75,6 @@ func (c *HTTP) PostJSON(ctx context.Context, rawURL string, body any, bearer *se
 	}
 	req.Header.Set("Content-Type", "application/json")
 	return c.do(req, bearer, headers, out)
-}
-
-// PostForm implements Client.
-func (c *HTTP) PostForm(ctx context.Context, rawURL string, fields [][2]string, headers map[string]string, out any) error {
-	parts := make([]string, len(fields))
-	for i, f := range fields {
-		parts[i] = url.QueryEscape(f[0]) + "=" + url.QueryEscape(f[1])
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, strings.NewReader(strings.Join(parts, "&")))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	return c.do(req, nil, headers, out)
 }
 
 func (c *HTTP) do(req *http.Request, bearer *secret.Secret, headers map[string]string, out any) error {

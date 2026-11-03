@@ -3,7 +3,6 @@ package claude
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -102,10 +101,6 @@ func (s *scriptedHTTP) PostJSON(_ context.Context, rawURL string, body any, _ *s
 	defer s.mu.Unlock()
 	s.calls = append(s.calls, httpCall{"POST", rawURL, "", headers, body})
 	return s.respond(&s.posts, out)
-}
-
-func (s *scriptedHTTP) PostForm(context.Context, string, [][2]string, map[string]string, any) error {
-	return errors.New("unexpected form post")
 }
 
 // memoryStore persists cursors and totals across fetches, like the file store.
