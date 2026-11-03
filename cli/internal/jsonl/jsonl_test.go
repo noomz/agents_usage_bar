@@ -1,6 +1,7 @@
 package jsonl
 
 import (
+	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,5 +106,55 @@ func TestFileURLMatchesFoundation(t *testing.T) {
 	want := "file:///tmp/a%20b/c%5Bd%5D+&=@:,;!$'()*~%23%3F%25.jsonl"
 	if got != want {
 		t.Fatalf("got %s", got)
+	}
+}
+
+// A cursor round-trips through the Double Foundation stores, which can land after the true mtime.
+func TestReadDeltaResumesWhenStoredMtimeRoundsUp(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "s.jsonl")
+	if err := os.WriteFile(path, []byte("one\ntwo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	base := time.Date(2026, 11, 3, 10, 0, 0, 0, time.UTC)
+	restarts := 0
+	for nanos := 0; nanos < 300; nanos++ {
+		mtime := base.Add(time.Duration(nanos))
+		if err := os.Chtimes(path, mtime, mtime); err != nil {
+			t.Fatal(err)
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stored := domain.RefDate(domain.RefSeconds(info.ModTime()))
+		delta, err := ReadDelta(path, 4, &stored)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(delta.Lines) != 1 || string(delta.Lines[0]) != "two" {
+			restarts++
+		}
+	}
+	if restarts != 0 {
+		t.Fatalf("%d of 300 cursors restarted an unchanged file", restarts)
+	}
+}
+
+func TestReadDeltaRestartsWhenMtimeGoesBack(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "s.jsonl")
+	if err := os.WriteFile(path, []byte("one\ntwo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	later := info.ModTime().Add(time.Second)
+	delta, err := ReadDelta(path, 4, &later)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(delta.Lines) != 2 {
+		t.Fatalf("replaced file must restart: %q", delta.Lines)
 	}
 }

@@ -32,7 +32,10 @@ func ReadDelta(path string, startOffset uint64, previousModified *time.Time) (De
 		return Delta{}, err
 	}
 	start := startOffset
-	if previousModified != nil && info.ModTime().Before(*previousModified) {
+	// The stored mtime is a Double of seconds since 2001, about 0.12µs apart today, so half of
+	// all unchanged files read as slightly older than their cursor. Restarting those would count
+	// them again. A replaced file cannot have an mtime within a microsecond of the old one.
+	if previousModified != nil && info.ModTime().Before(previousModified.Add(-time.Microsecond)) {
 		start = 0
 	}
 	f, err := os.Open(path)
