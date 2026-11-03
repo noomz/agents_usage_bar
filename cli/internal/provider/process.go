@@ -2,10 +2,9 @@ package provider
 
 import (
 	"bytes"
+	"encoding/binary"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -30,18 +29,26 @@ type StaticCatalog []RunningProcess
 // Processes implements ProcessCatalog.
 func (s StaticCatalog) Processes() []RunningProcess { return s }
 
-// SystemCatalog reads /proc where it exists and `ps` otherwise. Unreadable processes are
-// skipped.
+// SystemCatalog lists the running processes. A process it may not inspect keeps whatever is
+// readable, or is skipped when that is nothing.
 type SystemCatalog struct{}
 
 // Processes implements ProcessCatalog.
-func (SystemCatalog) Processes() []RunningProcess {
-	if runtime.GOOS == "linux" {
-		return procProcesses("/proc")
+func (SystemCatalog) Processes() []RunningProcess { return osProcesses() }
+
+// parseCmdline reads NUL-separated argv and drops empty arguments, as the app does.
+func parseCmdline(data []byte) []string {
+	var args []string
+	for _, part := range bytes.Split(data, []byte{0}) {
+		if len(part) > 0 {
+			args = append(args, string(part))
+		}
 	}
-	return psProcesses()
+	return args
 }
 
+// procProcesses reads a /proc tree. Another user's exe link is unreadable while its cmdline is
+// not, so a system service still classifies by argv[0].
 func procProcesses(root string) []RunningProcess {
 	entries, err := os.ReadDir(root)
 	if err != nil {
@@ -53,41 +60,47 @@ func procProcesses(root string) []RunningProcess {
 		if err != nil {
 			continue
 		}
-		exe, err := os.Readlink(filepath.Join(root, e.Name(), "exe"))
-		if err != nil {
-			continue
-		}
 		var args []string
 		if data, err := os.ReadFile(filepath.Join(root, e.Name(), "cmdline")); err == nil {
-			for _, part := range bytes.Split(bytes.TrimRight(data, "\x00"), []byte{0}) {
-				args = append(args, string(part))
+			args = parseCmdline(data)
+		}
+		exe, err := os.Readlink(filepath.Join(root, e.Name(), "exe"))
+		if err != nil {
+			if len(args) == 0 {
+				continue
 			}
+			exe = args[0]
 		}
 		out = append(out, RunningProcess{PID: pid, ExecutablePath: exe, Arguments: args})
 	}
 	return out
 }
 
-func psProcesses() []RunningProcess {
-	data, err := exec.Command("/bin/ps", "-axww", "-o", "pid=,args=").Output()
-	if err != nil {
+// parseProcArgs reads a KERN_PROCARGS2 buffer: argc, the exec path, padding NULs, then argv.
+func parseProcArgs(buf []byte) []string {
+	if len(buf) <= 4 {
 		return nil
 	}
-	var out []RunningProcess
-	for _, line := range strings.Split(string(data), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
-			continue
-		}
-		pid, err := strconv.Atoi(fields[0])
-		if err != nil {
-			continue
-		}
-		// `ps` cannot separate a path with spaces from its arguments, so the whole command
-		// line is the path. MatchPath is a substring test, which still finds the engine.
-		out = append(out, RunningProcess{PID: pid, ExecutablePath: strings.Join(fields[1:], " "), Arguments: fields[1:]})
+	argc := int(int32(binary.NativeEndian.Uint32(buf)))
+	offset := 4
+	for offset < len(buf) && buf[offset] != 0 {
+		offset++
 	}
-	return out
+	for offset < len(buf) && buf[offset] == 0 {
+		offset++
+	}
+	var args []string
+	for i := 0; i < argc && offset < len(buf); i++ {
+		start := offset
+		for offset < len(buf) && buf[offset] != 0 {
+			offset++
+		}
+		if start < offset {
+			args = append(args, string(buf[start:offset]))
+		}
+		offset++
+	}
+	return args
 }
 
 // PortFromArguments reads `--port 8123` or `--port=8123` from argv.
