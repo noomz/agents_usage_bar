@@ -2,6 +2,7 @@ package codex
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -18,6 +19,9 @@ type credentials struct {
 	// subscription is false for a top-level OPENAI_API_KEY, which is never a login.
 	subscription bool
 }
+
+// Format redacts: fmt cannot reach Secret's own Format through an unexported field.
+func (credentials) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte("<redacted>")) }
 
 // loadCredentials returns nil when the file is absent, malformed, or holds no bearer.
 func loadCredentials(path string) *credentials {
@@ -64,6 +68,9 @@ type login struct {
 	planSuffix *string
 	cliproxy   bool
 }
+
+// Format redacts: fmt cannot reach Secret's own Format through an unexported field.
+func (login) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte("<redacted>")) }
 
 var planSlugs = map[string]bool{
 	"plus": true, "pro": true, "team": true, "business": true,

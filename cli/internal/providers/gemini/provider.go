@@ -37,6 +37,9 @@ type credentials struct {
 	expiry       time.Time
 }
 
+// Format redacts: fmt cannot reach Secret's own Format through an unexported field.
+func (credentials) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte("<redacted>")) }
+
 // loadCredentials returns nil when the file is absent, malformed, or missing a required field.
 func loadCredentials(path string) *credentials {
 	data, err := os.ReadFile(path)
