@@ -175,10 +175,14 @@ func TestNoAppStateIsNormalAndCreatesNothing(t *testing.T) {
 		args []string
 		want string
 	}{
-		{nil, "no cached data yet — run aub --live"},
+		{nil, "! Claude"},
+		{[]string{"claude"}, "! Claude"},
 		{[]string{"usage", "--theme", "classic"}, "Today total"},
-		{[]string{"quota"}, "no cached data yet — run aub --live"},
-		{[]string{"usage", "--json"}, `"source" : "cached"`},
+		{[]string{"quota"}, "! Claude"},
+		{[]string{"usage", "--json"}, `"source" : "live"`},
+		{[]string{"--cached"}, "no cached data yet — run aub --live"},
+		{[]string{"quota", "--cached"}, "no cached data yet — run aub --live"},
+		{[]string{"usage", "--cached", "--json"}, `"source" : "cached"`},
 		{[]string{"quota", "--json"}, "["},
 		{[]string{"--live"}, "! Claude"},
 		{[]string{"stats"}, noHistoryText},
@@ -198,6 +202,25 @@ func TestNoAppStateIsNormalAndCreatesNothing(t *testing.T) {
 		if entries, err := os.ReadDir(h.Layout.Home); err != nil || len(entries) != 0 {
 			t.Errorf("%v created %v (%v)", c.args, entries, err)
 		}
+	}
+}
+
+func TestNoFlagReadsACacheThatHasRows(t *testing.T) {
+	h := newHarness(t)
+	calls := 0
+	h.Registry = func(provider.Env) provider.Registry { calls++; return provider.Registry{} }
+	row := `{"id":"claude","displayName":"Claude","status":{"unauthenticated":{}}}`
+	cacheFile := h.Layout.CacheFile()
+	if err := os.MkdirAll(filepath.Dir(cacheFile), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"schemaVersion":3,"providers":["claude",` + row + `],"baselines":[],"transcripts":{},"dailyUsage":[]}`
+	if err := os.WriteFile(cacheFile, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out, _, _ := h.run("usage", "--json")
+	if calls != 0 || !strings.Contains(out, `"source" : "cached"`) {
+		t.Fatalf("calls=%d %s", calls, out)
 	}
 }
 

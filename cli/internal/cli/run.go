@@ -243,11 +243,19 @@ func (a *App) session(prefs settings.Preferences, cached bool) Session {
 	return session
 }
 
+func (a *App) fetchReport(prefs settings.Preferences, c UsageCmd, now time.Time) UsageReport {
+	cached := c.Freshness == FreshnessCached
+	if c.Freshness == FreshnessAuto {
+		cached = len(cache.NewFile(a.Layout.CacheFile(), a.dayKeys()).LoadAll()) > 0
+	}
+	return a.session(prefs, cached).Fetch(context.Background(), c.Filter, cached, now)
+}
+
 func (a *App) runUsage(c UsageCmd) (int, error) {
 	prefs := a.preferences()
 	now := a.Clock.Now()
 	if c.JSON {
-		report := a.session(prefs, c.Cached).Fetch(context.Background(), c.Filter, c.Cached, now)
+		report := a.fetchReport(prefs, c, now)
 		if c.QuotaOnly {
 			fmt.Fprint(a.Stdout, renderQuotaJSON(report))
 		} else {
@@ -260,7 +268,7 @@ func (a *App) runUsage(c UsageCmd) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	report := a.session(prefs, c.Cached).Fetch(context.Background(), c.Filter, c.Cached, now)
+	report := a.fetchReport(prefs, c, now)
 	view := ViewUsage
 	if c.QuotaOnly {
 		view = ViewQuota

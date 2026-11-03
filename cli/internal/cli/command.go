@@ -29,13 +29,24 @@ type ProviderFilter struct {
 	ID   domain.ProviderID
 }
 
+// Freshness says where a usage report's data may come from.
+type Freshness int
+
+// The choices. FreshnessAuto is what no flag means: the cache, or a live fetch while the cache has
+// no provider rows, which is always on a standalone install.
+const (
+	FreshnessAuto Freshness = iota
+	FreshnessCached
+	FreshnessLive
+)
+
 // UsageCmd is `aub usage` and `aub quota`.
 type UsageCmd struct {
 	QuotaOnly bool
 	Filter    ProviderFilter
 	JSON      bool
 	NoColor   bool
-	Cached    bool
+	Freshness Freshness
 	Theme     *domain.CLITheme
 }
 
@@ -208,7 +219,7 @@ Examples:
 func Parse(args []string) (Command, *ParseError) {
 	var (
 		jsonFlag, noColor bool
-		cached            = true
+		freshness         Freshness
 		providerFlag      *string
 		prefix            *string
 		theme             *domain.CLITheme
@@ -243,9 +254,9 @@ func Parse(args []string) (Command, *ParseError) {
 		case "--no-color":
 			noColor = true
 		case "--cached":
-			cached = true
+			freshness = FreshnessCached
 		case "--live":
-			cached = false
+			freshness = FreshnessLive
 		case "--provider":
 			v, err := next()
 			if err != nil {
@@ -337,7 +348,7 @@ func Parse(args []string) (Command, *ParseError) {
 		if len(rest) > 1 {
 			return UsageCmd{}, unexpectedArgument(rest[1])
 		}
-		return UsageCmd{QuotaOnly: quotaOnly, Filter: filter, JSON: jsonFlag, NoColor: noColor, Cached: cached, Theme: theme}, nil
+		return UsageCmd{QuotaOnly: quotaOnly, Filter: filter, JSON: jsonFlag, NoColor: noColor, Freshness: freshness, Theme: theme}, nil
 	}
 
 	if !hasHead {
@@ -349,7 +360,7 @@ func Parse(args []string) (Command, *ParseError) {
 			}
 			filter = f
 		}
-		return UsageCmd{Filter: filter, JSON: jsonFlag, NoColor: noColor, Cached: cached, Theme: theme}, nil
+		return UsageCmd{Filter: filter, JSON: jsonFlag, NoColor: noColor, Freshness: freshness, Theme: theme}, nil
 	}
 
 	switch head {
@@ -410,7 +421,7 @@ func Parse(args []string) (Command, *ParseError) {
 		if len(rest) > 0 {
 			return nil, unexpectedArgument(rest[0])
 		}
-		return UsageCmd{Filter: ProviderFilter{Kind: FilterOne, ID: id}, JSON: jsonFlag, NoColor: noColor, Cached: cached, Theme: theme}, nil
+		return UsageCmd{Filter: ProviderFilter{Kind: FilterOne, ID: id}, JSON: jsonFlag, NoColor: noColor, Freshness: freshness, Theme: theme}, nil
 	}
 	return nil, unknownCommand(head)
 }

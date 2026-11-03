@@ -14,7 +14,7 @@ func one(id domain.ProviderID) ProviderFilter { return ProviderFilter{Kind: Filt
 var filterAll = ProviderFilter{Kind: FilterAll}
 
 func usage(mutate ...func(*UsageCmd)) UsageCmd {
-	c := UsageCmd{Cached: true}
+	c := UsageCmd{}
 	for _, m := range mutate {
 		m(&c)
 	}
@@ -30,12 +30,12 @@ func TestParseCommands(t *testing.T) {
 		want Command
 	}{
 		{nil, usage()},
-		{[]string{"usage", "--json", "--cached", "--no-color"}, usage(func(c *UsageCmd) { c.JSON, c.NoColor = true, true })},
-		{[]string{"--cached"}, usage()},
-		{[]string{"--live"}, usage(func(c *UsageCmd) { c.Cached = false })},
-		{[]string{"--live", "--cached"}, usage()},
-		{[]string{"--cached", "--live"}, usage(func(c *UsageCmd) { c.Cached = false })},
-		{[]string{"quota", "claude", "--live"}, usage(func(c *UsageCmd) { c.QuotaOnly, c.Filter, c.Cached = true, one(domain.Claude), false })},
+		{[]string{"usage", "--json", "--cached", "--no-color"}, usage(func(c *UsageCmd) { c.JSON, c.NoColor, c.Freshness = true, true, FreshnessCached })},
+		{[]string{"--cached"}, usage(func(c *UsageCmd) { c.Freshness = FreshnessCached })},
+		{[]string{"--live"}, usage(func(c *UsageCmd) { c.Freshness = FreshnessLive })},
+		{[]string{"--live", "--cached"}, usage(func(c *UsageCmd) { c.Freshness = FreshnessCached })},
+		{[]string{"--cached", "--live"}, usage(func(c *UsageCmd) { c.Freshness = FreshnessLive })},
+		{[]string{"quota", "claude", "--live"}, usage(func(c *UsageCmd) { c.QuotaOnly, c.Filter, c.Freshness = true, one(domain.Claude), FreshnessLive })},
 		{[]string{"usage", "claude"}, usage(func(c *UsageCmd) { c.Filter = one(domain.Claude) })},
 		{[]string{"grok"}, usage(func(c *UsageCmd) { c.Filter = one(domain.Grok) })},
 		{[]string{"engine.gpu-box"}, usage(func(c *UsageCmd) { c.Filter = one("engine.gpu-box") })},
