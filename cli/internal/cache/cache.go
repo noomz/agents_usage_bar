@@ -298,11 +298,11 @@ func decodeOffsets(raw json.RawMessage) map[string]domain.TranscriptOffset {
 		return out
 	}
 	for key, value := range m {
-		offset, err := domain.DecodeTranscriptOffset(value)
-		if err != nil {
-			return map[string]domain.TranscriptOffset{}
+		// One bad entry skips one file's cursor. Dropping them all would recount every file on
+		// top of a daily total that survives.
+		if offset, err := domain.DecodeTranscriptOffset(value); err == nil {
+			out[key] = offset
 		}
-		out[key] = offset
 	}
 	return out
 }

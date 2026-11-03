@@ -26,8 +26,8 @@ type Delta struct {
 	LastModified time.Time
 }
 
-// ReadDelta reads from startOffset to the end of the file. A file whose mtime went backwards
-// was truncated or replaced, so it is read from the start.
+// ReadDelta reads from startOffset to the end of the file. A file whose mtime went backwards or
+// that is now shorter than the offset was truncated or replaced, so it is read from the start.
 func ReadDelta(path string, startOffset uint64, previousModified *time.Time) (Delta, error) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -37,6 +37,9 @@ func ReadDelta(path string, startOffset uint64, previousModified *time.Time) (De
 	// A persisted mtime is a Foundation double, coarser than the filesystem's nanoseconds, so
 	// compare at that precision or an unchanged file reads as replaced.
 	if previousModified != nil && domain.RefSeconds(info.ModTime()) < domain.RefSeconds(*previousModified) {
+		start = 0
+	}
+	if start > uint64(info.Size()) {
 		start = 0
 	}
 	f, err := os.Open(path)

@@ -2,6 +2,7 @@ package grok
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -25,6 +26,9 @@ type credential struct {
 	token  secret.Secret
 	source credentialSource
 }
+
+// Format redacts: fmt cannot reach Secret's own Format through an unexported field.
+func (credential) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte("<redacted>")) }
 
 func grokHome(env provider.Env) string {
 	if override := env.Getenv("GROK_HOME"); override != "" {

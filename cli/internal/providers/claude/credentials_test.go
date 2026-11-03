@@ -3,8 +3,11 @@ package claude
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/noomz/agents_usage_bar/cli/internal/secret"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -242,5 +245,12 @@ func TestResponseDecoding(t *testing.T) {
 	stamp := "2026-05-13T20:00:00.000+00:00"
 	if got := parseResets(&stamp); got == nil || !got.Equal(time.Date(2026, 5, 13, 20, 0, 0, 0, time.UTC)) {
 		t.Fatalf("%v", got)
+	}
+}
+
+func TestTokenFormatsRedacted(t *testing.T) {
+	token := oauthToken{AccessToken: secret.New("fixture-value")}
+	if text := fmt.Sprintf("%v %+v %#v %v", token, token, token, &token); strings.Contains(text, "fixture-value") {
+		t.Fatal(text)
 	}
 }

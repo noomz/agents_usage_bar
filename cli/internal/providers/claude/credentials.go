@@ -2,6 +2,7 @@ package claude
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -21,6 +22,9 @@ type oauthToken struct {
 	AccessToken secret.Secret
 	ExpiresAtMs *float64
 }
+
+// Format redacts, as the other credential structs do.
+func (oauthToken) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte("<redacted>")) }
 
 // credentialLoader resolves the file, then the Keychain, then the environment. The Keychain
 // seam is nil where no Keychain exists.

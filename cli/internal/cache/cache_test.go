@@ -279,3 +279,12 @@ func TestUnusableFileIsNeverWritten(t *testing.T) {
 		})
 	}
 }
+
+func TestOneBadCursorSkipsOnlyThatEntry(t *testing.T) {
+	s, path := newStore(t)
+	write(t, path, `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{"/good":{"url":"/good","byteOffset":500,"lastModified":1},"/bad":{"url":"/bad","byteOffset":-1,"lastModified":1}},"dailyUsage":[]}`)
+	all := cursorsOf(s).AllTranscriptOffsets()
+	if len(all) != 1 || all["/good"].ByteOffset != 500 {
+		t.Fatalf("%+v", all)
+	}
+}

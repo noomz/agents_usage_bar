@@ -598,12 +598,6 @@ func TestOffsets(t *testing.T) {
 	}
 }
 
-func TestOffsetKeyEscapesLikeURLAbsoluteString(t *testing.T) {
-	if got := offsetKey("/Users/a b/.codex/r.jsonl"); got != "file:///Users/a%20b/.codex/r.jsonl" {
-		t.Fatalf("key = %s", got)
-	}
-}
-
 func TestFetchNeverWritesCredentials(t *testing.T) {
 	h := newHome(t)
 	h.auth(authFile(ptr("acc"), "t"))

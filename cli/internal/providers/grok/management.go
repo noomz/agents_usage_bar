@@ -2,6 +2,7 @@ package grok
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"os"
 	"strings"
@@ -26,6 +27,9 @@ type managementClient struct {
 	bearer  secret.Secret
 	teamID  string
 }
+
+// Format redacts: fmt cannot reach Secret's own Format through an unexported field.
+func (managementClient) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte("<redacted>")) }
 
 // isSafeTeamID: the team id is a path segment.
 func isSafeTeamID(raw string) bool {

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -198,11 +197,6 @@ func rolloutFiles(root string, dayKeys []string) []string {
 		}
 	}
 	return files
-}
-
-// offsetKey is the app's cursor key, URL.absoluteString of the canonical path.
-func offsetKey(path string) string {
-	return (&url.URL{Scheme: "file", Path: path}).String()
 }
 
 func parseTimestamp(s string) (time.Time, bool) {

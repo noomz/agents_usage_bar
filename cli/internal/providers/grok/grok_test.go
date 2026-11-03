@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -467,5 +468,13 @@ func TestOffsetKeyLeavesPiLocalCursorAlone(t *testing.T) {
 	grokKey := "grok:" + piKey
 	if got, ok := store.offsets[grokKey]; !ok || got.ByteOffset == 42 {
 		t.Fatalf("grok cursor: %+v", store.offsets)
+	}
+}
+
+func TestCredentialStructsFormatRedacted(t *testing.T) {
+	cred := credential{token: secret.New("fixture-value")}
+	client := managementClient{bearer: secret.New("fixture-value")}
+	if text := fmt.Sprintf("%v %+v %#v %v %+v %#v", cred, cred, &cred, client, client, &client); strings.Contains(text, "fixture-value") {
+		t.Fatal(text)
 	}
 }

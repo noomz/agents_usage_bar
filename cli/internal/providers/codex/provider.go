@@ -156,7 +156,7 @@ func advanceOffsets(c cache.Cursors, files []string) {
 	prior := c.AllTranscriptOffsets()
 	offsets := make([]domain.TranscriptOffset, 0, len(files))
 	for _, file := range files {
-		key := offsetKey(file)
+		key := jsonl.FileURL(file)
 		var start uint64
 		var modified *time.Time
 		if o, ok := prior[key]; ok {

@@ -158,3 +158,43 @@ func TestReadDeltaRestartsWhenMtimeGoesBack(t *testing.T) {
 		t.Fatalf("replaced file must restart: %q", delta.Lines)
 	}
 }
+
+func TestReplacedFileShorterThanTheCursorIsReadFromTheStart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "a.jsonl")
+	if err := os.WriteFile(path, []byte("first-long-line\nsecond-long-line\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	first, err := ReadDelta(path, 0, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("new\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	newer := first.LastModified.Add(time.Hour)
+	if err := os.Chtimes(path, newer, newer); err != nil {
+		t.Fatal(err)
+	}
+	second, err := ReadDelta(path, first.NewOffset, &first.LastModified)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second.Lines) != 1 || string(second.Lines[0]) != "new" || second.NewOffset != 4 {
+		t.Fatalf("%+v", second)
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("next\n"); err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+	third, err := ReadDelta(path, second.NewOffset, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(third.Lines) != 1 || string(third.Lines[0]) != "next" {
+		t.Fatalf("the cursor must keep moving after a reset: %+v", third)
+	}
+}
