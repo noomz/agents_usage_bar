@@ -181,15 +181,15 @@ func TestFetch(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := Build(testEnv(home, nil))
-	snap, err := p.Fetch(context.Background(), testNow)
+	snap, status, err := p.Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if *snap.TokensToday != 33582 || snap.Raw["providers"] != "DRM-SWAP" || snap.Raw["models"] != "qwen3.8-27b" || snap.Raw["filesRead"] != "1" {
 		t.Fatalf("%v %v", *snap.TokensToday, snap.Raw)
 	}
-	if snap.Quota != nil || p.Status().Kind != domain.StatusOK || snap.ProviderID != domain.PiLocal {
-		t.Fatalf("%+v", p.Status())
+	if snap.Quota != nil || status.Kind != domain.StatusOK || snap.ProviderID != domain.PiLocal {
+		t.Fatalf("%+v", status)
 	}
 	caps := p.Capabilities()
 	if !caps.HasTokens || !caps.HasCost || caps.HasQuota || caps.IsLocal {
@@ -199,12 +199,12 @@ func TestFetch(t *testing.T) {
 
 func TestFetchNoRootIsUnauthenticated(t *testing.T) {
 	p := Build(testEnv(t.TempDir(), nil))
-	snap, err := p.Fetch(context.Background(), testNow)
+	snap, status, err := p.Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snap.Raw[domain.RawProviderStatus] != domain.StatusSentinelUnauth || p.Status().Kind != domain.StatusUnauthenticated || *snap.TokensToday != 0 {
-		t.Fatalf("%+v %+v", snap, p.Status())
+	if snap.Raw[domain.RawProviderStatus] != domain.StatusSentinelUnauth || status.Kind != domain.StatusUnauthenticated || *snap.TokensToday != 0 {
+		t.Fatalf("%+v %+v", snap, status)
 	}
 }
 

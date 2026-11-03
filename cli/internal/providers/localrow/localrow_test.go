@@ -32,9 +32,9 @@ func TestFailureStates(t *testing.T) {
 		{"decode", domain.DecodeError{Err: errors.New("x")}, domain.StatusError, degraded, domain.ErrDecode},
 	} {
 		r := New("x", "X", base)
-		snap := r.Failed(now, tc.err)
-		if r.Status().Kind != tc.kind || r.Status().Err.Kind != tc.errKnd {
-			t.Errorf("%s: status %+v", tc.name, r.Status())
+		snap, status, _ := r.Failed(now, tc.err)
+		if status.Kind != tc.kind || status.Err.Kind != tc.errKnd {
+			t.Errorf("%s: status %+v", tc.name, status)
 		}
 		if !reflect.DeepEqual(snap.Raw, tc.raw) {
 			t.Errorf("%s: raw %v", tc.name, snap.Raw)
@@ -47,26 +47,23 @@ func TestFailureStates(t *testing.T) {
 
 func TestDegradedReusesLastSnapshot(t *testing.T) {
 	r := New("x", "X", map[string]string{"source": "s"})
-	r.OK(now, map[string]string{"modelCount": "1", "modelName": "m"})
-	if r.Status().Kind != domain.StatusOK {
-		t.Fatalf("status %+v", r.Status())
+	_, status, _ := r.OK(now, map[string]string{"modelCount": "1", "modelName": "m"})
+	if status.Kind != domain.StatusOK {
+		t.Fatalf("status %+v", status)
 	}
 	later := now.Add(time.Minute)
-	snap := r.Failed(later, domain.HTTPError{Status: 500})
+	snap, status, _ := r.Failed(later, domain.HTTPError{Status: 500})
 	want := map[string]string{"source": "s", "modelCount": "1", "modelName": "m", "note": "degraded"}
 	if !reflect.DeepEqual(snap.Raw, want) {
 		t.Errorf("raw %v", snap.Raw)
 	}
-	if s := r.Status(); s.Kind != domain.StatusStale || !s.LastSuccess.Equal(later) {
+	if s := status; s.Kind != domain.StatusStale || !s.LastSuccess.Equal(later) {
 		t.Errorf("status %+v", s)
 	}
 }
 
-func TestInitialStatusAndCapabilities(t *testing.T) {
+func TestCapabilities(t *testing.T) {
 	r := New("x", "X", nil)
-	if r.Status().Kind != domain.StatusNotRunning {
-		t.Errorf("status %+v", r.Status())
-	}
 	if want := (domain.Capabilities{IsLocal: true}); r.Capabilities() != want {
 		t.Errorf("caps %+v", r.Capabilities())
 	}

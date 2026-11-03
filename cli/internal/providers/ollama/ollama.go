@@ -70,7 +70,7 @@ func installedCount(r tagsResponse, err error) int {
 }
 
 // Fetch implements provider.Provider.
-func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
+func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	var ps psResponse
 	var tags tagsResponse
 	var psErr, tagsErr error
@@ -83,7 +83,7 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 		psErr = ps.validate()
 	}
 	if psErr != nil {
-		return p.Failed(now, psErr), nil
+		return p.Failed(now, psErr)
 	}
 
 	raw := map[string]string{"modelCount": strconv.Itoa(len(ps.Models))}
@@ -107,5 +107,5 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 		raw["modelName"] = names[0]
 		raw["allModels"] = strings.Join(names, "|")
 	}
-	return p.OK(now, raw), nil
+	return p.OK(now, raw)
 }

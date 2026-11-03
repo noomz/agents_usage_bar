@@ -178,7 +178,7 @@ func TestFixtureRolloutSnapshot(t *testing.T) {
 	h.auth(authFile(ptr("acc"), "t"))
 	h.rollout("2026-10-07", "fixture.jsonl", line)
 	p := h.build()
-	snap, err := p.Fetch(context.Background(), testNow)
+	snap, status, err := p.Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,8 +195,8 @@ func TestFixtureRolloutSnapshot(t *testing.T) {
 		t.Fatalf("primary = %+v", snap.QuotaWindows[0])
 	}
 	closeTo(t, snap.Quota, 0.02)
-	if snap.Raw["source"] != "rollout" || snap.Raw["fileURL"] != "fixture.jsonl" || p.Status().Kind != domain.StatusOK {
-		t.Fatalf("raw = %v status = %v", snap.Raw, p.Status().Kind)
+	if snap.Raw["source"] != "rollout" || snap.Raw["fileURL"] != "fixture.jsonl" || status.Kind != domain.StatusOK {
+		t.Fatalf("raw = %v status = %v", snap.Raw, status.Kind)
 	}
 	if len(h.http.calls) != 0 {
 		t.Fatalf("rollout windows win but wham was called")
@@ -210,7 +210,7 @@ func TestLegacyResetIsNowPlusSeconds(t *testing.T) {
 	}
 	h := newHome(t)
 	h.rollout("2026-10-07", "legacy.jsonl", string(data))
-	snap, err := h.build().Fetch(context.Background(), testNow)
+	snap, _, err := h.build().Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -367,7 +367,7 @@ func TestFallback(t *testing.T) {
 			h.http.responses = tc.responses
 			tc.setup(h)
 			p := h.build()
-			snap, err := p.Fetch(context.Background(), testNow)
+			snap, status, err := p.Fetch(context.Background(), testNow)
 			if len(h.http.calls) != tc.whamCalls {
 				t.Fatalf("wham calls = %d, want %d", len(h.http.calls), tc.whamCalls)
 			}
@@ -389,8 +389,8 @@ func TestFallback(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if p.Status().Kind != tc.status {
-				t.Fatalf("status = %v", p.Status().Kind)
+			if status.Kind != tc.status {
+				t.Fatalf("status = %v", status.Kind)
 			}
 			if snap.Accounts != nil {
 				t.Fatalf("accounts must stay nil below two logins")
@@ -438,10 +438,10 @@ func TestMultipleLogins(t *testing.T) {
 		t.Fatalf("no account %s in %+v", name, snap.Accounts)
 		return domain.AccountUsage{}
 	}
-	check := func(t *testing.T, h *home, p provider.Provider, snap domain.UsageSnapshot) {
+	check := func(t *testing.T, h *home, status domain.ProviderStatus, snap domain.UsageSnapshot) {
 		t.Helper()
-		if p.Status().Kind != domain.StatusOK || snap.Raw["source"] != "codex-accounts" || snap.QuotaWindows != nil {
-			t.Fatalf("header: status %v raw %v windows %v", p.Status().Kind, snap.Raw, snap.QuotaWindows)
+		if status.Kind != domain.StatusOK || snap.Raw["source"] != "codex-accounts" || snap.QuotaWindows != nil {
+			t.Fatalf("header: status %v raw %v windows %v", status.Kind, snap.Raw, snap.QuotaWindows)
 		}
 		if *snap.TokensToday != 18404 || snap.CostTodayUSD == nil {
 			t.Fatalf("header tokens/cost must stay the rollout's")
@@ -464,11 +464,11 @@ func TestMultipleLogins(t *testing.T) {
 		setup(h)
 		h.http.responses = map[string]any{plusID: usageBody("plus", 20, 90), teamID: usageBody("team", 70, 10)}
 		p := h.build()
-		snap, err := p.Fetch(context.Background(), testNow)
+		snap, status, err := p.Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
-		check(t, h, p, snap)
+		check(t, h, status, snap)
 		if snap.Accounts[0].Name != "plus" || snap.Accounts[1].Name != "team" {
 			t.Fatalf("order = %+v", snap.Accounts)
 		}
@@ -488,11 +488,11 @@ func TestMultipleLogins(t *testing.T) {
 		setup(h)
 		h.http.responses = map[string]any{plusID: usageBody("plus", 20, 90), teamID: domain.HTTPError{Status: 429}}
 		p := h.build()
-		snap, err := p.Fetch(context.Background(), testNow)
+		snap, status, err := p.Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
-		check(t, h, p, snap)
+		check(t, h, status, snap)
 		closeTo(t, snap.Quota, 0.20)
 		team := account(t, snap, "team")
 		if team.Quota != nil || team.QuotaWindows != nil {
@@ -508,7 +508,7 @@ func TestMultipleLogins(t *testing.T) {
 			teamID: `{"plan_type":"team","rate_limit":{"secondary_window":{"used_percent":80,"reset_at":1900000000,"limit_window_seconds":604800}}}`,
 		}
 		p := h.build()
-		snap, err := p.Fetch(context.Background(), testNow)
+		snap, _, err := p.Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -523,7 +523,7 @@ func TestMultipleLogins(t *testing.T) {
 		h := newHome(t)
 		setup(h)
 		h.http.responses = map[string]any{plusID: `{}`, teamID: domain.HTTPError{Status: 500}}
-		snap, err := h.build().Fetch(context.Background(), testNow)
+		snap, _, err := h.build().Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -538,11 +538,11 @@ func TestMultipleLogins(t *testing.T) {
 		h.rollout("2026-10-07", "r.jsonl", tokenLine("2026-10-07T02:00:00.000Z", 18404, liveWindows))
 		h.http.responses = map[string]any{plusID: usageBody("plus", 22, 1), teamID: usageBody("team", 2, 3)}
 		p := h.build()
-		snap, err := p.Fetch(context.Background(), testNow)
+		snap, status, err := p.Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
-		check(t, h, p, snap)
+		check(t, h, status, snap)
 		closeTo(t, snap.Quota, 0.22)
 	})
 
@@ -551,7 +551,7 @@ func TestMultipleLogins(t *testing.T) {
 		h.proxy("codex-aaaaaaaa-a@example.com-plus.json", plusID, "test-token-plus", "a@example.com")
 		h.auth(authFile(ptr("cccccccc-pro"), "test-token-pro"))
 		h.http.responses = map[string]any{plusID: usageBody("plus", 10, 0), "cccccccc-pro": usageBody("Pro", 30, 0)}
-		snap, err := h.build().Fetch(context.Background(), testNow)
+		snap, _, err := h.build().Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -567,7 +567,7 @@ func TestOffsets(t *testing.T) {
 	path := h.rollout("2026-10-07", "r.jsonl", tokenLine("2026-10-07T02:00:00.000Z", 1, "")+"\npartial")
 	yesterday := h.rollout("2026-10-06", "y.jsonl", tokenLine("2026-10-06T02:00:00.000Z", 1, "")+"\n")
 	p := h.build()
-	if _, err := p.Fetch(context.Background(), testNow); err != nil {
+	if _, _, err := p.Fetch(context.Background(), testNow); err != nil {
 		t.Fatal(err)
 	}
 	if h.c.writes != 1 || len(h.c.offsets) != 2 {
@@ -590,7 +590,7 @@ func TestOffsets(t *testing.T) {
 	if _, ok := h.c.offsets["file://"+canonicalY]; !ok {
 		t.Fatal("yesterday's file not tracked")
 	}
-	if _, err := p.Fetch(context.Background(), testNow); err != nil {
+	if _, _, err := p.Fetch(context.Background(), testNow); err != nil {
 		t.Fatal(err)
 	}
 	if h.c.writes != 2 {
@@ -604,7 +604,7 @@ func TestFetchNeverWritesCredentials(t *testing.T) {
 	h.proxy("codex-aaaaaaaa-a@example.com-plus.json", "a", "t2", "a@example.com")
 	h.http.responses = map[string]any{"acc": domain.HTTPError{Status: 401}, "a": domain.HTTPError{Status: 401}}
 	before := treeSums(t, h.root)
-	if _, err := h.build().Fetch(context.Background(), testNow); err != nil {
+	if _, _, err := h.build().Fetch(context.Background(), testNow); err != nil {
 		t.Fatal(err)
 	}
 	after := treeSums(t, h.root)

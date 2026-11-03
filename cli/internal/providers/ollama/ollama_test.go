@@ -51,12 +51,12 @@ func TestFetch(t *testing.T) {
 	} {
 		http := httpscript.New().Script("GET /api/ps", tc.ps).Script("GET /api/tags", tc.tags)
 		p := newProvider(http)
-		snap, err := p.Fetch(context.Background(), now)
+		snap, status, err := p.Fetch(context.Background(), now)
 		if err != nil {
 			t.Errorf("%s: fetch returned %v", tc.name, err)
 		}
-		if p.Status().Kind != tc.kind {
-			t.Errorf("%s: status %+v", tc.name, p.Status())
+		if status.Kind != tc.kind {
+			t.Errorf("%s: status %+v", tc.name, status)
 		}
 		if !reflect.DeepEqual(snap.Raw, tc.raw) {
 			t.Errorf("%s: raw %v", tc.name, snap.Raw)
@@ -75,22 +75,22 @@ func TestFetch(t *testing.T) {
 func TestDegradedPollKeepsLastPayload(t *testing.T) {
 	http := httpscript.New().Script("GET /api/ps", fixture(t, "ollama-ps-single-model.json"), httpscript.Status(500)).Script("GET /api/tags", httpscript.JSON(`{}`))
 	p := newProvider(http)
-	if _, err := p.Fetch(context.Background(), now); err != nil {
+	if _, _, err := p.Fetch(context.Background(), now); err != nil {
 		t.Fatal(err)
 	}
-	snap, _ := p.Fetch(context.Background(), now.Add(time.Minute))
+	snap, status, _ := p.Fetch(context.Background(), now.Add(time.Minute))
 	if snap.Raw["note"] != "degraded" || snap.Raw["modelName"] != "llama3:8b" {
 		t.Errorf("raw %v", snap.Raw)
 	}
-	if p.Status().Kind != domain.StatusStale {
-		t.Errorf("status %+v", p.Status())
+	if status.Kind != domain.StatusStale {
+		t.Errorf("status %+v", status)
 	}
 }
 
 func TestIdentity(t *testing.T) {
 	p := newProvider(httpscript.New())
-	if p.ID() != domain.Ollama || p.DisplayName() != "Ollama" || p.Status().Kind != domain.StatusNotRunning {
-		t.Errorf("%v %v %+v", p.ID(), p.DisplayName(), p.Status())
+	if p.ID() != domain.Ollama || p.DisplayName() != "Ollama" {
+		t.Errorf("%v %v", p.ID(), p.DisplayName())
 	}
 	if want := (domain.Capabilities{IsLocal: true}); p.Capabilities() != want {
 		t.Errorf("caps %+v", p.Capabilities())

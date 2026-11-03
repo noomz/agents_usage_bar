@@ -13,14 +13,13 @@
 //   - ID, DisplayName, and Capabilities are constants. Use the domain.ProviderID constant and
 //     the name Swift passes. Capabilities.HasTokens decides whether the row counts in the Today
 //     total and IsLocal decides whether it renders on the `local` line.
-//   - Fetch returns the snapshot as of now. It runs on its own goroutine once per `aub --live`,
+//   - Fetch returns the snapshot and status as of now. It runs on its own goroutine once per `aub --live`,
 //     concurrently with other providers, so a provider must not assume another has finished.
 //     It may hold fields, since one Provider value is used by one goroutine at a time.
 //   - On failure, return an error from the httpclient or a domain.ProviderError. Never return a
 //     partial snapshot with an error. The session then keeps the cached snapshot as stale, or
 //     shows an error row. Error text never reaches the output.
-//   - Status is called immediately after a successful Fetch and returns the status recorded by
-//     that Fetch without I/O. It is what the row prints, so a provider that has no data source
+//   - The status Fetch returns is what the row prints, so a provider that has no data source
 //     must return Unauthenticated and a stopped local runtime must return NotRunning, even
 //     though Fetch succeeded. Set snapshot.Raw[domain.RawProviderStatus] as Swift does too.
 //   - Money is decimal.Decimal, never float64. Decimal(Double) in Swift is decimal.FromFloat64
@@ -56,9 +55,7 @@ type Provider interface {
 	ID() domain.ProviderID
 	DisplayName() string
 	Capabilities() domain.Capabilities
-	// Status returns the status recorded by the last Fetch, without I/O.
-	Status() domain.ProviderStatus
-	Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error)
+	Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error)
 }
 
 // Env is everything a provider may depend on.

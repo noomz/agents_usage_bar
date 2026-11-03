@@ -16,9 +16,8 @@ type fake struct{ id domain.ProviderID }
 func (f fake) ID() domain.ProviderID             { return f.id }
 func (f fake) DisplayName() string               { return string(f.id) }
 func (f fake) Capabilities() domain.Capabilities { return domain.Capabilities{} }
-func (f fake) Status() domain.ProviderStatus     { return domain.OK(time.Unix(0, 0)) }
-func (f fake) Fetch(context.Context, time.Time) (domain.UsageSnapshot, error) {
-	return domain.UsageSnapshot{ProviderID: f.id, Raw: map[string]string{}}, nil
+func (f fake) Fetch(context.Context, time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
+	return domain.UsageSnapshot{ProviderID: f.id, Raw: map[string]string{}}, domain.OK(time.Unix(0, 0)), nil
 }
 
 func env() provider.Env {

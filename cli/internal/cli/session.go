@@ -179,10 +179,10 @@ func (s Session) wants(id domain.ProviderID, filter ProviderFilter) bool {
 // fetchOne keeps the last snapshot on failure and never surfaces error text.
 func fetchOne(ctx context.Context, p provider.Provider, now time.Time, previous *domain.ProviderState) ProviderReport {
 	caps := p.Capabilities()
-	snapshot, err := p.Fetch(ctx, now)
+	snapshot, status, err := p.Fetch(ctx, now)
 	if err == nil {
 		return ProviderReport{
-			ID: p.ID(), DisplayName: p.DisplayName(), Status: p.Status(), Snapshot: &snapshot,
+			ID: p.ID(), DisplayName: p.DisplayName(), Status: status, Snapshot: &snapshot,
 			IsLocal: caps.IsLocal, HasTokens: caps.HasTokens,
 		}
 	}

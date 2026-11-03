@@ -73,7 +73,6 @@ type Provider struct {
 	creditsURL string
 	keyURL     string
 	headers    map[string]string
-	status     domain.ProviderStatus
 }
 
 // Build needs an API key. A management key alone only feeds history backfill.
@@ -94,7 +93,6 @@ func Build(env provider.Env) provider.Provider {
 		creditsURL: cfg.APIURL.JoinPath("credits").String(),
 		keyURL:     cfg.APIURL.JoinPath("key").String(),
 		headers:    headers,
-		status:     domain.Errored(domain.ProviderError{Kind: domain.ErrNotYetFetched, Message: "Not yet fetched"}),
 	}
 }
 
@@ -108,9 +106,6 @@ func (p *Provider) DisplayName() string { return "OpenRouter" }
 func (p *Provider) Capabilities() domain.Capabilities {
 	return domain.Capabilities{HasQuota: true, HasCost: true}
 }
-
-// Status implements provider.Provider.
-func (p *Provider) Status() domain.ProviderStatus { return p.status }
 
 func (p *Provider) get(ctx context.Context) (creditsResponse, keyResponse, error) {
 	var credits creditsResponse
@@ -147,18 +142,16 @@ func (p *Provider) todayCost(now time.Time, usage float64) float64 {
 }
 
 // Fetch implements provider.Provider.
-func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
+func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	credits, key, err := p.get(ctx)
 	if err != nil {
-		p.status = domain.Errored(domain.ProviderErrorFrom(err))
-		return domain.UsageSnapshot{}, err
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, err
 	}
 	totalCredits, totalUsage := *credits.Data.TotalCredits, *credits.Data.TotalUsage
 	cost := decimal.FromFloat64(p.todayCost(now, totalUsage))
 	p.cache.MaintainBaseline(domain.OpenRouter, now, totalUsage)
 	balance := decimal.FromFloat64(totalCredits - totalUsage)
 
-	p.status = domain.OK(now)
 	return domain.UsageSnapshot{
 		ProviderID:   domain.OpenRouter,
 		AsOf:         now,
@@ -171,7 +164,7 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 			Week:  decimal.FromFloat64(*key.Data.UsageWeekly),
 			Month: decimal.FromFloat64(*key.Data.UsageMonthly),
 		},
-	}, nil
+	}, domain.OK(now), nil
 }
 
 // quota prefers the key's limit, then positive prepaid credits.

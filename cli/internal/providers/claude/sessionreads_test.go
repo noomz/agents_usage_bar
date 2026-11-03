@@ -18,20 +18,20 @@ const (
 	yesterdayStamp = "2026-05-12T10:00:00.000Z"
 )
 
-func fetchReads(t *testing.T, r *sessionReads) (domain.UsageSnapshot, map[string]int) {
+func fetchReads(t *testing.T, r *sessionReads) (domain.UsageSnapshot, domain.ProviderStatus, map[string]int) {
 	t.Helper()
-	snap, sessions, err := r.fetch(context.Background(), testNow)
+	snap, status, sessions, err := r.fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return snap, sessions
+	return snap, status, sessions
 }
 
 func TestNoSourceIsUnauthenticated(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "missing")
 	r := newReads([]string{missing}, nil, cache.Noop{})
-	snap, sessions := fetchReads(t, r)
-	if snap.Raw[domain.RawProviderStatus] != domain.StatusSentinelUnauth || r.status.Kind != domain.StatusUnauthenticated || *snap.TokensToday != 0 || sessions != nil {
+	snap, status, sessions := fetchReads(t, r)
+	if snap.Raw[domain.RawProviderStatus] != domain.StatusSentinelUnauth || status.Kind != domain.StatusUnauthenticated || *snap.TokensToday != 0 || sessions != nil {
 		t.Fatalf("%+v", snap)
 	}
 }
@@ -39,21 +39,21 @@ func TestNoSourceIsUnauthenticated(t *testing.T) {
 func TestRootCreatedAfterBuildIsRead(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "later")
 	r := newReads([]string{root}, nil, cache.Noop{})
-	fetchReads(t, r)
-	if r.status.Kind != domain.StatusUnauthenticated {
+	_, status, _ := fetchReads(t, r)
+	if status.Kind != domain.StatusUnauthenticated {
 		t.Fatal("no root yet")
 	}
 	writeFile(t, filepath.Join(root, "p", "s.jsonl"), assistantLine(todayStamp, "r1", "claude-test", 10, 0, 0, 0))
-	snap, _ := fetchReads(t, r)
-	if *snap.TokensToday != 10 || r.status.Kind != domain.StatusOK {
+	snap, status, _ := fetchReads(t, r)
+	if *snap.TokensToday != 10 || status.Kind != domain.StatusOK {
 		t.Fatalf("%+v", snap)
 	}
 }
 
 func TestEmptyRootIsZeroNotUnauthenticated(t *testing.T) {
 	r := newReads([]string{t.TempDir()}, nil, cache.Noop{})
-	snap, sessions := fetchReads(t, r)
-	if *snap.TokensToday != 0 || r.status.Kind != domain.StatusOK || sessions == nil || snap.Raw[domain.RawProviderStatus] != "" {
+	snap, status, sessions := fetchReads(t, r)
+	if *snap.TokensToday != 0 || status.Kind != domain.StatusOK || sessions == nil || snap.Raw[domain.RawProviderStatus] != "" {
 		t.Fatalf("%+v %v", snap, sessions)
 	}
 }
@@ -68,7 +68,7 @@ func TestReadsAggregateAcrossFiles(t *testing.T) {
 			assistantLine(todayStamp, "r1", "claude-test", 1000, 500, 0, 0))
 	writeFile(t, filepath.Join(root, "p", "s3.jsonl"), assistantLine(todayStamp, "", "claude-test", 7, 0, 0, 0)+assistantLine(todayStamp, "", "claude-test", 7, 0, 0, 0))
 	r := newReads([]string{root}, nil, cache.Noop{})
-	snap, sessions := fetchReads(t, r)
+	snap, _, sessions := fetchReads(t, r)
 	if *snap.TokensToday != 1534 {
 		t.Fatalf("yesterday excluded, r1 deduped across files, no-id lines counted: %d", *snap.TokensToday)
 	}
@@ -87,7 +87,7 @@ func TestSymlinkedInstanceRootCountsOnce(t *testing.T) {
 	if err := os.Symlink(shared, link); err != nil {
 		t.Fatal(err)
 	}
-	snap, _ := fetchReads(t, newReads([]string{shared, link}, nil, cache.Noop{}))
+	snap, _, _ := fetchReads(t, newReads([]string{shared, link}, nil, cache.Noop{}))
 	if *snap.TokensToday != 5 {
 		t.Fatalf("a line with no request ID must not count per root: %d", *snap.TokensToday)
 	}
@@ -99,7 +99,7 @@ func TestSecondPollReadsOnlyTheDelta(t *testing.T) {
 	writeFile(t, path, assistantLine(todayStamp, "r1", "claude-test", 10, 0, 0, 0))
 	store := newMemoryStore()
 	r := newReads([]string{root}, nil, store)
-	if snap, _ := fetchReads(t, r); *snap.TokensToday != 10 {
+	if snap, _, _ := fetchReads(t, r); *snap.TokensToday != 10 {
 		t.Fatalf("%d", *snap.TokensToday)
 	}
 	resolved, err := filepath.EvalSymlinks(path)
@@ -110,7 +110,7 @@ func TestSecondPollReadsOnlyTheDelta(t *testing.T) {
 	if !ok || offset.ByteOffset == 0 {
 		t.Fatalf("cursor not persisted under its file URL: %v", store.offsets)
 	}
-	if snap, _ := fetchReads(t, r); *snap.TokensToday != 0 {
+	if snap, _, _ := fetchReads(t, r); *snap.TokensToday != 0 {
 		t.Fatalf("nothing new, got %d", *snap.TokensToday)
 	}
 	appended := assistantLine(todayStamp, "r1", "claude-test", 10, 0, 0, 0) + assistantLine(todayStamp, "r2", "claude-test", 3, 0, 0, 0)
@@ -118,7 +118,7 @@ func TestSecondPollReadsOnlyTheDelta(t *testing.T) {
 	if err := os.Chtimes(path, time.Time{}, time.Now().Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	if snap, _ := fetchReads(t, r); *snap.TokensToday != 3 {
+	if snap, _, _ := fetchReads(t, r); *snap.TokensToday != 3 {
 		t.Fatalf("delta only, got %d", *snap.TokensToday)
 	}
 }
@@ -135,11 +135,11 @@ func TestUnreadableTranscriptFailsAndKeepsCursors(t *testing.T) {
 	}
 	store := newMemoryStore()
 	r := newReads([]string{root}, nil, store)
-	if _, _, err := r.fetch(context.Background(), testNow); err == nil {
+	if _, _, _, err := r.fetch(context.Background(), testNow); err == nil {
 		t.Fatal("want error")
 	}
-	if r.status.Kind != domain.StatusError || len(store.offsets) != 0 {
-		t.Fatalf("%+v %v", r.status, store.offsets)
+	if len(store.offsets) != 0 {
+		t.Fatalf("%v", store.offsets)
 	}
 }
 
@@ -153,7 +153,7 @@ func TestOAuthQuota(t *testing.T) {
 		SevenDayOpus:   &quotaWindowResponse{nil, nil},
 	}
 	r := newReads([]string{t.TempDir()}, fakeUsage{response: full}, cache.Noop{})
-	snap, _ := fetchReads(t, r)
+	snap, status, _ := fetchReads(t, r)
 	names := ""
 	for _, w := range snap.QuotaWindows {
 		names += w.Name + ","
@@ -169,19 +169,19 @@ func TestOAuthQuota(t *testing.T) {
 	}
 
 	degraded := newReads([]string{t.TempDir()}, fakeUsage{err: errors.New("429")}, cache.Noop{})
-	snap, _ = fetchReads(t, degraded)
-	if snap.QuotaWindows != nil || snap.Quota != nil || degraded.status.Kind != domain.StatusOK {
+	snap, status, _ = fetchReads(t, degraded)
+	if snap.QuotaWindows != nil || snap.Quota != nil || status.Kind != domain.StatusOK {
 		t.Fatalf("OAuth failure degrades to local only: %+v", snap)
 	}
 
 	onlyOAuth := newReads([]string{filepath.Join(t.TempDir(), "missing")}, fakeUsage{response: full}, cache.Noop{})
-	snap, _ = fetchReads(t, onlyOAuth)
-	if onlyOAuth.status.Kind != domain.StatusOK || len(snap.QuotaWindows) != 4 || *snap.TokensToday != 0 {
+	snap, status, _ = fetchReads(t, onlyOAuth)
+	if status.Kind != domain.StatusOK || len(snap.QuotaWindows) != 4 || *snap.TokensToday != 0 {
 		t.Fatalf("OAuth with no transcripts: %+v", snap)
 	}
 
 	empty := newReads([]string{t.TempDir()}, fakeUsage{response: &usageResponse{}}, cache.Noop{})
-	snap, _ = fetchReads(t, empty)
+	snap, status, _ = fetchReads(t, empty)
 	if snap.QuotaWindows != nil || snap.Quota != nil {
 		t.Fatalf("%+v", snap)
 	}

@@ -249,7 +249,7 @@ func TestFetch(t *testing.T) {
 			if !tc.deleteCreds {
 				before, _ = os.ReadFile(credsPath)
 			}
-			snap, err := p.Fetch(context.Background(), testNow)
+			snap, status, err := p.Fetch(context.Background(), testNow)
 			if !tc.deleteCreds {
 				after, _ := os.ReadFile(credsPath)
 				if string(before) != string(after) {
@@ -268,8 +268,8 @@ func TestFetch(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if p.Status().Kind != tc.status {
-				t.Fatalf("status = %v", p.Status().Kind)
+			if status.Kind != tc.status {
+				t.Fatalf("status = %v", status.Kind)
 			}
 			if tc.note != (snap.Raw["note"] == domain.DegradedNote) {
 				t.Fatalf("raw = %v", snap.Raw)
@@ -309,7 +309,7 @@ func TestFetch(t *testing.T) {
 func TestQuotaBody(t *testing.T) {
 	p, http, _ := setup(t, creds{"file-access", time.Hour})
 	http.queue[quotaURL] = []any{`{}`}
-	if _, err := p.Fetch(context.Background(), testNow); err != nil {
+	if _, _, err := p.Fetch(context.Background(), testNow); err != nil {
 		t.Fatal(err)
 	}
 	if http.bodies[0] != `{"project":""}` {

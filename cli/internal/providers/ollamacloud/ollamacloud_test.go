@@ -47,7 +47,7 @@ func happy() *httpscript.Client {
 
 func TestMapping(t *testing.T) {
 	p := newProvider(happy(), fixed(keyed("fake-env", config.SourceEnv)), noDevice, time.UTC)
-	snap, err := p.Fetch(context.Background(), testNow)
+	snap, status, err := p.Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,15 +65,15 @@ func TestMapping(t *testing.T) {
 	if *snap.Quota != (domain.Quota{Used: 0.25, Limit: 1, Remaining: 0.75}) {
 		t.Errorf("quota %+v", snap.Quota)
 	}
-	if snap.CostTodayUSD != nil || snap.TokensToday != nil || p.Status().Kind != domain.StatusOK {
-		t.Errorf("snapshot %+v status %+v", snap, p.Status())
+	if snap.CostTodayUSD != nil || snap.TokensToday != nil || status.Kind != domain.StatusOK {
+		t.Errorf("snapshot %+v status %+v", snap, status)
 	}
 }
 
 func TestClampsUtilization(t *testing.T) {
 	for _, tc := range []struct{ raw, want float64 }{{1.4, 1}, {-0.2, 0}, {0, 0}, {1, 1}} {
 		http := httpscript.New().Script(usageKey, httpscript.JSON(fmt.Sprintf(`{"limits":{"monthly":{"usage":%v}}}`, tc.raw)))
-		snap, err := newProvider(http, fixed(keyed("k", config.SourceEnv)), noDevice, time.UTC).Fetch(context.Background(), testNow)
+		snap, _, err := newProvider(http, fixed(keyed("k", config.SourceEnv)), noDevice, time.UTC).Fetch(context.Background(), testNow)
 		if err != nil || *snap.QuotaWindows[0].Utilization != tc.want {
 			t.Errorf("%v: %+v %v", tc.raw, snap.QuotaWindows, err)
 		}
@@ -84,8 +84,8 @@ func TestMissingMonthlyIsEmptyButOK(t *testing.T) {
 	for _, body := range []string{`{}`, `{"limits":{}}`, `{"limits":{"monthly":{}}}`, `{"surprise":[1,2]}`} {
 		http := httpscript.New().Script(usageKey, httpscript.JSON(body))
 		p := newProvider(http, fixed(keyed("k", config.SourceEnv)), noDevice, time.UTC)
-		snap, err := p.Fetch(context.Background(), testNow)
-		if err != nil || snap.QuotaWindows != nil || snap.Quota != nil || p.Status().Kind != domain.StatusOK {
+		snap, status, err := p.Fetch(context.Background(), testNow)
+		if err != nil || snap.QuotaWindows != nil || snap.Quota != nil || status.Kind != domain.StatusOK {
 			t.Errorf("%s: %+v %v", body, snap, err)
 		}
 	}
@@ -94,7 +94,7 @@ func TestMissingMonthlyIsEmptyButOK(t *testing.T) {
 func TestCostParsing(t *testing.T) {
 	for _, tc := range []struct{ cost, want string }{{"1.23456", "1.23456"}, {"0.00000", "0"}, {"n/a", ""}, {"1.5abc", ""}, {"", ""}} {
 		http := httpscript.New().Script(usageKey, httpscript.JSON(fmt.Sprintf(`{"activity":{"cost":%q},"limits":{"monthly":{"usage":0.5}}}`, tc.cost)))
-		snap, err := newProvider(http, fixed(keyed("k", config.SourceEnv)), noDevice, time.UTC).Fetch(context.Background(), testNow)
+		snap, _, err := newProvider(http, fixed(keyed("k", config.SourceEnv)), noDevice, time.UTC).Fetch(context.Background(), testNow)
 		if err != nil || snap.Raw["ownSpendLast4WeeksUSD"] != tc.want {
 			t.Errorf("%q: %v %v", tc.cost, snap.Raw, err)
 		}
@@ -105,7 +105,7 @@ func TestBillingDaySetsReset(t *testing.T) {
 	cfg := keyed("k", config.SourceEnv)
 	day := 15
 	cfg.BillingDay = &day
-	snap, err := newProvider(happy(), fixed(cfg), noDevice, time.UTC).Fetch(context.Background(), testNow)
+	snap, _, err := newProvider(happy(), fixed(cfg), noDevice, time.UTC).Fetch(context.Background(), testNow)
 	if err != nil || snap.QuotaWindows[0].ResetsAt == nil {
 		t.Errorf("%+v %v", snap.QuotaWindows, err)
 	}
@@ -113,7 +113,7 @@ func TestBillingDaySetsReset(t *testing.T) {
 
 func TestAPIKeyTransport(t *testing.T) {
 	http := happy()
-	if _, err := newProvider(http, fixed(keyed("fake-env", config.SourceEnv)), noDevice, time.UTC).Fetch(context.Background(), testNow); err != nil {
+	if _, _, err := newProvider(http, fixed(keyed("fake-env", config.SourceEnv)), noDevice, time.UTC).Fetch(context.Background(), testNow); err != nil {
 		t.Fatal(err)
 	}
 	calls := http.Calls()
@@ -130,7 +130,7 @@ func TestAPIKeyTransport(t *testing.T) {
 func TestDeviceSignsBothEndpoints(t *testing.T) {
 	http := happy()
 	s := fixedSigner(t)
-	snap, err := newProvider(http, fixed(config.OllamaCloud{}), func() *signer { return s }, time.UTC).Fetch(context.Background(), testNow)
+	snap, _, err := newProvider(http, fixed(config.OllamaCloud{}), func() *signer { return s }, time.UTC).Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,13 +178,10 @@ func TestFailures(t *testing.T) {
 	} {
 		http := httpscript.New().Script(usageKey, tc.reply).Script(meKey, httpscript.JSON(meOK))
 		p := newProvider(http, fixed(tc.cfg), func() *signer { return tc.device }, time.UTC)
-		_, err := p.Fetch(context.Background(), testNow)
+		_, _, err := p.Fetch(context.Background(), testNow)
 		pe := domain.ProviderErrorFrom(err)
 		if err == nil || pe.Kind != tc.kind || (tc.msg != "" && pe.Message != tc.msg) {
 			t.Errorf("%s: %v", tc.name, err)
-		}
-		if s := p.Status(); s.Kind != domain.StatusError || s.Err.Kind != tc.kind {
-			t.Errorf("%s: status %+v", tc.name, s)
 		}
 		if http.Count(meKey) != 0 {
 			t.Errorf("%s: /api/me after a failed usage call", tc.name)
@@ -195,7 +192,7 @@ func TestFailures(t *testing.T) {
 func TestNoCredentialAtFetch(t *testing.T) {
 	http := httpscript.New()
 	p := newProvider(http, fixed(config.OllamaCloud{}), noDevice, time.UTC)
-	_, err := p.Fetch(context.Background(), testNow)
+	_, _, err := p.Fetch(context.Background(), testNow)
 	if pe := domain.ProviderErrorFrom(err); pe.Kind != domain.ErrAuth || pe.Message != noCredential {
 		t.Errorf("%v", err)
 	}
@@ -206,11 +203,11 @@ func TestNoCredentialAtFetch(t *testing.T) {
 
 func fetchTwice(t *testing.T, p *Provider) (domain.UsageSnapshot, domain.UsageSnapshot) {
 	t.Helper()
-	first, err := p.Fetch(context.Background(), testNow)
+	first, _, err := p.Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := p.Fetch(context.Background(), testNow)
+	second, _, err := p.Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,13 +263,13 @@ func TestChangedCredentialAppliesNextPoll(t *testing.T) {
 		cfg := keyed("fake-bad", config.SourceConfig)
 		http := httpscript.New().Script(usageKey, httpscript.Status(401), httpscript.JSON(usageOK)).Script(meKey, httpscript.JSON(meOK))
 		p := newProvider(http, func() config.OllamaCloud { return cfg }, noDevice, time.UTC)
-		if _, err := p.Fetch(context.Background(), testNow); err == nil {
+		if _, _, err := p.Fetch(context.Background(), testNow); err == nil {
 			t.Fatal("expected a rejection")
 		}
 		day := 3
 		cfg = keyed("fake-good", config.SourceConfig)
 		cfg.BillingDay = &day
-		snap, err := p.Fetch(context.Background(), testNow)
+		snap, status, err := p.Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -282,8 +279,8 @@ func TestChangedCredentialAppliesNextPoll(t *testing.T) {
 				bearers = append(bearers, c.Bearer)
 			}
 		}
-		if !reflect.DeepEqual(bearers, []string{"fake-bad", "fake-good"}) || p.Status().Kind != domain.StatusOK {
-			t.Errorf("%v %+v", bearers, p.Status())
+		if !reflect.DeepEqual(bearers, []string{"fake-bad", "fake-good"}) || status.Kind != domain.StatusOK {
+			t.Errorf("%v %+v", bearers, status)
 		}
 		if snap.QuotaWindows[0].ResetsAt == nil || snap.Raw["plan"] != "pro" {
 			t.Errorf("%+v", snap)
@@ -299,7 +296,7 @@ func TestChangedCredentialAppliesNextPoll(t *testing.T) {
 			t.Fatalf("%d", http.Count(meKey))
 		}
 		cfg = config.OllamaCloud{}
-		snap, err := p.Fetch(context.Background(), testNow)
+		snap, _, err := p.Fetch(context.Background(), testNow)
 		if err != nil || http.Count(meKey) != 2 || snap.Raw["credentialSource"] != "device" {
 			t.Errorf("%v %d %v", err, http.Count(meKey), snap.Raw)
 		}
@@ -310,7 +307,7 @@ func TestChangedCredentialAppliesNextPoll(t *testing.T) {
 		p := newProvider(http, func() config.OllamaCloud { return cfg }, noDevice, time.UTC)
 		fetchTwice(t, p)
 		cfg = keyed("fake-b", config.SourceConfig)
-		snap, err := p.Fetch(context.Background(), testNow)
+		snap, _, err := p.Fetch(context.Background(), testNow)
 		if err != nil || snap.Raw["plan"] != "max" {
 			t.Errorf("%v %v", err, snap.Raw)
 		}
@@ -411,7 +408,7 @@ func TestBuild(t *testing.T) {
 	if p == nil {
 		t.Fatal("device key did not register")
 	}
-	snap, err := p.Fetch(context.Background(), testNow)
+	snap, _, err := p.Fetch(context.Background(), testNow)
 	if err != nil || snap.Raw["credentialSource"] != "device" {
 		t.Errorf("%v %v", err, snap.Raw)
 	}
@@ -432,7 +429,7 @@ func TestBuildReadsConfigFilePerFetch(t *testing.T) {
 	if err := os.WriteFile(env.Paths.ConfigFile(), []byte("[ollama]\napi_key = \"fake-toml\"\nbilling_day = 7\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	snap, err := Build(env).Fetch(context.Background(), testNow)
+	snap, _, err := Build(env).Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -61,7 +61,6 @@ type Provider struct {
 	env                              provider.Env
 	sessionsRoot, authPath, proxyDir string
 	rates                            *rates
-	status                           domain.ProviderStatus
 }
 
 // Build registers Codex when saved credentials, a sessions directory, or a login exists.
@@ -91,45 +90,38 @@ func (p *Provider) Capabilities() domain.Capabilities {
 	return domain.Capabilities{HasQuota: true, HasCost: true, HasTokens: true}
 }
 
-// Status implements provider.Provider.
-func (p *Provider) Status() domain.ProviderStatus { return p.status }
-
 // Fetch implements provider.Provider. Rollout tokens and cost always win. Two or more logins
 // take quota from one wham/usage per login. Otherwise live rollout windows win, a windowless
 // rollout overlays wham/usage, and with no rollout wham/usage is the whole row.
-func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
+func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	logins := discover(p.proxyDir, p.authPath)
 	rollout := p.readRollout(now)
 
 	if len(logins) >= 2 {
-		p.status = domain.OK(now)
-		return p.multiLoginSnapshot(ctx, logins, rollout, now), nil
+		return p.multiLoginSnapshot(ctx, logins, rollout, now), domain.OK(now), nil
 	}
 	var single *login
 	if len(logins) == 1 {
 		single = &logins[0]
 	}
 	if rollout != nil {
-		p.status = domain.OK(now)
 		if len(rollout.QuotaWindows) == 0 {
 			if overlaid := p.overlay(ctx, *rollout, single, now); overlaid != nil {
-				return *overlaid, nil
+				return *overlaid, domain.OK(now), nil
 			}
 		}
-		return *rollout, nil
+		return *rollout, domain.OK(now), nil
 	}
 
 	usage, err := p.fetchUsage(ctx, single)
 	if err != nil {
 		var status domain.HTTPError
 		if errors.Is(err, errNoCredentials) || (errors.As(err, &status) && (status.Status == 401 || status.Status == 403)) {
-			p.status = domain.Unauthenticated()
-			return domain.UsageSnapshot{ProviderID: domain.Codex, AsOf: now, Raw: map[string]string{"status": "no-data-yet"}}, nil
+			return domain.UsageSnapshot{ProviderID: domain.Codex, AsOf: now, Raw: map[string]string{"status": "no-data-yet"}}, domain.Unauthenticated(), nil
 		}
-		return domain.UsageSnapshot{}, err
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, err
 	}
-	p.status = domain.OK(now)
-	return usage.snapshot(now), nil
+	return usage.snapshot(now), domain.OK(now), nil
 }
 
 // readRollout returns today's snapshot, nil when no token_count event exists. Like the app it

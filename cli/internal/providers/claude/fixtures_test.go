@@ -133,6 +133,6 @@ func newReads(roots []string, oauth usageSource, store cache.Store) *sessionRead
 	return &sessionReads{
 		roots:   func() []string { return roots },
 		pricing: decodePricing([]byte(`{"default":{"inputPer1M":2,"outputPer1M":10,"cacheWritePer1M":2.5,"cacheReadPer1M":0.2},"models":{"claude-test":{"inputPer1M":1,"outputPer1M":5,"cacheWritePer1M":1.25,"cacheReadPer1M":0.1}}}`)),
-		oauth:   oauth, cache: store, dayKeys: testDayKeys(), status: notYetFetched,
+		oauth:   oauth, cache: store, dayKeys: testDayKeys(),
 	}
 }

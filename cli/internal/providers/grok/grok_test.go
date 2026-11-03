@@ -261,7 +261,7 @@ func TestSession401ThenPiOAuth(t *testing.T) {
 	writeFile(t, filepath.Join(home, ".pi", "agent", "auth.json"), string(body))
 	http := &fakeHTTP{byBearer: map[string]any{"dead": domain.HTTPError{Status: 401}, "good": weeklyBody}}
 	p := Build(testEnv(home, http, nil))
-	snap, err := p.Fetch(context.Background(), testNow)
+	snap, status, err := p.Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,8 +280,8 @@ func TestSession401ThenPiOAuth(t *testing.T) {
 	if caption, _ := snap.QuotaUsageCaption(); caption != "5% used · weekly" {
 		t.Fatal(caption)
 	}
-	if p.Status().Kind != domain.StatusOK {
-		t.Fatalf("%+v", p.Status())
+	if status.Kind != domain.StatusOK {
+		t.Fatalf("%+v", status)
 	}
 }
 
@@ -310,12 +310,12 @@ func TestFetchFailureModes(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			env, _ := withSession(t, &fakeHTTP{byBearer: map[string]any{"k": c.answer}}, nil)
 			p := Build(env)
-			snap, err := p.Fetch(context.Background(), testNow)
+			snap, status, err := p.Fetch(context.Background(), testNow)
 			if err != nil {
 				t.Fatalf("must not throw: %v", err)
 			}
-			if snap.Quota != nil || snap.Raw["status"] != "no-data-yet" || p.Status().Kind != c.kind {
-				t.Fatalf("%+v %+v", snap, p.Status())
+			if snap.Quota != nil || snap.Raw["status"] != "no-data-yet" || status.Kind != c.kind {
+				t.Fatalf("%+v %+v", snap, status)
 			}
 			if _, tagged := snap.Raw["note"]; tagged != c.note {
 				t.Fatalf("note %v", snap.Raw)
@@ -328,7 +328,7 @@ func TestHappyPath(t *testing.T) {
 	body := `{"creditUsagePercent":42.5,"monthlyLimit":1000,"includedUsed":425,"prepaidBalance":12.5,"subscriptionTier":"supergrok"}`
 	env, _ := withSession(t, &fakeHTTP{byBearer: map[string]any{"k": body}}, nil)
 	p := Build(env)
-	snap, err := p.Fetch(context.Background(), testNow)
+	snap, _, err := p.Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -363,12 +363,12 @@ func TestManagementSources(t *testing.T) {
 		http := &fakeHTTP{byBearer: map[string]any{"k": `{}`, "m": balance}, post: spend}
 		env, _ := managementEnv(t, http)
 		p := Build(env)
-		snap, err := p.Fetch(context.Background(), testNow)
+		snap, status, err := p.Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if snap.Quota != nil || snap.BalanceUSD.String() != "12.5" || snap.Raw["source"] != "management" || p.Status().Kind != domain.StatusOK {
-			t.Fatalf("%+v %v", snap, p.Status())
+		if snap.Quota != nil || snap.BalanceUSD.String() != "12.5" || snap.Raw["source"] != "management" || status.Kind != domain.StatusOK {
+			t.Fatalf("%+v %v", snap, status)
 		}
 		if snap.CostTodayUSD.Cmp(decimal.MustParse("1.40")) != 0 {
 			t.Fatalf("spend %s", snap.CostTodayUSD)
@@ -387,7 +387,7 @@ func TestManagementSources(t *testing.T) {
 	t.Run("cli quota overlays management spend", func(t *testing.T) {
 		http := &fakeHTTP{byBearer: map[string]any{"k": `{"creditUsagePercent":41,"currentPeriod":"weekly"}`, "m": `{"total":{"val":"800"}}`}, post: `{"timeSeries":[{"dataPoints":[{"values":[2]}]}]}`}
 		env, _ := managementEnv(t, http)
-		snap, err := Build(env).Fetch(context.Background(), testNow)
+		snap, _, err := Build(env).Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -401,7 +401,7 @@ func TestManagementSources(t *testing.T) {
 		env, _ := managementEnv(t, http)
 		bad := "../escape"
 		env.Config.Grok.TeamID = &bad
-		snap, err := Build(env).Fetch(context.Background(), testNow)
+		snap, _, err := Build(env).Fetch(context.Background(), testNow)
 		if err != nil || snap.Raw["source"] != "" || snap.Quota == nil {
 			t.Fatalf("%v %+v", err, snap)
 		}
@@ -425,7 +425,7 @@ func TestPiJSONL(t *testing.T) {
 	http := &fakeHTTP{byBearer: map[string]any{"k": `{}`, "m": `{"total":{"val":"0"}}`}, post: `{}`}
 	env, home := managementEnv(t, http)
 	writeFile(t, filepath.Join(home, ".pi", "agent", "sessions", "s.jsonl"), session)
-	snap, err := Build(env).Fetch(context.Background(), testNow)
+	snap, _, err := Build(env).Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -459,7 +459,7 @@ func TestOffsetKeyLeavesPiLocalCursorAlone(t *testing.T) {
 	piKey := "file://" + resolved
 	store := &recordingStore{offsets: map[string]domain.TranscriptOffset{piKey: {URL: piKey, ByteOffset: 42, LastModified: testNow}}}
 	env.Cache = store
-	if _, err := Build(env).Fetch(context.Background(), testNow); err != nil {
+	if _, _, err := Build(env).Fetch(context.Background(), testNow); err != nil {
 		t.Fatal(err)
 	}
 	if store.offsets[piKey].ByteOffset != 42 {

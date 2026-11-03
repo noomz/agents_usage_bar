@@ -181,7 +181,6 @@ func readPayload(path string) (hookPayload, bool) {
 type hookFeed struct {
 	dir     string
 	dayKeys *domain.DayKeyOwner
-	status  domain.ProviderStatus
 }
 
 // cleanup bounds the feed, whose tee writes whatever source is selected. Best effort.
@@ -240,16 +239,6 @@ type accountAggregate struct {
 // Tokens stay nil: the statusline has no totals. Quota windows are per account, prefixed with the
 // account name once two accounts exist, and the primary quota is the worst across them.
 func (h *hookFeed) fetch(now time.Time) (domain.UsageSnapshot, error) {
-	snapshot, err := h.read(now)
-	if err != nil {
-		h.status = domain.Errored(domain.ProviderErrorFrom(err))
-		return domain.UsageSnapshot{}, err
-	}
-	h.status = domain.OK(now)
-	return snapshot, nil
-}
-
-func (h *hookFeed) read(now time.Time) (domain.UsageSnapshot, error) {
 	all, err := enumerateFeed(h.dir)
 	if err != nil {
 		return domain.UsageSnapshot{}, errNoFeedData

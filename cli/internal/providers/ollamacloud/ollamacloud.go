@@ -98,7 +98,6 @@ type Provider struct {
 	loadDevice func() *signer
 	baseURL    string
 	loc        *time.Location
-	status     domain.ProviderStatus
 
 	plan        *string
 	planFetched bool
@@ -124,7 +123,6 @@ func Build(env provider.Env) provider.Provider {
 func newProvider(http httpclient.Client, loadConfig func() config.OllamaCloud, loadDevice func() *signer, loc *time.Location) *Provider {
 	return &Provider{
 		http: http, loadConfig: loadConfig, loadDevice: loadDevice, baseURL: defaultBaseURL, loc: loc,
-		status: domain.Errored(domain.ProviderError{Kind: domain.ErrNotYetFetched, Message: "Not yet fetched"}),
 	}
 }
 
@@ -136,14 +134,6 @@ func (p *Provider) DisplayName() string { return "Ollama Cloud" }
 
 // Capabilities implements provider.Provider: quota only, never today's totals.
 func (p *Provider) Capabilities() domain.Capabilities { return domain.Capabilities{HasQuota: true} }
-
-// Status implements provider.Provider.
-func (p *Provider) Status() domain.ProviderStatus { return p.status }
-
-func (p *Provider) fail(err domain.ProviderError) error {
-	p.status = domain.Errored(err)
-	return err
-}
 
 func (p *Provider) usage(ctx context.Context, c *credential, now time.Time) (usageResponse, error) {
 	var out usageResponse
@@ -182,11 +172,11 @@ func (p *Provider) fetchPlan(ctx context.Context, c *credential, now time.Time) 
 
 // Fetch implements provider.Provider. A rejected credential fails with a fix-it hint and never
 // falls back to another credential or sends a second request.
-func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
+func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	cfg := p.loadConfig()
 	c := resolve(cfg, p.loadDevice)
 	if c == nil {
-		return domain.UsageSnapshot{}, p.fail(domain.ProviderError{Kind: domain.ErrAuth, Message: noCredential})
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, domain.ProviderError{Kind: domain.ErrAuth, Message: noCredential}
 	}
 	owner := c.fingerprint()
 	if p.planOwner == nil || *p.planOwner != owner {
@@ -194,15 +184,14 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 	}
 	usage, err := p.usage(ctx, c, now)
 	if err != nil {
-		return domain.UsageSnapshot{}, p.fail(classify(err, c))
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, classify(err, c)
 	}
 	if !p.planFetched {
 		if plan, err := p.fetchPlan(ctx, c, now); err == nil {
 			p.plan, p.planFetched = plan, true
 		}
 	}
-	p.status = domain.OK(now)
-	return snapshot(usage, p.plan, c, cfg.BillingDay, now, p.loc), nil
+	return snapshot(usage, p.plan, c, cfg.BillingDay, now, p.loc), domain.OK(now), nil
 }
 
 func classify(err error, c *credential) domain.ProviderError {

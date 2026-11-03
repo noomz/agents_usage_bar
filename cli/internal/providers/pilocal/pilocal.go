@@ -124,13 +124,12 @@ func ReadSessions(store cache.Cursors, roots []string, catalog Catalog, today ti
 
 // Provider is the Local Llama row.
 type Provider struct {
-	env    provider.Env
-	status domain.ProviderStatus
+	env provider.Env
 }
 
 // Build registers the row whenever it is enabled: Fetch reports a machine with no Pi sessions.
 func Build(env provider.Env) provider.Provider {
-	return &Provider{env: env, status: domain.Errored(domain.ProviderError{Kind: domain.ErrNotYetFetched, Message: "not yet fetched"})}
+	return &Provider{env: env}
 }
 
 // ID implements provider.Provider.
@@ -144,20 +143,16 @@ func (*Provider) Capabilities() domain.Capabilities {
 	return domain.Capabilities{HasCost: true, HasTokens: true}
 }
 
-// Status implements provider.Provider.
-func (p *Provider) Status() domain.ProviderStatus { return p.status }
-
 // Fetch implements provider.Provider.
-func (p *Provider) Fetch(_ context.Context, now time.Time) (domain.UsageSnapshot, error) {
+func (p *Provider) Fetch(_ context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	roots := SessionDirs(p.env.Getenv, p.env.Paths.Home)
 	catalog := LoadCatalog(ModelsFiles(p.env.Getenv, p.env.Paths.Home))
 	if !AnyExists(roots) {
-		p.status = domain.Unauthenticated()
 		zeroTokens, zeroCost := 0, decimal.FromInt(0)
 		return domain.UsageSnapshot{
 			ProviderID: domain.PiLocal, AsOf: now, TokensToday: &zeroTokens, CostTodayUSD: &zeroCost,
 			Raw: map[string]string{domain.RawProviderStatus: domain.StatusSentinelUnauth},
-		}, nil
+		}, domain.Unauthenticated(), nil
 	}
 	var delta Delta
 	var total domain.DailyUsageRecord
@@ -168,10 +163,8 @@ func (p *Provider) Fetch(_ context.Context, now time.Time) (domain.UsageSnapshot
 		}
 	})
 	if err != nil {
-		p.status = domain.Errored(domain.ProviderErrorFrom(err))
-		return domain.UsageSnapshot{}, err
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, err
 	}
-	p.status = domain.OK(now)
 	tokens, cost := total.Tokens, total.CostUSD
 	return domain.UsageSnapshot{
 		ProviderID: domain.PiLocal, AsOf: now, TokensToday: &tokens, CostTodayUSD: &cost,
@@ -180,7 +173,7 @@ func (p *Provider) Fetch(_ context.Context, now time.Time) (domain.UsageSnapshot
 			"models":    joinSorted(delta.Acc.Models),
 			"filesRead": strconv.Itoa(delta.Files),
 		},
-	}, nil
+	}, domain.OK(now), nil
 }
 
 // AnyExists reports whether any path exists.

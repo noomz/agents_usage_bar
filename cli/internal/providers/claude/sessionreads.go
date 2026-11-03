@@ -23,28 +23,25 @@ type sessionReads struct {
 	oauth   usageSource
 	cache   cache.Store
 	dayKeys *domain.DayKeyOwner
-	status  domain.ProviderStatus
 }
 
 // fetch returns the snapshot and today's tokens per session. Sessions are nil when nothing was
 // read. An OAuth failure of any kind degrades to local data; a transcript failure fails the
 // fetch and advances no cursor.
-func (s *sessionReads) fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, map[string]int, error) {
+func (s *sessionReads) fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, map[string]int, error) {
 	roots := s.roots()
 	if s.oauth == nil && !anyExists(roots) {
-		s.status = domain.Unauthenticated()
 		zeroTokens, zeroCost := 0, decimal.FromInt(0)
 		return domain.UsageSnapshot{
 			ProviderID: domain.Claude, AsOf: now, TokensToday: &zeroTokens, CostTodayUSD: &zeroCost,
 			Raw: map[string]string{domain.RawProviderStatus: domain.StatusSentinelUnauth},
-		}, nil, nil
+		}, domain.Unauthenticated(), nil, nil
 	}
 	var total domain.DailyUsageRecord
 	var readErr error
 	s.cache.WithCursors(func(c cache.Cursors) { total, readErr = s.readDelta(c, roots, now) })
 	if readErr != nil {
-		s.status = domain.Errored(domain.ProviderErrorFrom(readErr))
-		return domain.UsageSnapshot{}, nil, readErr
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, nil, readErr
 	}
 
 	var usage *usageResponse
@@ -59,8 +56,7 @@ func (s *sessionReads) fetch(ctx context.Context, now time.Time) (domain.UsageSn
 	if usage != nil {
 		snapshot.QuotaWindows, snapshot.Quota = usageQuota(usage)
 	}
-	s.status = domain.OK(now)
-	return snapshot, total.SessionTokens, nil
+	return snapshot, domain.OK(now), total.SessionTokens, nil
 }
 
 // readDelta counts the transcript bytes past the stored cursors and adds them to today's total.

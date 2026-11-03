@@ -22,9 +22,8 @@ type fakeProvider struct {
 func (f *fakeProvider) ID() domain.ProviderID             { return f.id }
 func (f *fakeProvider) DisplayName() string               { return string(f.id) }
 func (f *fakeProvider) Capabilities() domain.Capabilities { return f.caps }
-func (f *fakeProvider) Status() domain.ProviderStatus     { return f.status }
-func (f *fakeProvider) Fetch(context.Context, time.Time) (domain.UsageSnapshot, error) {
-	return f.snap, f.err
+func (f *fakeProvider) Fetch(context.Context, time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
+	return f.snap, f.status, f.err
 }
 
 type memCache struct {

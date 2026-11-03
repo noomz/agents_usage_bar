@@ -89,7 +89,6 @@ func isOAuthPersonal(path string) bool {
 type Provider struct {
 	env       provider.Env
 	credsPath string
-	status    domain.ProviderStatus
 }
 
 // Build registers Gemini when settings select oauth-personal and the credentials file is usable.
@@ -110,9 +109,6 @@ func (p *Provider) DisplayName() string { return "Gemini" }
 
 // Capabilities implements provider.Provider.
 func (p *Provider) Capabilities() domain.Capabilities { return domain.Capabilities{HasQuota: true} }
-
-// Status implements provider.Provider.
-func (p *Provider) Status() domain.ProviderStatus { return p.status }
 
 // bearer returns the file's access token while it is unexpired.
 func (p *Provider) bearer(now time.Time) (secret.Secret, error) {
@@ -148,23 +144,22 @@ func (p *Provider) fetchQuota(ctx context.Context, bearer secret.Secret) (quotaR
 // Fetch implements provider.Provider. No credentials is a muted row. A token that is expired or
 // rejected is an error. Any other failure is a degraded row, so a flaky v1internal never reports
 // as a provider error to the session.
-func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
+func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	bearer, err := p.bearer(now)
 	if errors.Is(err, errNotSignedIn) {
-		p.status = domain.Unauthenticated()
-		return p.muted(now, false), nil
+		return p.muted(now, false), domain.Unauthenticated(), nil
 	}
 	if err != nil {
-		return domain.UsageSnapshot{}, err
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, err
 	}
 
 	quota, err := p.fetchQuota(ctx, bearer)
 	var status domain.HTTPError
 	if errors.As(err, &status) && status.Status == 401 {
-		return domain.UsageSnapshot{}, errTokenUnusable
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, errTokenUnusable
 	}
 	if err != nil {
-		return p.degraded(now, err), nil
+		return p.muted(now, true), domain.Errored(domain.ProviderErrorFrom(err)), nil
 	}
 
 	windows := foldBuckets(quota.Buckets)
@@ -178,8 +173,7 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 		q := domain.UnitQuota(worst)
 		snap.Quota = &q
 	}
-	p.status = domain.OK(now)
-	return snap, nil
+	return snap, domain.OK(now), nil
 }
 
 // foldBuckets keeps the lowest remaining fraction per model, sorted by model.
@@ -207,11 +201,6 @@ func foldBuckets(buckets []quotaBucket) []domain.QuotaWindow {
 	}
 	sort.Slice(windows, func(i, j int) bool { return windows[i].Name < windows[j].Name })
 	return windows
-}
-
-func (p *Provider) degraded(now time.Time, err error) domain.UsageSnapshot {
-	p.status = domain.Errored(domain.ProviderErrorFrom(err))
-	return p.muted(now, true)
 }
 
 func (p *Provider) muted(now time.Time, tagged bool) domain.UsageSnapshot {

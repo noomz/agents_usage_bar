@@ -67,12 +67,12 @@ func TestFetch(t *testing.T) {
 	} {
 		http := httpscript.New().Script(healthKey, tc.health).Script(modelsKey, tc.models)
 		p := newProvider(http, 8080, domain.LlamaCpp, "llama.cpp")
-		snap, err := p.Fetch(context.Background(), now)
+		snap, status, err := p.Fetch(context.Background(), now)
 		if err != nil {
 			t.Errorf("%s: fetch returned %v", tc.name, err)
 		}
-		if p.Status().Kind != tc.kind {
-			t.Errorf("%s: status %+v", tc.name, p.Status())
+		if status.Kind != tc.kind {
+			t.Errorf("%s: status %+v", tc.name, status)
 		}
 		if !reflect.DeepEqual(snap.Raw, tc.raw) {
 			t.Errorf("%s: raw %v", tc.name, snap.Raw)
@@ -93,12 +93,12 @@ func TestDegradedPollKeepsLastPayload(t *testing.T) {
 		Script(healthKey, fixture(t, "llamacpp-health-ok.json"), httpscript.Status(500)).
 		Script(modelsKey, fixture(t, "llamacpp-v1-models.json"))
 	p := newProvider(http, 8080, domain.LlamaCpp, "llama.cpp")
-	if _, err := p.Fetch(context.Background(), now); err != nil {
+	if _, _, err := p.Fetch(context.Background(), now); err != nil {
 		t.Fatal(err)
 	}
-	snap, _ := p.Fetch(context.Background(), now.Add(time.Minute))
-	if snap.Raw["note"] != "degraded" || snap.Raw["modelName"] == "" || p.Status().Kind != domain.StatusStale {
-		t.Errorf("raw %v status %+v", snap.Raw, p.Status())
+	snap, status, _ := p.Fetch(context.Background(), now.Add(time.Minute))
+	if snap.Raw["note"] != "degraded" || snap.Raw["modelName"] == "" || status.Kind != domain.StatusStale {
+		t.Errorf("raw %v status %+v", snap.Raw, status)
 	}
 }
 
@@ -114,7 +114,7 @@ func TestBuildNeedsAPort(t *testing.T) {
 	if built == nil || built.ID() != domain.LlamaCpp || built.DisplayName() != "llama.cpp" {
 		t.Fatalf("built %v", built)
 	}
-	if _, err := built.Fetch(context.Background(), now); err != nil {
+	if _, _, err := built.Fetch(context.Background(), now); err != nil {
 		t.Fatal(err)
 	}
 	for _, call := range http.Calls() {
@@ -127,7 +127,7 @@ func TestBuildNeedsAPort(t *testing.T) {
 func TestBuildEngineUsesItsIdentityAndPort(t *testing.T) {
 	http := httpscript.New().Script(healthKey, httpscript.JSON(`{"status":"ok"}`)).Script(modelsKey, httpscript.JSON(`{"data":[]}`))
 	built := BuildEngine(provider.Env{LocalhostHTTP: http}, config.LocalEngine{ID: "engine.box", DisplayName: "Box"}, 9001)
-	snap, err := built.Fetch(context.Background(), now)
+	snap, _, err := built.Fetch(context.Background(), now)
 	if err != nil {
 		t.Fatal(err)
 	}

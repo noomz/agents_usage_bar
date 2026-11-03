@@ -35,7 +35,7 @@ func quotaJSON(id string, five, seven, resets float64) string {
 }
 
 func newHook(dir string) *hookFeed {
-	return &hookFeed{dir: dir, dayKeys: testDayKeys(), status: notYetFetched}
+	return &hookFeed{dir: dir, dayKeys: testDayKeys()}
 }
 
 func fetchHook(t *testing.T, dir string) domain.UsageSnapshot {
@@ -136,9 +136,6 @@ func TestHookFeedStates(t *testing.T) {
 			if _, err := h.fetch(testNow); !errors.Is(err, errNoFeedData) {
 				t.Fatal(err)
 			}
-			if h.status.Kind != domain.StatusError {
-				t.Fatalf("%+v", h.status)
-			}
 		})
 	}
 	t.Run("stale newest yields a zero snapshot, not an error", func(t *testing.T) {
@@ -149,7 +146,7 @@ func TestHookFeedStates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !snap.CostTodayUSD.IsZero() || snap.Quota != nil || snap.QuotaWindows != nil || snap.Accounts != nil || h.status.Kind != domain.StatusOK {
+		if !snap.CostTodayUSD.IsZero() || snap.Quota != nil || snap.QuotaWindows != nil || snap.Accounts != nil {
 			t.Fatalf("%+v", snap)
 		}
 	})
@@ -282,7 +279,7 @@ func TestSessionAccounts(t *testing.T) {
 }
 
 func facade(useHook bool, reads *sessionReads, dir string) *Provider {
-	return &Provider{useHook: useHook, reads: reads, hook: newHook(dir), status: notYetFetched}
+	return &Provider{useHook: useHook, reads: reads, hook: newHook(dir)}
 }
 
 func TestSourceSwitch(t *testing.T) {
@@ -292,11 +289,11 @@ func TestSourceSwitch(t *testing.T) {
 	old := writeSession(t, feed, "old", costJSON("old", 1), testNow.Add(-49*time.Hour))
 
 	reads := facade(false, newReads([]string{root}, nil, cache.Noop{}), feed)
-	snap, err := reads.Fetch(context.Background(), testNow)
+	snap, status, err := reads.Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if *snap.TokensToday != 10 || snap.Accounts != nil || snap.CostTodayUSD.Float64() >= 3 || reads.Status().Kind != domain.StatusOK {
+	if *snap.TokensToday != 10 || snap.Accounts != nil || snap.CostTodayUSD.Float64() >= 3 || status.Kind != domain.StatusOK {
 		t.Fatalf("session reads must answer: %+v", snap)
 	}
 	if _, err := os.Stat(old); !os.IsNotExist(err) {
@@ -304,25 +301,22 @@ func TestSourceSwitch(t *testing.T) {
 	}
 
 	hook := facade(true, newReads([]string{root}, nil, cache.Noop{}), feed)
-	snap, err = hook.Fetch(context.Background(), testNow)
+	snap, status, err = hook.Fetch(context.Background(), testNow)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snap.CostTodayUSD.Cmp(decimal.MustParse("3")) != 0 || *snap.TokensToday != 10 || len(snap.Accounts) != 1 {
+	if snap.CostTodayUSD.Cmp(decimal.MustParse("3")) != 0 || *snap.TokensToday != 10 || len(snap.Accounts) != 1 || status.Kind != domain.StatusOK {
 		t.Fatalf("hook answers cost, the read grafts tokens: %+v", snap)
 	}
 }
 
-func TestHookErrorMirrorsStatusAndStillAdvancesRead(t *testing.T) {
+func TestHookErrorStillAdvancesRead(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "s.jsonl"), assistantLine(todayStamp, "", "claude-test", 1, 0, 0, 0))
 	store := newMemoryStore()
 	p := facade(true, newReads([]string{root}, nil, store), filepath.Join(t.TempDir(), "none"))
-	if _, err := p.Fetch(context.Background(), testNow); !errors.Is(err, errNoFeedData) {
+	if _, _, err := p.Fetch(context.Background(), testNow); !errors.Is(err, errNoFeedData) {
 		t.Fatal(err)
-	}
-	if p.Status().Kind != domain.StatusError {
-		t.Fatalf("%+v", p.Status())
 	}
 	if len(store.offsets) != 1 {
 		t.Fatal("the concurrent read in Swift has already persisted its cursors")
@@ -355,7 +349,7 @@ func TestAccountTokens(t *testing.T) {
 		writeFile(t, filepath.Join(root, "p", "s3.jsonl"), line("r3", 7))
 		writeSession(t, feed, "s1", session("s1", "personal"), earlierToday)
 		writeSession(t, feed, "s2", session("s2", "work"), earlierToday)
-		snap, err := facade(true, newReads([]string{root}, nil, cache.Noop{}), feed).Fetch(context.Background(), testNow)
+		snap, _, err := facade(true, newReads([]string{root}, nil, cache.Noop{}), feed).Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -370,7 +364,7 @@ func TestAccountTokens(t *testing.T) {
 		writeSession(t, feed, "s1", session("s1", "personal"), earlierToday)
 		writeSession(t, feed, "s9", session("s9", "work"), testNow.Add(-13*time.Hour))
 		writeSession(t, feed, "s8", session("s8", "team"), earlierToday)
-		snap, err := facade(true, newReads([]string{root}, nil, cache.Noop{}), feed).Fetch(context.Background(), testNow)
+		snap, _, err := facade(true, newReads([]string{root}, nil, cache.Noop{}), feed).Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -384,7 +378,7 @@ func TestAccountTokens(t *testing.T) {
 		writeSession(t, feed, "s1", session("s1", "personal"), earlierToday)
 		writeSession(t, feed, "s2", session("s2", "work"), earlierToday)
 		reads := newReads([]string{filepath.Join(t.TempDir(), "none")}, nil, cache.Noop{})
-		snap, err := facade(true, reads, feed).Fetch(context.Background(), testNow)
+		snap, _, err := facade(true, reads, feed).Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -405,7 +399,7 @@ func TestAccountTokens(t *testing.T) {
 		}
 		t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
 		writeSession(t, feed, "s1", session("s1", "work"), testNow.Add(-13*time.Hour))
-		snap, err := facade(true, newReads([]string{root}, nil, cache.Noop{}), feed).Fetch(context.Background(), testNow)
+		snap, _, err := facade(true, newReads([]string{root}, nil, cache.Noop{}), feed).Fetch(context.Background(), testNow)
 		if err != nil {
 			t.Fatal(err)
 		}

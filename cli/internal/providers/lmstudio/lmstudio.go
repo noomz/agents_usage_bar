@@ -71,23 +71,23 @@ func (p *Provider) get(ctx context.Context, path string) (modelsResponse, error)
 }
 
 // Fetch implements provider.Provider.
-func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
+func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	r, err := p.get(ctx, "/api/v0/models")
 	if err == nil {
-		return p.row(now, r), nil
+		return p.row(now, r)
 	}
 	var network domain.NetworkError
 	if errors.As(err, &network) {
-		return p.Failed(now, err), nil
+		return p.Failed(now, err)
 	}
 	r, err = p.get(ctx, "/v1/models")
 	if err != nil {
-		return p.Failed(now, err), nil
+		return p.Failed(now, err)
 	}
-	return p.row(now, r), nil
+	return p.row(now, r)
 }
 
-func (p *Provider) row(now time.Time, r modelsResponse) domain.UsageSnapshot {
+func (p *Provider) row(now time.Time, r modelsResponse) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	loaded := r.loaded()
 	raw := map[string]string{"modelCount": strconv.Itoa(len(loaded))}
 	if len(loaded) == 0 {

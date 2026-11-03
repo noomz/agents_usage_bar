@@ -29,7 +29,6 @@ var xaiCatalog = pilocal.Catalog{"xai": true}
 type Provider struct {
 	env        provider.Env
 	management *managementClient
-	status     domain.ProviderStatus
 }
 
 // Build registers the row when a bearer or a management key exists.
@@ -41,10 +40,7 @@ func Build(env provider.Env) provider.Provider {
 	if len(loadCandidates(env, env.Clock.Now())) == 0 && management == nil {
 		return nil
 	}
-	return &Provider{
-		env: env, management: management,
-		status: domain.Errored(domain.ProviderError{Kind: domain.ErrNotYetFetched, Message: "not yet fetched"}),
-	}
+	return &Provider{env: env, management: management}
 }
 
 // ID implements provider.Provider.
@@ -57,9 +53,6 @@ func (*Provider) DisplayName() string { return "Grok" }
 func (*Provider) Capabilities() domain.Capabilities {
 	return domain.Capabilities{HasQuota: true, HasCost: true, HasTokens: true}
 }
-
-// Status implements provider.Provider.
-func (p *Provider) Status() domain.ProviderStatus { return p.status }
 
 // creditsURL accepts the proxy base or a full billing URL, and always pins format=credits: bare
 // /billing returns a monthly {val:0} stub that reads as "no limit".
@@ -156,7 +149,7 @@ func (p *Provider) loadJSONL(now time.Time) jsonlLoad {
 // Fetch implements provider.Provider. CLI billing, management, and JSONL fail independently; an
 // outage of all three mutes the row rather than failing it, and no snapshot carries over
 // between fetches because one process fetches once.
-func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
+func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	billing, cliErr := p.fetchCredits(ctx, now)
 	cliHard := cliErr != nil && !isAuthError(cliErr)
 	if cliErr == nil && billing.isEmpty() {
@@ -170,12 +163,10 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 	jsonl := p.loadJSONL(now)
 
 	if billing != nil || mgmt != nil || jsonl.contributed {
-		p.status = domain.OK(now)
-		return p.snapshot(billing, mgmt, jsonl, now), nil
+		return p.snapshot(billing, mgmt, jsonl, now), domain.OK(now), nil
 	}
 	if cliHard {
-		p.status = domain.Errored(domain.ProviderErrorFrom(cliErr))
-		return mutedSnapshot(now, true), nil
+		return mutedSnapshot(now, true), domain.Errored(domain.ProviderErrorFrom(cliErr)), nil
 	}
 	reason := cliErr
 	if mgmtErr != nil {
@@ -185,11 +176,9 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 		reason = errEmptyPayload
 	}
 	if isAuthError(reason) {
-		p.status = domain.Unauthenticated()
-		return mutedSnapshot(now, false), nil
+		return mutedSnapshot(now, false), domain.Unauthenticated(), nil
 	}
-	p.status = domain.Errored(domain.ProviderErrorFrom(reason))
-	return mutedSnapshot(now, true), nil
+	return mutedSnapshot(now, true), domain.Errored(domain.ProviderErrorFrom(reason)), nil
 }
 
 func mutedSnapshot(now time.Time, tagged bool) domain.UsageSnapshot {

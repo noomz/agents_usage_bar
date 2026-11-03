@@ -71,7 +71,7 @@ func TestSnapshot(t *testing.T) {
 	} {
 		http := httpscript.New().Script(creditsKey, tc.credits).Script(keyKey, tc.key)
 		p, _ := build(t, http)
-		snap, err := p.Fetch(context.Background(), now)
+		snap, status, err := p.Fetch(context.Background(), now)
 		if err != nil {
 			t.Errorf("%s: %v", tc.name, err)
 			continue
@@ -85,8 +85,8 @@ func TestSnapshot(t *testing.T) {
 		if snap.TokensToday != nil || snap.Raw == nil || snap.ProviderID != domain.OpenRouter || !snap.AsOf.Equal(now) {
 			t.Errorf("%s: snapshot %+v", tc.name, snap)
 		}
-		if p.Status().Kind != domain.StatusOK {
-			t.Errorf("%s: status %+v", tc.name, p.Status())
+		if status.Kind != domain.StatusOK {
+			t.Errorf("%s: status %+v", tc.name, status)
 		}
 	}
 }
@@ -94,7 +94,7 @@ func TestSnapshot(t *testing.T) {
 func TestPeriodSpendPrintsSwiftBytes(t *testing.T) {
 	http := httpscript.New().Script(creditsKey, fixture(t, "credits.success.json")).Script(keyKey, fixture(t, "key.with_limit.json"))
 	p, _ := build(t, http)
-	snap, err := p.Fetch(context.Background(), now)
+	snap, _, err := p.Fetch(context.Background(), now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestBaselineDelta(t *testing.T) {
 		if tc.seedAt != nil {
 			store.MaintainBaseline(domain.OpenRouter, *tc.seedAt, tc.seed)
 		}
-		snap, err := p.Fetch(context.Background(), now)
+		snap, _, err := p.Fetch(context.Background(), now)
 		if err != nil {
 			t.Errorf("%s: %v", tc.name, err)
 			continue
@@ -167,13 +167,13 @@ func TestFailures(t *testing.T) {
 	} {
 		http := httpscript.New().Script(creditsKey, tc.credits).Script(keyKey, tc.key)
 		p, store := build(t, http)
-		_, err := p.Fetch(context.Background(), now)
+		_, _, err := p.Fetch(context.Background(), now)
 		if err == nil {
 			t.Errorf("%s: no error", tc.name)
 			continue
 		}
-		if s := p.Status(); s.Kind != domain.StatusError || s.Err.Kind != tc.kind {
-			t.Errorf("%s: status %+v", tc.name, s)
+		if pe := domain.ProviderErrorFrom(err); pe.Kind != tc.kind {
+			t.Errorf("%s: %+v", tc.name, pe)
 		}
 		if store.Baseline(domain.OpenRouter) != nil {
 			t.Errorf("%s: a failed fetch wrote a baseline", tc.name)
@@ -203,7 +203,7 @@ func TestRequestShape(t *testing.T) {
 	}
 	env.Config.OpenRouter.APIURL = u
 	p := Build(env)
-	if _, err := p.Fetch(context.Background(), now); err != nil {
+	if _, _, err := p.Fetch(context.Background(), now); err != nil {
 		t.Fatal(err)
 	}
 	urls := map[string]bool{}
@@ -228,8 +228,5 @@ func TestIdentity(t *testing.T) {
 	}
 	if want := (domain.Capabilities{HasQuota: true, HasCost: true}); p.Capabilities() != want {
 		t.Errorf("caps %+v", p.Capabilities())
-	}
-	if s := p.Status(); s.Kind != domain.StatusError || s.Err.Kind != domain.ErrNotYetFetched {
-		t.Errorf("status %+v", s)
 	}
 }

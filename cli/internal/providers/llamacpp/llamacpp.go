@@ -79,7 +79,7 @@ func (p *Provider) url(route string) string {
 }
 
 // Fetch implements provider.Provider.
-func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
+func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	var health healthResponse
 	var models modelsResponse
 	var healthErr, modelsErr error
@@ -90,14 +90,14 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 	wg.Wait()
 
 	if healthErr != nil {
-		return p.Failed(now, healthErr), nil
+		return p.Failed(now, healthErr)
 	}
 	status := health.lowered()
 	switch {
 	case strings.Contains(status, "loading"):
-		return p.OK(now, map[string]string{"loadingModel": "true", "modelCount": "0"}), nil
+		return p.OK(now, map[string]string{"loadingModel": "true", "modelCount": "0"})
 	case status == "error":
-		return p.Degraded(now, domain.ProviderError{Kind: domain.ErrHTTP, Message: "llamacpp /health status: error"}), nil
+		return p.Degraded(now, domain.ProviderError{Kind: domain.ErrHTTP, Message: "llamacpp /health status: error"})
 	}
 
 	raw := map[string]string{"modelCount": "0"}
@@ -106,5 +106,5 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 			raw = map[string]string{"modelCount": "1", "modelName": name, "allModels": name}
 		}
 	}
-	return p.OK(now, raw), nil
+	return p.OK(now, raw)
 }

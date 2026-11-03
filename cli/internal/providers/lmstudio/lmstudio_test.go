@@ -70,12 +70,12 @@ func TestFetch(t *testing.T) {
 			http.Script(v1, *tc.v1)
 		}
 		p := newProvider(http, 1234)
-		snap, err := p.Fetch(context.Background(), now)
+		snap, status, err := p.Fetch(context.Background(), now)
 		if err != nil {
 			t.Errorf("%s: fetch returned %v", tc.name, err)
 		}
-		if p.Status().Kind != tc.kind {
-			t.Errorf("%s: status %+v", tc.name, p.Status())
+		if status.Kind != tc.kind {
+			t.Errorf("%s: status %+v", tc.name, status)
 		}
 		if !reflect.DeepEqual(snap.Raw, tc.raw) {
 			t.Errorf("%s: raw %v", tc.name, snap.Raw)
@@ -101,7 +101,7 @@ func TestPortReachesURLAndRaw(t *testing.T) {
 		env.Config = config.Defaults()
 		env.Config.LMStudio.Port = port
 		built := Build(env)
-		snap, _ := built.Fetch(context.Background(), now)
+		snap, _, _ := built.Fetch(context.Background(), now)
 		if want := fmt.Sprintf("http://localhost:%d/api/v0/models", port); http.Calls()[0].URL != want {
 			t.Errorf("url %s", http.Calls()[0].URL)
 		}

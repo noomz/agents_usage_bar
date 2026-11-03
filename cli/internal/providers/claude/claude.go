@@ -21,10 +21,7 @@ type Provider struct {
 	useHook bool
 	reads   *sessionReads
 	hook    *hookFeed
-	status  domain.ProviderStatus
 }
-
-var notYetFetched = domain.Errored(domain.ProviderError{Kind: domain.ErrNotYetFetched, Message: "not yet fetched"})
 
 // Build always registers the row: Fetch reports a machine with no credential and no transcripts
 // as unauthenticated, and hook mode can have data with neither. No network here.
@@ -42,10 +39,8 @@ func Build(env provider.Env) provider.Provider {
 			oauth:   oauth,
 			cache:   env.Cache,
 			dayKeys: env.DayKeys,
-			status:  notYetFetched,
 		},
-		hook:   &hookFeed{dir: filepath.Join(env.Paths.DataDir, "claude-hook", "sessions"), dayKeys: env.DayKeys, status: notYetFetched},
-		status: notYetFetched,
+		hook: &hookFeed{dir: filepath.Join(env.Paths.DataDir, "claude-hook", "sessions"), dayKeys: env.DayKeys},
 	}
 }
 
@@ -86,29 +81,24 @@ func (*Provider) Capabilities() domain.Capabilities {
 	return domain.Capabilities{HasQuota: true, HasCost: true, HasTokens: true}
 }
 
-// Status implements provider.Provider.
-func (p *Provider) Status() domain.ProviderStatus { return p.status }
-
 // Fetch implements provider.Provider.
-func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
+func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	if p.useHook {
 		return p.fetchHook(ctx, now)
 	}
 	p.hook.prune(now)
-	snapshot, _, err := p.reads.fetch(ctx, now)
-	p.status = p.reads.status
-	return snapshot, err
+	snapshot, status, _, err := p.reads.fetch(ctx, now)
+	return snapshot, status, err
 }
 
 // fetchHook is hybrid for tokens: the statusline pushes real cost and rate limits but no token
 // totals, so only tokensToday comes from the session read. A read failure leaves tokens nil and
 // never fails the fetch.
-func (p *Provider) fetchHook(ctx context.Context, now time.Time) (domain.UsageSnapshot, error) {
-	read, sessions, readErr := p.reads.fetch(ctx, now)
+func (p *Provider) fetchHook(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
+	read, _, sessions, readErr := p.reads.fetch(ctx, now)
 	snapshot, err := p.hook.fetch(now)
-	p.status = p.hook.status
 	if err != nil {
-		return domain.UsageSnapshot{}, err
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, err
 	}
 	if readErr != nil {
 		sessions = nil
@@ -138,5 +128,5 @@ func (p *Provider) fetchHook(ctx context.Context, now time.Time) (domain.UsageSn
 			account.TokensToday = &zero
 		}
 	}
-	return snapshot, nil
+	return snapshot, domain.OK(now), nil
 }
