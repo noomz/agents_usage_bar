@@ -5,6 +5,11 @@ import (
 	"github.com/noomz/agents_usage_bar/cli/internal/config"
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"github.com/noomz/agents_usage_bar/cli/internal/provider"
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/llamacpp"
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/lmstudio"
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/ollama"
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/ollamacloud"
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/openrouter"
 )
 
 // builds registers implemented providers: one line each, such as
@@ -12,10 +17,16 @@ import (
 //	domain.OpenRouter: openrouter.Build,
 //
 // A known provider with no line here shows its placeholder row.
-var builds = map[domain.ProviderID]provider.Build{}
+var builds = map[domain.ProviderID]provider.Build{
+	domain.OpenRouter:  openrouter.Build,
+	domain.Ollama:      ollama.Build,
+	domain.OllamaCloud: ollamacloud.Build,
+	domain.LMStudio:    lmstudio.Build,
+	domain.LlamaCpp:    llamacpp.Build,
+}
 
-// engineBuild registers the llama.cpp-compatible engine row, such as llamacpp.BuildEngine.
-var engineBuild provider.EngineBuild
+// engineBuild registers the llama.cpp-compatible engine row.
+var engineBuild provider.EngineBuild = llamacpp.BuildEngine
 
 // entry is one provider's composition metadata, in the app's composition order.
 type entry struct {
