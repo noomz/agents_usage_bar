@@ -123,6 +123,9 @@ func (i *Installer) Uninstall() error {
 		if err != nil {
 			continue
 		}
+		if !filepath.IsAbs(dest) {
+			dest = filepath.Join(dir, dest)
+		}
 		if filepath.Clean(dest) == filepath.Clean(exe) {
 			if err := i.FS.RemoveItem(link); err != nil {
 				return err

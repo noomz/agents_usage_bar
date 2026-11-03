@@ -330,6 +330,9 @@ func TestDefaultsStoreOnThrowawayDomain(t *testing.T) {
 	t.Cleanup(func() { _ = exec.Command(defaultsTool, "delete", domainName).Run() })
 	s := &Defaults{Domain: domainName}
 	c := CLI{Store: s}
+	if len(s.All()) != 0 {
+		t.Errorf("a domain that does not exist reads as empty: %v", s.All())
+	}
 	if got := get(t, c, "threshold"); got != "0.80" {
 		t.Errorf("absent: %s", got)
 	}

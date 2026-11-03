@@ -144,11 +144,15 @@ func (a *App) execute(command Command) (int, error) {
 	return 0, errors.New("unhandled command")
 }
 
+// The dashboard is a window in the app, the one command the CLI cannot serve alone.
 func (a *App) runDashboard(c DashboardCmd) (int, error) {
 	if a.GOOS != "darwin" {
-		return 0, fmt.Errorf("the dashboard is part of the macOS app and is not available on %s", a.GOOS)
+		return 0, fmt.Errorf("the dashboard needs the macOS app, which is not available on %s", a.GOOS)
 	}
-	return 0, a.OpenURL(DashboardURL(c.Provider))
+	if err := a.OpenURL(DashboardURL(c.Provider)); err != nil {
+		return 0, errors.New("the dashboard needs the macOS app: nothing on this Mac can open agentsusagebar:// URLs. Install AgentsUsageBar.app")
+	}
+	return 0, nil
 }
 
 // DashboardURL is `agentsusagebar://dashboard[?provider=<id>]`. Opening it changes nothing;

@@ -3,8 +3,10 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
@@ -92,7 +94,7 @@ func TestExitCodesAndStreams(t *testing.T) {
 		{[]string{"stats", "--days", "0"}, "error: --days expects a whole number of days from 1, got '0'\n", 2},
 		{[]string{"settings", "get", "nope"}, "error: unknown key 'nope'. Try `aub settings`.\n", 2},
 		{[]string{"settings", "set", "theme", "neon"}, "error: invalid value 'neon' for theme; expected light|dark|auto\n", 2},
-		{[]string{"dashboard"}, "error: the dashboard is part of the macOS app and is not available on linux\n", 1},
+		{[]string{"dashboard"}, "error: the dashboard needs the macOS app, which is not available on linux\n", 1},
 	}
 	for _, c := range cases {
 		out, errOut, code := newHarness(t).run(c.args...)
@@ -127,6 +129,69 @@ func TestDashboardOpensTheAppURL(t *testing.T) {
 	id := domain.ProviderID("engine.a b")
 	if got := DashboardURL(&id); got != "agentsusagebar://dashboard?provider=engine.a%20b" {
 		t.Error(got)
+	}
+}
+
+func TestDashboardWithoutTheAppIsAClearError(t *testing.T) {
+	h := newHarness(t)
+	h.GOOS = "darwin"
+	h.OpenURL = func(string) error { return errors.New("exit status 1") }
+	out, errOut, code := h.run("dashboard", "claude")
+	want := "error: the dashboard needs the macOS app: nothing on this Mac can open agentsusagebar:// URLs. Install AgentsUsageBar.app\n"
+	if out != "" || errOut != want || code != 1 {
+		t.Errorf("%q %q %d", out, errOut, code)
+	}
+}
+
+func TestVersionResolution(t *testing.T) {
+	module := func(v string) *debug.BuildInfo { return &debug.BuildInfo{Main: debug.Module{Version: v}} }
+	cases := []struct {
+		ldflags string
+		info    *debug.BuildInfo
+		want    string
+	}{
+		{"1.2.3", module("v9.9.9"), "1.2.3"},
+		{"", module("v0.4.0"), "v0.4.0"},
+		{"", module("(devel)"), "dev"},
+		{"", module(""), "dev"},
+		{"", nil, "dev"},
+	}
+	for _, c := range cases {
+		if got := ResolveVersion(c.ldflags, c.info); got != c.want {
+			t.Errorf("%+v: %s", c, got)
+		}
+	}
+}
+
+// Standalone install: no app, cache, history, or stored setting is a normal state.
+func TestNoAppStateIsNormalAndCreatesNothing(t *testing.T) {
+	cases := []struct {
+		args []string
+		want string
+	}{
+		{nil, "no cached data yet — run aub --live"},
+		{[]string{"usage", "--theme", "classic"}, "Today total"},
+		{[]string{"quota"}, "no cached data yet — run aub --live"},
+		{[]string{"usage", "--json"}, `"source" : "cached"`},
+		{[]string{"quota", "--json"}, "["},
+		{[]string{"--live"}, "! Claude"},
+		{[]string{"stats"}, noHistoryText},
+		{[]string{"stats", "claude"}, noHistoryText},
+		{[]string{"stats", "--json"}, `"schemaVersion" : 1`},
+		{[]string{"stats", "--csv"}, "date,provider,tokens"},
+		{[]string{"themes"}, "active: compact (from default)"},
+		{[]string{"settings"}, "refresh-interval=5m"},
+		{[]string{"settings", "get", "threshold"}, "0.80"},
+	}
+	for _, c := range cases {
+		h := newHarness(t)
+		out, errOut, code := h.run(c.args...)
+		if code != 0 || errOut != "" || !strings.Contains(out, c.want) {
+			t.Errorf("%v: code=%d err=%q out=%q", c.args, code, errOut, out)
+		}
+		if entries, err := os.ReadDir(h.Layout.Home); err != nil || len(entries) != 0 {
+			t.Errorf("%v created %v (%v)", c.args, entries, err)
+		}
 	}
 }
 

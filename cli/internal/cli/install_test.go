@@ -101,6 +101,30 @@ func TestUninstallRemovesOnlyOurLinks(t *testing.T) {
 	}
 }
 
+func TestUninstallFollowsRelativeLinks(t *testing.T) {
+	fs := newFakeFS()
+	fs.files[homeBin+"/aub"] = "../../../../opt/aub/aub"
+	fs.files["/usr/local/bin/aub"] = "aub-other"
+	if err := (&Installer{fs}).Uninstall(); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := fs.files[homeBin+"/aub"]; ok {
+		t.Error("a relative link to this executable stayed")
+	}
+	if _, ok := fs.files["/usr/local/bin/aub"]; !ok {
+		t.Error("a relative link elsewhere was removed")
+	}
+}
+
+func TestInstallNeedsNoAppBundle(t *testing.T) {
+	fs := newFakeFS()
+	fs.exe = "/home/test/go/bin/aub"
+	path, err := (&Installer{fs}).Install(nil)
+	if err != nil || path != homeBin+"/aub" || fs.files[path] != fs.exe {
+		t.Errorf("%s %v", path, err)
+	}
+}
+
 func TestAdminFallback(t *testing.T) {
 	fs := newFakeFS()
 	fs.dirs["/usr/local/bin"] = true
