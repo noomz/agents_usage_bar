@@ -178,3 +178,65 @@ func TestNoopPassesDeltaThrough(t *testing.T) {
 		t.Errorf("%+v", got)
 	}
 }
+
+func writeAllSections(s *File, now time.Time, tick int) {
+	s.SetTranscriptOffsets([]domain.TranscriptOffset{
+		{URL: "file:///z.jsonl", ByteOffset: uint64(tick), LastModified: day1.Add(123456789 * time.Nanosecond)},
+		{URL: "file:///a.jsonl", ByteOffset: 7, LastModified: day1},
+		{URL: "file:///m.jsonl", ByteOffset: 9, LastModified: day1.Add(time.Second / 3)},
+	})
+	for _, id := range []domain.ProviderID{domain.Codex, domain.OpenRouter, domain.Claude, domain.Gemini} {
+		s.MaintainBaseline(id, now, 1.5)
+		s.AccumulateDailyUsage(id, now, 0, decimal.FromInt(0), map[string]int{"zeta": 0, "alpha": 0, "mid": 0})
+	}
+}
+
+// Swift encodes dictionaries unsorted, so a file from the app holds any key order. The first Go
+// write settles the sections it owns; every later one with the same state is byte-identical.
+func TestWritesOfIdenticalStateAreByteIdentical(t *testing.T) {
+	seeds := map[string]string{
+		"no file": "",
+		"from the app": `{"dailyUsage":["gemini",{"tokens":3,"date":"2026-03-14","sessionTokens":{"z":1,"a":2},"costUSD":0.1}],` +
+			`"transcripts":{"file:///z.jsonl":{"url":"file:///z.jsonl","lastModified":795182400.5,"byteOffset":1},"file:///b.jsonl":{"byteOffset":2,"url":"file:///b.jsonl","lastModified":795182401}},` +
+			`"providers":["claude",` + state + `],"schemaVersion":3,` +
+			`"baselines":["openrouter",{"lastValue":2,"value":1,"date":"2026-03-14","lastUpdated":795182400.25}]}`,
+	}
+	for name, seed := range seeds {
+		t.Run(name, func(t *testing.T) {
+			for run := 0; run < 20; run++ {
+				s, path := newStore(t)
+				if seed != "" {
+					write(t, path, seed)
+				}
+				writeAllSections(s, day1, 1)
+				first, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for again := 0; again < 3; again++ {
+					writeAllSections(s, day1, 1)
+					next, _ := os.ReadFile(path)
+					if string(next) != string(first) {
+						t.Fatalf("write %d changed bytes:\n%s\n%s", again, first, next)
+					}
+				}
+				other := NewFile(path, domain.NewDayKeyOwner(clock.Fixed(day1), time.UTC))
+				writeAllSections(other, day1, 1)
+				if next, _ := os.ReadFile(path); string(next) != string(first) {
+					t.Fatalf("a new process changed bytes:\n%s\n%s", first, next)
+				}
+			}
+		})
+	}
+}
+
+func TestWritesKeepTheAppsProviderRowsVerbatim(t *testing.T) {
+	s, path := newStore(t)
+	row := `{"status":{"unauthenticated":{}},"id":"claude","displayName":"Claude"}`
+	write(t, path, `{"schemaVersion":3,"providers":["claude",`+row+`],"baselines":[],"transcripts":{},"dailyUsage":[]}`)
+	writeAllSections(s, day1, 1)
+	data, _ := os.ReadFile(path)
+	if !strings.Contains(string(data), row) {
+		t.Fatalf("%s", data)
+	}
+}
