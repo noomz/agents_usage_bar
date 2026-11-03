@@ -77,7 +77,7 @@ type Delta struct {
 // the cursors under keyPrefix. The prefix keeps each reader's cursors apart: package grok reads
 // the same files as this provider, so sharing a key would hide bytes from one of them. Any
 // unreadable file fails the read and advances no cursor.
-func ReadSessions(store cache.Store, roots []string, catalog Catalog, today time.Time, keyPrefix string) (Delta, error) {
+func ReadSessions(store cache.Cursors, roots []string, catalog Catalog, today time.Time, keyPrefix string) (Delta, error) {
 	prior := store.AllTranscriptOffsets()
 	var floor *time.Time
 	for key, offset := range prior {
@@ -159,12 +159,18 @@ func (p *Provider) Fetch(_ context.Context, now time.Time) (domain.UsageSnapshot
 			Raw: map[string]string{domain.RawProviderStatus: domain.StatusSentinelUnauth},
 		}, nil
 	}
-	delta, err := ReadSessions(p.env.Cache, roots, catalog, p.env.DayKeys.StartOfDay(now), "")
+	var delta Delta
+	var total domain.DailyUsageRecord
+	var err error
+	p.env.Cache.WithCursors(func(c cache.Cursors) {
+		if delta, err = ReadSessions(c, roots, catalog, p.env.DayKeys.StartOfDay(now), ""); err == nil {
+			total = c.AccumulateDailyUsage(domain.PiLocal, now, delta.Acc.Tokens, delta.Acc.CostUSD, map[string]int{})
+		}
+	})
 	if err != nil {
 		p.status = domain.Errored(domain.ProviderErrorFrom(err))
 		return domain.UsageSnapshot{}, err
 	}
-	total := p.env.Cache.AccumulateDailyUsage(domain.PiLocal, now, delta.Acc.Tokens, delta.Acc.CostUSD, map[string]int{})
 	p.status = domain.OK(now)
 	tokens, cost := total.Tokens, total.CostUSD
 	return domain.UsageSnapshot{

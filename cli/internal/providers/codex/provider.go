@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/noomz/agents_usage_bar/cli/internal/cache"
 	"github.com/noomz/agents_usage_bar/cli/internal/decimal"
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"github.com/noomz/agents_usage_bar/cli/internal/jsonl"
@@ -143,7 +144,7 @@ func (p *Provider) readRollout(now time.Time) *domain.UsageSnapshot {
 	if len(files) == 0 {
 		return nil
 	}
-	p.advanceOffsets(files)
+	p.env.Cache.WithCursors(func(c cache.Cursors) { advanceOffsets(c, files) })
 	event, file, ok := lastTokenCount(files)
 	if !ok {
 		return nil
@@ -151,8 +152,8 @@ func (p *Provider) readRollout(now time.Time) *domain.UsageSnapshot {
 	return p.rolloutSnapshot(event, file, now)
 }
 
-func (p *Provider) advanceOffsets(files []string) {
-	prior := p.env.Cache.AllTranscriptOffsets()
+func advanceOffsets(c cache.Cursors, files []string) {
+	prior := c.AllTranscriptOffsets()
 	offsets := make([]domain.TranscriptOffset, 0, len(files))
 	for _, file := range files {
 		key := offsetKey(file)
@@ -167,7 +168,7 @@ func (p *Provider) advanceOffsets(files []string) {
 		}
 		offsets = append(offsets, domain.TranscriptOffset{URL: key, ByteOffset: delta.NewOffset, LastModified: delta.LastModified})
 	}
-	p.env.Cache.SetTranscriptOffsets(offsets)
+	c.SetTranscriptOffsets(offsets)
 }
 
 func (p *Provider) rolloutSnapshot(event rolloutEvent, file string, now time.Time) *domain.UsageSnapshot {

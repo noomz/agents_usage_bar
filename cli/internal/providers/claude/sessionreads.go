@@ -39,8 +39,34 @@ func (s *sessionReads) fetch(ctx context.Context, now time.Time) (domain.UsageSn
 			Raw: map[string]string{domain.RawProviderStatus: domain.StatusSentinelUnauth},
 		}, nil, nil
 	}
+	var total domain.DailyUsageRecord
+	var readErr error
+	s.cache.WithCursors(func(c cache.Cursors) { total, readErr = s.readDelta(c, roots, now) })
+	if readErr != nil {
+		s.status = domain.Errored(domain.ProviderErrorFrom(readErr))
+		return domain.UsageSnapshot{}, nil, readErr
+	}
+
+	var usage *usageResponse
+	if s.oauth != nil {
+		if response, err := s.oauth.getUsage(ctx); err == nil {
+			usage = response
+		}
+	}
+
+	totalTokens, totalCost := total.Tokens, total.CostUSD
+	snapshot := domain.UsageSnapshot{ProviderID: domain.Claude, AsOf: now, TokensToday: &totalTokens, CostTodayUSD: &totalCost, Raw: map[string]string{}}
+	if usage != nil {
+		snapshot.QuotaWindows, snapshot.Quota = usageQuota(usage)
+	}
+	s.status = domain.OK(now)
+	return snapshot, total.SessionTokens, nil
+}
+
+// readDelta counts the transcript bytes past the stored cursors and adds them to today's total.
+func (s *sessionReads) readDelta(c cache.Cursors, roots []string, now time.Time) (domain.DailyUsageRecord, error) {
 	today := s.dayKeys.StartOfDay(now)
-	prior := s.cache.AllTranscriptOffsets()
+	prior := c.AllTranscriptOffsets()
 	var floor *time.Time
 	for _, offset := range prior {
 		if floor == nil || offset.LastModified.Before(*floor) {
@@ -51,13 +77,6 @@ func (s *sessionReads) fetch(ctx context.Context, now time.Time) (domain.UsageSn
 	if floor != nil {
 		earlier := floor.Add(-time.Second)
 		floor = &earlier
-	}
-
-	var usage *usageResponse
-	if s.oauth != nil {
-		if response, err := s.oauth.getUsage(ctx); err == nil {
-			usage = response
-		}
 	}
 
 	seen := map[string]bool{}
@@ -79,8 +98,7 @@ func (s *sessionReads) fetch(ctx context.Context, now time.Time) (domain.UsageSn
 		}
 		read, err := jsonl.ReadDelta(path, start, modified)
 		if err != nil {
-			s.status = domain.Errored(domain.ProviderErrorFrom(err))
-			return domain.UsageSnapshot{}, nil, err
+			return domain.DailyUsageRecord{}, err
 		}
 		offsets = append(offsets, domain.TranscriptOffset{URL: key, ByteOffset: read.NewOffset, LastModified: read.LastModified})
 		for _, line := range read.Lines {
@@ -100,16 +118,8 @@ func (s *sessionReads) fetch(ctx context.Context, now time.Time) (domain.UsageSn
 		}
 	}
 	// Offsets first: a crash between the two writes under-counts a delta rather than re-counting it.
-	s.cache.SetTranscriptOffsets(offsets)
-	total := s.cache.AccumulateDailyUsage(domain.Claude, now, tokens, cost, sessions)
-
-	totalTokens, totalCost := total.Tokens, total.CostUSD
-	snapshot := domain.UsageSnapshot{ProviderID: domain.Claude, AsOf: now, TokensToday: &totalTokens, CostTodayUSD: &totalCost, Raw: map[string]string{}}
-	if usage != nil {
-		snapshot.QuotaWindows, snapshot.Quota = usageQuota(usage)
-	}
-	s.status = domain.OK(now)
-	return snapshot, total.SessionTokens, nil
+	c.SetTranscriptOffsets(offsets)
+	return c.AccumulateDailyUsage(domain.Claude, now, tokens, cost, sessions), nil
 }
 
 // usageQuota lists the windows reported. The primary quota is the larger of 5h and 7d, leaving

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/noomz/agents_usage_bar/cli/internal/cache"
 	"github.com/noomz/agents_usage_bar/cli/internal/decimal"
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"github.com/noomz/agents_usage_bar/cli/internal/provider"
@@ -135,11 +136,17 @@ type jsonlLoad struct {
 
 func (p *Provider) loadJSONL(now time.Time) jsonlLoad {
 	roots := pilocal.SessionDirs(p.env.Getenv, p.env.Paths.Home)
-	delta, err := pilocal.ReadSessions(p.env.Cache, roots, xaiCatalog, p.env.DayKeys.StartOfDay(now), offsetPrefix)
+	var delta pilocal.Delta
+	var total domain.DailyUsageRecord
+	var err error
+	p.env.Cache.WithCursors(func(c cache.Cursors) {
+		if delta, err = pilocal.ReadSessions(c, roots, xaiCatalog, p.env.DayKeys.StartOfDay(now), offsetPrefix); err == nil {
+			total = c.AccumulateDailyUsage(domain.Grok, now, delta.Acc.Tokens, delta.Acc.CostUSD, map[string]int{})
+		}
+	})
 	if err != nil {
 		return jsonlLoad{}
 	}
-	total := p.env.Cache.AccumulateDailyUsage(domain.Grok, now, delta.Acc.Tokens, delta.Acc.CostUSD, map[string]int{})
 	if len(delta.Acc.Providers) == 0 && total.Tokens <= 0 && total.CostUSD.Sign() <= 0 {
 		return jsonlLoad{}
 	}

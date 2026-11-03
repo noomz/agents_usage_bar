@@ -71,6 +71,8 @@ type recordingCache struct {
 	writes  int
 }
 
+func (c *recordingCache) WithCursors(body func(cache.Cursors)) { body(c) }
+
 func (c *recordingCache) AllTranscriptOffsets() map[string]domain.TranscriptOffset { return c.offsets }
 
 func (c *recordingCache) SetTranscriptOffsets(offsets []domain.TranscriptOffset) {

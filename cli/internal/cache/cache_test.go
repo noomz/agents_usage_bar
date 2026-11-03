@@ -23,6 +23,8 @@ func newStore(t *testing.T) (*File, string) {
 	return NewFile(path, domain.NewDayKeyOwner(clock.Fixed(day1), time.UTC)), path
 }
 
+func cursorsOf(s *File) Cursors { return fileCursors{s} }
+
 func write(t *testing.T, path, body string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
@@ -37,7 +39,7 @@ const state = `{"id":"claude","displayName":"Claude","status":{"unauthenticated"
 
 func TestFreshStoreIsEmptyAndCreatesNothing(t *testing.T) {
 	s, path := newStore(t)
-	if len(s.LoadAll()) != 0 || len(s.AllTranscriptOffsets()) != 0 || s.Baseline(domain.Claude) != nil {
+	if len(s.LoadAll()) != 0 || len(cursorsOf(s).AllTranscriptOffsets()) != 0 || s.Baseline(domain.Claude) != nil {
 		t.Error("not empty")
 	}
 	if _, err := os.Stat(filepath.Dir(path)); err == nil {
@@ -92,24 +94,24 @@ func TestBaselineRules(t *testing.T) {
 func TestAccumulateDailyUsage(t *testing.T) {
 	s, path := newStore(t)
 	one := decimal.MustParse("0.1")
-	got := s.AccumulateDailyUsage(domain.Claude, day1, 5, one, map[string]int{"a": 2})
+	got := cursorsOf(s).AccumulateDailyUsage(domain.Claude, day1, 5, one, map[string]int{"a": 2})
 	if got.Tokens != 5 || got.CostUSD.String() != "0.1" {
 		t.Errorf("%+v", got)
 	}
-	got = s.AccumulateDailyUsage(domain.Claude, day1, 3, decimal.MustParse("0.2"), map[string]int{"a": 1, "b": 4})
+	got = cursorsOf(s).AccumulateDailyUsage(domain.Claude, day1, 3, decimal.MustParse("0.2"), map[string]int{"a": 1, "b": 4})
 	if got.Tokens != 8 || got.CostUSD.String() != "0.3" || got.SessionTokens["a"] != 3 || got.SessionTokens["b"] != 4 {
 		t.Errorf("sum: %+v", got)
 	}
-	other := s.AccumulateDailyUsage(domain.Codex, day1, 1, one, nil)
+	other := cursorsOf(s).AccumulateDailyUsage(domain.Codex, day1, 1, one, nil)
 	if other.Tokens != 1 {
 		t.Errorf("providers are isolated: %+v", other)
 	}
 	fresh := NewFile(path, domain.NewDayKeyOwner(clock.Fixed(day1), time.UTC))
-	got = fresh.AccumulateDailyUsage(domain.Claude, day1, 1, one, nil)
+	got = cursorsOf(fresh).AccumulateDailyUsage(domain.Claude, day1, 1, one, nil)
 	if got.Tokens != 9 || got.CostUSD.String() != "0.4" {
 		t.Errorf("persisted: %+v", got)
 	}
-	got = fresh.AccumulateDailyUsage(domain.Claude, day2, 2, one, map[string]int{"c": 1})
+	got = cursorsOf(fresh).AccumulateDailyUsage(domain.Claude, day2, 2, one, map[string]int{"c": 1})
 	if got.Tokens != 2 || got.CostUSD.String() != "0.1" || got.SessionTokens["a"] != 0 {
 		t.Errorf("rollover: %+v", got)
 	}
@@ -118,7 +120,7 @@ func TestAccumulateDailyUsage(t *testing.T) {
 func TestOldCacheWithoutSessionTokensReadsEmpty(t *testing.T) {
 	s, path := newStore(t)
 	write(t, path, `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":["claude",{"date":"2026-03-14","tokens":5,"costUSD":1.5}]}`)
-	got := s.AccumulateDailyUsage(domain.Claude, day1, 1, decimal.MustParse("0.5"), nil)
+	got := cursorsOf(s).AccumulateDailyUsage(domain.Claude, day1, 1, decimal.MustParse("0.5"), nil)
 	if got.Tokens != 6 || got.CostUSD.String() != "2" {
 		t.Errorf("%+v", got)
 	}
@@ -127,16 +129,16 @@ func TestOldCacheWithoutSessionTokensReadsEmpty(t *testing.T) {
 func TestTranscriptOffsets(t *testing.T) {
 	s, _ := newStore(t)
 	mod := time.Date(2026, 3, 14, 1, 2, 3, 500_000_000, time.UTC)
-	s.SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/a/b.jsonl", ByteOffset: 10, LastModified: mod}, {URL: "/c.jsonl", ByteOffset: 20, LastModified: mod}})
-	got := s.TranscriptOffset("/a/b.jsonl")
-	if got == nil || got.ByteOffset != 10 || !got.LastModified.Equal(mod) {
+	cursorsOf(s).SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/a/b.jsonl", ByteOffset: 10, LastModified: mod}, {URL: "/c.jsonl", ByteOffset: 20, LastModified: mod}})
+	got := cursorsOf(s).AllTranscriptOffsets()["/a/b.jsonl"]
+	if got.ByteOffset != 10 || !got.LastModified.Equal(mod) {
 		t.Errorf("%+v", got)
 	}
-	s.SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/a/b.jsonl", ByteOffset: 99, LastModified: mod}})
-	if s.TranscriptOffset("/a/b.jsonl").ByteOffset != 99 || len(s.AllTranscriptOffsets()) != 2 {
+	cursorsOf(s).SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/a/b.jsonl", ByteOffset: 99, LastModified: mod}})
+	if cursorsOf(s).AllTranscriptOffsets()["/a/b.jsonl"].ByteOffset != 99 || len(cursorsOf(s).AllTranscriptOffsets()) != 2 {
 		t.Error("overwrite keeps the latest")
 	}
-	if s.TranscriptOffset("/nope") != nil {
+	if _, ok := cursorsOf(s).AllTranscriptOffsets()["/nope"]; ok {
 		t.Error("unknown URL")
 	}
 }
@@ -145,9 +147,9 @@ func TestWritesLeaveOtherSectionsAndProviderBytesIntact(t *testing.T) {
 	s, path := newStore(t)
 	providers := `["claude",{"displayName":"Claude","id":"claude","status":{"unauthenticated":{}},"zzFuture":1.50}]`
 	write(t, path, `{"schemaVersion":3,"providers":`+providers+`,"baselines":["grok",{"value":1,"date":"2026-03-14","lastValue":2,"lastUpdated":3}],"transcripts":{"/t":{"url":"/t","byteOffset":1,"lastModified":2}},"dailyUsage":[]}`)
-	s.SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/x", ByteOffset: 5, LastModified: day1}})
+	cursorsOf(s).SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/x", ByteOffset: 5, LastModified: day1}})
 	s.MaintainBaseline(domain.OpenRouter, day1, 1)
-	s.AccumulateDailyUsage(domain.Claude, day1, 1, decimal.MustParse("0.5"), nil)
+	cursorsOf(s).AccumulateDailyUsage(domain.Claude, day1, 1, decimal.MustParse("0.5"), nil)
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -156,15 +158,15 @@ func TestWritesLeaveOtherSectionsAndProviderBytesIntact(t *testing.T) {
 	if !strings.Contains(string(data), `"providers":`+providers) {
 		t.Errorf("provider bytes changed: %s", data)
 	}
-	if s.Baseline("grok") == nil || s.TranscriptOffset("/t") == nil || s.TranscriptOffset("/x") == nil {
+	if s.Baseline("grok") == nil || len(cursorsOf(s).AllTranscriptOffsets()) != 2 {
 		t.Error("a write clobbered a section")
 	}
 	if len(s.LoadAll()) != 1 {
 		t.Error("rows lost")
 	}
-	entries, _ := os.ReadDir(filepath.Dir(path))
-	if len(entries) != 1 {
-		t.Errorf("temp files left: %v", entries)
+	leftovers, _ := filepath.Glob(filepath.Join(filepath.Dir(path), ".today-*"))
+	if len(leftovers) != 0 {
+		t.Errorf("temp files left: %v", leftovers)
 	}
 	info, _ := os.Stat(path)
 	if info.Mode().Perm() != 0o644 {
@@ -180,14 +182,14 @@ func TestNoopPassesDeltaThrough(t *testing.T) {
 }
 
 func writeAllSections(s *File, now time.Time) {
-	s.SetTranscriptOffsets([]domain.TranscriptOffset{
+	cursorsOf(s).SetTranscriptOffsets([]domain.TranscriptOffset{
 		{URL: "file:///z.jsonl", ByteOffset: 1, LastModified: day1.Add(123456789 * time.Nanosecond)},
 		{URL: "file:///a.jsonl", ByteOffset: 7, LastModified: day1},
 		{URL: "file:///m.jsonl", ByteOffset: 9, LastModified: day1.Add(time.Second / 3)},
 	})
 	for _, id := range []domain.ProviderID{domain.Codex, domain.OpenRouter, domain.Claude, domain.Gemini} {
 		s.MaintainBaseline(id, now, 1.5)
-		s.AccumulateDailyUsage(id, now, 0, decimal.FromInt(0), map[string]int{"zeta": 0, "alpha": 0, "mid": 0})
+		cursorsOf(s).AccumulateDailyUsage(id, now, 0, decimal.FromInt(0), map[string]int{"zeta": 0, "alpha": 0, "mid": 0})
 	}
 }
 

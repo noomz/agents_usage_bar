@@ -213,6 +213,7 @@ type recordingStore struct {
 	offsets map[string]domain.TranscriptOffset
 }
 
+func (s *recordingStore) WithCursors(body func(cache.Cursors))                     { body(s) }
 func (s *recordingStore) AllTranscriptOffsets() map[string]domain.TranscriptOffset { return s.offsets }
 func (s *recordingStore) SetTranscriptOffsets(o []domain.TranscriptOffset) {
 	for _, offset := range o {

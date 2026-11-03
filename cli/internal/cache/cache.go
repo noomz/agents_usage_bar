@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/noomz/agents_usage_bar/cli/internal/decimal"
@@ -25,14 +26,22 @@ type Store interface {
 	// Baseline returns the stored baseline for id, nil when none exists.
 	Baseline(id domain.ProviderID) *domain.BaselineRecord
 	// MaintainBaseline sets a fresh baseline on a new day or a negative delta; otherwise it
-	// keeps the baseline and updates LastValue.
+	// keeps the baseline and updates LastValue. Never call it inside WithCursors: it takes the
+	// same lock.
 	MaintainBaseline(id domain.ProviderID, now time.Time, currentValue float64)
-	// TranscriptOffset returns the resume cursor for a file URL, nil when none exists.
-	TranscriptOffset(url string) *domain.TranscriptOffset
-	// SetTranscriptOffsets upserts cursors keyed by URL in one write.
-	SetTranscriptOffsets(offsets []domain.TranscriptOffset)
+	// WithCursors runs body holding the cross-process cursor lock. Cursors are reachable only
+	// here, so reading them and adding the delta they measure happen under one lock. A second
+	// process in between would count the same bytes, and the total would stay doubled until
+	// midnight. Body must make no network call.
+	WithCursors(body func(Cursors))
+}
+
+// Cursors is the cursor and daily-total state, valid only inside WithCursors.
+type Cursors interface {
 	// AllTranscriptOffsets returns every cursor.
 	AllTranscriptOffsets() map[string]domain.TranscriptOffset
+	// SetTranscriptOffsets upserts cursors keyed by URL in one write.
+	SetTranscriptOffsets(offsets []domain.TranscriptOffset)
 	// AccumulateDailyUsage adds a poll's delta to id's running total and returns the new
 	// total. A new day key restarts the total from the delta.
 	AccumulateDailyUsage(id domain.ProviderID, now time.Time, deltaTokens int, deltaCostUSD decimal.Decimal, deltaSessionTokens map[string]int) domain.DailyUsageRecord
@@ -51,6 +60,36 @@ func NewFile(path string, dayKeys *domain.DayKeyOwner) *File {
 }
 
 const currentSchema = 3
+
+// lock takes the advisory lock on today.json.lock, shared by every process and goroutine that
+// writes the store. The kernel drops it if the process dies. The app's FileCacheStore does not
+// take it yet. If the lock file cannot be opened the store's directory is not writable either,
+// so nothing persists and running unlocked cannot double a total.
+func (f *File) lock() (unlock func()) {
+	if err := os.MkdirAll(filepath.Dir(f.path), 0o755); err != nil {
+		return func() {}
+	}
+	file, err := os.OpenFile(f.path+".lock", os.O_RDWR|os.O_CREATE, 0o644)
+	if err != nil {
+		return func() {}
+	}
+	for {
+		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX)
+		if !errors.Is(err, syscall.EINTR) {
+			break
+		}
+	}
+	return func() { file.Close() }
+}
+
+// WithCursors implements Store.
+func (f *File) WithCursors(body func(Cursors)) {
+	defer f.lock()()
+	body(fileCursors{f})
+}
+
+// fileCursors is File's Cursors, handed out only under the lock.
+type fileCursors struct{ f *File }
 
 // envelope keeps sections raw so a run that only needs one section does not decode 1 MB of
 // transcript cursors, and a write leaves `providers` exactly as the app wrote it.
@@ -221,6 +260,7 @@ func (f *File) Baseline(id domain.ProviderID) *domain.BaselineRecord {
 
 // MaintainBaseline implements Store.
 func (f *File) MaintainBaseline(id domain.ProviderID, now time.Time, currentValue float64) {
+	defer f.lock()()
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	e := f.loadOrEmpty()
@@ -266,17 +306,9 @@ func decodeOffsets(raw json.RawMessage) map[string]domain.TranscriptOffset {
 	return out
 }
 
-// TranscriptOffset implements Store.
-func (f *File) TranscriptOffset(url string) *domain.TranscriptOffset {
-	all := f.AllTranscriptOffsets()
-	if offset, ok := all[url]; ok {
-		return &offset
-	}
-	return nil
-}
-
-// AllTranscriptOffsets implements Store.
-func (f *File) AllTranscriptOffsets() map[string]domain.TranscriptOffset {
+// AllTranscriptOffsets implements Cursors.
+func (c fileCursors) AllTranscriptOffsets() map[string]domain.TranscriptOffset {
+	f := c.f
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	e := f.load()
@@ -286,11 +318,12 @@ func (f *File) AllTranscriptOffsets() map[string]domain.TranscriptOffset {
 	return decodeOffsets(e.transcripts)
 }
 
-// SetTranscriptOffsets implements Store.
-func (f *File) SetTranscriptOffsets(offsets []domain.TranscriptOffset) {
+// SetTranscriptOffsets implements Cursors.
+func (c fileCursors) SetTranscriptOffsets(offsets []domain.TranscriptOffset) {
 	if len(offsets) == 0 {
 		return
 	}
+	f := c.f
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	e := f.loadOrEmpty()
@@ -316,8 +349,9 @@ func dailyTree(d domain.DailyUsageRecord) any {
 	}
 }
 
-// AccumulateDailyUsage implements Store.
-func (f *File) AccumulateDailyUsage(id domain.ProviderID, now time.Time, deltaTokens int, deltaCostUSD decimal.Decimal, deltaSessionTokens map[string]int) domain.DailyUsageRecord {
+// AccumulateDailyUsage implements Cursors.
+func (c fileCursors) AccumulateDailyUsage(id domain.ProviderID, now time.Time, deltaTokens int, deltaCostUSD decimal.Decimal, deltaSessionTokens map[string]int) domain.DailyUsageRecord {
+	f := c.f
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	e := f.loadOrEmpty()
@@ -362,18 +396,18 @@ func (Noop) Baseline(domain.ProviderID) *domain.BaselineRecord { return nil }
 // MaintainBaseline implements Store.
 func (Noop) MaintainBaseline(domain.ProviderID, time.Time, float64) {}
 
-// TranscriptOffset implements Store.
-func (Noop) TranscriptOffset(string) *domain.TranscriptOffset { return nil }
+// WithCursors implements Store.
+func (Noop) WithCursors(body func(Cursors)) { body(Noop{}) }
 
-// SetTranscriptOffsets implements Store.
+// SetTranscriptOffsets implements Cursors.
 func (Noop) SetTranscriptOffsets([]domain.TranscriptOffset) {}
 
-// AllTranscriptOffsets implements Store.
+// AllTranscriptOffsets implements Cursors.
 func (Noop) AllTranscriptOffsets() map[string]domain.TranscriptOffset {
 	return map[string]domain.TranscriptOffset{}
 }
 
-// AccumulateDailyUsage implements Store: the delta passes through unchanged.
+// AccumulateDailyUsage implements Cursors: the delta passes through unchanged.
 func (Noop) AccumulateDailyUsage(_ domain.ProviderID, _ time.Time, deltaTokens int, deltaCostUSD decimal.Decimal, deltaSessionTokens map[string]int) domain.DailyUsageRecord {
 	return domain.DailyUsageRecord{Tokens: deltaTokens, CostUSD: deltaCostUSD, SessionTokens: deltaSessionTokens}
 }
