@@ -56,59 +56,64 @@ sha256_of() {
   fi
 }
 
-os="$(detect_os)"
-arch="$(detect_arch)"
-tarball="aub-$os-$arch.tar.gz"
+# Everything runs from here, so a pipe cut off mid-download runs nothing.
+main() {
+  os="$(detect_os)"
+  arch="$(detect_arch)"
+  tarball="aub-$os-$arch.tar.gz"
 
-if [ -n "${AUB_RELEASE_URL:-}" ]; then
-  base="$AUB_RELEASE_URL"
-elif [ -n "${AUB_VERSION:-}" ]; then
-  base="$repo_url/download/$AUB_VERSION"
-else
-  base="$repo_url/latest/download"
-fi
+  if [ -n "${AUB_RELEASE_URL:-}" ]; then
+    base="$AUB_RELEASE_URL"
+  elif [ -n "${AUB_VERSION:-}" ]; then
+    base="$repo_url/download/$AUB_VERSION"
+  else
+    base="$repo_url/latest/download"
+  fi
 
-[ -n "${HOME:-}" ] || [ -n "${AUB_INSTALL_DIR:-}" ] || fail "HOME is not set; set AUB_INSTALL_DIR"
-install_dir="${AUB_INSTALL_DIR:-$HOME/.local/bin}"
-target="$install_dir/aub"
-[ ! -d "$target" ] || fail "$target is a directory"
+  [ -n "${HOME:-}" ] || [ -n "${AUB_INSTALL_DIR:-}" ] || fail "HOME is not set; set AUB_INSTALL_DIR"
+  install_dir="${AUB_INSTALL_DIR:-$HOME/.local/bin}"
+  target="$install_dir/aub"
+  [ ! -d "$target" ] || fail "$target is a directory"
 
-staged=""
-work="$(mktemp -d "${TMPDIR:-/tmp}/aub-install.XXXXXX")"
-trap 'rm -rf "$work"; [ -z "$staged" ] || rm -f "$staged"' EXIT
-trap 'exit 1' HUP INT TERM
+  staged=""
+  work="$(mktemp -d "${TMPDIR:-/tmp}/aub-install.XXXXXX")"
+  trap 'rm -rf "$work"; [ -z "$staged" ] || rm -f "$staged"' EXIT
+  trap 'exit 1' HUP INT TERM
 
-download "$base/$tarball" "$work/$tarball" || fail "no release file for $os/$arch: $base/$tarball"
-download "$base/$checksums_name" "$work/$checksums_name" || fail "no checksums file: $base/$checksums_name"
+  download "$base/$tarball" "$work/$tarball" || fail "no release file for $os/$arch: $base/$tarball"
+  download "$base/$checksums_name" "$work/$checksums_name" || fail "no checksums file: $base/$checksums_name"
 
-expected="$(awk -v name="$tarball" '$2 == name || $2 == "*" name {print $1}' "$work/$checksums_name")"
-[ -n "$expected" ] || fail "$checksums_name has no entry for $tarball"
-actual="$(sha256_of "$work/$tarball")"
-[ "$expected" = "$actual" ] || fail "checksum mismatch for $tarball: expected $expected, got $actual. Nothing was installed."
+  expected="$(awk -v name="$tarball" '$2 == name || $2 == "*" name {print $1}' "$work/$checksums_name")"
+  [ -n "$expected" ] || fail "$checksums_name has no entry for $tarball"
+  actual="$(sha256_of "$work/$tarball")"
+  [ "$expected" = "$actual" ] || fail "checksum mismatch for $tarball: expected $expected, got $actual. Nothing was installed."
 
-tar -xzf "$work/$tarball" -C "$work" aub || fail "$tarball does not contain aub"
-chmod 755 "$work/aub"
-version="$("$work/aub" --version)" || fail "the downloaded binary does not run on this machine"
+  tar -xzf "$work/$tarball" -C "$work" aub || fail "$tarball does not contain aub"
+  chmod 755 "$work/aub"
+  version="$("$work/aub" --version)" || fail "the downloaded binary does not run on this machine"
 
-mkdir -p "$install_dir" || fail "cannot create $install_dir"
-staged="$(mktemp "$install_dir/.aub.XXXXXX")" || fail "cannot write to $install_dir"
-cp "$work/aub" "$staged"
-chmod 755 "$staged"
+  mkdir -p "$install_dir" || fail "cannot create $install_dir"
+  staged="$(mktemp "$install_dir/.aub.XXXXXX")" || fail "cannot write to $install_dir"
+  cp "$work/aub" "$staged"
+  chmod 755 "$staged"
 
-# mv replaces a symlink itself, so a link into the macOS app never overwrites the app's binary.
-if [ -L "$target" ]; then
-  printf 'Replaced aub → %s\n' "$(readlink "$target")"
-fi
-mv -f "$staged" "$target"
-printf 'Installed %s → %s\n' "$version" "$target"
+  # mv replaces a symlink itself, so a link into the macOS app never overwrites the app's binary.
+  if [ -L "$target" ]; then
+    printf 'Replaced aub → %s\n' "$(readlink "$target")"
+  fi
+  mv -f "$staged" "$target"
+  printf 'Installed %s → %s\n' "$version" "$target"
 
-case ":${PATH:-}:" in
-  *":$install_dir:"*) ;;
-  *)
-    if [ "$install_dir" = "${HOME:-}/.local/bin" ]; then
-      printf '%s\n' 'Not on PATH. fish: fish_add_path ~/.local/bin   zsh/bash: export PATH="$HOME/.local/bin:$PATH"'
-    else
-      printf 'Not on PATH. Add %s to PATH in your shell profile.\n' "$install_dir"
-    fi
-    ;;
-esac
+  case ":${PATH:-}:" in
+    *":$install_dir:"*) ;;
+    *)
+      if [ "$install_dir" = "${HOME:-}/.local/bin" ]; then
+        printf '%s\n' 'Not on PATH. fish: fish_add_path ~/.local/bin   zsh/bash: export PATH="$HOME/.local/bin:$PATH"'
+      else
+        printf 'Not on PATH. Add %s to PATH in your shell profile.\n' "$install_dir"
+      fi
+      ;;
+  esac
+}
+
+main "$@"

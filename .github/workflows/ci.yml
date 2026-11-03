@@ -97,6 +97,9 @@ jobs:
           for target in linux/amd64 linux/arm64 darwin/arm64 darwin/amd64; do
             CGO_ENABLED=0 GOOS="${target%/*}" GOARCH="${target#*/}" go build -o /dev/null ./cmd/aub
           done
+      - name: Installer against local release fixtures
+        working-directory: .
+        run: scripts/check-install.sh
 
   # Phase 6 Plan 06-04 (REL-08 / REL-09) — entitlement / Hardened-Runtime /
   # Sandbox regression guard. Intentionally reads SOURCE plists + pbxproj,

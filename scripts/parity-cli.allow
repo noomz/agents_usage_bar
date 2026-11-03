@@ -1,7 +1,2 @@
 # case-name | reason
 settings-get-json | Swift encodes this dictionary without .sortedKeys, so its key order is random per process; Go always prints key first, one of the two orders Swift prints.
-tty-stats-90 | Output crosses the kernel pty's 2048-byte buffer, where the driver sometimes doubles a \r; Swift alone varies between runs, and the same case piped (stats-days-90) must match byte for byte.
-tty-usage-classic | Output crosses the kernel pty's 2048-byte buffer, where the driver sometimes doubles a \r; the piped case with the same arguments must match byte for byte.
-tty-stats-claude | Output crosses the kernel pty's 2048-byte buffer, where the driver sometimes doubles a \r; the piped case with the same arguments must match byte for byte.
-tty-stats-codex | Output crosses the kernel pty's 2048-byte buffer, where the driver sometimes doubles a \r; the piped case with the same arguments must match byte for byte.
-home-full-tty-usage-classic | Output crosses the kernel pty's 2048-byte buffer, where the driver sometimes doubles a \r; the piped case with the same arguments must match byte for byte.

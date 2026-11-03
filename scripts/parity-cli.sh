@@ -304,14 +304,19 @@ run_side() { # dir binary env... -- args...
   while [[ "$1" != "--" ]]; do envs+=("$1"); shift; done
   shift
   mkdir -p "$dir"
-  local launcher=("$bin")
+  local launcher=("$bin") tty=0
   if [[ "${1:-}" == "@tty" ]]; then
     shift
     launcher=(script -q /dev/null "$bin")
+    tty=1
   fi
   env -u COLUMNS -u NO_COLOR -u AUB_THEME ${envs[@]+"${envs[@]}"} "${launcher[@]}" "$@" >"$dir/stdout" 2>"$dir/stderr" </dev/null
   echo "$?" >"$dir/code"
   normalize "$dir/stdout"
+  # The kernel pty sometimes doubles a \r past its 2048-byte buffer, in Swift's output alone.
+  if [[ $tty == 1 ]]; then
+    sed -E $'s/\r+$/\r/' "$dir/stdout.norm" >"$dir/stdout.tmp" && mv "$dir/stdout.tmp" "$dir/stdout.norm"
+  fi
 }
 
 same() {
