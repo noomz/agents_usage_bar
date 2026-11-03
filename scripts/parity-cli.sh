@@ -159,6 +159,7 @@ add tty-usage-dumb TERM=dumb -- @tty usage --cached
 add tty-usage-all -- @tty usage --cached --provider all
 add tty-stats -- @tty stats
 add tty-stats-all -- @tty stats --provider all
+add tty-stats-30 -- @tty stats --days 30
 add tty-stats-90 -- @tty stats --days 90
 add tty-stats-claude -- @tty stats claude
 add tty-stats-codex -- @tty stats codex --days 30
