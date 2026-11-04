@@ -498,3 +498,37 @@ func TestOlderSchemaIgnoresSectionsItNeverHad(t *testing.T) {
 		})
 	}
 }
+
+func TestUnreadableStoreIsNotMovedAndTheRunStillReports(t *testing.T) {
+	skipIfRoot(t)
+	s, path := newStore(t)
+	body := `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":[]}`
+	write(t, path, body)
+	if err := os.Chmod(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(path, 0o600) })
+	if err := s.MaintainBaseline(domain.OpenRouter, day1, 10); !errors.Is(err, errUnusable) {
+		t.Errorf("MaintainBaseline: %v", err)
+	}
+	var total int
+	err := s.WithCursors(func(c Cursors) {
+		total = c.AccumulateDailyUsage(domain.Claude, day1, 7, decimal.MustParse("0.5"), nil).Tokens
+	})
+	if err != nil || total != 7 {
+		t.Fatalf("run must still report the delta: %v %d", err, total)
+	}
+	if _, err := os.Stat(path + ".corrupt"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("an unreadable store was moved aside")
+	}
+	info, err := os.Stat(path)
+	if err != nil || info.Mode().Perm() != 0 {
+		t.Fatalf("store changed: %v %v", info, err)
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(path); string(data) != body {
+		t.Fatalf("store rewritten: %s", data)
+	}
+}
