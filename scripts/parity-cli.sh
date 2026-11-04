@@ -251,7 +251,7 @@ in_home() { # home-name case-suffix args...
   add "home-$home-$suffix" "HOME=$HOME_ROOT/$home" "CFFIXED_USER_HOME=$HOME_ROOT/$home" -- "$@"
 }
 
-for home in full variants grok-balance grok-nothing schema1 schema2 schema9 corrupt bad-row empty history-file history-noperm; do
+for home in full variants grok-balance grok-nothing openrouter-no-cost schema1 schema2 schema9 corrupt bad-row empty history-file history-noperm; do
   for theme in compact classic; do
     in_home "$home" "usage-$theme" usage --cached --no-color --theme "$theme"
     in_home "$home" "quota-$theme" quota --cached --no-color --theme "$theme"

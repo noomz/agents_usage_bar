@@ -45,10 +45,14 @@ func build(t *testing.T, http *httpscript.Client) (provider.Provider, cache.Stor
 	t.Helper()
 	dayKeys := domain.NewDayKeyOwner(clock.Fixed(now), time.UTC)
 	store := cache.NewFile(filepath.Join(t.TempDir(), "today.json"), dayKeys)
+	return buildWith(http, store, dayKeys), store
+}
+
+func buildWith(http *httpscript.Client, store cache.Store, dayKeys *domain.DayKeyOwner) provider.Provider {
 	key := secret.New("fake-openrouter-key")
 	env := provider.Env{Config: config.Defaults(), HTTP: http, Cache: store, DayKeys: dayKeys}
 	env.Config.OpenRouter.APIKey = &key
-	return Build(env), store
+	return Build(env)
 }
 
 func TestSnapshot(t *testing.T) {
@@ -132,7 +136,7 @@ func TestBaselineDelta(t *testing.T) {
 		if got := snap.CostTodayUSD.String(); got != tc.cost {
 			t.Errorf("%s: cost %s", tc.name, got)
 		}
-		b := store.Baseline(domain.OpenRouter)
+		b, _ := store.Baseline(domain.OpenRouter)
 		if b == nil || b.Value != tc.baseline || b.Date != "2026-05-11" {
 			t.Errorf("%s: baseline %+v", tc.name, b)
 		}
@@ -175,7 +179,7 @@ func TestFailures(t *testing.T) {
 		if pe := domain.ProviderErrorFrom(err); pe.Kind != tc.kind {
 			t.Errorf("%s: %+v", tc.name, pe)
 		}
-		if store.Baseline(domain.OpenRouter) != nil {
+		if b, _ := store.Baseline(domain.OpenRouter); b != nil {
 			t.Errorf("%s: a failed fetch wrote a baseline", tc.name)
 		}
 	}
@@ -228,5 +232,79 @@ func TestIdentity(t *testing.T) {
 	}
 	if want := (domain.Capabilities{HasQuota: true, HasCost: true}); p.Capabilities() != want {
 		t.Errorf("caps %+v", p.Capabilities())
+	}
+}
+
+func costsOverRuns(t *testing.T, store cache.Store, dayKeys *domain.DayKeyOwner) []string {
+	t.Helper()
+	var costs []string
+	for i, usage := range []string{"10", "11", "12"} {
+		http := httpscript.New().Script(creditsKey, creditsJSON("100", usage)).Script(keyKey, fixture(t, "key.no_limit.json"))
+		snap, status, err := buildWith(http, store, dayKeys).Fetch(context.Background(), now)
+		if err != nil || status.Kind != domain.StatusOK {
+			t.Fatalf("run %d: %v %+v", i, err, status)
+		}
+		if snap.CostTodayUSD == nil {
+			costs = append(costs, "nil")
+		} else {
+			costs = append(costs, snap.CostTodayUSD.String())
+		}
+	}
+	return costs
+}
+
+func TestCostAcrossStoreStates(t *testing.T) {
+	const newer = `{"schemaVersion":4,"baselines":[]}`
+	const truncated = `{"schemaVersion":3,"provi`
+	for _, tc := range []struct {
+		name, seed string
+		want       []string
+		kept       bool
+	}{
+		{"missing", "", []string{"0", "1", "2"}, false},
+		{"newer schema reports no cost and keeps the file", newer, []string{"nil", "nil", "nil"}, true},
+		{"corrupt reports no cost once and then heals", truncated, []string{"nil", "1", "2"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "today.json")
+			if tc.seed != "" {
+				if err := os.WriteFile(path, []byte(tc.seed), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			dayKeys := domain.NewDayKeyOwner(clock.Fixed(now), time.UTC)
+			got := costsOverRuns(t, cache.NewFile(path, dayKeys), dayKeys)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("costs %v, want %v", got, tc.want)
+			}
+			if data, _ := os.ReadFile(path); tc.kept && string(data) != tc.seed {
+				t.Errorf("file changed: %s", data)
+			}
+		})
+	}
+}
+
+// unstoredBaseline reads like a healthy store but cannot keep what it is given.
+type unstoredBaseline struct {
+	cache.Noop
+	record *domain.BaselineRecord
+}
+
+func (s unstoredBaseline) Baseline(domain.ProviderID) (*domain.BaselineRecord, bool) {
+	return s.record, true
+}
+
+func (unstoredBaseline) MaintainBaseline(domain.ProviderID, time.Time, float64) error {
+	return errors.New("not stored")
+}
+
+func TestCostWhenTheBaselineCannotBeStored(t *testing.T) {
+	dayKeys := domain.NewDayKeyOwner(clock.Fixed(now), time.UTC)
+	if got := costsOverRuns(t, unstoredBaseline{}, dayKeys); !reflect.DeepEqual(got, []string{"nil", "nil", "nil"}) {
+		t.Errorf("no baseline: %v", got)
+	}
+	today := &domain.BaselineRecord{Value: 9, Date: dayKeys.KeyFor(now)}
+	if got := costsOverRuns(t, unstoredBaseline{record: today}, dayKeys); !reflect.DeepEqual(got, []string{"1", "2", "3"}) {
+		t.Errorf("today's baseline still measures: %v", got)
 	}
 }

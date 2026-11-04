@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,6 +26,15 @@ func newStore(t *testing.T) (*File, string) {
 
 func cursorsOf(s *File) Cursors { return fileCursors{s} }
 
+func baselineOf(t *testing.T, s *File, id domain.ProviderID) *domain.BaselineRecord {
+	t.Helper()
+	b, available := s.Baseline(id)
+	if !available {
+		t.Fatal("baseline unavailable")
+	}
+	return b
+}
+
 func write(t *testing.T, path, body string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
@@ -39,7 +49,7 @@ const state = `{"id":"claude","displayName":"Claude","status":{"unauthenticated"
 
 func TestFreshStoreIsEmptyAndCreatesNothing(t *testing.T) {
 	s, path := newStore(t)
-	if len(s.LoadAll()) != 0 || len(cursorsOf(s).AllTranscriptOffsets()) != 0 || s.Baseline(domain.Claude) != nil {
+	if len(s.LoadAll()) != 0 || len(cursorsOf(s).AllTranscriptOffsets()) != 0 || baselineOf(t, s, domain.Claude) != nil {
 		t.Error("not empty")
 	}
 	if _, err := os.Stat(filepath.Dir(path)); err == nil {
@@ -73,20 +83,20 @@ func TestLoadsEverySchemaVersion(t *testing.T) {
 func TestBaselineRules(t *testing.T) {
 	s, _ := newStore(t)
 	s.MaintainBaseline(domain.OpenRouter, day1, 10)
-	b := s.Baseline(domain.OpenRouter)
+	b := baselineOf(t, s, domain.OpenRouter)
 	if b.Value != 10 || b.LastValue != 10 || b.Date != "2026-03-14" {
 		t.Errorf("cold start: %+v", b)
 	}
 	s.MaintainBaseline(domain.OpenRouter, day1, 15)
-	if b = s.Baseline(domain.OpenRouter); b.Value != 10 || b.LastValue != 15 {
+	if b = baselineOf(t, s, domain.OpenRouter); b.Value != 10 || b.LastValue != 15 {
 		t.Errorf("same day: %+v", b)
 	}
 	s.MaintainBaseline(domain.OpenRouter, day1, 7)
-	if b = s.Baseline(domain.OpenRouter); b.Value != 7 || b.LastValue != 7 {
+	if b = baselineOf(t, s, domain.OpenRouter); b.Value != 7 || b.LastValue != 7 {
 		t.Errorf("negative delta: %+v", b)
 	}
 	s.MaintainBaseline(domain.OpenRouter, day2, 20)
-	if b = s.Baseline(domain.OpenRouter); b.Value != 20 || b.Date != "2026-03-15" {
+	if b = baselineOf(t, s, domain.OpenRouter); b.Value != 20 || b.Date != "2026-03-15" {
 		t.Errorf("next day: %+v", b)
 	}
 }
@@ -158,7 +168,7 @@ func TestWritesLeaveOtherSectionsAndProviderBytesIntact(t *testing.T) {
 	if !strings.Contains(string(data), `"providers":`+providers) {
 		t.Errorf("provider bytes changed: %s", data)
 	}
-	if s.Baseline("grok") == nil || len(cursorsOf(s).AllTranscriptOffsets()) != 2 {
+	if baselineOf(t, s, "grok") == nil || len(cursorsOf(s).AllTranscriptOffsets()) != 2 {
 		t.Error("a write clobbered a section")
 	}
 	if len(s.LoadAll()) != 1 {
@@ -243,48 +253,167 @@ func TestWritesKeepTheAppsProviderRowsVerbatim(t *testing.T) {
 	}
 }
 
-func TestUnusableFileIsNeverWritten(t *testing.T) {
-	for name, body := range map[string]string{
-		"newer schema": `{"schemaVersion":4,"providers":[],"baselines":["openrouter",{"value":1}],"transcripts":{},"dailyUsage":[],"futureSection":{"a":1}}`,
-		"truncated":    `{"schemaVersion":3,"providers":[],"base`,
-	} {
+func exerciseEveryWriter(t *testing.T, s *File) {
+	t.Helper()
+	if err := s.MaintainBaseline(domain.OpenRouter, day1, 10); err != nil && !errors.Is(err, errUnusable) {
+		t.Fatal(err)
+	}
+	err := s.WithCursors(func(c Cursors) {
+		c.SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/a", ByteOffset: 1, LastModified: day1}})
+		c.AccumulateDailyUsage(domain.Claude, day1, 7, decimal.MustParse("0.5"), map[string]int{"s": 7})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNewerSchemaIsNeverWrittenOrMoved(t *testing.T) {
+	body := `{"schemaVersion":4,"providers":[],"baselines":["openrouter",{"value":1}],"transcripts":{},"dailyUsage":[],"futureSection":{"a":1}}`
+	s, path := newStore(t)
+	write(t, path, body)
+	stamp := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+	if err := os.Chtimes(path, stamp, stamp); err != nil {
+		t.Fatal(err)
+	}
+	if _, available := s.Baseline(domain.OpenRouter); available {
+		t.Error("baseline from a newer schema")
+	}
+	if err := s.MaintainBaseline(domain.OpenRouter, day1, 10); !errors.Is(err, errUnusable) {
+		t.Errorf("MaintainBaseline: %v", err)
+	}
+	err := s.WithCursors(func(c Cursors) {
+		if len(c.AllTranscriptOffsets()) != 0 {
+			t.Error("cursors from a newer schema")
+		}
+		c.SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/a", ByteOffset: 1, LastModified: day1}})
+		if got := c.AccumulateDailyUsage(domain.Claude, day1, 7, decimal.MustParse("0.5"), map[string]int{"s": 7}); got.Tokens != 7 || got.SessionTokens["s"] != 7 {
+			t.Errorf("delta must pass through: %+v", got)
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != body || !info.ModTime().Equal(stamp) {
+		t.Fatalf("file changed: %s", data)
+	}
+	if _, err := os.Stat(path + ".corrupt"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("a newer schema was moved aside")
+	}
+}
+
+var corruptBodies = map[string]string{
+	"truncated":              `{"schemaVersion":3,"providers":[],"base`,
+	"empty":                  ``,
+	"not an object":          `[]`,
+	"no schema":              `{"providers":[]}`,
+	"schema zero":            `{"schemaVersion":0,"providers":[],"baselines":[]}`,
+	"v3 missing a section":   `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{}}`,
+	"one bad cursor":         `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{"/good":{"url":"/good","byteOffset":500,"lastModified":1},"/bad":{"url":"/bad","byteOffset":-1,"lastModified":1}},"dailyUsage":["claude",{"date":"2026-03-14","tokens":5000,"costUSD":1}]}`,
+	"future-shape cursors":   `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{"/a":{"path":"/a","position":500}},"dailyUsage":["claude",{"date":"2026-03-14","tokens":5000,"costUSD":1}]}`,
+	"transcripts wrong type": `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":[],"dailyUsage":["claude",{"date":"2026-03-14","tokens":5000,"costUSD":1}]}`,
+	"baselines wrong type":   `{"schemaVersion":3,"providers":[],"baselines":{},"transcripts":{},"dailyUsage":[]}`,
+	"bad baseline":           `{"schemaVersion":3,"providers":[],"baselines":["openrouter",{"value":1}],"transcripts":{},"dailyUsage":[]}`,
+	"daily wrong type":       `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":{}}`,
+	"bad daily record":       `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":["claude",{"tokens":"x"}]}`,
+	"providers wrong type":   `{"schemaVersion":3,"providers":{},"baselines":[],"transcripts":{},"dailyUsage":[]}`,
+}
+
+func TestCorruptFileMovesAsideAndCountingRestartsOnce(t *testing.T) {
+	for name, body := range corruptBodies {
 		t.Run(name, func(t *testing.T) {
 			s, path := newStore(t)
 			write(t, path, body)
-			stamp := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
-			if err := os.Chtimes(path, stamp, stamp); err != nil {
+			if _, available := s.Baseline(domain.OpenRouter); available {
+				t.Error("baseline from a corrupt file")
+			}
+			if len(s.LoadAll()) != 0 {
+				t.Error("rows from a corrupt file")
+			}
+			if data, _ := os.ReadFile(path); string(data) != body {
+				t.Fatal("a read changed the file")
+			}
+
+			var first domain.DailyUsageRecord
+			err := s.WithCursors(func(c Cursors) {
+				if len(c.AllTranscriptOffsets()) != 0 {
+					t.Error("cursors survived")
+				}
+				c.SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/a", ByteOffset: 100, LastModified: day1}})
+				first = c.AccumulateDailyUsage(domain.Claude, day1, 100, decimal.MustParse("1"), nil)
+			})
+			if err != nil {
 				t.Fatal(err)
 			}
-			s.MaintainBaseline(domain.OpenRouter, day1, 10)
-			s.WithCursors(func(c Cursors) {
-				if len(c.AllTranscriptOffsets()) != 0 {
-					t.Error("cursors from an unusable file")
+			if first.Tokens != 100 {
+				t.Errorf("first run total %d, want the delta alone", first.Tokens)
+			}
+			if aside, err := os.ReadFile(path + ".corrupt"); err != nil || string(aside) != body {
+				t.Fatalf("original bytes lost: %v %q", err, aside)
+			}
+			err = s.WithCursors(func(c Cursors) {
+				if c.AllTranscriptOffsets()["/a"].ByteOffset != 100 {
+					t.Error("cursor did not persist")
 				}
-				c.SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/a", ByteOffset: 1, LastModified: day1}})
-				if got := c.AccumulateDailyUsage(domain.Claude, day1, 7, decimal.MustParse("0.5"), map[string]int{"s": 7}); got.Tokens != 7 || got.SessionTokens["s"] != 7 {
-					t.Errorf("delta must pass through: %+v", got)
+				if got := c.AccumulateDailyUsage(domain.Claude, day1, 5, decimal.MustParse("1"), nil); got.Tokens != 105 {
+					t.Errorf("later run total %d, want 105", got.Tokens)
 				}
 			})
-			data, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)
-			}
-			info, err := os.Stat(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if string(data) != body || !info.ModTime().Equal(stamp) {
-				t.Fatalf("file changed: %s", data)
 			}
 		})
 	}
 }
 
-func TestOneBadCursorSkipsOnlyThatEntry(t *testing.T) {
+func TestCorruptCopyKeepsOnlyTheLatest(t *testing.T) {
 	s, path := newStore(t)
-	write(t, path, `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{"/good":{"url":"/good","byteOffset":500,"lastModified":1},"/bad":{"url":"/bad","byteOffset":-1,"lastModified":1}},"dailyUsage":[]}`)
-	all := cursorsOf(s).AllTranscriptOffsets()
-	if len(all) != 1 || all["/good"].ByteOffset != 500 {
-		t.Fatalf("%+v", all)
+	write(t, path+".corrupt", "older damage")
+	write(t, path, "newer damage")
+	exerciseEveryWriter(t, s)
+	if aside, _ := os.ReadFile(path + ".corrupt"); string(aside) != "newer damage" {
+		t.Fatalf("%q", aside)
+	}
+	matches, _ := filepath.Glob(path + "*")
+	if len(matches) != 3 {
+		t.Fatalf("want store, lock, and one copy: %v", matches)
+	}
+}
+
+func TestCorruptFileInReadOnlyDirectoryPassesDeltaThrough(t *testing.T) {
+	skipIfRoot(t)
+	s, path := newStore(t)
+	write(t, path, "{broken")
+	write(t, path+".lock", "")
+	if err := os.Chmod(filepath.Dir(path), 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(filepath.Dir(path), 0o755) })
+	exerciseEveryWriter(t, s)
+	if data, _ := os.ReadFile(path); string(data) != "{broken" {
+		t.Fatalf("%q", data)
+	}
+}
+
+func TestBadProviderRowIsNotCorruption(t *testing.T) {
+	body := `{"schemaVersion":3,"providers":["x",{"id":"x"}],"baselines":[],"transcripts":{"/a":{"url":"/a","byteOffset":5,"lastModified":1}},"dailyUsage":[]}`
+	s, path := newStore(t)
+	write(t, path, body)
+	if err := s.WithCursors(func(c Cursors) {
+		if c.AllTranscriptOffsets()["/a"].ByteOffset != 5 {
+			t.Error("cursor lost")
+		}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path + ".corrupt"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("moved aside")
 	}
 }

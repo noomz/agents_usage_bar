@@ -121,6 +121,13 @@ def rows_grok_balance():
     ]
 
 
+def rows_openrouter_no_cost():
+    return [
+        state("openrouter", "OpenRouter", OK, snap("openrouter", balanceUSD=RawNumber("90.5"), quota=quota(9.5, 100),
+              periodSpendUSD={"day": RawNumber("1.25"), "week": RawNumber("8.1"), "month": RawNumber("31.4")})),
+    ]
+
+
 def rows_grok_nothing():
     return [
         state("grok", "Grok", OK, snap("grok", quota=quota(0.3, 1), balanceUSD=RawNumber("1"))),
@@ -208,6 +215,7 @@ def main(root):
     home("variants", rows_variants())
     home("grok-balance", rows_grok_balance())
     home("grok-nothing", rows_grok_nothing())
+    home("openrouter-no-cost", rows_openrouter_no_cost())
     home("schema1", rows_variants(), schema=1)
     home("schema2", rows_variants(), schema=2)
     home("schema9", rows_variants(), schema=9)

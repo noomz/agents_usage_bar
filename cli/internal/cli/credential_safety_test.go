@@ -134,11 +134,15 @@ func TestDegradedClaudeRowKeepsLocalTokens(t *testing.T) {
 
 func TestUnusableStoreSurvivesEveryLiveCommandAndStillReports(t *testing.T) {
 	t.Cleanup(func() { activeStyle = styleUS })
-	for name, body := range map[string]string{
-		"newer schema": `{"schemaVersion":4,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":[],"futureSection":{"a":1}}`,
-		"truncated":    `{"schemaVersion":3,"providers":[],"base`,
+	for _, tc := range []struct {
+		name, body string
+		corrupt    bool
+	}{
+		{"newer schema", `{"schemaVersion":4,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":[],"futureSection":{"a":1}}`, false},
+		{"truncated", `{"schemaVersion":3,"providers":[],"base`, true},
 	} {
-		t.Run(name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
+			body := tc.body
 			h := newHarness(t)
 			recordingServer(t, h)
 			store := h.Layout.CacheFile()
@@ -162,13 +166,19 @@ func TestUnusableStoreSurvivesEveryLiveCommandAndStillReports(t *testing.T) {
 				if _, _, code := h.run(args...); code != 0 {
 					t.Fatalf("%v: code=%d", args, code)
 				}
-				if changed := changedFiles(t, files); len(changed) != 0 {
+				if changed := changedFiles(t, files); !tc.corrupt && len(changed) != 0 {
 					t.Fatalf("%v changed the store", args)
 				}
 			}
 			out, _, code := h.run("usage", "claude", "--live", "--json")
 			if code != 0 || !strings.Contains(out, `"tokensToday" : 25`) {
 				t.Fatalf("code=%d: %s", code, out)
+			}
+			if tc.corrupt {
+				if aside, err := os.ReadFile(store + ".corrupt"); err != nil || string(aside) != body {
+					t.Fatalf("original bytes lost: %v", err)
+				}
+				return
 			}
 			if changed := changedFiles(t, files); len(changed) != 0 {
 				t.Fatal("--json changed the store")

@@ -129,13 +129,22 @@ func (p *Provider) get(ctx context.Context) (creditsResponse, keyResponse, error
 	return credits, key, keyErr
 }
 
-// todayCost is the delta from today's baseline. A cold start, a new day, or a refund is zero.
-func (p *Provider) todayCost(now time.Time, usage float64) float64 {
-	b := p.cache.Baseline(domain.OpenRouter)
-	if b == nil || b.Date != p.dayKeys.KeyFor(now) || usage < b.Value {
-		return 0
+// todayCost is the delta from today's baseline, and it records usage as the next baseline. A cold
+// start, a new day, or a refund is zero. It is nil when the store can neither supply a baseline
+// nor keep one: every later run would report zero too, and a false $0 reads as no spend.
+func (p *Provider) todayCost(now time.Time, usage float64) *decimal.Decimal {
+	b, available := p.cache.Baseline(domain.OpenRouter)
+	stored := p.cache.MaintainBaseline(domain.OpenRouter, now, usage) == nil
+	today := b != nil && b.Date == p.dayKeys.KeyFor(now)
+	if !available || (!today && !stored) {
+		return nil
 	}
-	return usage - b.Value
+	delta := 0.0
+	if today && usage >= b.Value {
+		delta = usage - b.Value
+	}
+	cost := decimal.FromFloat64(delta)
+	return &cost
 }
 
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
@@ -144,14 +153,13 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 		return domain.UsageSnapshot{}, domain.ProviderStatus{}, err
 	}
 	totalCredits, totalUsage := *credits.Data.TotalCredits, *credits.Data.TotalUsage
-	cost := decimal.FromFloat64(p.todayCost(now, totalUsage))
-	_ = p.cache.MaintainBaseline(domain.OpenRouter, now, totalUsage)
+	cost := p.todayCost(now, totalUsage)
 	balance := decimal.FromFloat64(totalCredits - totalUsage)
 
 	return domain.UsageSnapshot{
 		ProviderID:   domain.OpenRouter,
 		AsOf:         now,
-		CostTodayUSD: &cost,
+		CostTodayUSD: cost,
 		BalanceUSD:   &balance,
 		Quota:        quota(key, totalCredits, totalUsage),
 		Raw:          map[string]string{},

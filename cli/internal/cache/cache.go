@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/noomz/agents_usage_bar/cli/internal/applog"
 	"github.com/noomz/agents_usage_bar/cli/internal/decimal"
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"github.com/noomz/agents_usage_bar/cli/internal/swiftjson"
@@ -22,8 +23,9 @@ import (
 type Store interface {
 	// LoadAll returns every persisted provider row. A missing or unreadable cache is empty.
 	LoadAll() map[domain.ProviderID]domain.ProviderState
-	// Baseline returns the stored baseline for id, nil when none exists.
-	Baseline(id domain.ProviderID) *domain.BaselineRecord
+	// Baseline returns the stored baseline for id, nil when none exists. available is false when
+	// the file exists but cannot be used, so "none" cannot be known.
+	Baseline(id domain.ProviderID) (record *domain.BaselineRecord, available bool)
 	// MaintainBaseline sets a fresh baseline on a new day or a negative delta; otherwise it
 	// keeps the baseline and updates LastValue. Never call it inside WithCursors: it takes the
 	// same lock. An error means nothing was stored.
@@ -144,33 +146,59 @@ func (f *File) WithCursors(body func(Cursors)) error {
 // fileCursors is File's Cursors, handed out only under the lock.
 type fileCursors struct{ f *File }
 
-// envelope keeps sections raw so a run that only needs one section does not decode 1 MB of
-// transcript cursors, and a write leaves `providers` exactly as the app wrote it.
+// envelope keeps sections raw so a write leaves `providers` exactly as the app wrote it. The
+// decoded maps are nil after read and filled by load.
 type envelope struct {
 	providers   json.RawMessage
 	baselines   json.RawMessage
 	transcripts json.RawMessage
 	dailyUsage  json.RawMessage
+
+	baselineRecords map[string]domain.BaselineRecord
+	offsets         map[string]domain.TranscriptOffset
+	daily           map[string]domain.DailyUsageRecord
 }
 
-// load returns ok=false for a file that exists but cannot be used: corrupt, unreadable, or from a
-// newer schema. Such a file is never written, because a newer app owns its contents. A missing
-// file is an empty, writable envelope.
-func (f *File) load() (e *envelope, ok bool) {
+func emptyEnvelope() *envelope {
+	return &envelope{
+		baselineRecords: map[string]domain.BaselineRecord{},
+		offsets:         map[string]domain.TranscriptOffset{},
+		daily:           map[string]domain.DailyUsageRecord{},
+	}
+}
+
+type storeState int
+
+const (
+	// storeUsable includes a missing file, which the first write creates.
+	storeUsable storeState = iota
+	// storeCorrupt is a current or older schema that does not decode. Swift and Go both write by
+	// atomic rename, so a reader never sees a partial write and this is real damage.
+	storeCorrupt
+	// storeForeign is a newer schema, whose contents a newer app owns, or a file that cannot be
+	// read, whose contents are unknown. It is never written or moved.
+	storeForeign
+)
+
+// read checks the file's outline only, so `--cached` does not decode 1 MB of transcript cursors.
+func (f *File) read() (*envelope, storeState) {
 	data, err := os.ReadFile(f.path)
 	if errors.Is(err, os.ErrNotExist) {
-		return &envelope{}, true
+		return emptyEnvelope(), storeUsable
 	}
 	if err != nil {
-		return nil, false
+		return nil, storeForeign
 	}
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal(data, &top); err != nil {
-		return nil, false
+		return nil, storeCorrupt
 	}
 	var schema int
 	if err := json.Unmarshal(top["schemaVersion"], &schema); err != nil {
-		return nil, false
+		return nil, storeCorrupt
+	}
+	if schema > currentSchema {
+		return nil, storeForeign
 	}
 	// Later schemas add sections, so each version requires what it had when written.
 	required := map[int][]string{
@@ -179,14 +207,53 @@ func (f *File) load() (e *envelope, ok bool) {
 		3: {"providers", "baselines", "transcripts", "dailyUsage"},
 	}[schema]
 	if required == nil {
-		return nil, false
+		return nil, storeCorrupt
 	}
 	for _, key := range required {
 		if _, ok := top[key]; !ok {
-			return nil, false
+			return nil, storeCorrupt
 		}
 	}
-	return &envelope{providers: top["providers"], baselines: top["baselines"], transcripts: top["transcripts"], dailyUsage: top["dailyUsage"]}, true
+	return &envelope{providers: top["providers"], baselines: top["baselines"], transcripts: top["transcripts"], dailyUsage: top["dailyUsage"]}, storeUsable
+}
+
+// load also decodes what totals depend on. All or nothing, as Swift's decoder is: keeping the good
+// half of a section would pair a surviving daily total with lost cursors and recount those files.
+// Provider rows stay opaque because no total depends on them and the app owns them.
+func (f *File) load() (*envelope, storeState) {
+	e, state := f.read()
+	if state != storeUsable {
+		return e, state
+	}
+	var err error
+	if e.baselineRecords, err = decodeBaselines(e.baselines); err != nil {
+		return nil, storeCorrupt
+	}
+	if e.offsets, err = decodeOffsets(e.transcripts); err != nil {
+		return nil, storeCorrupt
+	}
+	if e.daily, err = decodeDaily(e.dailyUsage); err != nil {
+		return nil, storeCorrupt
+	}
+	if err := pairs(e.providers, func(string, any) error { return nil }); err != nil {
+		return nil, storeCorrupt
+	}
+	return e, storeUsable
+}
+
+// update is load for a lock holder. It moves a corrupt file aside and starts fresh, losing cursors
+// and daily totals together, so the next read recounts today once. ok is false when the store
+// cannot be written.
+func (f *File) update() (e *envelope, ok bool) {
+	e, state := f.load()
+	if state != storeCorrupt {
+		return e, state == storeUsable
+	}
+	if os.Rename(f.path, f.path+".corrupt") != nil {
+		return nil, false
+	}
+	applog.Logger.Warn("cache file corrupt; moved aside and starting fresh")
+	return emptyEnvelope(), true
 }
 
 func (f *File) write(e *envelope) error {
@@ -252,9 +319,9 @@ func pairs(raw json.RawMessage, visit func(key string, value any) error) error {
 }
 
 func (f *File) LoadAll() map[domain.ProviderID]domain.ProviderState {
-	e, ok := f.load()
+	e, state := f.read()
 	states := map[domain.ProviderID]domain.ProviderState{}
-	if !ok {
+	if state != storeUsable {
 		return states
 	}
 	err := pairs(e.providers, func(key string, value any) error {
@@ -271,9 +338,9 @@ func (f *File) LoadAll() map[domain.ProviderID]domain.ProviderState {
 	return states
 }
 
-func decodeBaselines(raw json.RawMessage) map[string]domain.BaselineRecord {
+func decodeBaselines(raw json.RawMessage) (map[string]domain.BaselineRecord, error) {
 	out := map[string]domain.BaselineRecord{}
-	_ = pairs(raw, func(key string, value any) error {
+	err := pairs(raw, func(key string, value any) error {
 		rec, err := domain.DecodeBaseline(value)
 		if err != nil {
 			return err
@@ -281,7 +348,20 @@ func decodeBaselines(raw json.RawMessage) map[string]domain.BaselineRecord {
 		out[key] = rec
 		return nil
 	})
-	return out
+	return out, err
+}
+
+func decodeDaily(raw json.RawMessage) (map[string]domain.DailyUsageRecord, error) {
+	out := map[string]domain.DailyUsageRecord{}
+	err := pairs(raw, func(key string, value any) error {
+		rec, err := domain.DecodeDailyUsage(value)
+		if err != nil {
+			return err
+		}
+		out[key] = rec
+		return nil
+	})
+	return out, err
 }
 
 // pairsOf re-encodes a dictionary in Swift's [key, value, ...] form with sorted keys.
@@ -299,15 +379,15 @@ func baselineTree(b domain.BaselineRecord) any {
 	}
 }
 
-func (f *File) Baseline(id domain.ProviderID) *domain.BaselineRecord {
-	e, ok := f.load()
-	if !ok {
-		return nil
+func (f *File) Baseline(id domain.ProviderID) (*domain.BaselineRecord, bool) {
+	e, state := f.load()
+	if state != storeUsable {
+		return nil, false
 	}
-	if rec, ok := decodeBaselines(e.baselines)[string(id)]; ok {
-		return &rec
+	if rec, ok := e.baselineRecords[string(id)]; ok {
+		return &rec, true
 	}
-	return nil
+	return nil, true
 }
 
 func (f *File) MaintainBaseline(id domain.ProviderID, now time.Time, currentValue float64) error {
@@ -316,51 +396,50 @@ func (f *File) MaintainBaseline(id domain.ProviderID, now time.Time, currentValu
 		return err
 	}
 	defer unlock()
-	e, ok := f.load()
+	e, ok := f.update()
 	if !ok {
 		return errUnusable
 	}
-	baselines := decodeBaselines(e.baselines)
 	today := f.dayKeys.KeyFor(now)
-	existing, ok := baselines[string(id)]
+	existing, ok := e.baselineRecords[string(id)]
 	base := currentValue
 	if ok && existing.Date == today && currentValue >= existing.Value {
 		base = existing.Value
 	}
-	baselines[string(id)] = domain.BaselineRecord{Value: base, Date: today, LastValue: currentValue, LastUpdated: now}
-	e.baselines = json.RawMessage(pairsOf(baselines, baselineTree))
+	e.baselineRecords[string(id)] = domain.BaselineRecord{Value: base, Date: today, LastValue: currentValue, LastUpdated: now}
+	e.baselines = json.RawMessage(pairsOf(e.baselineRecords, baselineTree))
 	return f.write(e)
 }
 
-func decodeOffsets(raw json.RawMessage) map[string]domain.TranscriptOffset {
+func decodeOffsets(raw json.RawMessage) (map[string]domain.TranscriptOffset, error) {
 	out := map[string]domain.TranscriptOffset{}
 	if len(raw) == 0 {
-		return out
+		return out, nil
 	}
 	tree, err := domain.ParseJSON(raw)
 	if err != nil {
-		return out
+		return nil, err
 	}
 	m, ok := tree.(map[string]any)
 	if !ok {
-		return out
+		return nil, errors.New("expected an object of cursors")
 	}
 	for key, value := range m {
-		// One bad entry skips one file's cursor. Dropping them all would recount every file on
-		// top of a daily total that survives.
-		if offset, err := domain.DecodeTranscriptOffset(value); err == nil {
-			out[key] = offset
+		offset, err := domain.DecodeTranscriptOffset(value)
+		if err != nil {
+			return nil, err
 		}
+		out[key] = offset
 	}
-	return out
+	return out, nil
 }
 
 func (c fileCursors) AllTranscriptOffsets() map[string]domain.TranscriptOffset {
-	e, ok := c.f.load()
+	e, ok := c.f.update()
 	if !ok {
 		return map[string]domain.TranscriptOffset{}
 	}
-	return decodeOffsets(e.transcripts)
+	return e.offsets
 }
 
 func (c fileCursors) SetTranscriptOffsets(offsets []domain.TranscriptOffset) {
@@ -368,16 +447,15 @@ func (c fileCursors) SetTranscriptOffsets(offsets []domain.TranscriptOffset) {
 		return
 	}
 	f := c.f
-	e, ok := f.load()
+	e, ok := f.update()
 	if !ok {
 		return
 	}
-	all := decodeOffsets(e.transcripts)
 	for _, o := range offsets {
-		all[o.URL] = o
+		e.offsets[o.URL] = o
 	}
-	tree := make(map[string]any, len(all))
-	for k, o := range all {
+	tree := make(map[string]any, len(e.offsets))
+	for k, o := range e.offsets {
 		tree[k] = map[string]any{"url": o.URL, "byteOffset": o.ByteOffset, "lastModified": domain.RefSeconds(o.LastModified)}
 	}
 	e.transcripts = json.RawMessage(swiftjson.Encode(tree, swiftjson.Options{}))
@@ -402,28 +480,19 @@ func (c fileCursors) AccumulateDailyUsage(id domain.ProviderID, now time.Time, d
 		next.SessionTokens[k] = v
 	}
 	// With no readable cursors the delta is the whole day, so it is already the total.
-	e, ok := f.load()
+	e, ok := f.update()
 	if !ok {
 		return next
 	}
-	records := map[string]domain.DailyUsageRecord{}
-	_ = pairs(e.dailyUsage, func(key string, value any) error {
-		rec, err := domain.DecodeDailyUsage(value)
-		if err != nil {
-			return err
-		}
-		records[key] = rec
-		return nil
-	})
-	if existing, ok := records[string(id)]; ok && existing.Date == today {
+	if existing, ok := e.daily[string(id)]; ok && existing.Date == today {
 		next.Tokens += existing.Tokens
 		next.CostUSD = existing.CostUSD.Add(deltaCostUSD)
 		for k, v := range existing.SessionTokens {
 			next.SessionTokens[k] += v
 		}
 	}
-	records[string(id)] = next
-	e.dailyUsage = json.RawMessage(pairsOf(records, dailyTree))
+	e.daily[string(id)] = next
+	e.dailyUsage = json.RawMessage(pairsOf(e.daily, dailyTree))
 	_ = f.write(e)
 	return next
 }
@@ -435,7 +504,7 @@ func (Noop) LoadAll() map[domain.ProviderID]domain.ProviderState {
 	return map[domain.ProviderID]domain.ProviderState{}
 }
 
-func (Noop) Baseline(domain.ProviderID) *domain.BaselineRecord { return nil }
+func (Noop) Baseline(domain.ProviderID) (*domain.BaselineRecord, bool) { return nil, true }
 
 func (Noop) MaintainBaseline(domain.ProviderID, time.Time, float64) error { return nil }
 
