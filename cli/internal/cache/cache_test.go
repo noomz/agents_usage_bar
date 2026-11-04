@@ -312,7 +312,6 @@ func TestNewerSchemaIsNeverWrittenOrMoved(t *testing.T) {
 var corruptBodies = map[string]string{
 	"truncated":              `{"schemaVersion":3,"providers":[],"base`,
 	"empty":                  ``,
-	"not an object":          `[]`,
 	"no schema":              `{"providers":[]}`,
 	"schema zero":            `{"schemaVersion":0,"providers":[],"baselines":[]}`,
 	"v3 missing a section":   `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{}}`,
@@ -376,9 +375,9 @@ func TestCorruptFileMovesAsideAndCountingRestartsOnce(t *testing.T) {
 func TestCorruptCopyKeepsOnlyTheLatest(t *testing.T) {
 	s, path := newStore(t)
 	write(t, path+".corrupt", "older damage")
-	write(t, path, "newer damage")
+	write(t, path, `{"newer":"damage`)
 	exerciseEveryWriter(t, s)
-	if aside, _ := os.ReadFile(path + ".corrupt"); string(aside) != "newer damage" {
+	if aside, _ := os.ReadFile(path + ".corrupt"); string(aside) != `{"newer":"damage` {
 		t.Fatalf("%q", aside)
 	}
 	matches, _ := filepath.Glob(path + "*")
@@ -423,5 +422,79 @@ func TestBadProviderRowIsNotCorruption(t *testing.T) {
 	}
 	if _, err := os.Stat(path + ".corrupt"); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("moved aside")
+	}
+}
+
+const (
+	oneBaseline = `["openrouter",{"value":1,"date":"2026-03-14","lastValue":1,"lastUpdated":1}]`
+)
+
+// Each body is one Swift's decoder may accept, so Go keeps the bytes where they are.
+var foreignOrIgnoredBodies = map[string]struct {
+	body    string
+	foreign bool
+}{
+	"v4 point zero":       {`{"schemaVersion":4.0,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":[]}`, true},
+	"huge version":        {`{"schemaVersion":1000000000000000000000000000000,"providers":[],"baselines":[]}`, true},
+	"exponent version":    {`{"schemaVersion":4e0,"providers":[],"baselines":[]}`, true},
+	"utf8 bom":            {"\xef\xbb\xbf" + `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":[]}`, true},
+	"utf16 bom":           {"\xff\xfe{\x00\"\x00", true},
+	"utf16 no bom":        {"{\x00\"\x00s\x00", true},
+	"not an object":       {`[]`, true},
+	"offset beyond int64": {`{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{"/a":{"url":"/a","byteOffset":99999999999999999999,"lastModified":1}},"dailyUsage":[]}`, true},
+	"tokens beyond int64": {`{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":["claude",{"date":"2026-03-14","tokens":1e30,"costUSD":1}]}`, true},
+	"session tokens huge": {`{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":["claude",{"date":"2026-03-14","tokens":1,"costUSD":1,"sessionTokens":{"s":1e30}}]}`, true},
+}
+
+func TestForeignLookingStoresAreNeverMovedOrWritten(t *testing.T) {
+	for name, c := range foreignOrIgnoredBodies {
+		t.Run(name, func(t *testing.T) {
+			s, path := newStore(t)
+			write(t, path, c.body)
+			if err := s.MaintainBaseline(domain.OpenRouter, day1, 10); !errors.Is(err, errUnusable) {
+				t.Errorf("MaintainBaseline: %v", err)
+			}
+			err := s.WithCursors(func(c Cursors) {
+				c.SetTranscriptOffsets([]domain.TranscriptOffset{{URL: "/a", ByteOffset: 1, LastModified: day1}})
+				c.AccumulateDailyUsage(domain.Claude, day1, 7, decimal.MustParse("0.5"), nil)
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if data, _ := os.ReadFile(path); string(data) != c.body {
+				t.Fatalf("file changed: %q", data)
+			}
+			if _, err := os.Stat(path + ".corrupt"); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("moved aside")
+			}
+		})
+	}
+}
+
+func TestOlderSchemaIgnoresSectionsItNeverHad(t *testing.T) {
+	bad := map[string]string{
+		"v1 bad transcripts":  `{"schemaVersion":1,"providers":[],"baselines":[],"transcripts":"x"}`,
+		"v1 null transcripts": `{"schemaVersion":1.0,"providers":[],"baselines":[],"transcripts":null}`,
+		"v1 bad daily":        `{"schemaVersion":1,"providers":[],"baselines":[],"dailyUsage":{"a":1}}`,
+		"v2 bad daily":        `{"schemaVersion":2,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":["odd"]}`,
+		"v2 daily string":     `{"schemaVersion":2,"providers":[],"baselines":[],"transcripts":{},"dailyUsage":"x"}`,
+		"v3 point zero":       `{"schemaVersion":3.0,"providers":[],"baselines":[` + oneBaseline[1:len(oneBaseline)-1] + `],"transcripts":{},"dailyUsage":[]}`,
+		"v3 exponent offset":  `{"schemaVersion":3,"providers":[],"baselines":[],"transcripts":{"/a":{"url":"/a","byteOffset":1e16,"lastModified":1}},"dailyUsage":[]}`,
+	}
+	for name, body := range bad {
+		t.Run(name, func(t *testing.T) {
+			s, path := newStore(t)
+			write(t, path, body)
+			if err := s.MaintainBaseline(domain.OpenRouter, day1, 10); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(path + ".corrupt"); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("a usable store was moved aside")
+			}
+			data, _ := os.ReadFile(path)
+			if strings.Contains(string(data), `"x"`) || strings.Contains(string(data), `"odd"`) {
+				t.Fatalf("ignored section was carried forward: %s", data)
+			}
+		})
 	}
 }

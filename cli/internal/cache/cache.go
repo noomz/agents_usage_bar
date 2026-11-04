@@ -6,8 +6,10 @@
 package cache
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"math/big"
 	"os"
 	"path/filepath"
 	"sync"
@@ -189,32 +191,60 @@ func (f *File) read() (*envelope, storeState) {
 	if err != nil {
 		return nil, storeForeign
 	}
+	if len(data) == 0 {
+		return nil, storeCorrupt
+	}
+	// Anything not shaped like JSON text (a BOM, UTF-16, which holds NUL bytes) may be a file Swift reads, so it stays put.
+	if trimmed := bytes.TrimLeft(data, " \t\r\n"); len(trimmed) == 0 || trimmed[0] != '{' || bytes.IndexByte(data, 0) >= 0 {
+		return nil, storeForeign
+	}
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal(data, &top); err != nil {
 		return nil, storeCorrupt
 	}
-	var schema int
-	if err := json.Unmarshal(top["schemaVersion"], &schema); err != nil {
-		return nil, storeCorrupt
+	schema, state := parseSchema(top["schemaVersion"])
+	if state != storeUsable {
+		return nil, state
 	}
-	if schema > currentSchema {
-		return nil, storeForeign
-	}
-	// Later schemas add sections, so each version requires what it had when written.
+	// Later schemas add sections, and a reader of an older schema ignores the newer ones.
 	required := map[int][]string{
 		1: {"providers", "baselines"},
 		2: {"providers", "baselines", "transcripts"},
 		3: {"providers", "baselines", "transcripts", "dailyUsage"},
 	}[schema]
-	if required == nil {
-		return nil, storeCorrupt
-	}
 	for _, key := range required {
 		if _, ok := top[key]; !ok {
 			return nil, storeCorrupt
 		}
 	}
-	return &envelope{providers: top["providers"], baselines: top["baselines"], transcripts: top["transcripts"], dailyUsage: top["dailyUsage"]}, storeUsable
+	e := &envelope{providers: top["providers"], baselines: top["baselines"]}
+	if schema >= 2 {
+		e.transcripts = top["transcripts"]
+	}
+	if schema >= 3 {
+		e.dailyUsage = top["dailyUsage"]
+	}
+	return e, storeUsable
+}
+
+// parseSchema reads the version as a number, so 3.0 is 3. A version above the current one, or too
+// large to parse, belongs to a newer app.
+func parseSchema(raw json.RawMessage) (int, storeState) {
+	var n json.Number
+	if json.Unmarshal(raw, &n) != nil {
+		return 0, storeCorrupt
+	}
+	r, ok := new(big.Rat).SetString(n.String())
+	if !ok {
+		return 0, storeForeign
+	}
+	if !r.IsInt() || r.Sign() <= 0 {
+		return 0, storeCorrupt
+	}
+	if r.Cmp(big.NewRat(currentSchema, 1)) > 0 {
+		return 0, storeForeign
+	}
+	return int(r.Num().Int64()), storeUsable
 }
 
 // load also decodes what totals depend on. All or nothing, as Swift's decoder is: keeping the good
@@ -227,18 +257,25 @@ func (f *File) load() (*envelope, storeState) {
 	}
 	var err error
 	if e.baselineRecords, err = decodeBaselines(e.baselines); err != nil {
-		return nil, storeCorrupt
+		return nil, loadFailure(err)
 	}
 	if e.offsets, err = decodeOffsets(e.transcripts); err != nil {
-		return nil, storeCorrupt
+		return nil, loadFailure(err)
 	}
 	if e.daily, err = decodeDaily(e.dailyUsage); err != nil {
-		return nil, storeCorrupt
+		return nil, loadFailure(err)
 	}
 	if err := pairs(e.providers, func(string, any) error { return nil }); err != nil {
 		return nil, storeCorrupt
 	}
 	return e, storeUsable
+}
+
+func loadFailure(err error) storeState {
+	if errors.Is(err, domain.ErrIntRange) {
+		return storeForeign
+	}
+	return storeCorrupt
 }
 
 // update is load for a lock holder. It moves a corrupt file aside and starts fresh, losing cursors

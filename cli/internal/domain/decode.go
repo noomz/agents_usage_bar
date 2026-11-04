@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"strconv"
 	"time"
 
@@ -104,6 +105,10 @@ func (r *reader) reqBool(key string) bool {
 	return b
 }
 
+// ErrIntRange marks an integer-valued number too large for Int. Swift's decoder may accept
+// these, so a store holding one is foreign, not corrupt.
+var ErrIntRange = errors.New("integer out of range")
+
 func numberInt(v any) (int, bool) {
 	n, ok := v.(json.Number)
 	if !ok {
@@ -112,11 +117,31 @@ func numberInt(v any) (int, bool) {
 	if i, err := strconv.ParseInt(n.String(), 10, 64); err == nil {
 		return int(i), true
 	}
-	f, err := n.Float64()
-	if err != nil || f != math.Trunc(f) || math.Abs(f) > 1<<53 {
+	r, ok := new(big.Rat).SetString(n.String())
+	if !ok || !r.IsInt() || !r.Num().IsInt64() {
 		return 0, false
 	}
-	return int(f), true
+	return int(r.Num().Int64()), true
+}
+
+// intRange reports a number that numberInt rejected only for its size.
+func intRange(v any) bool {
+	n, ok := v.(json.Number)
+	if !ok {
+		return false
+	}
+	r, ok := new(big.Rat).SetString(n.String())
+	return !ok || (r.IsInt() && !r.Num().IsInt64())
+}
+
+func (r *reader) failInt(key string, v any) {
+	if intRange(v) {
+		if r.err == nil {
+			r.err = fmt.Errorf("key %q: %w", key, ErrIntRange)
+		}
+		return
+	}
+	r.fail(key)
 }
 
 func (r *reader) reqInt(key string) int {
@@ -127,7 +152,7 @@ func (r *reader) reqInt(key string) int {
 	}
 	i, ok := numberInt(v)
 	if !ok {
-		r.fail(key)
+		r.failInt(key, v)
 	}
 	return i
 }
@@ -139,7 +164,7 @@ func (r *reader) optInt(key string) *int {
 	}
 	i, ok := numberInt(v)
 	if !ok {
-		r.fail(key)
+		r.failInt(key, v)
 		return nil
 	}
 	return &i
@@ -537,6 +562,9 @@ func DecodeDailyUsage(v any) (DailyUsageRecord, error) {
 		for k, x := range sv.(map[string]any) {
 			n, ok := numberInt(x)
 			if !ok {
+				if intRange(x) {
+					return d, fmt.Errorf("session tokens: %w", ErrIntRange)
+				}
 				return d, errors.New("session tokens must be integers")
 			}
 			d.SessionTokens[k] = n
