@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "lastUpdated": "2026-05-15",
+  "source": "https://openai.com/api/pricing/ — reviewer checkpoint deferred (page 403 at research time per RESEARCH §Embedded Pricing); draft values from RESEARCH §Embedded Pricing accepted as best-effort under T-03.02-03 (JSON is a runtime bundle resource and can be patched without recompile)",
+  "default": {
+    "inputPerMToken":        0.750,
+    "outputPerMToken":       3.000,
+    "cachedInputPerMToken":  0.025
+  },
+  "models": {
+    "codex-mini-latest": { "inputPerMToken": 0.750, "outputPerMToken": 3.000, "cachedInputPerMToken": 0.025 },
+    "o4-mini":           { "inputPerMToken": 1.100, "outputPerMToken": 4.400, "cachedInputPerMToken": 0.275 },
+    "o3":                { "inputPerMToken": 2.000, "outputPerMToken": 8.000, "cachedInputPerMToken": 0.500 },
+    "o3-mini":           { "inputPerMToken": 1.100, "outputPerMToken": 4.400, "cachedInputPerMToken": 0.550 },
+    "gpt-4.1":           { "inputPerMToken": 2.000, "outputPerMToken": 8.000, "cachedInputPerMToken": 0.500 },
+    "gpt-4.1-mini":      { "inputPerMToken": 0.200, "outputPerMToken": 0.800, "cachedInputPerMToken": 0.100 },
+    "gpt-4.1-nano":      { "inputPerMToken": 0.050, "outputPerMToken": 0.200, "cachedInputPerMToken": 0.025 }
+  }
+}

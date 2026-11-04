@@ -1,0 +1,208 @@
+// Package gemini reports per-model quota from the Code Assist API for OAuth-personal logins.
+//
+// gemini-cli owns ~/.gemini/oauth_creds.json. This package only reads it: an expired access token
+// waits for gemini-cli to refresh the file, and the row is an error until then.
+package gemini
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"time"
+
+	"github.com/noomz/agents_usage_bar/cli/internal/domain"
+	"github.com/noomz/agents_usage_bar/cli/internal/provider"
+	"github.com/noomz/agents_usage_bar/cli/internal/secret"
+)
+
+const (
+	quotaURL = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
+)
+
+var (
+	errNotSignedIn   = errors.New("not signed in to Gemini")
+	errTokenUnusable = errors.New("Gemini access token is expired or rejected")
+)
+
+var headers = map[string]string{"Accept": "application/json", "User-Agent": "Agents-Usage-Bar/1.0"}
+
+// credentials is ~/.gemini/oauth_creds.json. access_token may be absent, because gemini-cli can
+// clear it after a failed refresh. expiry_date is epoch milliseconds.
+type credentials struct {
+	accessToken *secret.Secret
+	expiry      time.Time
+}
+
+// Format redacts: fmt cannot reach Secret's own Format through an unexported field.
+func (credentials) Format(f fmt.State, _ rune) { _, _ = f.Write([]byte("<redacted>")) }
+
+// loadCredentials returns nil when the file is absent, malformed, or missing a required field.
+func loadCredentials(path string) *credentials {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	// scope, id_token, and token_type are declared so a mistyped one rejects the file, as Swift's
+	// Decodable does.
+	var raw struct {
+		AccessToken  *string  `json:"access_token"`
+		RefreshToken *string  `json:"refresh_token"`
+		Scope        *string  `json:"scope"`
+		IDToken      *string  `json:"id_token"`
+		ExpiryDate   *float64 `json:"expiry_date"`
+		TokenType    *string  `json:"token_type"`
+	}
+	if json.Unmarshal(data, &raw) != nil || raw.RefreshToken == nil || raw.ExpiryDate == nil {
+		return nil
+	}
+	creds := &credentials{
+		expiry: time.UnixMilli(0).Add(time.Duration(*raw.ExpiryDate * float64(time.Millisecond))),
+	}
+	if raw.AccessToken != nil {
+		token := secret.New(*raw.AccessToken)
+		creds.accessToken = &token
+	}
+	return creds
+}
+
+// isOAuthPersonal is the gate: security.auth.selectedType must be exactly "oauth-personal". There
+// is deliberately no fall-through to a flat key.
+func isOAuthPersonal(path string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	var top map[string]any
+	if json.Unmarshal(data, &top) != nil {
+		return false
+	}
+	security, _ := top["security"].(map[string]any)
+	auth, _ := security["auth"].(map[string]any)
+	return auth["selectedType"] == "oauth-personal"
+}
+
+type Provider struct {
+	env       provider.Env
+	credsPath string
+}
+
+// Build registers Gemini when settings select oauth-personal and the credentials file is usable.
+func Build(env provider.Env) provider.Provider {
+	dir := filepath.Join(env.Paths.Home, ".gemini")
+	credsPath := filepath.Join(dir, "oauth_creds.json")
+	if !isOAuthPersonal(filepath.Join(dir, "settings.json")) || loadCredentials(credsPath) == nil {
+		return nil
+	}
+	return &Provider{env: env, credsPath: credsPath}
+}
+
+func (p *Provider) ID() domain.ProviderID { return domain.Gemini }
+
+func (p *Provider) DisplayName() string { return "Gemini" }
+
+func (p *Provider) Capabilities() domain.Capabilities { return domain.Capabilities{HasQuota: true} }
+
+// bearer returns the file's access token while it is unexpired.
+func (p *Provider) bearer(now time.Time) (secret.Secret, error) {
+	creds := loadCredentials(p.credsPath)
+	if creds == nil {
+		return secret.Secret{}, errNotSignedIn
+	}
+	if t := creds.accessToken; t != nil && *t != (secret.Secret{}) && now.Before(creds.expiry) {
+		return *t, nil
+	}
+	return secret.Secret{}, errTokenUnusable
+}
+
+// quotaBucket is one entry of retrieveUserQuota, whose keys are camelCase on the wire.
+type quotaBucket struct {
+	RemainingFraction *float64 `json:"remainingFraction"`
+	ResetTime         *string  `json:"resetTime"`
+	ModelID           *string  `json:"modelId"`
+	TokenType         *string  `json:"tokenType"`
+	RemainingAmount   *string  `json:"remainingAmount"`
+}
+
+type quotaResponse struct {
+	Buckets []quotaBucket `json:"buckets"`
+}
+
+func (p *Provider) fetchQuota(ctx context.Context, bearer secret.Secret) (quotaResponse, error) {
+	var response quotaResponse
+	err := p.env.HTTP.PostJSON(ctx, quotaURL, map[string]string{"project": ""}, &bearer, headers, &response)
+	return response, err
+}
+
+// No credentials is a muted row. A token that is expired or
+// rejected is an error. Any other failure is a degraded row, so a flaky v1internal never reports
+// as a provider error to the session.
+func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
+	bearer, err := p.bearer(now)
+	if errors.Is(err, errNotSignedIn) {
+		return p.muted(now, false), domain.Unauthenticated(), nil
+	}
+	if err != nil {
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, err
+	}
+
+	quota, err := p.fetchQuota(ctx, bearer)
+	var status domain.HTTPError
+	if errors.As(err, &status) && status.Status == 401 {
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, errTokenUnusable
+	}
+	if err != nil {
+		return p.muted(now, true), domain.Errored(domain.ProviderErrorFrom(err)), nil
+	}
+
+	windows := foldBuckets(quota.Buckets)
+	snap := domain.UsageSnapshot{ProviderID: domain.Gemini, AsOf: now, Raw: map[string]string{"source": "v1internal"}}
+	if len(windows) > 0 {
+		snap.QuotaWindows = windows
+		worst := *windows[0].Utilization
+		for _, w := range windows {
+			worst = max(worst, *w.Utilization)
+		}
+		q := domain.UnitQuota(worst)
+		snap.Quota = &q
+	}
+	return snap, domain.OK(now), nil
+}
+
+// foldBuckets keeps the lowest remaining fraction per model, sorted by model.
+func foldBuckets(buckets []quotaBucket) []domain.QuotaWindow {
+	lowest := map[string]quotaBucket{}
+	for _, b := range buckets {
+		if b.ModelID == nil || b.RemainingFraction == nil {
+			continue
+		}
+		if existing, ok := lowest[*b.ModelID]; ok && *existing.RemainingFraction <= *b.RemainingFraction {
+			continue
+		}
+		lowest[*b.ModelID] = b
+	}
+	windows := make([]domain.QuotaWindow, 0, len(lowest))
+	for model, b := range lowest {
+		utilization := 1 - *b.RemainingFraction
+		w := domain.QuotaWindow{Name: model, Utilization: &utilization}
+		if b.ResetTime != nil {
+			if reset, err := time.Parse(time.RFC3339Nano, *b.ResetTime); err == nil {
+				w.ResetsAt = &reset
+			}
+		}
+		windows = append(windows, w)
+	}
+	sort.Slice(windows, func(i, j int) bool { return windows[i].Name < windows[j].Name })
+	return windows
+}
+
+func (p *Provider) muted(now time.Time, tagged bool) domain.UsageSnapshot {
+	raw := map[string]string{"status": "no-data-yet"}
+	if tagged {
+		raw["note"] = domain.DegradedNote
+	}
+	return domain.UsageSnapshot{ProviderID: domain.Gemini, AsOf: now, Raw: raw}
+}

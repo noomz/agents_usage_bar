@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "lastUpdated": "2026-05-13",
+  "source": "https://platform.claude.com/docs/en/about-claude/pricing + ClaudeBar ModelPricing.swift",
+  "default": {
+    "inputPer1M":      3.00,
+    "outputPer1M":     15.00,
+    "cacheWritePer1M": 3.75,
+    "cacheReadPer1M":  0.30
+  },
+  "models": {
+    "claude-opus-4-7":            { "inputPer1M": 15.00, "outputPer1M": 75.00, "cacheWritePer1M": 18.75, "cacheReadPer1M": 1.50 },
+    "claude-opus-4-5":            { "inputPer1M":  5.00, "outputPer1M": 25.00, "cacheWritePer1M":  6.25, "cacheReadPer1M": 0.50 },
+    "claude-sonnet-4-6":          { "inputPer1M":  3.00, "outputPer1M": 15.00, "cacheWritePer1M":  3.75, "cacheReadPer1M": 0.30 },
+    "claude-sonnet-4-5":          { "inputPer1M":  3.00, "outputPer1M": 15.00, "cacheWritePer1M":  3.75, "cacheReadPer1M": 0.30 },
+    "claude-haiku-4-5":           { "inputPer1M":  1.00, "outputPer1M":  5.00, "cacheWritePer1M":  1.25, "cacheReadPer1M": 0.10 },
+    "claude-3-5-sonnet-20241022": { "inputPer1M":  3.00, "outputPer1M": 15.00, "cacheWritePer1M":  3.75, "cacheReadPer1M": 0.30 },
+    "claude-3-5-haiku-20241022":  { "inputPer1M":  0.80, "outputPer1M":  4.00, "cacheWritePer1M":  1.00, "cacheReadPer1M": 0.08 }
+  }
+}

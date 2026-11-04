@@ -154,7 +154,7 @@ ln -sf "/Applications/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar" ~/.local
 ```
 
 ```
-aub                         # menu-bar cache (same layout as the popover; fast)
+aub                         # menu-bar cache (same layout as the popover; fast); live when the cache has no rows
 aub --live                  # fetch providers now
 aub usage --json            # cached snapshot, machine-readable
 aub quota claude            # limits + reset windows (cache)
@@ -162,10 +162,47 @@ aub dashboard [provider]    # open the dashboard window (agentsusagebar://dashbo
 aub settings                # list keys
 aub settings get threshold
 aub settings set threshold 0.70
-aub usage --cached          # same as default; explicit cache read
+aub usage --cached          # read only the cache, even when it has no rows
 ```
 
 Settings writes go to the same `aub.*` UserDefaults keys as the GUI. API keys are still env / `config.toml` only.
+
+### Install the CLI without the app
+
+The Go build of `aub` needs no app and no Swift. It runs on Linux and macOS, on `amd64` and `arm64`.
+
+To install the latest release into `~/.local/bin`, run the install script:
+
+```
+curl -fsSL https://raw.githubusercontent.com/noomz/agents_usage_bar/main/scripts/install.sh | sh
+```
+
+The script checks the tarball's SHA-256 against the release's `aub-checksums.txt`, needs no `sudo`, and changes no shell config. It prints a PATH hint when the directory is not on PATH. Set `AUB_INSTALL_DIR` to pick another directory, or `AUB_VERSION=v0.1.28` to pick a release.
+
+To install by hand, download `aub-<os>-<arch>.tar.gz` and `aub-checksums.txt` from the [GitHub Releases page](https://github.com/noomz/agents_usage_bar/releases), check the checksum, and put `aub` on your PATH.
+
+To build from source with Go, run:
+
+```
+go install github.com/noomz/agents_usage_bar/cli/cmd/aub@latest
+```
+
+`go install` finds versions through `cli/vX.Y.Z` tags, which the release workflow pushes.
+
+The darwin tarballs are not notarized. If macOS blocks a binary from a tarball that you downloaded with a browser, run `xattr -d com.apple.quarantine aub`.
+
+These commands work on a standalone install:
+
+- `aub`, `aub usage`, and `aub quota` fetch live while the cache has no provider rows. With `--cached`, they read only the cache and print a hint when it is empty.
+- `aub settings` stores its values in `~/.config/agents-usage-bar/settings.json` on Linux, and under `$XDG_CONFIG_HOME` when that is set. On macOS it uses the app's UserDefaults keys.
+- `aub themes` works the same on every platform.
+
+These commands differ on a standalone install:
+
+- `aub stats` stays empty, and `aub --cached` keeps printing its hint, because only the app writes provider rows and daily history. A later poll mode will write them.
+- `aub dashboard` needs the macOS app.
+
+`aub` never refreshes an OAuth token, on any platform. It reads `~/.claude/.credentials.json` and the other CLI login files and never writes them. An access token is used until its stated expiry. After that, the Claude row shows local tokens and cost with no quota bars until Claude Code refreshes the login, and the Gemini row shows an error until `gemini` refreshes it.
 
 ### Usage history export
 
