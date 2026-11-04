@@ -3,6 +3,7 @@ package jsonl
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -32,6 +33,9 @@ func ReadDelta(path string, startOffset uint64, previousModified *time.Time) (De
 	info, err := os.Stat(path)
 	if err != nil {
 		return Delta{}, err
+	}
+	if !info.Mode().IsRegular() {
+		return Delta{}, errors.New("not a regular file")
 	}
 	start := startOffset
 	// A persisted mtime is a Foundation double, coarser than the filesystem's nanoseconds, so

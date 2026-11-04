@@ -192,6 +192,9 @@ func rolloutFiles(root string, dayKeys []string) []string {
 			if real, err := filepath.EvalSymlinks(path); err == nil {
 				path = real
 			}
+			if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
+				continue
+			}
 			files = append(files, path)
 		}
 	}
