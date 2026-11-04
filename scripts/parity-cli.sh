@@ -11,12 +11,19 @@
 #   PARITY_DIR    scratch dir for outputs (default: a new temp dir, never in the repo)
 #   PARITY_LINES  diff lines printed per case (default 40; the full diff stays on disk)
 #
+# Cases named home-* run both binaries against synthetic homes from scripts/parity-fixtures.py,
+# through HOME and CFFIXED_USER_HOME. Preferences and locale still come from the real user;
+# every subcommand here only reads them.
+#
 # Compares stdout, stderr, and exit code. Normalizes only `asOf` and `exportedAt` JSON
 # values. A case runs up to 3 times because the two binaries start at different instants:
 # a reset countdown or header clock can tick, and the app can rewrite today.json, between
 # them. A real difference repeats on every attempt.
 #
 # Only read-only subcommands run against the Swift binary, which is the user's real install.
+#
+# Exit 0 only when no difference remains outside scripts/parity-cli.allow, whose lines are
+# `case-name | reason`.
 
 set -u
 
