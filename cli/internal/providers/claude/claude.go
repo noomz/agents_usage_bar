@@ -28,7 +28,7 @@ type Provider struct {
 func Build(env provider.Env) provider.Provider {
 	loader := newCredentialLoader(env)
 	var oauth usageSource
-	if loader.load() != nil {
+	if loader.load(env.Clock.Now()) != nil {
 		oauth = &oauthClient{http: env.HTTP, creds: loader, now: env.Clock.Now}
 	}
 	return &Provider{

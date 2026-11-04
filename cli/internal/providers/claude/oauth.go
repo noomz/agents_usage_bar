@@ -40,11 +40,12 @@ type oauthClient struct {
 }
 
 func (c *oauthClient) getUsage(ctx context.Context) (*usageResponse, error) {
-	token := c.creds.load()
+	now := c.now()
+	token := c.creds.load(now)
 	if token == nil {
 		return nil, errNoCredentials
 	}
-	if token.expired(c.now()) {
+	if token.expired(now) {
 		return nil, errTokenExpired
 	}
 	var usage usageResponse

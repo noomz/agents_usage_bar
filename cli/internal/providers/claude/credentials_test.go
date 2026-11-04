@@ -35,7 +35,7 @@ func loaderWith(t *testing.T, file *string, keychain []byte, keychainErr error, 
 
 func TestCredentialLoad(t *testing.T) {
 	ref := func(s string) *string { return &s }
-	good := `{"claudeAiOauth":{"accessToken":"file-token","refreshToken":"r","expiresAt":1778000000000,"subscriptionType":"claude_max"}}`
+	good := `{"claudeAiOauth":{"accessToken":"file-token","refreshToken":"r","expiresAt":4102444800000,"subscriptionType":"claude_max"}}`
 	keychain := []byte(`{"claudeAiOauth":{"accessToken":"keychain-token"}}`)
 	cases := []struct {
 		name        string
@@ -57,7 +57,7 @@ func TestCredentialLoad(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := loaderWith(t, c.file, c.keychain, c.keychainErr, c.env).load()
+			got := loaderWith(t, c.file, c.keychain, c.keychainErr, c.env).load(testNow)
 			if c.wantToken == "" {
 				if got != nil {
 					t.Fatal("want no credential")
@@ -76,7 +76,7 @@ func TestLinuxHasNoKeychainAndMissingFileIsNoCredential(t *testing.T) {
 		t.Fatal("Linux must have no Keychain reader")
 	}
 	loader := &credentialLoader{path: filepath.Join(t.TempDir(), "missing.json"), getenv: func(string) string { return "" }}
-	if loader.load() != nil {
+	if loader.load(testNow) != nil {
 		t.Fatal("missing file with no Keychain must read as no credential")
 	}
 }
@@ -252,5 +252,55 @@ func TestTokenFormatsRedacted(t *testing.T) {
 	token := oauthToken{AccessToken: secret.New("fixture-value")}
 	if text := fmt.Sprintf("%v %+v %#v %v", token, token, token, &token); strings.Contains(text, "fixture-value") {
 		t.Fatal(text)
+	}
+}
+
+func TestCredentialLoadPassesOverExpiredTokens(t *testing.T) {
+	token := func(name string, expires time.Time) string {
+		data, _ := json.Marshal(map[string]any{"claudeAiOauth": map[string]any{"accessToken": name, "expiresAt": float64(expires.UnixMilli())}})
+		return string(data)
+	}
+	past, future := testNow.Add(-time.Hour), testNow.Add(time.Hour)
+	ref := func(s string) *string { return &s }
+	cases := []struct {
+		name      string
+		file      *string
+		keychain  []byte
+		env       map[string]string
+		wantToken string
+	}{
+		{"expired file, fresh keychain", ref(token("file", past)), []byte(token("keychain", future)), nil, "keychain"},
+		{"expired file, expired keychain, env", ref(token("file", past)), []byte(token("keychain", past)), map[string]string{envTokenKey: "env"}, "env"},
+		{"expired file, no other source", ref(token("file", past)), nil, nil, "file"},
+		{"both expired returns the first", ref(token("file", past)), []byte(token("keychain", past)), nil, "file"},
+		{"fresh file still wins", ref(token("file", future)), []byte(token("keychain", future)), map[string]string{envTokenKey: "env"}, "file"},
+		{"expired keychain alone", nil, []byte(token("keychain", past)), nil, "keychain"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			keychainErr := error(nil)
+			if c.keychain == nil {
+				keychainErr = errors.New("none")
+			}
+			got := loaderWith(t, c.file, c.keychain, keychainErr, c.env).load(testNow)
+			if got == nil || got.AccessToken.Reveal() != c.wantToken {
+				t.Fatalf("got %+v", got)
+			}
+		})
+	}
+}
+
+func TestExpiredFileDoesNotHideAFreshKeychainTokenFromTheRequest(t *testing.T) {
+	tokenAt := func(at time.Time) []byte {
+		data, _ := json.Marshal(map[string]any{"claudeAiOauth": map[string]any{"accessToken": "t", "expiresAt": float64(at.UnixMilli())}})
+		return data
+	}
+	file := string(tokenAt(testNow.Add(-time.Hour)))
+	http := &scriptedHTTP{gets: []any{`{}`}}
+	if _, err := oauthFor(t, &file, tokenAt(testNow.Add(time.Hour)), nil, http).getUsage(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if len(http.calls) != 1 {
+		t.Fatalf("%d calls", len(http.calls))
 	}
 }

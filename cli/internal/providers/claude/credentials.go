@@ -38,25 +38,53 @@ func newCredentialLoader(env provider.Env) *credentialLoader {
 	return &credentialLoader{path: filepath.Join(env.Paths.Home, ".claude", ".credentials.json"), keychain: env.Keychain, getenv: env.Getenv}
 }
 
-// load treats any Keychain failure, a locked keychain included, as no credential, so a read
-// never surfaces as a dialog cascade.
-func (l *credentialLoader) load() *oauthToken {
-	if data, err := os.ReadFile(l.path); err == nil {
-		if token := decodeOAuthBlob(data); token != nil {
+// load returns the first unexpired token, and an expired one only if nothing else exists. The app
+// takes the first token of any age because it can refresh; the CLI cannot, so an expired file would
+// hide a valid Keychain token.
+func (l *credentialLoader) load(now time.Time) *oauthToken {
+	var expired *oauthToken
+	for _, source := range []func() *oauthToken{l.fromFile, l.fromKeychain, l.fromEnv} {
+		token := source()
+		if token == nil {
+			continue
+		}
+		if !token.expired(now) {
 			return token
 		}
-	}
-	if l.keychain != nil {
-		if data, err := l.keychain(keychainService); err == nil {
-			if token := decodeOAuthBlob(data); token != nil {
-				return token
-			}
+		if expired == nil {
+			expired = token
 		}
 	}
-	if value := l.getenv(envTokenKey); value != "" {
-		return &oauthToken{AccessToken: secret.New(value)}
+	return expired
+}
+
+func (l *credentialLoader) fromFile() *oauthToken {
+	data, err := os.ReadFile(l.path)
+	if err != nil {
+		return nil
 	}
-	return nil
+	return decodeOAuthBlob(data)
+}
+
+// fromKeychain treats any failure, a locked keychain included, as no credential, so a read never
+// surfaces as a dialog cascade.
+func (l *credentialLoader) fromKeychain() *oauthToken {
+	if l.keychain == nil {
+		return nil
+	}
+	data, err := l.keychain(keychainService)
+	if err != nil {
+		return nil
+	}
+	return decodeOAuthBlob(data)
+}
+
+func (l *credentialLoader) fromEnv() *oauthToken {
+	value := l.getenv(envTokenKey)
+	if value == "" {
+		return nil
+	}
+	return &oauthToken{AccessToken: secret.New(value)}
 }
 
 func decodeOAuthBlob(data []byte) *oauthToken {
