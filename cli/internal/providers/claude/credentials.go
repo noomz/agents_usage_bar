@@ -66,8 +66,8 @@ func (l *credentialLoader) fromFile() *oauthToken {
 	return decodeOAuthBlob(data)
 }
 
-// fromKeychain treats any failure, a locked keychain included, as no credential, so a read never
-// surfaces as a dialog cascade.
+// fromKeychain treats any failure as no credential, including the reader's 3 s deadline on a
+// locked keychain. Whether a locked keychain shows a dialog is not verified.
 func (l *credentialLoader) fromKeychain() *oauthToken {
 	if l.keychain == nil {
 		return nil
