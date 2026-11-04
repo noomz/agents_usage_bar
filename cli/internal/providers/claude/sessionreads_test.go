@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -197,5 +198,39 @@ func TestLockFailureFailsTheFetch(t *testing.T) {
 	r := newReads([]string{root}, fakeUsage{err: errors.New("unused")}, lockedStore{})
 	if _, _, _, err := r.fetch(context.Background(), testNow); err == nil {
 		t.Fatal("fetch counted without the lock")
+	}
+}
+
+// lockProbe stands in for the usage endpoint and records whether the cursor lock was held during
+// the call. flock conflicts between descriptors, so the probe sees a hold in its own process.
+type lockProbe struct {
+	lockPath string
+	calls    int
+	held     bool
+}
+
+func (p *lockProbe) getUsage(context.Context) (*usageResponse, error) {
+	p.calls++
+	file, err := os.Open(p.lockPath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	p.held = syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) != nil
+	return &usageResponse{}, nil
+}
+
+func TestUsageCallRunsOutsideTheCursorLock(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "p", "s.jsonl"), assistantLine(todayStamp, "r1", "claude-test", 10, 0, 0, 0))
+	storePath := filepath.Join(t.TempDir(), "today.json")
+	probe := &lockProbe{lockPath: storePath + ".lock"}
+	r := newReads([]string{root}, probe, cache.NewFile(storePath, testDayKeys()))
+	fetchReads(t, r)
+	if probe.calls != 1 {
+		t.Fatalf("usage called %d times", probe.calls)
+	}
+	if probe.held {
+		t.Fatal("network call held the cursor lock")
 	}
 }
