@@ -310,6 +310,8 @@ func TestNewerSchemaIsNeverWrittenOrMoved(t *testing.T) {
 }
 
 var corruptBodies = map[string]string{
+	"blank":                  " \n\t ",
+	"zero filled":            "\x00\x00\x00\x00",
 	"truncated":              `{"schemaVersion":3,"providers":[],"base`,
 	"empty":                  ``,
 	"no schema":              `{"providers":[]}`,

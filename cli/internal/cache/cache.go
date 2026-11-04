@@ -191,11 +191,11 @@ func (f *File) read() (*envelope, storeState) {
 	if err != nil {
 		return nil, storeForeign
 	}
-	if len(data) == 0 {
+	if len(bytes.Trim(data, " \t\r\n\x00")) == 0 {
 		return nil, storeCorrupt
 	}
 	// Anything not shaped like JSON text (a BOM, UTF-16, which holds NUL bytes) may be a file Swift reads, so it stays put.
-	if trimmed := bytes.TrimLeft(data, " \t\r\n"); len(trimmed) == 0 || trimmed[0] != '{' || bytes.IndexByte(data, 0) >= 0 {
+	if trimmed := bytes.TrimLeft(data, " \t\r\n"); trimmed[0] != '{' || bytes.IndexByte(data, 0) >= 0 {
 		return nil, storeForeign
 	}
 	var top map[string]json.RawMessage

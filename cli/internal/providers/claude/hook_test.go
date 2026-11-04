@@ -408,3 +408,27 @@ func TestAccountTokens(t *testing.T) {
 		}
 	})
 }
+
+func TestEnumerateFeedFollowsSymlinkedFiles(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(t.TempDir(), "s.json")
+	if err := os.WriteFile(target, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	account := filepath.Join(dir, "work")
+	if err := os.Mkdir(account, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, link := range []string{filepath.Join(dir, "top.json"), filepath.Join(account, "nested.json")} {
+		if err := os.Symlink(target, link); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := enumerateFeed(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("got %d entries, want both symlinked files", len(entries))
+	}
+}

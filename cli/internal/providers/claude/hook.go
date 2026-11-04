@@ -134,14 +134,15 @@ func enumerateFeed(dir string) ([]feedEntry, error) {
 				if strings.HasPrefix(child.Name(), ".") || filepath.Ext(child.Name()) != ".json" {
 					continue
 				}
-				if info, err := child.Info(); err == nil && info.Mode().IsRegular() {
-					entries = append(entries, feedEntry{item.Name(), filepath.Join(path, child.Name()), info.ModTime()})
+				childPath := filepath.Join(path, child.Name())
+				if info, err := os.Stat(childPath); err == nil && info.Mode().IsRegular() {
+					entries = append(entries, feedEntry{item.Name(), childPath, info.ModTime()})
 				}
 			}
 			continue
 		}
 		if filepath.Ext(item.Name()) == ".json" {
-			if info, err := item.Info(); err == nil && info.Mode().IsRegular() {
+			if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
 				entries = append(entries, feedEntry{"default", path, info.ModTime()})
 			}
 		}
