@@ -114,7 +114,10 @@ func newMemoryStore() *memoryStore {
 	return &memoryStore{offsets: map[string]domain.TranscriptOffset{}, daily: map[domain.ProviderID]domain.DailyUsageRecord{}}
 }
 
-func (m *memoryStore) WithCursors(body func(cache.Cursors))                     { body(m) }
+func (m *memoryStore) WithCursors(body func(cache.Cursors)) error {
+	body(m)
+	return nil
+}
 func (m *memoryStore) AllTranscriptOffsets() map[string]domain.TranscriptOffset { return m.offsets }
 func (m *memoryStore) SetTranscriptOffsets(o []domain.TranscriptOffset) {
 	for _, offset := range o {

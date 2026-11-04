@@ -91,7 +91,10 @@ func (p *Provider) Capabilities() domain.Capabilities {
 // rollout overlays wham/usage, and with no rollout wham/usage is the whole row.
 func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, error) {
 	logins := discover(p.proxyDir, p.authPath)
-	rollout := p.readRollout(now)
+	rollout, err := p.readRollout(now)
+	if err != nil {
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, err
+	}
 
 	if len(logins) >= 2 {
 		return p.multiLoginSnapshot(ctx, logins, rollout, now), domain.OK(now), nil
@@ -122,7 +125,7 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 
 // readRollout returns today's snapshot, nil when no token_count event exists. Like the app it
 // advances the transcript cursors, though the fold rereads each whole file.
-func (p *Provider) readRollout(now time.Time) *domain.UsageSnapshot {
+func (p *Provider) readRollout(now time.Time) (*domain.UsageSnapshot, error) {
 	today := p.env.DayKeys.KeyFor(now)
 	days := []string{today}
 	if yesterday, ok := domain.AddDays(today, -1); ok {
@@ -130,14 +133,16 @@ func (p *Provider) readRollout(now time.Time) *domain.UsageSnapshot {
 	}
 	files := rolloutFiles(p.sessionsRoot, days)
 	if len(files) == 0 {
-		return nil
+		return nil, nil
 	}
-	p.env.Cache.WithCursors(func(c cache.Cursors) { advanceOffsets(c, files) })
+	if err := p.env.Cache.WithCursors(func(c cache.Cursors) { advanceOffsets(c, files) }); err != nil {
+		return nil, err
+	}
 	event, file, ok := lastTokenCount(files)
 	if !ok {
-		return nil
+		return nil, nil
 	}
-	return p.rolloutSnapshot(event, file, now)
+	return p.rolloutSnapshot(event, file, now), nil
 }
 
 func advanceOffsets(c cache.Cursors, files []string) {

@@ -440,7 +440,10 @@ type recordingStore struct {
 	offsets map[string]domain.TranscriptOffset
 }
 
-func (s *recordingStore) WithCursors(body func(cache.Cursors))                     { body(s) }
+func (s *recordingStore) WithCursors(body func(cache.Cursors)) error {
+	body(s)
+	return nil
+}
 func (s *recordingStore) AllTranscriptOffsets() map[string]domain.TranscriptOffset { return s.offsets }
 func (s *recordingStore) SetTranscriptOffsets(o []domain.TranscriptOffset) {
 	for _, offset := range o {
@@ -476,5 +479,19 @@ func TestCredentialStructsFormatRedacted(t *testing.T) {
 	client := managementClient{bearer: secret.New("fixture-value")}
 	if text := fmt.Sprintf("%v %+v %#v %v %+v %#v", cred, cred, &cred, client, client, &client); strings.Contains(text, "fixture-value") {
 		t.Fatal(text)
+	}
+}
+
+type lockedStore struct{ cache.Noop }
+
+func (lockedStore) WithCursors(func(cache.Cursors)) error { return errors.New("locked") }
+
+func TestLockFailureFailsTheFetch(t *testing.T) {
+	http := &fakeHTTP{byBearer: map[string]any{"k": `{}`, "m": `{"total":{"val":"0"}}`}, post: `{}`}
+	env, home := managementEnv(t, http)
+	writeFile(t, filepath.Join(home, ".pi", "agent", "sessions", "s.jsonl"), assistantLine("xai", 1000, "1.25"))
+	env.Cache = lockedStore{}
+	if _, _, err := Build(env).Fetch(context.Background(), testNow); err == nil {
+		t.Fatal("fetch reported a row without the JSONL total")
 	}
 }

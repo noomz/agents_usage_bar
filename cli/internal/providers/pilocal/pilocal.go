@@ -152,12 +152,15 @@ func (p *Provider) Fetch(_ context.Context, now time.Time) (domain.UsageSnapshot
 	}
 	var delta Delta
 	var total domain.DailyUsageRecord
-	var err error
-	p.env.Cache.WithCursors(func(c cache.Cursors) {
-		if delta, err = ReadSessions(c, roots, catalog, p.env.DayKeys.StartOfDay(now), ""); err == nil {
+	var readErr error
+	err := p.env.Cache.WithCursors(func(c cache.Cursors) {
+		if delta, readErr = ReadSessions(c, roots, catalog, p.env.DayKeys.StartOfDay(now), ""); readErr == nil {
 			total = c.AccumulateDailyUsage(domain.PiLocal, now, delta.Acc.Tokens, delta.Acc.CostUSD, map[string]int{})
 		}
 	})
+	if err == nil {
+		err = readErr
+	}
 	if err != nil {
 		return domain.UsageSnapshot{}, domain.ProviderStatus{}, err
 	}

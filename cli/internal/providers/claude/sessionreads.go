@@ -26,8 +26,8 @@ type sessionReads struct {
 }
 
 // fetch returns the snapshot and today's tokens per session. Sessions are nil when nothing was
-// read. An OAuth failure of any kind degrades to local data; a transcript failure fails the
-// fetch and advances no cursor.
+// read. An OAuth failure of any kind degrades to local data; a transcript or cursor-lock failure
+// fails the fetch and advances no cursor.
 func (s *sessionReads) fetch(ctx context.Context, now time.Time) (domain.UsageSnapshot, domain.ProviderStatus, map[string]int, error) {
 	roots := s.roots()
 	if s.oauth == nil && !anyExists(roots) {
@@ -39,9 +39,12 @@ func (s *sessionReads) fetch(ctx context.Context, now time.Time) (domain.UsageSn
 	}
 	var total domain.DailyUsageRecord
 	var readErr error
-	s.cache.WithCursors(func(c cache.Cursors) { total, readErr = s.readDelta(c, roots, now) })
-	if readErr != nil {
-		return domain.UsageSnapshot{}, domain.ProviderStatus{}, nil, readErr
+	err := s.cache.WithCursors(func(c cache.Cursors) { total, readErr = s.readDelta(c, roots, now) })
+	if err == nil {
+		err = readErr
+	}
+	if err != nil {
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, nil, err
 	}
 
 	var usage *usageResponse

@@ -26,13 +26,14 @@ type Store interface {
 	Baseline(id domain.ProviderID) *domain.BaselineRecord
 	// MaintainBaseline sets a fresh baseline on a new day or a negative delta; otherwise it
 	// keeps the baseline and updates LastValue. Never call it inside WithCursors: it takes the
-	// same lock.
-	MaintainBaseline(id domain.ProviderID, now time.Time, currentValue float64)
+	// same lock. An error means nothing was stored.
+	MaintainBaseline(id domain.ProviderID, now time.Time, currentValue float64) error
 	// WithCursors runs body holding the cross-process cursor lock. Cursors are reachable only
 	// here, so reading them and adding the delta they measure happen under one lock. A second
 	// process in between would count the same bytes, and the total would stay doubled until
-	// midnight. Body must make no network call.
-	WithCursors(body func(Cursors))
+	// midnight. Body must make no network call. An error means body did not run, and the caller
+	// fails its fetch rather than count without the lock.
+	WithCursors(body func(Cursors)) error
 }
 
 // Cursors is the cursor and daily-total state, valid only inside WithCursors.
@@ -47,42 +48,97 @@ type Cursors interface {
 
 // File is the production Store, one JSON file written atomically by rename.
 type File struct {
-	path    string
-	dayKeys *domain.DayKeyOwner
-	mu      sync.Mutex
+	path     string
+	dayKeys  *domain.DayKeyOwner
+	lockWait time.Duration
+	mu       sync.Mutex
+	lockErr  error
 }
 
 // NewFile opens a cache path. Nothing is created until a provider writes.
 func NewFile(path string, dayKeys *domain.DayKeyOwner) *File {
-	return &File{path: path, dayKeys: dayKeys}
+	return &File{path: path, dayKeys: dayKeys, lockWait: defaultLockWait}
 }
 
-const currentSchema = 3
+const (
+	currentSchema   = 3
+	defaultLockWait = 5 * time.Second
+	lockPollEvery   = 50 * time.Millisecond
+)
+
+var (
+	errLockTimeout = errors.New("cache lock held past the deadline")
+	errUnusable    = errors.New("cache file unusable")
+)
 
 // lock takes the advisory lock on today.json.lock, shared by every process and goroutine that
 // writes the store. The kernel drops it if the process dies. The app's FileCacheStore does not
-// take it yet. If the lock file cannot be opened the store's directory is not writable either,
-// so nothing persists and running unlocked cannot double a total.
-func (f *File) lock() (unlock func()) {
+// take it yet.
+//
+// This process's fetches queue on mu with no deadline, because a sibling's cold scan is real work
+// rather than a stuck holder. The first failure sticks so they do not each wait the deadline in turn.
+func (f *File) lock() (unlock func(), err error) {
+	f.mu.Lock()
+	if f.lockErr != nil {
+		defer f.mu.Unlock()
+		return nil, f.lockErr
+	}
+	release, err := f.flock()
+	if err != nil {
+		defer f.mu.Unlock()
+		f.lockErr = err
+		return nil, err
+	}
+	return func() {
+		release()
+		f.mu.Unlock()
+	}, nil
+}
+
+func (f *File) flock() (release func(), err error) {
 	if err := os.MkdirAll(filepath.Dir(f.path), 0o755); err != nil {
-		return func() {}
+		return func() {}, nil
 	}
 	file, err := os.OpenFile(f.path+".lock", os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
-		return func() {}
+		// flock needs no write access, so a lock file left by another user still excludes.
+		file, err = os.OpenFile(f.path+".lock", os.O_RDONLY, 0)
 	}
+	// Absent and not creatable means the directory is not writable. The store's rename cannot
+	// succeed there either, so nothing persists and no total can double.
+	if errors.Is(err, os.ErrNotExist) {
+		return func() {}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	deadline := time.Now().Add(f.lockWait)
 	for {
-		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX)
-		if !errors.Is(err, syscall.EINTR) {
-			break
+		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		switch {
+		case err == nil:
+			return func() { file.Close() }, nil
+		case errors.Is(err, syscall.EINTR):
+			continue
+		case !errors.Is(err, syscall.EWOULDBLOCK):
+			file.Close()
+			return nil, err
+		case time.Now().After(deadline):
+			file.Close()
+			return nil, errLockTimeout
 		}
+		time.Sleep(lockPollEvery)
 	}
-	return func() { file.Close() }
 }
 
-func (f *File) WithCursors(body func(Cursors)) {
-	defer f.lock()()
+func (f *File) WithCursors(body func(Cursors)) error {
+	unlock, err := f.lock()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	body(fileCursors{f})
+	return nil
 }
 
 // fileCursors is File's Cursors, handed out only under the lock.
@@ -133,7 +189,7 @@ func (f *File) load() (e *envelope, ok bool) {
 	return &envelope{providers: top["providers"], baselines: top["baselines"], transcripts: top["transcripts"], dailyUsage: top["dailyUsage"]}, true
 }
 
-func (f *File) write(e *envelope) {
+func (f *File) write(e *envelope) error {
 	object := map[string]any{
 		"schemaVersion": currentSchema,
 		"providers":     rawOr(e.providers, "[]"),
@@ -143,24 +199,24 @@ func (f *File) write(e *envelope) {
 	}
 	data := []byte(swiftjson.Encode(object, swiftjson.Options{}))
 	if err := os.MkdirAll(filepath.Dir(f.path), 0o755); err != nil {
-		return
+		return err
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(f.path), ".today-*.json")
 	if err != nil {
-		return
+		return err
 	}
 	defer os.Remove(tmp.Name())
 	if _, err := tmp.Write(data); err != nil {
 		tmp.Close()
-		return
+		return err
 	}
 	if err := tmp.Close(); err != nil {
-		return
+		return err
 	}
 	if err := os.Chmod(tmp.Name(), 0o644); err != nil {
-		return
+		return err
 	}
-	_ = os.Rename(tmp.Name(), f.path)
+	return os.Rename(tmp.Name(), f.path)
 }
 
 func rawOr(raw json.RawMessage, fallback string) swiftjson.Raw {
@@ -196,9 +252,7 @@ func pairs(raw json.RawMessage, visit func(key string, value any) error) error {
 }
 
 func (f *File) LoadAll() map[domain.ProviderID]domain.ProviderState {
-	f.mu.Lock()
 	e, ok := f.load()
-	f.mu.Unlock()
 	states := map[domain.ProviderID]domain.ProviderState{}
 	if !ok {
 		return states
@@ -246,8 +300,6 @@ func baselineTree(b domain.BaselineRecord) any {
 }
 
 func (f *File) Baseline(id domain.ProviderID) *domain.BaselineRecord {
-	f.mu.Lock()
-	defer f.mu.Unlock()
 	e, ok := f.load()
 	if !ok {
 		return nil
@@ -258,13 +310,15 @@ func (f *File) Baseline(id domain.ProviderID) *domain.BaselineRecord {
 	return nil
 }
 
-func (f *File) MaintainBaseline(id domain.ProviderID, now time.Time, currentValue float64) {
-	defer f.lock()()
-	f.mu.Lock()
-	defer f.mu.Unlock()
+func (f *File) MaintainBaseline(id domain.ProviderID, now time.Time, currentValue float64) error {
+	unlock, err := f.lock()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	e, ok := f.load()
 	if !ok {
-		return
+		return errUnusable
 	}
 	baselines := decodeBaselines(e.baselines)
 	today := f.dayKeys.KeyFor(now)
@@ -275,7 +329,7 @@ func (f *File) MaintainBaseline(id domain.ProviderID, now time.Time, currentValu
 	}
 	baselines[string(id)] = domain.BaselineRecord{Value: base, Date: today, LastValue: currentValue, LastUpdated: now}
 	e.baselines = json.RawMessage(pairsOf(baselines, baselineTree))
-	f.write(e)
+	return f.write(e)
 }
 
 func decodeOffsets(raw json.RawMessage) map[string]domain.TranscriptOffset {
@@ -302,10 +356,7 @@ func decodeOffsets(raw json.RawMessage) map[string]domain.TranscriptOffset {
 }
 
 func (c fileCursors) AllTranscriptOffsets() map[string]domain.TranscriptOffset {
-	f := c.f
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	e, ok := f.load()
+	e, ok := c.f.load()
 	if !ok {
 		return map[string]domain.TranscriptOffset{}
 	}
@@ -317,8 +368,6 @@ func (c fileCursors) SetTranscriptOffsets(offsets []domain.TranscriptOffset) {
 		return
 	}
 	f := c.f
-	f.mu.Lock()
-	defer f.mu.Unlock()
 	e, ok := f.load()
 	if !ok {
 		return
@@ -332,7 +381,7 @@ func (c fileCursors) SetTranscriptOffsets(offsets []domain.TranscriptOffset) {
 		tree[k] = map[string]any{"url": o.URL, "byteOffset": o.ByteOffset, "lastModified": domain.RefSeconds(o.LastModified)}
 	}
 	e.transcripts = json.RawMessage(swiftjson.Encode(tree, swiftjson.Options{}))
-	f.write(e)
+	_ = f.write(e)
 }
 
 func dailyTree(d domain.DailyUsageRecord) any {
@@ -347,8 +396,6 @@ func dailyTree(d domain.DailyUsageRecord) any {
 
 func (c fileCursors) AccumulateDailyUsage(id domain.ProviderID, now time.Time, deltaTokens int, deltaCostUSD decimal.Decimal, deltaSessionTokens map[string]int) domain.DailyUsageRecord {
 	f := c.f
-	f.mu.Lock()
-	defer f.mu.Unlock()
 	today := f.dayKeys.KeyFor(now)
 	next := domain.DailyUsageRecord{Date: today, Tokens: deltaTokens, CostUSD: deltaCostUSD, SessionTokens: map[string]int{}}
 	for k, v := range deltaSessionTokens {
@@ -377,7 +424,7 @@ func (c fileCursors) AccumulateDailyUsage(id domain.ProviderID, now time.Time, d
 	}
 	records[string(id)] = next
 	e.dailyUsage = json.RawMessage(pairsOf(records, dailyTree))
-	f.write(e)
+	_ = f.write(e)
 	return next
 }
 
@@ -390,9 +437,12 @@ func (Noop) LoadAll() map[domain.ProviderID]domain.ProviderState {
 
 func (Noop) Baseline(domain.ProviderID) *domain.BaselineRecord { return nil }
 
-func (Noop) MaintainBaseline(domain.ProviderID, time.Time, float64) {}
+func (Noop) MaintainBaseline(domain.ProviderID, time.Time, float64) error { return nil }
 
-func (Noop) WithCursors(body func(Cursors)) { body(Noop{}) }
+func (Noop) WithCursors(body func(Cursors)) error {
+	body(Noop{})
+	return nil
+}
 
 func (Noop) SetTranscriptOffsets([]domain.TranscriptOffset) {}
 

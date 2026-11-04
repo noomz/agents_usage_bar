@@ -71,7 +71,10 @@ type recordingCache struct {
 	writes  int
 }
 
-func (c *recordingCache) WithCursors(body func(cache.Cursors)) { body(c) }
+func (c *recordingCache) WithCursors(body func(cache.Cursors)) error {
+	body(c)
+	return nil
+}
 
 func (c *recordingCache) AllTranscriptOffsets() map[string]domain.TranscriptOffset { return c.offsets }
 
@@ -627,4 +630,22 @@ func treeSums(t *testing.T, root string) map[string][32]byte {
 		t.Fatal(err)
 	}
 	return sums
+}
+
+type lockedStore struct{ cache.Noop }
+
+func (lockedStore) WithCursors(func(cache.Cursors)) error { return errors.New("locked") }
+
+func TestLockFailureFailsTheFetch(t *testing.T) {
+	h := newHome(t)
+	h.auth(authFile(ptr("acc"), "t"))
+	h.rollout("2026-10-07", "r.jsonl", "{}\n")
+	p := Build(provider.Env{
+		HTTP: h.http, Cache: lockedStore{},
+		DayKeys: domain.NewDayKeyOwner(clock.Fixed(testNow), time.UTC),
+		Paths:   paths.Layout{Home: h.root},
+	})
+	if _, _, err := p.Fetch(context.Background(), testNow); err == nil {
+		t.Fatal("no error")
+	}
 }

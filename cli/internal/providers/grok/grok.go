@@ -124,23 +124,27 @@ type jsonlLoad struct {
 	costUSD     decimal.Decimal
 }
 
-func (p *Provider) loadJSONL(now time.Time) jsonlLoad {
+// loadJSONL mutes a read failure. The error is only a cursor-lock failure.
+func (p *Provider) loadJSONL(now time.Time) (jsonlLoad, error) {
 	roots := pilocal.SessionDirs(p.env.Getenv, p.env.Paths.Home)
 	var delta pilocal.Delta
 	var total domain.DailyUsageRecord
-	var err error
-	p.env.Cache.WithCursors(func(c cache.Cursors) {
-		if delta, err = pilocal.ReadSessions(c, roots, xaiCatalog, p.env.DayKeys.StartOfDay(now), offsetPrefix); err == nil {
+	var readErr error
+	lockErr := p.env.Cache.WithCursors(func(c cache.Cursors) {
+		if delta, readErr = pilocal.ReadSessions(c, roots, xaiCatalog, p.env.DayKeys.StartOfDay(now), offsetPrefix); readErr == nil {
 			total = c.AccumulateDailyUsage(domain.Grok, now, delta.Acc.Tokens, delta.Acc.CostUSD, map[string]int{})
 		}
 	})
-	if err != nil {
-		return jsonlLoad{}
+	if lockErr != nil {
+		return jsonlLoad{}, lockErr
+	}
+	if readErr != nil {
+		return jsonlLoad{}, nil
 	}
 	if len(delta.Acc.Providers) == 0 && total.Tokens <= 0 && total.CostUSD.Sign() <= 0 {
-		return jsonlLoad{}
+		return jsonlLoad{}, nil
 	}
-	return jsonlLoad{contributed: true, tokens: total.Tokens, costUSD: total.CostUSD}
+	return jsonlLoad{contributed: true, tokens: total.Tokens, costUSD: total.CostUSD}, nil
 }
 
 // CLI billing, management, and JSONL fail independently; an
@@ -157,7 +161,10 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 	if p.management != nil {
 		mgmt, mgmtErr = p.management.fetch(ctx, now)
 	}
-	jsonl := p.loadJSONL(now)
+	jsonl, lockErr := p.loadJSONL(now)
+	if lockErr != nil {
+		return domain.UsageSnapshot{}, domain.ProviderStatus{}, lockErr
+	}
 
 	if billing != nil || mgmt != nil || jsonl.contributed {
 		return p.snapshot(billing, mgmt, jsonl, now), domain.OK(now), nil

@@ -2,6 +2,7 @@ package pilocal
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -213,7 +214,10 @@ type recordingStore struct {
 	offsets map[string]domain.TranscriptOffset
 }
 
-func (s *recordingStore) WithCursors(body func(cache.Cursors))                     { body(s) }
+func (s *recordingStore) WithCursors(body func(cache.Cursors)) error {
+	body(s)
+	return nil
+}
 func (s *recordingStore) AllTranscriptOffsets() map[string]domain.TranscriptOffset { return s.offsets }
 func (s *recordingStore) SetTranscriptOffsets(o []domain.TranscriptOffset) {
 	for _, offset := range o {
@@ -249,5 +253,19 @@ func TestReadSessionsResumesAtCursorAndPrefixesKeys(t *testing.T) {
 	}
 	if third, _ := ReadSessions(store, roots, Catalog{"p": true}, today, "grok:"); third.Acc.Tokens != 10 {
 		t.Fatalf("appended line: %+v", third)
+	}
+}
+
+type lockedStore struct{ cache.Noop }
+
+func (lockedStore) WithCursors(func(cache.Cursors)) error { return errors.New("locked") }
+
+func TestLockFailureFailsTheFetch(t *testing.T) {
+	home := t.TempDir()
+	writeSession(t, home, "s.jsonl", mixedFixture(t, "2026-04-22T11:00:00.000Z"))
+	env := testEnv(home, nil)
+	env.Cache = lockedStore{}
+	if _, _, err := Build(env).Fetch(context.Background(), testNow); err == nil {
+		t.Fatal("fetch counted without the lock")
 	}
 }

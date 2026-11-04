@@ -145,7 +145,7 @@ func (p *Provider) Fetch(ctx context.Context, now time.Time) (domain.UsageSnapsh
 	}
 	totalCredits, totalUsage := *credits.Data.TotalCredits, *credits.Data.TotalUsage
 	cost := decimal.FromFloat64(p.todayCost(now, totalUsage))
-	p.cache.MaintainBaseline(domain.OpenRouter, now, totalUsage)
+	_ = p.cache.MaintainBaseline(domain.OpenRouter, now, totalUsage)
 	balance := decimal.FromFloat64(totalCredits - totalUsage)
 
 	return domain.UsageSnapshot{

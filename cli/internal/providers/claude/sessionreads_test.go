@@ -186,3 +186,16 @@ func TestOAuthQuota(t *testing.T) {
 		t.Fatalf("%+v", snap)
 	}
 }
+
+type lockedStore struct{ cache.Noop }
+
+func (lockedStore) WithCursors(func(cache.Cursors)) error { return errors.New("locked") }
+
+func TestLockFailureFailsTheFetch(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "p", "s.jsonl"), assistantLine(todayStamp, "r1", "claude-test", 10, 0, 0, 0))
+	r := newReads([]string{root}, fakeUsage{err: errors.New("unused")}, lockedStore{})
+	if _, _, _, err := r.fetch(context.Background(), testNow); err == nil {
+		t.Fatal("fetch counted without the lock")
+	}
+}
