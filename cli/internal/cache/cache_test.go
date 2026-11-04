@@ -397,6 +397,14 @@ func TestCorruptFileInReadOnlyDirectoryPassesDeltaThrough(t *testing.T) {
 	}
 	t.Cleanup(func() { os.Chmod(filepath.Dir(path), 0o755) })
 	exerciseEveryWriter(t, s)
+	err := s.WithCursors(func(c Cursors) {
+		if got := c.AccumulateDailyUsage(domain.Claude, day1, 7, decimal.MustParse("0.5"), nil); got.Tokens != 7 {
+			t.Errorf("total %d, want the delta", got.Tokens)
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if data, _ := os.ReadFile(path); string(data) != "{broken" {
 		t.Fatalf("%q", data)
 	}
