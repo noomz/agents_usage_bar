@@ -111,6 +111,13 @@ type feedEntry struct {
 	mtime   time.Time
 }
 
+func (e feedEntry) owner(payload hookPayload) string {
+	if owner := accountFromTranscriptPath(payload.TranscriptPath); owner != nil {
+		return *owner
+	}
+	return e.account
+}
+
 // enumerateFeed reads `<dir>/<session>.json` as account "default" and
 // `<dir>/<account>/<session>.json` as that account. It fails only when dir itself cannot be
 // listed.
@@ -219,11 +226,7 @@ func (h *hookFeed) sessionAccounts(since *time.Time) map[string]string {
 		if payload.SessionID != nil {
 			session = *payload.SessionID
 		}
-		if owner := accountFromTranscriptPath(payload.TranscriptPath); owner != nil {
-			accounts[session] = *owner
-		} else {
-			accounts[session] = entry.account
-		}
+		accounts[session] = entry.owner(payload)
 	}
 	return accounts
 }
@@ -268,10 +271,7 @@ func (h *hookFeed) fetch(now time.Time) (domain.UsageSnapshot, error) {
 		if !ok {
 			continue
 		}
-		name := entry.account
-		if owner := accountFromTranscriptPath(payload.TranscriptPath); owner != nil {
-			name = *owner
-		}
+		name := entry.owner(payload)
 		aggregate := accounts[name]
 		if aggregate == nil {
 			aggregate = &accountAggregate{cost: decimal.FromInt(0)}
@@ -302,12 +302,7 @@ func assembleSnapshot(accounts map[string]*accountAggregate, now time.Time) doma
 	for name := range accounts {
 		names = append(names, name)
 	}
-	sort.Slice(names, func(i, j int) bool {
-		if (names[i] == "default") != (names[j] == "default") {
-			return names[i] == "default"
-		}
-		return names[i] < names[j]
-	})
+	sortAccounts(names)
 	prefixed := len(names) >= 2
 
 	snapshot := domain.UsageSnapshot{ProviderID: domain.Claude, AsOf: now, Raw: map[string]string{}}
