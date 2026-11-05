@@ -512,6 +512,10 @@ func TestMalformedFilesAreErrorsThatWriteNothing(t *testing.T) {
 			writeFile(t, env.settings, `{"statusLine":{"type":"command","command":"sh '`+env.script()+`'"}}`)
 			writeFile(t, env.original(), `{broken`)
 		},
+		"empty backup with ours": func(t *testing.T, env installEnv) {
+			writeFile(t, env.settings, `{"statusLine":{"type":"command","command":"sh '`+env.script()+`'"}}`)
+			writeFile(t, env.original(), " \n")
+		},
 		"backup with foreign": func(t *testing.T, env installEnv) {
 			writeFile(t, env.settings, `{"statusLine":{"type":"command","command":"omc-hud"}}`)
 			writeFile(t, env.original(), `[1,2]`)
