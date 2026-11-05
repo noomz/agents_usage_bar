@@ -592,27 +592,82 @@ func TestSwiftInstallKeepsItsNamesAndGainsSingleQuotes(t *testing.T) {
 	}
 }
 
-func TestSlugFromCommand(t *testing.T) {
+func TestOwnCommandIsAWholeCommandMatch(t *testing.T) {
 	cases := []struct {
-		command, slug string
-		ok            bool
+		command, path, slug string
+		ok                  bool
 	}{
-		{`sh '/feed/aub-statusline.sh'`, "default", true},
-		{`sh "/feed/aub-statusline.sh"`, "default", true},
-		{`sh /feed/aub-statusline.sh`, "default", true},
-		{`sh '/feed/aub-statusline-work.sh'`, "work", true},
-		{`sh "/App Support/aub-statusline-work.sh"`, "work", true},
-		{`sh '/feed/aub-statusline-a.shell.sh'`, "a.shell", true},
-		{`sh '/feed/aub-statusline-it'\''s.sh'`, "it's", true},
-		{`sh '/aub-statusline-dir/aub-statusline-work.sh'`, "work", true},
-		{`sh '/aub-statusline-dir/hud.sh'`, "", false},
-		{`aub-statusline-wrapper`, "", false},
-		{`omc-hud`, "", false},
+		{`sh '/feed/aub-statusline.sh'`, "/feed/aub-statusline.sh", "default", true},
+		{`sh "/feed/aub-statusline.sh"`, "/feed/aub-statusline.sh", "default", true},
+		{`sh /feed/aub-statusline.sh`, "/feed/aub-statusline.sh", "default", true},
+		{`sh '/feed/aub-statusline-work.sh'`, "/feed/aub-statusline-work.sh", "work", true},
+		{`sh "/App Support/aub-statusline-work.sh"`, "/App Support/aub-statusline-work.sh", "work", true},
+		{`sh '/feed/aub-statusline-a.shell.sh'`, "/feed/aub-statusline-a.shell.sh", "a.shell", true},
+		{`sh '/feed/aub-statusline-it'\''s.sh'`, "/feed/aub-statusline-it's.sh", "it's", true},
+		{`sh '/aub-statusline-dir/aub-statusline-work.sh'`, "/aub-statusline-dir/aub-statusline-work.sh", "work", true},
+		{`sh '/aub-statusline-dir/hud.sh'`, "", "", false},
+		{`sh '/x/aub-statusline.sh' | my-prefix`, "", "", false},
+		{`sh /x/aub-statusline.sh; other`, "", "", false},
+		{`sh '/x/aub-statusline.sh' 'second'`, "", "", false},
+		{`sh ~/aub-statusline-tools/hud.sh`, "", "", false},
+		{`sh "$(hud)/aub-statusline.sh"`, "", "", false},
+		{`sh /x/aub-statusline-.sh`, "", "", false},
+		{`bash /x/aub-statusline.sh`, "", "", false},
+		{`aub-statusline-wrapper`, "", "", false},
+		{`omc-hud`, "", "", false},
+		{``, "", "", false},
 	}
 	for _, c := range cases {
-		if slug, ok := slugFromCommand(c.command); slug != c.slug || ok != c.ok {
-			t.Errorf("%s: got %q %v", c.command, slug, ok)
+		own, ok := parseOwnCommand(c.command)
+		if own.scriptPath != c.path || own.slug != c.slug || ok != c.ok {
+			t.Errorf("%s: got %+v %v", c.command, own, ok)
 		}
+	}
+}
+
+func TestStatusLinesThatOnlyMentionTheMarkerSurviveARoundTrip(t *testing.T) {
+	for _, foreign := range []string{`sh '/x/aub-statusline.sh' | my-prefix`, `sh ~/aub-statusline-tools/hud.sh`} {
+		t.Run(foreign, func(t *testing.T) {
+			env := newInstallEnv(t)
+			data, _ := json.Marshal(map[string]any{"statusLine": map[string]any{"type": "command", "command": foreign}})
+			writeFile(t, env.settings, string(data))
+			if statusOf(env.installer) != HookForeignStatusline {
+				t.Fatalf("status %v", statusOf(env.installer))
+			}
+
+			if !env.mustInstall(t) {
+				t.Fatal("a foreign status line must be chained")
+			}
+			env.mustUninstall(t)
+
+			if got := env.statusLine(t)["command"]; got != foreign {
+				t.Fatalf("restored %q", got)
+			}
+		})
+	}
+}
+
+func TestStatusLineRunningOurOwnScriptIsRefused(t *testing.T) {
+	env := newInstallEnv(t)
+	rel := filepath.Join(filepath.Base(filepath.Dir(env.feed)), filepath.Base(env.feed))
+	for _, command := range []string{
+		`sh '` + env.script() + `' | my-prefix`,
+		`sh "$HOME/` + rel + `/aub-statusline-work.sh" | my-prefix`,
+	} {
+		t.Run(command, func(t *testing.T) {
+			data, _ := json.Marshal(map[string]any{"statusLine": map[string]any{"type": "command", "command": command}})
+			writeFile(t, env.settings, string(data))
+			before := snapshotTree(t, env.root)
+			if _, err := env.installer.Install(); err == nil {
+				t.Fatal("install must refuse to chain our own script")
+			}
+			if err := env.installer.Uninstall(); err == nil {
+				t.Fatal("uninstall must refuse to delete a script the status line runs")
+			}
+			if after := snapshotTree(t, env.root); !reflect.DeepEqual(before, after) {
+				t.Fatal("wrote something")
+			}
+		})
 	}
 }
 

@@ -254,6 +254,9 @@ func (i HookInstaller) planSlot(target HookTarget) (hookSlot, error) {
 	case HookInstalled:
 		slot.original = saved
 	}
+	if i.runsFeedScript(slot.originalCommand()) {
+		return hookSlot{}, fmt.Errorf("%s: status line %q runs our own script: it would recurse if chained and break on uninstall, so change it first", target.SettingsPath, slot.originalCommand())
+	}
 	return slot, nil
 }
 
@@ -319,8 +322,8 @@ type hookFiles struct{ script, original string }
 // would orphan the saved status line and lose the chain.
 func (i HookInstaller) files(target HookTarget, values map[string]any) hookFiles {
 	slug := target.Slug
-	if fromCommand, ok := slugFromCommand(commandOf(values["statusLine"])); ok {
-		slug = fromCommand
+	if own, ok := parseOwnCommand(commandOf(values["statusLine"])); ok {
+		slug = own.slug
 	}
 	suffix := ""
 	if slug != defaultAccount {
@@ -332,27 +335,35 @@ func (i HookInstaller) files(target HookTarget, values map[string]any) hookFiles
 	}
 }
 
-// scriptSlugPattern matches from the last marker on, in the single or double quoted form either
-// installer writes.
-var scriptSlugPattern = regexp.MustCompile(`^` + hookScriptMarker + `(?:-(.+?))?\.sh(?:['"\s]|$)`)
+// ownCommand is a statusLine command that runs one of our scripts and nothing else.
+type ownCommand struct{ scriptPath, slug string }
 
-func slugFromCommand(command string) (string, bool) {
-	at := strings.LastIndex(command, hookScriptMarker)
-	if at < 0 {
-		return "", false
-	}
-	match := scriptSlugPattern.FindStringSubmatch(command[at:])
+var (
+	ownCommandPattern = regexp.MustCompile("^sh\\s+(?:'((?:[^']|'\\\\'')*)'|\"([^\"$`\\\\]*)\"|([^\\s'\"\\\\;|&<>()$`*?#]+))$")
+	ownScriptPattern  = regexp.MustCompile(`^` + hookScriptMarker + `(?:-(.+))?\.sh$`)
+)
+
+func parseOwnCommand(command string) (ownCommand, bool) {
+	match := ownCommandPattern.FindStringSubmatch(strings.TrimSpace(command))
 	if match == nil {
-		return "", false
+		return ownCommand{}, false
 	}
-	slug := strings.ReplaceAll(match[1], `'\''`, "'")
+	path := strings.ReplaceAll(match[1], `'\''`, "'") + match[2] + match[3]
+	script := ownScriptPattern.FindStringSubmatch(filepath.Base(path))
+	if script == nil {
+		return ownCommand{}, false
+	}
+	slug := script[1]
 	if slug == "" {
-		return defaultAccount, true
+		slug = defaultAccount
 	}
-	if strings.Contains(slug, "/") {
-		return "", false
-	}
-	return slug, true
+	return ownCommand{path, slug}, true
+}
+
+// runsFeedScript matches on the feed's last two path parts so that `~` and `$HOME` spellings count.
+func (i HookInstaller) runsFeedScript(command string) bool {
+	suffix := filepath.Join(filepath.Base(filepath.Dir(i.FeedDir)), filepath.Base(i.FeedDir), hookScriptMarker)
+	return strings.Contains(command, suffix)
 }
 
 func commandOf(statusLine any) string {
@@ -366,7 +377,8 @@ func slotState(values map[string]any) HookState {
 	switch {
 	case statusLine == nil:
 		return HookNotInstalled
-	case strings.Contains(commandOf(statusLine), hookScriptMarker):
+	}
+	if _, ok := parseOwnCommand(commandOf(statusLine)); ok {
 		return HookInstalled
 	}
 	return HookForeignStatusline
