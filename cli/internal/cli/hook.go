@@ -11,25 +11,28 @@ import (
 const claudeSourceKey = "claude-source"
 
 func (a *App) runHook(c HookCmd) (int, error) {
-	feedDir := claude.HookFeedDir(a.Layout.DataDir)
-	targets := claude.DiscoverHookTargets(a.Layout.Home)
+	installer := claude.HookInstaller{
+		FeedDir: claude.HookFeedDir(a.Layout.DataDir),
+		Targets: claude.DiscoverHookTargets(a.Layout.Home),
+	}
 	switch c.Verb {
 	case HookInstall:
-		return a.hookInstall(feedDir, targets)
+		return a.hookInstall(installer)
 	case HookUninstall:
-		return a.hookUninstall(feedDir, targets)
+		return a.hookUninstall(installer)
 	}
-	return a.hookStatus(feedDir, targets)
+	return a.hookStatus(installer)
 }
 
-func (a *App) hookInstall(feedDir string, targets []claude.HookTarget) (int, error) {
-	for _, target := range targets {
-		chained, err := claude.HookInstaller{FeedDir: feedDir, Target: target}.Install()
-		if err != nil {
-			return 0, err
-		}
+func (a *App) hookInstall(installer claude.HookInstaller) (int, error) {
+	installations, err := installer.Install()
+	if err != nil {
+		return 0, err
+	}
+	for _, installation := range installations {
+		target := installation.Target
 		line := fmt.Sprintf("Installed %s (accounts: %s)", target.SettingsPath, strings.Join(target.Accounts, ", "))
-		if chained {
+		if installation.Chained {
 			line += ", chained the existing status line"
 		}
 		fmt.Fprintln(a.Stdout, line)
@@ -41,11 +44,11 @@ func (a *App) hookInstall(feedDir string, targets []claude.HookTarget) (int, err
 	return 0, nil
 }
 
-func (a *App) hookUninstall(feedDir string, targets []claude.HookTarget) (int, error) {
-	for _, target := range targets {
-		if err := (claude.HookInstaller{FeedDir: feedDir, Target: target}).Uninstall(); err != nil {
-			return 0, err
-		}
+func (a *App) hookUninstall(installer claude.HookInstaller) (int, error) {
+	if err := installer.Uninstall(); err != nil {
+		return 0, err
+	}
+	for _, target := range installer.Targets {
 		fmt.Fprintf(a.Stdout, "Uninstalled %s (accounts: %s)\n", target.SettingsPath, strings.Join(target.Accounts, ", "))
 	}
 	return 0, a.setClaudeSource("sessionReads")
@@ -60,17 +63,16 @@ func (a *App) setClaudeSource(value string) error {
 	return nil
 }
 
-func (a *App) hookStatus(feedDir string, targets []claude.HookTarget) (int, error) {
+func (a *App) hookStatus(installer claude.HookInstaller) (int, error) {
 	source, err := a.settingsCLI().Get(claudeSourceKey)
 	if err != nil {
 		return 0, err
 	}
 	fmt.Fprintln(a.Stdout, source.Key+"="+source.Value)
-	for _, target := range targets {
-		state := claude.HookInstaller{FeedDir: feedDir, Target: target}.Status()
-		fmt.Fprintf(a.Stdout, "%s: %s  %s\n", strings.Join(target.Accounts, ", "), state, target.SettingsPath)
+	for _, target := range installer.Targets {
+		fmt.Fprintf(a.Stdout, "%s: %s  %s\n", strings.Join(target.Accounts, ", "), installer.Status(target), target.SettingsPath)
 	}
-	accounts := claude.HookFeedAccounts(feedDir)
+	accounts := claude.HookFeedAccounts(installer.FeedDir)
 	if len(accounts) == 0 {
 		fmt.Fprintln(a.Stdout, "feed: no data yet")
 	}
