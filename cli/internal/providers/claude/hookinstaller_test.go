@@ -877,6 +877,31 @@ func TestSessionIDCannotEscapeTheFeed(t *testing.T) {
 	}
 }
 
+func TestDotPrefixedConfigDirIsVisibleToTheReader(t *testing.T) {
+	cases := []struct{ configDir, account string }{
+		{".claude", "default"},
+		{".work", "work"},
+		{"..work", "work"},
+		{"..", "default"},
+		{"work", "work"},
+	}
+	for _, c := range cases {
+		t.Run(c.configDir, func(t *testing.T) {
+			root := t.TempDir()
+			feed := filepath.Join(root, "claude-hook")
+			script := filepath.Join(root, "tee.sh")
+			writeFile(t, script, hookScript(hookSessionsDir(feed), ""))
+
+			runScript(t, "sh", script, `{"session_id":"s1"}`, "CLAUDE_CONFIG_DIR="+root+"/"+c.configDir)
+
+			accounts := HookFeedAccounts(feed)
+			if len(accounts) != 1 || accounts[0].Name != c.account {
+				t.Fatalf("accounts %+v", accounts)
+			}
+		})
+	}
+}
+
 func TestStatusLineFeedsTheReaderThroughRealShell(t *testing.T) {
 	root := t.TempDir()
 	dataDir := filepath.Join(root, "App Support", "it's $HOME")

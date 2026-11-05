@@ -655,6 +655,8 @@ func hookScript(sessionsDir, originalCommand string) string {
 		"FEED_ROOT=" + shellQuote(sessionsDir),
 		`# Account = ccs instance dir name from CLAUDE_CONFIG_DIR; "default" for ~/.claude.`,
 		`acct="${CLAUDE_CONFIG_DIR:+$(basename "$CLAUDE_CONFIG_DIR")}"`,
+		`# The reader skips dot directories, so a dot-prefixed config dir needs another name.`,
+		`case "$acct" in .claude) acct=default ;; .*) acct=$(printf '%s' "$acct" | sed 's/^\.*//') ;; esac`,
 		`acct="${acct:-default}"`,
 		`FEED_DIR="$FEED_ROOT/$acct"`,
 		`input=$(cat)`,
