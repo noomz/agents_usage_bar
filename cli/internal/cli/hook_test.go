@@ -425,7 +425,9 @@ func TestHookStatusPrintsStateWithoutWriting(t *testing.T) {
 	writeHookFile(t, h.claudeSettings(), `{"statusLine":{"type":"command","command":"omc-hud"}}`)
 	writeHookFile(t, h.instanceSettings("broken"), `{not json`)
 	shared := filepath.Join(h.Layout.Home, ".ccs", "shared", "settings.json")
-	writeHookFile(t, shared, `{"statusLine":{"type":"command","command":"sh '/x/aub-statusline-personal.sh'"}}`)
+	sharedScript := filepath.Join(claude.HookFeedDir(h.Layout.DataDir), "aub-statusline-personal.sh")
+	writeHookFile(t, sharedScript, "#!/bin/sh\n")
+	writeHookFile(t, shared, statusLineJSON("sh '"+sharedScript+"'"))
 	for _, slug := range []string{"personal", "work"} {
 		if err := os.MkdirAll(filepath.Dir(h.instanceSettings(slug)), 0o755); err != nil {
 			t.Fatal(err)
@@ -470,6 +472,23 @@ func TestHookStatusPrintsStateWithoutWriting(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(h.Layout.DataDir, "claude-hook", "aub-statusline.sh")); !os.IsNotExist(err) {
 		t.Fatal("status must not write a script")
+	}
+}
+
+func TestHookStatusNamesAMissingScript(t *testing.T) {
+	h := newHarness(t)
+	writeHookFile(t, h.claudeSettings(), statusLineJSON("omc-hud"))
+	if _, errOut, code := h.run("hook", "install"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if err := os.Remove(filepath.Join(claude.HookFeedDir(h.Layout.DataDir), "aub-statusline.sh")); err != nil {
+		t.Fatal(err)
+	}
+
+	out, _, code := h.run("hook", "status")
+
+	if want := "default: installed (script missing, rerun aub hook install)  " + h.claudeSettings() + "\n"; code != 0 || !strings.Contains(out, want) {
+		t.Fatalf("code %d, out:\n%s", code, out)
 	}
 }
 
