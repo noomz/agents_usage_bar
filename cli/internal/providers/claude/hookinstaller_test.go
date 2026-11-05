@@ -654,7 +654,7 @@ func TestReinstallIsIdempotent(t *testing.T) {
 
 func TestStatusLineFeedsTheReaderThroughRealShell(t *testing.T) {
 	root := t.TempDir()
-	dataDir := filepath.Join(root, "App Support", "it's")
+	dataDir := filepath.Join(root, "App Support", "it's $HOME")
 	configDir := filepath.Join(root, ".ccs", "instances", "work")
 	settingsPath := filepath.Join(configDir, "settings.json")
 
