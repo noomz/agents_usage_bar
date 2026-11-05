@@ -854,6 +854,29 @@ func TestOursWithoutASavedFileRecoversOrProceeds(t *testing.T) {
 	})
 }
 
+func TestSessionIDCannotEscapeTheFeed(t *testing.T) {
+	for _, id := range []string{"../../evil", "/../../original-statusline", "a/b"} {
+		t.Run(id, func(t *testing.T) {
+			root := t.TempDir()
+			feed := filepath.Join(root, "claude-hook")
+			saved := filepath.Join(feed, "original-statusline.json")
+			writeFile(t, saved, `{"type":"command","command":"omc-hud"}`)
+			script := filepath.Join(feed, "aub-statusline.sh")
+			writeFile(t, script, hookScript(hookSessionsDir(feed), "echo hud"))
+			before := snapshotTree(t, root)
+
+			out := runScript(t, "sh", script, `{"session_id":"`+id+`"}`)
+
+			if out != "hud\n" {
+				t.Fatalf("chain must still run, got %q", out)
+			}
+			if after := snapshotTree(t, root); !reflect.DeepEqual(before, after) {
+				t.Fatalf("wrote something:\n%v\n%v", before, after)
+			}
+		})
+	}
+}
+
 func TestStatusLineFeedsTheReaderThroughRealShell(t *testing.T) {
 	root := t.TempDir()
 	dataDir := filepath.Join(root, "App Support", "it's $HOME")
