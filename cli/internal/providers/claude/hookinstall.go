@@ -229,7 +229,25 @@ func (i HookInstaller) planSlots() ([]hookSlot, error) {
 		}
 		slots[index] = slot
 	}
+	if err := refuseSharedFiles(slots); err != nil {
+		return nil, err
+	}
 	return slots, nil
+}
+
+// refuseSharedFiles allows sharing only between slots that are already ours: one script then
+// serves them all and routes at runtime. In any other pair, one target's status line would
+// overwrite the other's saved copy and chain.
+func refuseSharedFiles(slots []hookSlot) error {
+	byScript := map[string]hookSlot{}
+	for _, slot := range slots {
+		other, shared := byScript[slot.files.script]
+		if shared && (slot.state != HookInstalled || other.state != HookInstalled) {
+			return fmt.Errorf("%s and %s both use %s: rename the ccs instance or fix its status line first", other.target.SettingsPath, slot.target.SettingsPath, slot.files.script)
+		}
+		byScript[slot.files.script] = slot
+	}
+	return nil
 }
 
 func (i HookInstaller) planSlot(target HookTarget) (hookSlot, error) {

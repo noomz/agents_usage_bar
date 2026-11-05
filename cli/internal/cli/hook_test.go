@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/claude"
 	"github.com/noomz/agents_usage_bar/cli/internal/settings"
 )
 
@@ -160,6 +162,85 @@ func TestHookUninstallRefusalWritesNothingOnAnyTarget(t *testing.T) {
 	}
 	if after := snapshotHookTree(t, h); !reflect.DeepEqual(before, after) {
 		t.Fatalf("a refusal wrote something:\n%v\n%v", before, after)
+	}
+}
+
+func statusLineJSON(command string) string {
+	data, _ := json.Marshal(map[string]any{"statusLine": map[string]any{"type": "command", "command": command}})
+	return string(data)
+}
+
+func TestHookRefusesTwoTargetsSharingFilesUnlessBothAreOurs(t *testing.T) {
+	feedScript := func(h *harness) string {
+		return filepath.Join(claude.HookFeedDir(h.Layout.DataDir), "aub-statusline.sh")
+	}
+	cases := map[string]func(h *harness) (string, string){
+		"instance named default, both foreign": func(h *harness) (string, string) {
+			writeHookFile(t, h.claudeSettings(), statusLineJSON("hud-a"))
+			writeHookFile(t, h.instanceSettings("default"), statusLineJSON("hud-b"))
+			return h.claudeSettings(), h.instanceSettings("default")
+		},
+		"instance named default, one empty": func(h *harness) (string, string) {
+			writeHookFile(t, h.claudeSettings(), statusLineJSON("hud-a"))
+			writeHookFile(t, h.instanceSettings("default"), `{}`)
+			return h.claudeSettings(), h.instanceSettings("default")
+		},
+		"copied settings beside a foreign slot": func(h *harness) (string, string) {
+			writeHookFile(t, h.claudeSettings(), statusLineJSON("newer-hud"))
+			writeHookFile(t, h.instanceSettings("copy"), statusLineJSON("sh '"+feedScript(h)+"'"))
+			writeHookFile(t, filepath.Join(claude.HookFeedDir(h.Layout.DataDir), "original-statusline.json"), statusLineJSON("old-hud"))
+			return h.claudeSettings(), h.instanceSettings("copy")
+		},
+	}
+	for name, seed := range cases {
+		t.Run(name, func(t *testing.T) {
+			for _, verb := range []string{"install", "uninstall"} {
+				h := newHarness(t)
+				first, second := seed(h)
+				before := snapshotHookTree(t, h)
+
+				_, errOut, code := h.run("hook", verb)
+
+				if code != 1 {
+					t.Fatalf("%s: code %d", verb, code)
+				}
+				for _, want := range []string{first, second, feedScript(h)} {
+					if !strings.Contains(errOut, want) {
+						t.Errorf("%s: stderr %q does not name %s", verb, errOut, want)
+					}
+				}
+				if after := snapshotHookTree(t, h); !reflect.DeepEqual(before, after) {
+					t.Fatalf("%s wrote something:\n%v\n%v", verb, before, after)
+				}
+				if len(h.store) != 0 {
+					t.Fatalf("%s wrote a setting: %v", verb, h.store)
+				}
+			}
+		})
+	}
+}
+
+func TestHookUninstallRestoresEveryCopyOfASharedSlot(t *testing.T) {
+	h := newHarness(t)
+	writeHookFile(t, h.claudeSettings(), statusLineJSON("omc-hud"))
+	if _, errOut, code := h.run("hook", "install"); code != 0 {
+		t.Fatal(errOut)
+	}
+	installed, err := os.ReadFile(h.claudeSettings())
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeHookFile(t, h.instanceSettings("copy"), string(installed))
+
+	if _, errOut, code := h.run("hook", "uninstall"); code != 0 {
+		t.Fatal(errOut)
+	}
+
+	for _, path := range []string{h.claudeSettings(), h.instanceSettings("copy")} {
+		restored, _ := os.ReadFile(path)
+		if !strings.Contains(string(restored), `"command": "omc-hud"`) {
+			t.Errorf("%s: %s", path, restored)
+		}
 	}
 }
 
