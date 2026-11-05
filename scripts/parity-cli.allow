@@ -3,4 +3,3 @@ settings-get-json | Swift encodes this dictionary without .sortedKeys, so its ke
 help-long | Go lists `aub hook`; the Swift CLI has no hook command because the app installs the hook from Settings.
 help-short | Go lists `aub hook`; the Swift CLI has no hook command because the app installs the hook from Settings.
 help-word | Go lists `aub hook`; the Swift CLI has no hook command because the app installs the hook from Settings.
-help-wins | Go lists `aub hook`; the Swift CLI has no hook command because the app installs the hook from Settings.
