@@ -137,6 +137,55 @@ func backupEpochs(t *testing.T, settingsPath string) map[int]bool {
 	return epochs
 }
 
+func runScript(t *testing.T, shell, script, stdin string, env ...string) string {
+	t.Helper()
+	command := exec.Command(shell, script)
+	command.Stdin = strings.NewReader(stdin)
+	command.Env = append([]string{"PATH=" + os.Getenv("PATH")}, env...)
+	out, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("%s %s: %v\n%s", shell, script, err, out)
+	}
+	return string(out)
+}
+
+func TestChainGivesTheWholeOriginalTheInput(t *testing.T) {
+	const payload = "{\"session_id\":\"s1\"}"
+	cases := []struct{ name, original, want string }{
+		{"reads a line", `read -r l; echo "$l"`, payload + "\n"},
+		{"second command reads", `echo x; cat`, "x\n" + payload},
+		{"multi-line", "x=1\necho \"$x:$(cat)\"", "1:" + payload + "\n"},
+		{"plain pipeline", `cat | tr 1 2`, "{\"session_id\":\"s2\"}"},
+		{"trailing comment", `cat # a note`, payload},
+	}
+	shells := []string{"sh"}
+	if _, err := exec.LookPath("dash"); err == nil {
+		shells = append(shells, "dash")
+	}
+	for _, shell := range shells {
+		for _, c := range cases {
+			t.Run(shell+"/"+c.name, func(t *testing.T) {
+				dir := t.TempDir()
+				script := filepath.Join(dir, "tee.sh")
+				writeFile(t, script, hookScript(filepath.Join(dir, "sessions"), c.original))
+				if got := runScript(t, shell, script, payload); got != c.want {
+					t.Fatalf("got %q, want %q", got, c.want)
+				}
+			})
+		}
+		t.Run(shell+"/config dir form", func(t *testing.T) {
+			dir := t.TempDir()
+			config := filepath.Join(dir, "instance")
+			writeFile(t, filepath.Join(config, "hud", "hud.sh"), `echo "$1 $(cat)"`+"\n")
+			script := filepath.Join(dir, "tee.sh")
+			writeFile(t, script, hookScript(filepath.Join(dir, "sessions"), `sh ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hud/hud.sh arg`))
+			if got := runScript(t, shell, script, payload, "CLAUDE_CONFIG_DIR="+config); got != "arg "+payload+"\n" {
+				t.Fatalf("got %q", got)
+			}
+		})
+	}
+}
+
 func TestInstallFreshWiresStatusLineAndKeepsOtherKeys(t *testing.T) {
 	env := newInstallEnv(t)
 	writeFile(t, env.settings, `{"model":"opusplan","env":{"FOO":"bar"},"permissions":{"allow":["Bash"]}}`)
@@ -204,8 +253,8 @@ func TestInstallOverForeignSavesAndChainsItVerbatim(t *testing.T) {
 	if saved["command"] != foreign {
 		t.Fatalf("saved %+v", saved)
 	}
-	if want := "\nprintf '%s' \"$input\" | " + foreign + "\n"; !strings.Contains(string(readBytes(t, env.script())), want) {
-		t.Fatalf("script does not chain verbatim:\n%s", readBytes(t, env.script()))
+	if got := runScript(t, "sh", env.script(), "{}", "USER=me"); got != "hud: me\n" {
+		t.Fatalf("chained output %q", got)
 	}
 	if statusOf(env.installer) != HookInstalled || env.readSettings(t)["model"] != "sonnet" {
 		t.Fatalf("settings %s", readBytes(t, env.settings))
@@ -544,15 +593,15 @@ func TestMalformedFilesAreErrorsThatWriteNothing(t *testing.T) {
 func TestInstalledCommandSlugWinsOverDiscovery(t *testing.T) {
 	env := newInstallEnv(t)
 	shared := filepath.Join(env.root, "shared", "settings.json")
-	writeFile(t, shared, `{"statusLine":{"type":"command","command":"omc-hud"}}`)
+	writeFile(t, shared, `{"statusLine":{"type":"command","command":"echo hud"}}`)
 	first := HookInstaller{env.feed, []HookTarget{{"personal", []string{"personal", "work"}, shared}}}
 	installOne(t, first)
 	personalScript := filepath.Join(env.feed, "aub-statusline-personal.sh")
 	personalOriginal := filepath.Join(env.feed, "original-statusline-personal.json")
 
 	later := oneTarget(env.feed, "work", shared)
-	if !installOne(t, later) || !strings.Contains(string(readBytes(t, personalScript)), "| omc-hud\n") {
-		t.Fatalf("chain lost")
+	if !installOne(t, later) || runScript(t, "sh", personalScript, "{}") != "hud\n" {
+		t.Fatal("chain lost")
 	}
 	assertAbsent(t, filepath.Join(env.feed, "aub-statusline-work.sh"))
 	assertAbsent(t, filepath.Join(env.feed, "original-statusline-work.json"))
@@ -564,7 +613,7 @@ func TestInstalledCommandSlugWinsOverDiscovery(t *testing.T) {
 	if err := json.Unmarshal(readBytes(t, shared), &values); err != nil {
 		t.Fatal(err)
 	}
-	if got := commandOf(values["statusLine"]); got != "omc-hud" {
+	if got := commandOf(values["statusLine"]); got != "echo hud" {
 		t.Fatalf("restored %q", got)
 	}
 	assertAbsent(t, personalScript)
@@ -577,10 +626,10 @@ func TestSwiftInstallKeepsItsNamesAndGainsSingleQuotes(t *testing.T) {
 	swiftCommand := `sh "` + env.script() + `"`
 	data, _ := json.Marshal(map[string]any{"statusLine": map[string]any{"type": "command", "command": swiftCommand}})
 	writeFile(t, personalSettings, string(data))
-	writeFile(t, env.original(), `{"type":"command","command":"omc-hud"}`)
+	writeFile(t, env.original(), `{"type":"command","command":"echo hud"}`)
 	installer := oneTarget(env.feed, "personal", personalSettings)
 
-	if !installOne(t, installer) || !strings.Contains(string(readBytes(t, env.script())), "| omc-hud\n") {
+	if !installOne(t, installer) || runScript(t, "sh", env.script(), "{}") != "hud\n" {
 		t.Fatal("the Swift install's chain must survive")
 	}
 	var values map[string]any

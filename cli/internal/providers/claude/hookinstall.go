@@ -580,9 +580,15 @@ func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
+const (
+	chainMarker = "# --- chained original statusline (embedded verbatim) ---"
+	chainPrefix = `printf '%s' "$input" | `
+)
+
 // hookScript is the tee. The account is read at runtime because instances can share one
 // settings.json, so the script's own name cannot say who is running. The original command goes on
-// its own line, not in a variable, so it parses exactly as its author wrote it.
+// its own lines, not in a variable, so it parses exactly as its author wrote it. The braces give
+// all of a compound or multi-line command the pipe, not only its first part.
 func hookScript(sessionsDir, originalCommand string) string {
 	lines := []string{
 		"#!/bin/sh",
@@ -606,8 +612,10 @@ func hookScript(sessionsDir, originalCommand string) string {
 	}
 	if strings.TrimSpace(originalCommand) != "" {
 		lines = append(lines,
-			"# --- chained original statusline (embedded verbatim) ---",
-			`printf '%s' "$input" | `+originalCommand,
+			chainMarker,
+			chainPrefix+"{",
+			originalCommand,
+			"}",
 		)
 	}
 	return strings.Join(lines, "\n") + "\n"
