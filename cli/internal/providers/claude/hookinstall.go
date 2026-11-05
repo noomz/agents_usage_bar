@@ -252,14 +252,17 @@ func (i HookInstaller) planSlots() ([]hookSlot, error) {
 }
 
 // refuseSharedFiles allows sharing only between slots that are already ours: one script then
-// serves them all and routes at runtime. In any other pair, one target's status line would
-// overwrite the other's saved copy and chain.
+// serves them all and routes at runtime, so they must also chain the same status line. In any
+// other pair, one target's status line would overwrite the other's saved copy and chain.
 func refuseSharedFiles(slots []hookSlot) error {
 	byScript := map[string]hookSlot{}
 	for _, slot := range slots {
 		other, shared := byScript[slot.files.script]
 		if shared && (slot.state != HookInstalled || other.state != HookInstalled) {
 			return fmt.Errorf("%s and %s both use %s: rename the ccs instance or fix its status line first", other.target.SettingsPath, slot.target.SettingsPath, slot.files.script)
+		}
+		if shared && slot.originalCommand() != other.originalCommand() {
+			return fmt.Errorf("%s and %s share %s but chain different status lines: point both at one status line, then rerun", other.target.SettingsPath, slot.target.SettingsPath, slot.files.script)
 		}
 		byScript[slot.files.script] = slot
 	}
@@ -304,8 +307,12 @@ func (i HookInstaller) planSlot(target HookTarget) (hookSlot, error) {
 // can leave the chain only there. The command's own path comes first because that is what runs. A
 // deleted script leaves nothing to recover and install is its repair, so that is not an error.
 func recoverOriginal(statusLine map[string]any, files hookFiles) (map[string]any, error) {
-	own, _ := parseOwnCommand(commandOf(statusLine))
-	for _, path := range []string{own.scriptPath, files.script} {
+	paths := []string{files.script}
+	// A relative path would be read from aub's working directory, not where Claude Code runs it.
+	if own, _ := parseOwnCommand(commandOf(statusLine)); filepath.IsAbs(own.scriptPath) {
+		paths = []string{own.scriptPath, files.script}
+	}
+	for _, path := range paths {
 		data, err := os.ReadFile(path)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue

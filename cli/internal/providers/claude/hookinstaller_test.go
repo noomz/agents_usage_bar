@@ -881,6 +881,41 @@ func TestOursWithoutASavedFileRecoversOrProceeds(t *testing.T) {
 	})
 }
 
+func TestSharedScriptWithDifferentChainsIsRefused(t *testing.T) {
+	env := newInstallEnv(t)
+	oldScript := filepath.Join(env.root, "old-feed", "aub-statusline.sh")
+	writeFile(t, oldScript, hookScript(filepath.Join(env.root, "sessions"), "hud-a"))
+	writeFile(t, env.settings, `{"statusLine":{"type":"command","padding":2,"command":"sh '`+oldScript+`'"}}`)
+	shared := filepath.Join(env.root, ".ccs", "shared", "settings.json")
+	writeFile(t, shared, `{"statusLine":{"type":"command","command":"sh '`+env.script()+`'"}}`)
+	writeFile(t, env.script(), hookScript(filepath.Join(env.feed, "sessions"), "hud-b"))
+	installer := HookInstaller{env.feed, []HookTarget{
+		{"default", []string{"default"}, env.settings},
+		{"work", []string{"work"}, shared},
+	}}
+	before := snapshotTree(t, env.root)
+	if _, err := installer.Install(); err == nil {
+		t.Fatal("install must refuse")
+	}
+	if err := installer.Uninstall(); err == nil {
+		t.Fatal("uninstall must refuse")
+	}
+	if after := snapshotTree(t, env.root); !reflect.DeepEqual(before, after) {
+		t.Fatal("wrote something")
+	}
+}
+
+func TestRelativeOwnScriptIsNotReadFromTheWorkingDirectory(t *testing.T) {
+	env := newInstallEnv(t)
+	cwd := t.TempDir()
+	writeFile(t, filepath.Join(cwd, "aub-statusline.sh"), hookScript(filepath.Join(cwd, "sessions"), "echo from-cwd"))
+	t.Chdir(cwd)
+	writeFile(t, env.settings, `{"statusLine":{"type":"command","command":"sh aub-statusline.sh"}}`)
+	if env.mustInstall(t) {
+		t.Fatalf("chained a script from the working directory: %s", readBytes(t, env.script()))
+	}
+}
+
 func TestSessionIDCannotEscapeTheFeed(t *testing.T) {
 	for _, id := range []string{"../../evil", "/../../original-statusline", "a/b"} {
 		t.Run(id, func(t *testing.T) {
