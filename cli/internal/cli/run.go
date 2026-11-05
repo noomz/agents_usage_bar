@@ -137,6 +137,8 @@ func (a *App) execute(command Command) (int, error) {
 		}
 		fmt.Fprintln(a.Stdout, "Uninstalled aub symlinks that pointed at this app.")
 		return 0, nil
+	case HookCmd:
+		return a.runHook(c)
 	case UsageCmd:
 		return a.runUsage(c)
 	case StatsCmd:
@@ -183,11 +185,15 @@ func (a *App) dayKeys() *domain.DayKeyOwner {
 	return domain.NewDayKeyOwner(a.Clock, a.Location)
 }
 
-func (a *App) runSettings(c SettingsCmd) (int, error) {
-	store := settings.CLI{
+func (a *App) settingsCLI() settings.CLI {
+	return settings.CLI{
 		Store:         a.Settings,
 		CustomEngines: func() []domain.ProviderID { return config.Load(a.envValue, a.Layout.ConfigFile()).CustomEngineIDs() },
 	}
+}
+
+func (a *App) runSettings(c SettingsCmd) (int, error) {
+	store := a.settingsCLI()
 	switch c.Verb {
 	case SettingsList:
 		rows := store.List()

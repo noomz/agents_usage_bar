@@ -1,2 +1,6 @@
 # case-name | reason
 settings-get-json | Swift encodes this dictionary without .sortedKeys, so its key order is random per process; Go always prints key first, one of the two orders Swift prints.
+help-long | Go lists `aub hook`; the Swift CLI has no hook command because the app installs the hook from Settings.
+help-short | Go lists `aub hook`; the Swift CLI has no hook command because the app installs the hook from Settings.
+help-word | Go lists `aub hook`; the Swift CLI has no hook command because the app installs the hook from Settings.
+help-wins | Go lists `aub hook`; the Swift CLI has no hook command because the app installs the hook from Settings.
