@@ -40,7 +40,7 @@ func Build(env provider.Env) provider.Provider {
 			cache:   env.Cache,
 			dayKeys: env.DayKeys,
 		},
-		hook: &hookFeed{dir: filepath.Join(env.Paths.DataDir, "claude-hook", "sessions"), dayKeys: env.DayKeys},
+		hook: &hookFeed{dir: hookSessionsDir(HookFeedDir(env.Paths.DataDir)), dayKeys: env.DayKeys},
 	}
 }
 
