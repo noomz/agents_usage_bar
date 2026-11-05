@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -242,6 +243,147 @@ func TestHookUninstallRestoresEveryCopyOfASharedSlot(t *testing.T) {
 			t.Errorf("%s: %s", path, restored)
 		}
 	}
+}
+
+const macHUD = `sh ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hud/omc-hud-cache.sh ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hud/omc-hud.mjs`
+
+type macState struct {
+	h             *harness
+	feed, shared  string
+	script, saved string
+	settingsFiles []string
+}
+
+// seedMacState is what the Mac app left on the user's machine: two settings files on one script,
+// no saved status line, and the HUD only in the script.
+func seedMacState(t *testing.T) macState {
+	t.Helper()
+	h := newHarness(t)
+	h.App.Layout.DataDir = filepath.Join(h.Layout.Home, "Library", "Application Support", "AgentsUsageBar")
+	feed := claude.HookFeedDir(h.Layout.DataDir)
+	script := filepath.Join(feed, "aub-statusline.sh")
+	writeHookFile(t, script, strings.Join([]string{
+		"#!/bin/sh",
+		"# Agents Usage Bar — statusline tee. Captures Claude Code statusline JSON,",
+		"# then chains to the original statusline. Managed by Agents Usage Bar —",
+		"# do not edit by hand; reinstall from the app instead.",
+		`FEED_ROOT="` + filepath.Join(feed, "sessions") + `"`,
+		`# Account = ccs instance dir name from CLAUDE_CONFIG_DIR; "default" for ~/.claude.`,
+		`acct="${CLAUDE_CONFIG_DIR:+$(basename "$CLAUDE_CONFIG_DIR")}"`,
+		`acct="${acct:-default}"`,
+		`FEED_DIR="$FEED_ROOT/$acct"`,
+		`input=$(cat)`,
+		`sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)`,
+		`if [ -n "$sid" ]; then`,
+		`  mkdir -p "$FEED_DIR"`,
+		`  tmp="$FEED_DIR/.$sid.tmp.$$"`,
+		`  # Remove the temp file on ANY exit — a failed mv must not strand hidden files.`,
+		`  trap 'rm -f "$tmp"' EXIT`,
+		`  printf '%s' "$input" > "$tmp" && mv -f "$tmp" "$FEED_DIR/$sid.json"`,
+		`fi`,
+		`# --- chained original statusline (embedded verbatim) ---`,
+		`printf '%s' "$input" | ` + macHUD,
+	}, "\n")+"\n")
+	swiftSlot := statusLineJSON(`sh "` + script + `"`)
+	shared := filepath.Join(h.Layout.Home, ".ccs", "shared", "settings.json")
+	writeHookFile(t, h.claudeSettings(), swiftSlot)
+	writeHookFile(t, shared, swiftSlot)
+	for _, slug := range []string{"personal", "work"} {
+		if err := os.MkdirAll(filepath.Dir(h.instanceSettings(slug)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(shared, h.instanceSettings(slug)); err != nil {
+			t.Fatal(err)
+		}
+		writeHookFile(t, filepath.Join(h.Layout.Home, ".ccs", "instances", slug, "hud", "omc-hud-cache.sh"), `echo "hud-`+slug+` $(basename "$1") $(cat)"`+"\n")
+	}
+	writeHookFile(t, filepath.Join(h.Layout.Home, ".claude", "hud", "omc-hud-cache.sh"), `echo "hud-default $(basename "$1") $(cat)"`+"\n")
+	return macState{h, feed, shared, script, filepath.Join(feed, "original-statusline.json"), []string{h.claudeSettings(), shared}}
+}
+
+func (m macState) assertRestored(t *testing.T) {
+	t.Helper()
+	for _, path := range m.settingsFiles {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var values struct {
+			StatusLine map[string]any `json:"statusLine"`
+		}
+		if err := json.Unmarshal(data, &values); err != nil {
+			t.Fatal(err)
+		}
+		want := map[string]any{"type": "command", "command": macHUD}
+		if !reflect.DeepEqual(values.StatusLine, want) {
+			t.Errorf("%s restored %+v", path, values.StatusLine)
+		}
+	}
+	for _, gone := range []string{m.script, m.saved} {
+		if _, err := os.Lstat(gone); !os.IsNotExist(err) {
+			t.Errorf("%s should be gone (err %v)", gone, err)
+		}
+	}
+	if target, err := os.Readlink(m.h.instanceSettings("work")); err != nil || target != m.shared {
+		t.Errorf("link now %q, err %v", target, err)
+	}
+}
+
+func TestHookInstallOnTheMacStateKeepsTheChainAndUninstallRestoresIt(t *testing.T) {
+	m := seedMacState(t)
+
+	out, errOut, code := m.h.run("hook", "install")
+
+	if code != 0 {
+		t.Fatalf("code %d, stderr %q", code, errOut)
+	}
+	if got := strings.Count(out, "chained the existing status line"); got != 2 {
+		t.Fatalf("chained %d targets:\n%s", got, out)
+	}
+	var saved map[string]any
+	data, err := os.ReadFile(m.saved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &saved); err != nil || saved["command"] != macHUD {
+		t.Fatalf("saved %s, err %v", data, err)
+	}
+	children, _ := os.ReadDir(m.feed)
+	if len(children) != 2 {
+		t.Fatalf("one script and one saved file serve both targets, got %v", children)
+	}
+	for _, path := range m.settingsFiles {
+		data, _ := os.ReadFile(path)
+		if !strings.Contains(string(data), `"command": "sh '`+m.script+`'"`) {
+			t.Errorf("%s: %s", path, data)
+		}
+	}
+	for account, env := range map[string][]string{
+		"hud-default": {"HOME=" + m.h.Layout.Home},
+		"hud-work":    {"HOME=" + m.h.Layout.Home, "CLAUDE_CONFIG_DIR=" + filepath.Dir(m.h.instanceSettings("work"))},
+	} {
+		run := exec.Command("sh", m.script)
+		run.Stdin = strings.NewReader(`{"session_id":"s1"}`)
+		run.Env = append([]string{"PATH=" + os.Getenv("PATH")}, env...)
+		got, err := run.CombinedOutput()
+		if want := account + " omc-hud.mjs {\"session_id\":\"s1\"}\n"; err != nil || string(got) != want {
+			t.Errorf("got %q, want %q, err %v", got, want, err)
+		}
+	}
+
+	if _, errOut, code := m.h.run("hook", "uninstall"); code != 0 {
+		t.Fatalf("code %d, stderr %q", code, errOut)
+	}
+	m.assertRestored(t)
+}
+
+func TestHookUninstallOnTheMacStateRestoresBothTargets(t *testing.T) {
+	m := seedMacState(t)
+
+	if _, errOut, code := m.h.run("hook", "uninstall"); code != 0 {
+		t.Fatalf("code %d, stderr %q", code, errOut)
+	}
+	m.assertRestored(t)
 }
 
 func TestHookUninstallRestoresAndResetsThePreference(t *testing.T) {
