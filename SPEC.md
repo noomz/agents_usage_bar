@@ -193,7 +193,7 @@ T38|x|Account tokens: `AccountUsage` gains today's tokens. A transcript's sessio
 T39|x|Split Tokens: provider detail Split and Overview Split accounts stack tokens by account with `unattributed`. Tests: per-account tokens, lone account, pre-T38 day all unattributed, totals match unsplit.|V12,V53,V54,V68
 T40|x|Account tokens gate: CI green, install, run across a poll, confirm today's file has account tokens and split Tokens shows per account.|C7
 T41|x|Grok xAI management: config key+team, poll prepaid balance + today USD, merge with CLI quota, no "no limit" when management data exists. Tests: empty CLI + management spend, env/TOML layering, compact row.|V70,I17
-T42|x|`aub hook` install, uninstall, and status in the Go CLI, so a machine without the app reports Claude quota per ccs account. Tests: real `sh` run of the installed status line into the reader, one case per difference from the Swift installer.|V71,V72,V73
+T42|x|`aub hook` install, uninstall, and status in the Go CLI, so a machine without the app reports Claude quota per ccs account. Tests: real `sh` run of the installed status line into the reader, one case per difference from the Swift installer.|V71,V72,V73,I7
 
 ## §B
 
