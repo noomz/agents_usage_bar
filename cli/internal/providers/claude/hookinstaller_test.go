@@ -28,7 +28,22 @@ func newInstallEnv(t *testing.T) installEnv {
 	root := t.TempDir()
 	settings := filepath.Join(root, ".claude", "settings.json")
 	feed := filepath.Join(root, "claude-hook")
-	return installEnv{root, settings, feed, HookInstaller{feed, HookTarget{"default", []string{"default"}, settings}}}
+	return installEnv{root, settings, feed, oneTarget(feed, "default", settings)}
+}
+
+func oneTarget(feed, slug, settings string) HookInstaller {
+	return HookInstaller{feed, []HookTarget{{slug, []string{slug}, settings}}}
+}
+
+func statusOf(i HookInstaller) HookState { return i.Status(i.Targets[0]) }
+
+func installOne(t *testing.T, i HookInstaller) bool {
+	t.Helper()
+	installations, err := i.Install()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return installations[0].Chained
 }
 
 func (e installEnv) script() string   { return filepath.Join(e.feed, "aub-statusline.sh") }
@@ -54,11 +69,7 @@ func (e installEnv) statusLine(t *testing.T) map[string]any {
 
 func (e installEnv) mustInstall(t *testing.T) bool {
 	t.Helper()
-	chained, err := e.installer.Install()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return chained
+	return installOne(t, e.installer)
 }
 
 func (e installEnv) mustUninstall(t *testing.T) {
@@ -134,8 +145,8 @@ func TestInstallFreshWiresStatusLineAndKeepsOtherKeys(t *testing.T) {
 		t.Fatal("nothing to chain on a fresh install")
 	}
 
-	if env.installer.Status() != HookInstalled {
-		t.Fatalf("status %v", env.installer.Status())
+	if statusOf(env.installer) != HookInstalled {
+		t.Fatalf("status %v", statusOf(env.installer))
 	}
 	statusLine := env.statusLine(t)
 	if statusLine["type"] != "command" || statusLine["command"] != "sh '"+env.script()+"'" {
@@ -164,8 +175,8 @@ func TestInstallCreatesMissingOrEmptySettings(t *testing.T) {
 				writeFile(t, env.settings, *seed)
 			}
 			env.mustInstall(t)
-			if env.installer.Status() != HookInstalled {
-				t.Fatalf("status %v", env.installer.Status())
+			if statusOf(env.installer) != HookInstalled {
+				t.Fatalf("status %v", statusOf(env.installer))
 			}
 		})
 	}
@@ -178,8 +189,8 @@ func TestInstallOverForeignSavesAndChainsItVerbatim(t *testing.T) {
 	foreign := `sh -c 'printf "hud: %s\n" "$USER"'`
 	data, _ := json.Marshal(map[string]any{"statusLine": map[string]any{"type": "command", "command": foreign}, "model": "sonnet"})
 	writeFile(t, env.settings, string(data))
-	if env.installer.Status() != HookForeignStatusline {
-		t.Fatalf("status %v", env.installer.Status())
+	if statusOf(env.installer) != HookForeignStatusline {
+		t.Fatalf("status %v", statusOf(env.installer))
 	}
 
 	if !env.mustInstall(t) {
@@ -196,7 +207,7 @@ func TestInstallOverForeignSavesAndChainsItVerbatim(t *testing.T) {
 	if want := "\nprintf '%s' \"$input\" | " + foreign + "\n"; !strings.Contains(string(readBytes(t, env.script())), want) {
 		t.Fatalf("script does not chain verbatim:\n%s", readBytes(t, env.script()))
 	}
-	if env.installer.Status() != HookInstalled || env.readSettings(t)["model"] != "sonnet" {
+	if statusOf(env.installer) != HookInstalled || env.readSettings(t)["model"] != "sonnet" {
 		t.Fatalf("settings %s", readBytes(t, env.settings))
 	}
 }
@@ -211,7 +222,7 @@ func TestUninstallRestoresForeignAndRemovesOurFiles(t *testing.T) {
 
 	env.mustUninstall(t)
 
-	if env.statusLine(t)["command"] != foreign || env.installer.Status() != HookForeignStatusline {
+	if env.statusLine(t)["command"] != foreign || statusOf(env.installer) != HookForeignStatusline {
 		t.Fatalf("settings %s", readBytes(t, env.settings))
 	}
 	assertAbsent(t, env.original())
@@ -232,8 +243,8 @@ func TestUninstallAfterFreshInstallRemovesTheKey(t *testing.T) {
 	if _, present := values["statusLine"]; present || values["model"] != "opus" {
 		t.Fatalf("values %+v", values)
 	}
-	if env.installer.Status() != HookNotInstalled {
-		t.Fatalf("status %v", env.installer.Status())
+	if statusOf(env.installer) != HookNotInstalled {
+		t.Fatalf("status %v", statusOf(env.installer))
 	}
 	assertAbsent(t, env.script())
 }
@@ -340,8 +351,8 @@ func TestDanglingSymlinkIsAnErrorAndNotReplaced(t *testing.T) {
 	if err := env.installer.Uninstall(); err == nil {
 		t.Fatal("uninstall must refuse")
 	}
-	if env.installer.Status() != HookUnreadable {
-		t.Fatalf("status %v", env.installer.Status())
+	if statusOf(env.installer) != HookUnreadable {
+		t.Fatalf("status %v", statusOf(env.installer))
 	}
 	if after := snapshotTree(t, env.root); !reflect.DeepEqual(before, after) {
 		t.Fatalf("wrote something:\n%v\n%v", before, after)
@@ -379,26 +390,24 @@ func TestSlugTargetsInstallSideBySide(t *testing.T) {
 	env := newInstallEnv(t)
 	writeFile(t, env.settings, `{"model":"opusplan"}`)
 	personalSettings := filepath.Join(env.root, ".ccs", "instances", "personal", "settings.json")
-	personal := HookInstaller{env.feed, HookTarget{"personal", []string{"personal"}, personalSettings}}
+	personal := oneTarget(env.feed, "personal", personalSettings)
 
 	env.mustInstall(t)
-	if _, err := personal.Install(); err != nil {
-		t.Fatal(err)
-	}
+	installOne(t, personal)
 
 	personalScript := filepath.Join(env.feed, "aub-statusline-personal.sh")
 	if !reflect.DeepEqual(readBytes(t, env.script()), readBytes(t, personalScript)) {
 		t.Fatal("both scripts route at runtime and differ only by chain")
 	}
-	if env.installer.Status() != HookInstalled || personal.Status() != HookInstalled {
+	if statusOf(env.installer) != HookInstalled || statusOf(personal) != HookInstalled {
 		t.Fatal("both slots must be wired")
 	}
 
 	if err := personal.Uninstall(); err != nil {
 		t.Fatal(err)
 	}
-	if personal.Status() != HookNotInstalled || env.installer.Status() != HookInstalled {
-		t.Fatalf("statuses %v %v", personal.Status(), env.installer.Status())
+	if statusOf(personal) != HookNotInstalled || statusOf(env.installer) != HookInstalled {
+		t.Fatalf("statuses %v %v", statusOf(personal), statusOf(env.installer))
 	}
 	assertAbsent(t, personalScript)
 	if _, err := os.Stat(env.script()); err != nil {
@@ -427,7 +436,7 @@ func TestStatusReportsEveryStateAndNeverWrites(t *testing.T) {
 			env := newInstallEnv(t)
 			writeFile(t, env.settings, c.body)
 			before := snapshotTree(t, env.root)
-			if got := env.installer.Status(); got != c.want {
+			if got := statusOf(env.installer); got != c.want {
 				t.Fatalf("status %v, want %v", got, c.want)
 			}
 			if after := snapshotTree(t, env.root); !reflect.DeepEqual(before, after) {
@@ -435,7 +444,7 @@ func TestStatusReportsEveryStateAndNeverWrites(t *testing.T) {
 			}
 		})
 	}
-	if got := newInstallEnv(t).installer.Status(); got != HookNotInstalled {
+	if got := statusOf(newInstallEnv(t).installer); got != HookNotInstalled {
 		t.Fatalf("missing file: %v", got)
 	}
 }
@@ -532,20 +541,14 @@ func TestInstalledCommandSlugWinsOverDiscovery(t *testing.T) {
 	env := newInstallEnv(t)
 	shared := filepath.Join(env.root, "shared", "settings.json")
 	writeFile(t, shared, `{"statusLine":{"type":"command","command":"omc-hud"}}`)
-	first := HookInstaller{env.feed, HookTarget{"personal", []string{"personal", "work"}, shared}}
-	if _, err := first.Install(); err != nil {
-		t.Fatal(err)
-	}
+	first := HookInstaller{env.feed, []HookTarget{{"personal", []string{"personal", "work"}, shared}}}
+	installOne(t, first)
 	personalScript := filepath.Join(env.feed, "aub-statusline-personal.sh")
 	personalOriginal := filepath.Join(env.feed, "original-statusline-personal.json")
 
-	later := HookInstaller{env.feed, HookTarget{"work", []string{"work"}, shared}}
-	chained, err := later.Install()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !chained || !strings.Contains(string(readBytes(t, personalScript)), "| omc-hud\n") {
-		t.Fatalf("chain lost, chained=%v", chained)
+	later := oneTarget(env.feed, "work", shared)
+	if !installOne(t, later) || !strings.Contains(string(readBytes(t, personalScript)), "| omc-hud\n") {
+		t.Fatalf("chain lost")
 	}
 	assertAbsent(t, filepath.Join(env.feed, "aub-statusline-work.sh"))
 	assertAbsent(t, filepath.Join(env.feed, "original-statusline-work.json"))
@@ -571,13 +574,9 @@ func TestSwiftInstallKeepsItsNamesAndGainsSingleQuotes(t *testing.T) {
 	data, _ := json.Marshal(map[string]any{"statusLine": map[string]any{"type": "command", "command": swiftCommand}})
 	writeFile(t, personalSettings, string(data))
 	writeFile(t, env.original(), `{"type":"command","command":"omc-hud"}`)
-	installer := HookInstaller{env.feed, HookTarget{"personal", []string{"personal"}, personalSettings}}
+	installer := oneTarget(env.feed, "personal", personalSettings)
 
-	chained, err := installer.Install()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !chained || !strings.Contains(string(readBytes(t, env.script())), "| omc-hud\n") {
+	if !installOne(t, installer) || !strings.Contains(string(readBytes(t, env.script())), "| omc-hud\n") {
 		t.Fatal("the Swift install's chain must survive")
 	}
 	var values map[string]any
@@ -666,12 +665,8 @@ func TestStatusLineFeedsTheReaderThroughRealShell(t *testing.T) {
 	writeFile(t, settingsPath, string(data))
 
 	feedDir := HookFeedDir(dataDir)
-	installer := HookInstaller{feedDir, HookTarget{"work", []string{"work"}, settingsPath}}
-	chained, err := installer.Install()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !chained {
+	installer := oneTarget(feedDir, "work", settingsPath)
+	if !installOne(t, installer) {
 		t.Fatal("install must report the chain")
 	}
 

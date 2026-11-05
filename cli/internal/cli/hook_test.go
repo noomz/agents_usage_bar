@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -94,13 +95,37 @@ func TestHookInstallWiresEveryTargetAndFlipsThePreference(t *testing.T) {
 	}
 }
 
-func TestHookInstallFailureStopsAndLeavesThePreference(t *testing.T) {
+func snapshotHookTree(t *testing.T, h *harness) map[string]string {
+	t.Helper()
+	tree := map[string]string{}
+	err := filepath.WalkDir(h.Layout.Home, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		tree[path] = d.Type().String()
+		if d.Type().IsRegular() {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			tree[path] += ":" + string(data)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tree
+}
+
+func TestHookInstallRefusalWritesNothingOnAnyTarget(t *testing.T) {
 	h := newHarness(t)
 	h.store[settings.KeyClaudeSource] = "sessionReads"
-	writeHookFile(t, h.claudeSettings(), `{}`)
+	writeHookFile(t, h.claudeSettings(), `{"statusLine":{"type":"command","command":"omc-hud"}}`)
+	writeHookFile(t, h.instanceSettings("a-first"), `{}`)
 	writeHookFile(t, h.instanceSettings("broken"), `{not json`)
 	writeHookFile(t, h.instanceSettings("work"), `{}`)
-	workBefore, _ := os.ReadFile(h.instanceSettings("work"))
+	before := snapshotHookTree(t, h)
 
 	_, errOut, code := h.run("hook", "install")
 
@@ -110,9 +135,31 @@ func TestHookInstallFailureStopsAndLeavesThePreference(t *testing.T) {
 	if h.store[settings.KeyClaudeSource] != "sessionReads" {
 		t.Fatalf("preference flipped to %v", h.store[settings.KeyClaudeSource])
 	}
-	workAfter, _ := os.ReadFile(h.instanceSettings("work"))
-	if string(workAfter) != string(workBefore) {
-		t.Fatal("install must stop at the first error")
+	if after := snapshotHookTree(t, h); !reflect.DeepEqual(before, after) {
+		t.Fatalf("a refusal wrote something:\n%v\n%v", before, after)
+	}
+}
+
+func TestHookUninstallRefusalWritesNothingOnAnyTarget(t *testing.T) {
+	h := newHarness(t)
+	writeHookFile(t, h.claudeSettings(), `{"statusLine":{"type":"command","command":"omc-hud"}}`)
+	writeHookFile(t, h.instanceSettings("work"), `{"statusLine":{"type":"command","command":"work-hud"}}`)
+	if _, errOut, code := h.run("hook", "install"); code != 0 {
+		t.Fatal(errOut)
+	}
+	writeHookFile(t, h.instanceSettings("zz-broken"), `{not json`)
+	before := snapshotHookTree(t, h)
+
+	_, errOut, code := h.run("hook", "uninstall")
+
+	if code != 1 || !strings.Contains(errOut, h.instanceSettings("zz-broken")) {
+		t.Fatalf("code %d, stderr %q", code, errOut)
+	}
+	if h.store[settings.KeyClaudeSource] != "hook" {
+		t.Fatalf("preference flipped to %v", h.store[settings.KeyClaudeSource])
+	}
+	if after := snapshotHookTree(t, h); !reflect.DeepEqual(before, after) {
+		t.Fatalf("a refusal wrote something:\n%v\n%v", before, after)
 	}
 }
 

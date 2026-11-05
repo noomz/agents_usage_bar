@@ -135,112 +135,181 @@ func sortAccounts(names []string) {
 	})
 }
 
-// HookInstaller wires one target's statusLine slot to the tee. settings.json is written only by
-// Install and Uninstall. Every read and check comes before the first write, so a refusal leaves
-// the disk as it was.
+// HookInstaller wires every target's statusLine slot to the tee. Install and Uninstall plan first
+// and only then write, so a refusal on any target leaves every target as it was.
 type HookInstaller struct {
 	FeedDir string
+	Targets []HookTarget
+}
+
+// HookInstallation is the outcome for one target. Chained says an existing status line runs
+// through the tee.
+type HookInstallation struct {
 	Target  HookTarget
+	Chained bool
 }
 
 // Status never writes.
-func (i HookInstaller) Status() HookState {
-	settings, err := loadHookSettings(i.Target.SettingsPath)
+func (i HookInstaller) Status(target HookTarget) HookState {
+	settings, err := loadHookSettings(target.SettingsPath)
 	if err != nil {
 		return HookUnreadable
 	}
 	return slotState(settings.values)
 }
 
-// Install reports whether an existing status line was chained.
-func (i HookInstaller) Install() (chained bool, err error) {
-	settings, err := loadHookSettings(i.Target.SettingsPath)
+// Install writes the scripts before any settings file points at them.
+func (i HookInstaller) Install() ([]HookInstallation, error) {
+	slots, err := i.planSlots()
 	if err != nil {
-		return false, err
+		return nil, err
+	}
+	if err := os.MkdirAll(i.FeedDir, 0o755); err != nil {
+		return nil, err
+	}
+	for _, slot := range slots {
+		if err := i.writeFiles(slot); err != nil {
+			return nil, err
+		}
+	}
+	installations := make([]HookInstallation, len(slots))
+	for index, slot := range slots {
+		if err := slot.wire(); err != nil {
+			return nil, err
+		}
+		installations[index] = HookInstallation{slot.target, strings.TrimSpace(slot.originalCommand()) != ""}
+	}
+	return installations, nil
+}
+
+// Uninstall puts back the saved status line only when the slot is still ours: one set after
+// install is the user's newer choice. Targets can share a script, so files go only after every
+// settings file is written. The sessions feed stays.
+func (i HookInstaller) Uninstall() error {
+	slots, err := i.planSlots()
+	if err != nil {
+		return err
+	}
+	for _, slot := range slots {
+		if err := slot.restore(); err != nil {
+			return err
+		}
+	}
+	for _, slot := range slots {
+		if err := removeIfPresent(slot.files.original); err != nil {
+			return err
+		}
+		if err := removeIfPresent(slot.files.script); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// hookSlot is one target as planning found it. Everything Install and Uninstall write comes from
+// it, with no second read.
+type hookSlot struct {
+	target     HookTarget
+	settings   hookSettings
+	state      HookState
+	statusLine map[string]any
+	files      hookFiles
+	// original is the status line behind the tee: chained by install, restored by uninstall.
+	original map[string]any
+	// unsaved says no saved file holds original yet.
+	unsaved bool
+}
+
+func (i HookInstaller) planSlots() ([]hookSlot, error) {
+	slots := make([]hookSlot, len(i.Targets))
+	for index, target := range i.Targets {
+		slot, err := i.planSlot(target)
+		if err != nil {
+			return nil, err
+		}
+		slots[index] = slot
+	}
+	return slots, nil
+}
+
+func (i HookInstaller) planSlot(target HookTarget) (hookSlot, error) {
+	settings, err := loadHookSettings(target.SettingsPath)
+	if err != nil {
+		return hookSlot{}, err
 	}
 	state := slotState(settings.values)
-	existing, isObject := settings.values["statusLine"].(map[string]any)
+	statusLine, isObject := settings.values["statusLine"].(map[string]any)
 	if state == HookForeignStatusline && !isObject {
-		return false, fmt.Errorf("%s: statusLine is not an object", i.Target.SettingsPath)
+		return hookSlot{}, fmt.Errorf("%s: statusLine is not an object", target.SettingsPath)
 	}
-	files := i.files(settings.values)
+	files := i.files(target, settings.values)
 	saved, err := readOriginalStatusLine(files.original)
 	if err != nil {
-		return false, err
+		return hookSlot{}, err
 	}
-	original := saved
-	if state != HookInstalled {
-		original = existing
-	}
-
-	if err := os.MkdirAll(i.FeedDir, 0o755); err != nil {
-		return false, err
-	}
+	slot := hookSlot{target: target, settings: settings, state: state, statusLine: statusLine, files: files}
 	switch state {
 	case HookForeignStatusline:
-		data, err := encodeJSON(original)
-		if err != nil {
-			return false, err
-		}
-		if err := writeFileAtomic(files.original, data, 0o644); err != nil {
-			return false, err
-		}
-	case HookNotInstalled:
-		if err := removeIfPresent(files.original); err != nil {
-			return false, err
-		}
+		slot.original, slot.unsaved = statusLine, true
+	case HookInstalled:
+		slot.original = saved
 	}
-	command, _ := original["command"].(string)
-	script := hookScript(hookSessionsDir(i.FeedDir), command)
-	if err := writeFileAtomic(files.script, []byte(script), 0o755); err != nil {
-		return false, err
-	}
-	chained = strings.TrimSpace(command) != ""
+	return slot, nil
+}
 
-	wanted := "sh " + shellQuote(files.script)
-	if state == HookInstalled && existing["type"] == "command" && existing["command"] == wanted {
-		return chained, nil
-	}
-	if settings.exists {
-		if err := i.backUp(settings); err != nil {
-			return false, err
+func (s hookSlot) originalCommand() string {
+	command, _ := s.original["command"].(string)
+	return command
+}
+
+func (i HookInstaller) writeFiles(slot hookSlot) error {
+	switch {
+	case slot.unsaved:
+		data, err := encodeJSON(slot.original)
+		if err != nil {
+			return err
+		}
+		if err := writeFileAtomic(slot.files.original, data, 0o644); err != nil {
+			return err
+		}
+	case slot.state == HookNotInstalled:
+		if err := removeIfPresent(slot.files.original); err != nil {
+			return err
 		}
 	}
-	statusLine := maps.Clone(existing)
+	script := hookScript(hookSessionsDir(i.FeedDir), slot.originalCommand())
+	return writeFileAtomic(slot.files.script, []byte(script), 0o755)
+}
+
+func (s hookSlot) wire() error {
+	wanted := "sh " + shellQuote(s.files.script)
+	if s.state == HookInstalled && s.statusLine["type"] == "command" && s.statusLine["command"] == wanted {
+		return nil
+	}
+	if s.settings.exists {
+		if err := s.backUp(); err != nil {
+			return err
+		}
+	}
+	statusLine := maps.Clone(s.statusLine)
 	if statusLine == nil {
 		statusLine = map[string]any{}
 	}
 	statusLine["type"], statusLine["command"] = "command", wanted
-	settings.values["statusLine"] = statusLine
-	return chained, settings.save()
+	s.settings.values["statusLine"] = statusLine
+	return s.settings.save()
 }
 
-// Uninstall puts back the saved status line only when the slot is still ours: one set after
-// install is the user's newer choice. The sessions feed stays.
-func (i HookInstaller) Uninstall() error {
-	settings, err := loadHookSettings(i.Target.SettingsPath)
-	if err != nil {
-		return err
+func (s hookSlot) restore() error {
+	if s.state != HookInstalled {
+		return nil
 	}
-	files := i.files(settings.values)
-	saved, err := readOriginalStatusLine(files.original)
-	if err != nil {
-		return err
+	if s.original != nil {
+		s.settings.values["statusLine"] = s.original
+	} else {
+		delete(s.settings.values, "statusLine")
 	}
-	if slotState(settings.values) == HookInstalled {
-		if saved != nil {
-			settings.values["statusLine"] = saved
-		} else {
-			delete(settings.values, "statusLine")
-		}
-		if err := settings.save(); err != nil {
-			return err
-		}
-	}
-	if err := removeIfPresent(files.original); err != nil {
-		return err
-	}
-	return removeIfPresent(files.script)
+	return s.settings.save()
 }
 
 type hookFiles struct{ script, original string }
@@ -248,8 +317,8 @@ type hookFiles struct{ script, original string }
 // files names the script and saved status line. An installed command's own slug wins over
 // discovery: removing the first ccs instance renames a folded target, and following the new name
 // would orphan the saved status line and lose the chain.
-func (i HookInstaller) files(values map[string]any) hookFiles {
-	slug := i.Target.Slug
+func (i HookInstaller) files(target HookTarget, values map[string]any) hookFiles {
+	slug := target.Slug
 	if fromCommand, ok := slugFromCommand(commandOf(values["statusLine"])); ok {
 		slug = fromCommand
 	}
@@ -306,11 +375,11 @@ func slotState(values map[string]any) HookState {
 // backUp sits beside the path as configured, not the symlink's target. It copies bytes, so a
 // backup of a symlinked file does not follow later edits. Within one second the first copy holds
 // the state before that second's writes, and is kept.
-func (i HookInstaller) backUp(settings hookSettings) error {
-	prefix := i.Target.SettingsPath + ".aub-backup-"
+func (s hookSlot) backUp() error {
+	prefix := s.target.SettingsPath + ".aub-backup-"
 	path := prefix + strconv.FormatInt(time.Now().Unix(), 10)
 	if _, err := os.Lstat(path); errors.Is(err, fs.ErrNotExist) {
-		if err := writeFileAtomic(path, settings.raw, settings.mode); err != nil {
+		if err := writeFileAtomic(path, s.settings.raw, s.settings.mode); err != nil {
 			return err
 		}
 	}
