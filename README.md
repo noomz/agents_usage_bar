@@ -196,6 +196,13 @@ These commands work on a standalone install:
 - `aub`, `aub usage`, and `aub quota` fetch live while the cache has no provider rows. With `--cached`, they read only the cache and print a hint when it is empty.
 - `aub settings` stores its values in `~/.config/agents-usage-bar/settings.json` on Linux, and under `$XDG_CONFIG_HOME` when that is set. On macOS it uses the app's UserDefaults keys.
 - `aub themes` works the same on every platform.
+- `aub hook install` reports Claude quota and cost per ccs account, not only the `~/.claude` account. It wires a status line tee into `~/.claude/settings.json` and each `~/.ccs/instances/*/settings.json`, keeps any existing status line running through it, and sets `claude-source=hook`. `aub hook uninstall` restores the status lines and sets `claude-source=sessionReads`. `aub hook` prints each target's state and each account's feed age. It changes nothing.
+
+  The hook has these limits:
+
+  - Quota updates only while a Claude Code session runs, because Claude Code sends the data only when it updates the status line.
+  - Data older than 24 hours is stale. The row then shows no quota and zero cost.
+  - No history exists from before the install.
 
 These commands differ on a standalone install:
 
