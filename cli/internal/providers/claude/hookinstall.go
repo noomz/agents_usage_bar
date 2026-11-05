@@ -659,6 +659,7 @@ func hookScript(sessionsDir, originalCommand string) string {
 		`FEED_DIR="$FEED_ROOT/$acct"`,
 		`input=$(cat)`,
 		`sid=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)`,
+		`case "$sid" in */*) sid= ;; esac`,
 		`if [ -n "$sid" ]; then`,
 		`  mkdir -p "$FEED_DIR"`,
 		`  tmp="$FEED_DIR/.$sid.tmp.$$"`,
