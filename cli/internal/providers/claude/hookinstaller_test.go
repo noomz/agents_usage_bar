@@ -471,7 +471,7 @@ func TestStatusReportsEveryStateAndNeverWrites(t *testing.T) {
 	}{
 		{"no key", `{"model":"x"}`, HookNotInstalled},
 		{"null key", `{"statusLine":null}`, HookNotInstalled},
-		{"ours", `{"statusLine":{"type":"command","command":"sh '/x/aub-statusline-work.sh'"}}`, HookInstalled},
+		{"ours, script missing", `{"statusLine":{"type":"command","command":"sh '/x/aub-statusline-work.sh'"}}`, HookScriptMissing},
 		{"foreign", `{"statusLine":{"type":"command","command":"omc-hud"}}`, HookForeignStatusline},
 		{"foreign without command", `{"statusLine":{"type":"static"}}`, HookForeignStatusline},
 		{"foreign non-object", `{"statusLine":"omc-hud"}`, HookForeignStatusline},
@@ -495,6 +495,33 @@ func TestStatusReportsEveryStateAndNeverWrites(t *testing.T) {
 	}
 	if got := statusOf(newInstallEnv(t).installer); got != HookNotInstalled {
 		t.Fatalf("missing file: %v", got)
+	}
+}
+
+func TestStatusFollowsTheScriptAndInstallRepairsIt(t *testing.T) {
+	env := newInstallEnv(t)
+	writeFile(t, env.settings, `{"statusLine":{"type":"command","command":"echo hud"}}`)
+	env.mustInstall(t)
+	if statusOf(env.installer) != HookInstalled {
+		t.Fatalf("status %v", statusOf(env.installer))
+	}
+	if err := os.Remove(env.script()); err != nil {
+		t.Fatal(err)
+	}
+	before := snapshotTree(t, env.root)
+
+	if statusOf(env.installer) != HookScriptMissing {
+		t.Fatalf("status %v", statusOf(env.installer))
+	}
+	if after := snapshotTree(t, env.root); !reflect.DeepEqual(before, after) {
+		t.Fatal("status wrote something")
+	}
+
+	if !env.mustInstall(t) || statusOf(env.installer) != HookInstalled {
+		t.Fatalf("status %v", statusOf(env.installer))
+	}
+	if got := runScript(t, "sh", env.script(), "{}"); got != "hud\n" {
+		t.Fatalf("repaired script printed %q", got)
 	}
 }
 

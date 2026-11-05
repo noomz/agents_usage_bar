@@ -42,6 +42,8 @@ type HookState int
 const (
 	HookNotInstalled HookState = iota
 	HookInstalled
+	// HookScriptMissing is a slot that is ours whose script is gone, so the status line is broken.
+	HookScriptMissing
 	HookForeignStatusline
 	// HookUnreadable is a settings.json that cannot be read or parsed.
 	HookUnreadable
@@ -51,6 +53,8 @@ func (s HookState) String() string {
 	switch s {
 	case HookInstalled:
 		return "installed"
+	case HookScriptMissing:
+		return "installed (script missing, rerun aub hook install)"
 	case HookForeignStatusline:
 		return "foreign status line"
 	case HookUnreadable:
@@ -155,7 +159,19 @@ func (i HookInstaller) Status(target HookTarget) HookState {
 	if err != nil {
 		return HookUnreadable
 	}
-	return slotState(settings.values)
+	state := slotState(settings.values)
+	if state != HookInstalled {
+		return state
+	}
+	// A relative or `~` path has no meaning here, so the feed's script stands in for it.
+	script := i.files(target, settings.values).script
+	if own, _ := parseOwnCommand(commandOf(settings.values["statusLine"])); filepath.IsAbs(own.scriptPath) {
+		script = own.scriptPath
+	}
+	if _, err := os.Stat(script); errors.Is(err, fs.ErrNotExist) {
+		return HookScriptMissing
+	}
+	return HookInstalled
 }
 
 // Install writes the scripts before any settings file points at them.
