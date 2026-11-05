@@ -467,7 +467,8 @@ func (s hookSettings) save() error {
 	return writeFileAtomic(s.dest, data, s.mode)
 }
 
-// readOriginalStatusLine is nil when none was saved.
+// readOriginalStatusLine is nil when none was saved. An empty saved file is malformed, not "none":
+// treating it as none would make uninstall delete the status line.
 func readOriginalStatusLine(path string) (map[string]any, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -479,6 +480,9 @@ func readOriginalStatusLine(path string) (map[string]any, error) {
 	object, err := decodeObject(data)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if object == nil {
+		return nil, fmt.Errorf("%s: empty", path)
 	}
 	return object, nil
 }
