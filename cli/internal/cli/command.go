@@ -96,6 +96,19 @@ type InstallCmd struct {
 
 type UninstallCmd struct{}
 
+// HookVerb is status, install, or uninstall.
+type HookVerb int
+
+const (
+	HookStatus HookVerb = iota
+	HookInstall
+	HookUninstall
+)
+
+type HookCmd struct {
+	Verb HookVerb
+}
+
 type VersionCmd struct{}
 
 type HelpCmd struct{}
@@ -107,6 +120,7 @@ func (SettingsCmd) isCommand()  {}
 func (ThemesCmd) isCommand()    {}
 func (InstallCmd) isCommand()   {}
 func (UninstallCmd) isCommand() {}
+func (HookCmd) isCommand()      {}
 func (VersionCmd) isCommand()   {}
 func (HelpCmd) isCommand()      {}
 
@@ -164,6 +178,9 @@ Usage:
   aub themes               List CLI themes and the active one
   aub install [--prefix PATH]   Default: ~/.local/bin
   aub uninstall
+  aub hook [status]        Show the Claude status line hook per account
+  aub hook install         Report Claude quota per ccs account; sets claude-source=hook
+  aub hook uninstall       Restore status lines; sets claude-source=sessionReads
   aub version
   aub help
 
@@ -404,6 +421,8 @@ func Parse(args []string) (Command, *ParseError) {
 			return nil, unexpectedArgument(rest[0])
 		}
 		return UninstallCmd{}, nil
+	case "hook":
+		return parseHook(rest, jsonFlag)
 	}
 	if id, ok := domain.NamedProvider(head); ok {
 		if len(rest) > 0 {
@@ -440,6 +459,24 @@ func parseSettings(rest []string, jsonFlag bool) (Command, *ParseError) {
 		return SettingsCmd{Verb: SettingsSet, Key: rest[1], Value: rest[2], JSON: jsonFlag}, nil
 	}
 	return nil, unknownCommand("settings " + rest[0])
+}
+
+func parseHook(rest []string, jsonFlag bool) (Command, *ParseError) {
+	if jsonFlag {
+		return nil, unexpectedArgument("--json")
+	}
+	if len(rest) == 0 {
+		return HookCmd{Verb: HookStatus}, nil
+	}
+	verbs := map[string]HookVerb{"status": HookStatus, "install": HookInstall, "uninstall": HookUninstall}
+	verb, ok := verbs[rest[0]]
+	if !ok {
+		return nil, unknownCommand("hook " + rest[0])
+	}
+	if len(rest) > 1 {
+		return nil, unexpectedArgument(rest[1])
+	}
+	return HookCmd{Verb: verb}, nil
 }
 
 func parseProviderToken(token string) (ProviderFilter, *ParseError) {
