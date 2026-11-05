@@ -271,11 +271,68 @@ func (i HookInstaller) planSlot(target HookTarget) (hookSlot, error) {
 		slot.original, slot.unsaved = statusLine, true
 	case HookInstalled:
 		slot.original = saved
+		if saved == nil {
+			if slot.original, err = recoverOriginal(statusLine, files); err != nil {
+				return hookSlot{}, err
+			}
+			slot.unsaved = slot.original != nil
+		}
 	}
 	if i.runsFeedScript(slot.originalCommand()) {
 		return hookSlot{}, fmt.Errorf("%s: status line %q runs our own script: it would recurse if chained and break on uninstall, so change it first", target.SettingsPath, slot.originalCommand())
 	}
 	return slot, nil
+}
+
+// recoverOriginal rebuilds the status line from its script when no saved file holds it. The Mac app
+// can leave the chain only there. The command's own path comes first because that is what runs. A
+// deleted script leaves nothing to recover and install is its repair, so that is not an error.
+func recoverOriginal(statusLine map[string]any, files hookFiles) (map[string]any, error) {
+	own, _ := parseOwnCommand(commandOf(statusLine))
+	for _, path := range []string{own.scriptPath, files.script} {
+		data, err := os.ReadFile(path)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		command, err := parseChain(string(data))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", path, err)
+		}
+		if command == "" {
+			return nil, nil
+		}
+		original := maps.Clone(statusLine)
+		original["command"] = command
+		return original, nil
+	}
+	return nil, nil
+}
+
+// parseChain reads back what hookScript or the Mac app embedded, and is empty when the script has
+// no chain. A marker with a body it cannot read refuses: "no chain" would drop the status line.
+func parseChain(script string) (string, error) {
+	_, body, found := strings.Cut(script, "\n"+chainMarker+"\n")
+	if !found {
+		if strings.Contains(script, chainMarker) {
+			return "", errors.New("chain marker with no command")
+		}
+		return "", nil
+	}
+	command, ok := strings.CutPrefix(strings.TrimSuffix(body, "\n"), chainPrefix)
+	if !ok || strings.TrimSpace(command) == "" {
+		return "", errors.New("cannot read the chained status line")
+	}
+	if command != "{" && !strings.HasPrefix(command, "{\n") {
+		return command, nil
+	}
+	inner, ok := strings.CutSuffix(strings.TrimPrefix(command, "{\n"), "\n}")
+	if !ok || strings.TrimSpace(inner) == "" {
+		return "", errors.New("cannot read the chained status line")
+	}
+	return inner, nil
 }
 
 func (s hookSlot) originalCommand() string {

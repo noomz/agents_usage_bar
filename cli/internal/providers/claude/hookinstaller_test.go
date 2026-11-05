@@ -759,6 +759,101 @@ func TestReinstallIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestParseChainReadsEveryFormItEmits(t *testing.T) {
+	for _, command := range []string{"omc-hud", "a; b", "x=1\necho \"$x\"", "{ grouped; }"} {
+		got, err := parseChain(hookScript("/feed/sessions", command))
+		if err != nil || got != command {
+			t.Errorf("%q: got %q, err %v", command, got, err)
+		}
+	}
+	got, err := parseChain("#!/bin/sh\n" + chainMarker + "\n" + chainPrefix + "swift-hud --flag\n")
+	if err != nil || got != "swift-hud --flag" {
+		t.Errorf("Swift form: got %q, err %v", got, err)
+	}
+	if got, err := parseChain(hookScript("/feed/sessions", "")); err != nil || got != "" {
+		t.Errorf("no chain: got %q, err %v", got, err)
+	}
+	for name, script := range map[string]string{
+		"marker last":   "#!/bin/sh\n" + chainMarker,
+		"no prefix":     "#!/bin/sh\n" + chainMarker + "\nomc-hud\n",
+		"empty command": "#!/bin/sh\n" + chainMarker + "\n" + chainPrefix + "\n",
+		"open brace":    "#!/bin/sh\n" + chainMarker + "\n" + chainPrefix + "{\nomc-hud\n",
+		"empty braces":  "#!/bin/sh\n" + chainMarker + "\n" + chainPrefix + "{\n\n}\n",
+	} {
+		if got, err := parseChain(script); err == nil {
+			t.Errorf("%s: must refuse, got %q", name, got)
+		}
+	}
+}
+
+func TestOursWithoutASavedFileRecoversOrProceeds(t *testing.T) {
+	ours := func(env installEnv) string {
+		return `{"statusLine":{"type":"command","padding":2,"command":"sh \"` + env.script() + `\""}}`
+	}
+	t.Run("script without a chain has no original", func(t *testing.T) {
+		env := newInstallEnv(t)
+		writeFile(t, env.settings, ours(env))
+		writeFile(t, env.script(), hookScript(filepath.Join(env.feed, "sessions"), ""))
+		if env.mustInstall(t) {
+			t.Fatal("nothing to chain")
+		}
+		assertAbsent(t, env.original())
+		env.mustUninstall(t)
+		if _, present := env.readSettings(t)["statusLine"]; present {
+			t.Fatalf("settings %s", readBytes(t, env.settings))
+		}
+	})
+	t.Run("missing script is repaired without a chain", func(t *testing.T) {
+		env := newInstallEnv(t)
+		writeFile(t, env.settings, ours(env))
+		if env.mustInstall(t) {
+			t.Fatal("nothing to chain")
+		}
+		if _, err := os.Stat(env.script()); err != nil {
+			t.Fatal(err)
+		}
+	})
+	t.Run("marker with an unreadable body refuses", func(t *testing.T) {
+		env := newInstallEnv(t)
+		writeFile(t, env.settings, ours(env))
+		writeFile(t, env.script(), "#!/bin/sh\n"+chainMarker+"\nomc-hud\n")
+		before := snapshotTree(t, env.root)
+		if _, err := env.installer.Install(); err == nil {
+			t.Fatal("install must refuse")
+		}
+		if err := env.installer.Uninstall(); err == nil {
+			t.Fatal("uninstall must refuse")
+		}
+		if after := snapshotTree(t, env.root); !reflect.DeepEqual(before, after) {
+			t.Fatal("wrote something")
+		}
+	})
+	t.Run("recovered original keeps the other keys and is saved", func(t *testing.T) {
+		env := newInstallEnv(t)
+		writeFile(t, env.settings, ours(env))
+		writeFile(t, env.script(), hookScript(filepath.Join(env.feed, "sessions"), "a\nb"))
+		if !env.mustInstall(t) {
+			t.Fatal("install must report the chain")
+		}
+		var saved map[string]any
+		if err := json.Unmarshal(readBytes(t, env.original()), &saved); err != nil {
+			t.Fatal(err)
+		}
+		if saved["command"] != "a\nb" || saved["padding"] != float64(2) {
+			t.Fatalf("saved %+v", saved)
+		}
+	})
+	t.Run("script named by the command is read when it is outside the feed", func(t *testing.T) {
+		env := newInstallEnv(t)
+		elsewhere := filepath.Join(env.root, "old-feed", "aub-statusline.sh")
+		writeFile(t, env.settings, `{"statusLine":{"type":"command","command":"sh '`+elsewhere+`'"}}`)
+		writeFile(t, elsewhere, hookScript(filepath.Join(env.root, "sessions"), "echo hud"))
+		if !env.mustInstall(t) || runScript(t, "sh", env.script(), "{}") != "hud\n" {
+			t.Fatal("chain lost")
+		}
+	})
+}
+
 func TestStatusLineFeedsTheReaderThroughRealShell(t *testing.T) {
 	root := t.TempDir()
 	dataDir := filepath.Join(root, "App Support", "it's $HOME")
