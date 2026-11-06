@@ -1,0 +1,123 @@
+name: Release toolchain comparison
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/toolchain-comparison.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: Release with Xcode ${{ matrix.xcode }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            xcode: '16.4'
+            build: '16F6'
+            sdk: '15.5'
+          - runner: xcode-27
+            xcode: '27.0'
+            build: '27A266a'
+            sdk: '27.0'
+    env:
+      EXPECTED_XCODE: ${{ matrix.xcode }}
+      EXPECTED_BUILD: ${{ matrix.build }}
+      EXPECTED_SDK: ${{ matrix.sdk }}
+      SOURCE_SHA: ${{ github.sha }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ matrix.xcode }}
+
+      - name: Record and verify toolchain
+        run: |
+          set -euo pipefail
+          mkdir -p build/comparison
+          {
+            printf 'Source: %s\n' "$(git rev-parse HEAD)"
+            sw_vers
+            uname -m
+            xcodebuild -version
+            xcrun --sdk macosx --show-sdk-version
+            xcrun --sdk macosx --show-sdk-build-version
+            xcrun swift --version
+          } | tee build/comparison/toolchain.txt
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$(xcodebuild -version | head -n 1)" = "Xcode $EXPECTED_XCODE"
+          test "$(xcodebuild -version | tail -n 1)" = "Build version $EXPECTED_BUILD"
+          test "$(xcrun --sdk macosx --show-sdk-version)" = "$EXPECTED_SDK"
+
+      - name: Build universal Release app
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project AgentsUsageBar.xcodeproj \
+            -scheme AgentsUsageBar \
+            -configuration Release \
+            -derivedDataPath build/dd \
+            -destination 'generic/platform=macOS' \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            MACOSX_DEPLOYMENT_TARGET=14.0 \
+            CODE_SIGNING_ALLOWED=NO \
+            CLANG_COVERAGE_MAPPING=NO \
+            ENABLE_CODE_COVERAGE=NO \
+            2>&1 | tee build/comparison/build.log
+
+      - name: Verify binary and ad-hoc signing
+        run: |
+          set -euo pipefail
+          APP="build/dd/Build/Products/Release/AgentsUsageBar.app"
+          BINARY="$APP/Contents/MacOS/AgentsUsageBar"
+          {
+            lipo -info "$BINARY"
+            for arch in arm64 x86_64; do
+              lipo "$BINARY" -verify_arch "$arch"
+              METADATA="$(xcrun vtool -arch "$arch" -show-build "$BINARY")"
+              printf '%s\n' "$METADATA"
+              test "$(awk '$1 == "sdk" { print $2 }' <<< "$METADATA")" = "$EXPECTED_SDK"
+              test "$(awk '$1 == "minos" { print $2 }' <<< "$METADATA")" = '14.0'
+            done
+            otool -L "$BINARY"
+            bash scripts/check-no-coverage.sh "$BINARY"
+            while IFS= read -r item; do
+              codesign --force --timestamp=none --sign - "$item"
+            done < <(find "$APP/Contents" \
+                       \( -name '*.xpc' -o -name '*.app' -o -name '*.framework' \) \
+                       -depth)
+            codesign --force --timestamp=none --sign - "$APP"
+            codesign --verify --deep --strict --verbose=2 "$APP"
+            "$BINARY" version
+          } 2>&1 | tee build/comparison/verification.txt
+
+      - name: Package comparison app
+        run: |
+          set -euo pipefail
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/dd/Build/Products/Release/AgentsUsageBar.app \
+            "build/comparison/AgentsUsageBar-Xcode-$EXPECTED_XCODE.zip"
+          (cd build/comparison && \
+            shasum -a 256 "AgentsUsageBar-Xcode-$EXPECTED_XCODE.zip" > SHA256SUMS.txt)
+
+      - name: Upload app and diagnostic records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolchain-xcode-${{ matrix.xcode }}-${{ github.sha }}
+          path: build/comparison/
+          if-no-files-found: error
+          retention-days: 14
