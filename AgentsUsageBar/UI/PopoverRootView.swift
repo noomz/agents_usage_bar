@@ -29,6 +29,7 @@ public struct PopoverRootView: View {
     @Environment(\.clockService) private var clock
     @Environment(\.popoverTeaserSource) private var teaserSource
     @State private var window: NSWindow?
+    @State private var contentSize: CGSize?
     @State private var teaser: PopoverTeaser?
     @State private var maxHeight = (NSScreen.main?.visibleFrame.height ?? 800) * 0.8
     /// Starts `true`: the view mounts because the popover is opening.
@@ -48,8 +49,17 @@ public struct PopoverRootView: View {
         .fixedSize(horizontal: false, vertical: true)
         .textSelection(.disabled)
         .background(HostingWindowReader { window = $0 })
+        .onGeometryChange(for: CGSize.self) { proxy in
+            proxy.size
+        } action: { size in
+            contentSize = size
+            resizeWindow(window, to: size)
+        }
         .onChange(of: window) { _, window in
             updateMaxHeight(for: window)
+            if let contentSize {
+                resizeWindow(window, to: contentSize)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didChangeScreenNotification)) { notification in
             guard let window, notification.object as? NSWindow === window else { return }
@@ -87,6 +97,19 @@ public struct PopoverRootView: View {
             }
             FooterView()
         }
+    }
+
+    private func resizeWindow(_ window: NSWindow?, to size: CGSize) {
+        guard let window, size.width > 0, size.height > 0 else { return }
+        let frame = window.frame
+        let current = window.contentRect(forFrameRect: frame).size
+        guard abs(current.width - size.width) > 1 || abs(current.height - size.height) > 1 else { return }
+        let target = window.frameRect(forContentRect: NSRect(origin: .zero, size: size)).size
+        // MenuBarExtra can retain the old screen's height; keep its top anchored when resizing.
+        window.setFrame(
+            NSRect(x: frame.minX, y: frame.maxY - target.height, width: target.width, height: target.height),
+            display: false
+        )
     }
 
     private func updateMaxHeight(for window: NSWindow?) {
