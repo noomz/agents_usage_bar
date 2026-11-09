@@ -105,7 +105,7 @@ struct AgentsUsageBarApp: App {
         // NSApp.activate(...) so the window comes to front and gets key status on
         // LSUIElement apps (D-05 / Pitfall 1).
         Settings {
-            SettingsScene()
+            SettingsScene(updater: updaterController.updater)
                 .environment(dependencies.store)
                 .environment(\.clockService, dependencies.clock)
                 .environment(\.preferences, dependencies.preferences)  // Plan 05-02: preferences overlay (D-01/D-02)

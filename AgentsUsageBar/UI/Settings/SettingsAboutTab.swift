@@ -1,10 +1,16 @@
+import Sparkle
 import SwiftUI
 
 /// Settings → About tab.
 ///
-/// Shows app version + build, GitHub repo link, and license link.
-/// Phase 6 placeholder: "Check for Updates" button (Sparkle wiring deferred to Phase 6 REL-02).
+/// Shows app version + build, GitHub repo link, license link, and a manual
+/// Sparkle "Check for Updates…" button.
 struct SettingsAboutTab: View {
+    @State private var updateCheck: UpdateCheck
+
+    init(updater: SPUUpdater) {
+        _updateCheck = State(initialValue: UpdateCheck(updater: updater))
+    }
 
     // Read version + build from bundle at render time — no state needed.
     private var version: String {
@@ -49,17 +55,48 @@ struct SettingsAboutTab: View {
 
             Divider()
 
-            // Phase 6 placeholder — Sparkle "Check for Updates" wiring
-            // TODO(Phase 6 REL-02): replace this Text with a Sparkle SPUUpdater button.
-            Text("Automatic updates available in a future release.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 4) {
+                Button("Check for Updates…") { updateCheck.check() }
+                    .disabled(!updateCheck.canCheck)
+                if let last = updateCheck.lastCheck {
+                    Text("Last checked \(last.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             Spacer()
         }
         .padding(24)
         .frame(minWidth: 360, minHeight: 300)
+    }
+}
+
+/// Mirrors Sparkle's KVO-observable `canCheckForUpdates` so the button is disabled
+/// while a check or update session is already running.
+@MainActor @Observable
+private final class UpdateCheck {
+    private let updater: SPUUpdater
+    private(set) var canCheck: Bool
+    private(set) var lastCheck: Date?
+    @ObservationIgnored private var observation: NSKeyValueObservation?
+
+    init(updater: SPUUpdater) {
+        self.updater = updater
+        canCheck = updater.canCheckForUpdates
+        lastCheck = updater.lastUpdateCheckDate
+        observation = updater.observe(\.canCheckForUpdates, options: [.new]) { [weak self] updater, _ in
+            let canCheck = updater.canCheckForUpdates
+            let lastCheck = updater.lastUpdateCheckDate
+            Task { @MainActor in
+                self?.canCheck = canCheck
+                self?.lastCheck = lastCheck
+            }
+        }
+    }
+
+    func check() {
+        updater.checkForUpdates()
     }
 }
 
