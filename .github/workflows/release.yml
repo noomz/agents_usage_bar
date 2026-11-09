@@ -142,6 +142,8 @@ jobs:
             -configuration Release \
             -archivePath build/AgentsUsageBar.xcarchive \
             -destination 'generic/platform=macOS' \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
             CLANG_COVERAGE_MAPPING=NO \
             ENABLE_CODE_COVERAGE=NO
 
@@ -194,6 +196,8 @@ jobs:
             -configuration Release \
             -derivedDataPath build/dd \
             -destination 'generic/platform=macOS' \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             CLANG_COVERAGE_MAPPING=NO \
             ENABLE_CODE_COVERAGE=NO
@@ -225,6 +229,16 @@ jobs:
           set -euo pipefail
           bash scripts/check-no-coverage.sh \
             build/export/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar
+
+      # Intel Macs still run this app; fail rather than ship a single-arch build.
+      - name: Require universal binary
+        run: |
+          set -euo pipefail
+          archs="$(lipo -archs build/export/AgentsUsageBar.app/Contents/MacOS/AgentsUsageBar)"
+          echo "Architectures: $archs"
+          for a in arm64 x86_64; do
+            case " $archs " in *" $a "*) ;; *) echo "missing $a"; exit 1 ;; esac
+          done
 
       # D-05 — pin create-dmg/create-dmg v1.2.3 (shell). NOT sindresorhus
       # (Node). Pinned tarball + `make install` for reproducibility.
