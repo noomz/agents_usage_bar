@@ -75,7 +75,7 @@ This promise is enforced by a deliberately minimal entitlement posture: the app 
 
 **Requirements:**
 - macOS 14 Sonoma or newer
-- Xcode 16.4 or newer
+- Xcode 27.0 or newer (older Xcode builds, but the popover background is opaque instead of translucent)
 - An OpenRouter API key — https://openrouter.ai/keys (read-only is sufficient) — and/or signed-in `claude`, `codex`, `gemini` CLIs; and/or a running local LLM runtime (Ollama / LM Studio / llama.cpp)
 
 **Steps:**
