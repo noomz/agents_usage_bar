@@ -79,13 +79,13 @@ private final class UpdateCheck {
     private let updater: SPUUpdater
     private(set) var canCheck: Bool
     private(set) var lastCheck: Date?
-    @ObservationIgnored private var observation: NSKeyValueObservation?
+    @ObservationIgnored private var observations: [NSKeyValueObservation] = []
 
     init(updater: SPUUpdater) {
         self.updater = updater
         canCheck = updater.canCheckForUpdates
         lastCheck = updater.lastUpdateCheckDate
-        observation = updater.observe(\.canCheckForUpdates, options: [.new]) { [weak self] updater, _ in
+        let refresh: @Sendable (SPUUpdater) -> Void = { [weak self] updater in
             let canCheck = updater.canCheckForUpdates
             let lastCheck = updater.lastUpdateCheckDate
             Task { @MainActor in
@@ -93,6 +93,10 @@ private final class UpdateCheck {
                 self?.lastCheck = lastCheck
             }
         }
+        observations = [
+            updater.observe(\.canCheckForUpdates) { updater, _ in refresh(updater) },
+            updater.observe(\.lastUpdateCheckDate) { updater, _ in refresh(updater) },
+        ]
     }
 
     func check() {
