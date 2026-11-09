@@ -51,7 +51,10 @@ on:
 jobs:
   release:
     name: Build, (sign/notarize if enrolled), DMG, appcast, release
-    runs-on: macos-15
+    # Xcode 27 / SDK 27: the macOS 15 SDK draws the MenuBarExtra popover opaque
+    # black; SDK 27 gives the native translucent background (#60). The
+    # xcode-27 image is a GitHub public preview, accepted for releases.
+    runs-on: xcode-27
     permissions:
       contents: write   # gh release create + git push to gh-pages
       pages: write      # gh-pages deployment (Pitfall 6)
@@ -66,7 +69,15 @@ jobs:
       - name: Pin Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '16.4'
+          xcode-version: '27.0'
+
+      - name: Record and verify toolchain
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
+          xcrun --sdk macosx --show-sdk-build-version
+          test "$(xcrun --sdk macosx --show-sdk-version)" = "27.0"
 
       # Lane gate — presence of the Developer ID cert secret decides whether
       # this run takes the SIGNED (Apple-notarized) or UNSIGNED (ad-hoc)
