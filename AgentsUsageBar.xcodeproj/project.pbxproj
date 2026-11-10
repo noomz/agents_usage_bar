@@ -241,7 +241,7 @@
 		AA071000000000000000005A /* GrokBillingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000005B /* GrokBillingError.swift */; };
 		AA071000000000000000006A /* GrokBillingResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000006B /* GrokBillingResponse.swift */; };
 		AA071000000000000000007A /* GrokManagementClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA071000000000000000007B /* GrokManagementClient.swift */; };
-		AA080800000000000000001A /* PiProviderName.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA080800000000000000001B /* PiProviderName.swift */; };
+		AA0808000000000000000F1A /* PiProviderName.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0808000000000000000F1B /* PiProviderName.swift */; };
 		AA080800000000000000002A /* PiSessionRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA080800000000000000002B /* PiSessionRecord.swift */; };
 		AA080800000000000000003A /* PiLocalCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA080800000000000000003B /* PiLocalCatalog.swift */; };
 		AA080800000000000000004A /* PiSessionRoots.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA080800000000000000004B /* PiSessionRoots.swift */; };
@@ -729,7 +729,7 @@
 		AA071000000000000000005B /* GrokBillingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokBillingError.swift; sourceTree = "<group>"; };
 		AA071000000000000000006B /* GrokBillingResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokBillingResponse.swift; sourceTree = "<group>"; };
 		AA071000000000000000007B /* GrokManagementClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokManagementClient.swift; sourceTree = "<group>"; };
-		AA080800000000000000001B /* PiProviderName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PiProviderName.swift; sourceTree = "<group>"; };
+		AA0808000000000000000F1B /* PiProviderName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PiProviderName.swift; sourceTree = "<group>"; };
 		AA080800000000000000002B /* PiSessionRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PiSessionRecord.swift; sourceTree = "<group>"; };
 		AA080800000000000000003B /* PiLocalCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PiLocalCatalog.swift; sourceTree = "<group>"; };
 		AA080800000000000000004B /* PiSessionRoots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PiSessionRoots.swift; sourceTree = "<group>"; };
@@ -1254,7 +1254,7 @@
 		AA080800000000000000030B /* PiLocal */ = {
 			isa = PBXGroup;
 			children = (
-				AA080800000000000000001B /* PiProviderName.swift */,
+				AA0808000000000000000F1B /* PiProviderName.swift */,
 				AA080800000000000000002B /* PiSessionRecord.swift */,
 				AA080800000000000000003B /* PiLocalCatalog.swift */,
 				AA080800000000000000004B /* PiSessionRoots.swift */,
@@ -2292,7 +2292,7 @@ AA030500000000000000060B /* ProvidersGeminiTests */ = {
 				AA071000000000000000005A /* GrokBillingError.swift in Sources */,
 				AA071000000000000000006A /* GrokBillingResponse.swift in Sources */,
 				AA071000000000000000007A /* GrokManagementClient.swift in Sources */,
-				AA080800000000000000001A /* PiProviderName.swift in Sources */,
+				AA0808000000000000000F1A /* PiProviderName.swift in Sources */,
 				AA080800000000000000002A /* PiSessionRecord.swift in Sources */,
 				AA080800000000000000003A /* PiLocalCatalog.swift in Sources */,
 				AA080800000000000000004A /* PiSessionRoots.swift in Sources */,
