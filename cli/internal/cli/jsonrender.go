@@ -56,6 +56,7 @@ func providerTree(p ProviderReport) map[string]any {
 	raw := map[string]any{}
 	var accounts []domain.AccountUsage
 	if s := p.Snapshot; s != nil {
+		m["asOf"] = iso8601(s.AsOf)
 		if s.TokensToday != nil {
 			m["tokensToday"] = *s.TokensToday
 		}
