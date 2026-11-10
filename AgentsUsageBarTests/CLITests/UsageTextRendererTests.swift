@@ -296,6 +296,40 @@ struct UsageTextRendererTests {
         #expect(json.contains("\"tokens\" : 10") || json.contains("\"tokens\":10"))
     }
 
+    @Test("JSON usage gives each provider its snapshot time, apart from the report time")
+    func jsonProviderAsOf() throws {
+        let now = Date(timeIntervalSince1970: 0)
+        let polled = Date(timeIntervalSince1970: 1000)
+        let report = UsageReport(
+            asOf: now,
+            source: .cached,
+            providers: [
+                ProviderReport(
+                    id: .codex, displayName: "Codex", status: .ok(lastSuccess: polled),
+                    snapshot: UsageSnapshot(
+                        providerID: .codex, asOf: polled, tokensToday: 10,
+                        costTodayUSD: nil, balanceUSD: nil, quota: nil, raw: [:]
+                    ),
+                    placeholderMessage: nil, errorDescription: nil,
+                    isLocal: false, hasTokens: true
+                ),
+                ProviderReport(
+                    id: .gemini, displayName: "Gemini", status: .disabled,
+                    snapshot: nil, placeholderMessage: nil, errorDescription: nil,
+                    isLocal: false, hasTokens: true
+                ),
+            ]
+        )
+        let json = try UsageJSONRenderer.renderUsage(report)
+        let root = try #require(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+        #expect(root["asOf"] as? String == "1970-01-01T00:00:00Z")
+        let providers = try #require(root["providers"] as? [[String: Any]])
+        let codex = try #require(providers.first { $0["id"] as? String == "codex" })
+        let gemini = try #require(providers.first { $0["id"] as? String == "gemini" })
+        #expect(codex["asOf"] as? String == "1970-01-01T00:16:40Z")
+        #expect(gemini["asOf"] == nil)
+    }
+
     @Test("gemini degraded snapshot does not print NSError")
     func geminiDegraded() {
         let now = Date()
