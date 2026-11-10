@@ -48,6 +48,7 @@ private struct ProviderJSON: Encodable {
     let id: String
     let displayName: String
     let status: String
+    let asOf: Date?
     let tokensToday: Int?
     let costTodayUSD: String?
     let balanceUSD: String?
@@ -61,6 +62,7 @@ private struct ProviderJSON: Encodable {
         self.id = report.id.rawValue
         self.displayName = report.displayName
         self.status = statusName(report.status)
+        self.asOf = report.snapshot?.asOf
         self.tokensToday = report.snapshot?.tokensToday
         self.costTodayUSD = report.snapshot?.costTodayUSD.map { NSDecimalNumber(decimal: $0).stringValue }
         self.balanceUSD = report.snapshot?.balanceUSD.map { NSDecimalNumber(decimal: $0).stringValue }
@@ -77,6 +79,7 @@ private struct ProviderJSON: Encodable {
         try container.encode(id, forKey: .id)
         try container.encode(displayName, forKey: .displayName)
         try container.encode(status, forKey: .status)
+        try container.encodeIfPresent(asOf, forKey: .asOf)
         try container.encodeIfPresent(tokensToday, forKey: .tokensToday)
         try container.encodeIfPresent(costTodayUSD, forKey: .costTodayUSD)
         try container.encodeIfPresent(balanceUSD, forKey: .balanceUSD)
@@ -92,7 +95,7 @@ private struct ProviderJSON: Encodable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, displayName, status, tokensToday, costTodayUSD, balanceUSD
+        case id, displayName, status, asOf, tokensToday, costTodayUSD, balanceUSD
         case quota, quotaWindows, accounts, raw, error
     }
 }
