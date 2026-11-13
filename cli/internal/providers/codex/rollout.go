@@ -57,6 +57,29 @@ func (u *tokenUsage) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// riseSince is the usage added since an earlier cumulative total of the same session. A total
+// that dropped starts the session count again.
+func (u tokenUsage) riseSince(earlier tokenUsage) tokenUsage {
+	if u.TotalTokens < earlier.TotalTokens {
+		return u
+	}
+	return tokenUsage{
+		InputTokens:       max(0, u.InputTokens-earlier.InputTokens),
+		CachedInputTokens: max(0, u.CachedInputTokens-earlier.CachedInputTokens),
+		OutputTokens:      max(0, u.OutputTokens-earlier.OutputTokens),
+		TotalTokens:       u.TotalTokens - earlier.TotalTokens,
+	}
+}
+
+func (u tokenUsage) plus(other tokenUsage) tokenUsage {
+	return tokenUsage{
+		InputTokens:       u.InputTokens + other.InputTokens,
+		CachedInputTokens: u.CachedInputTokens + other.CachedInputTokens,
+		OutputTokens:      u.OutputTokens + other.OutputTokens,
+		TotalTokens:       u.TotalTokens + other.TotalTokens,
+	}
+}
+
 type rateLimits struct {
 	LimitID              *string        `json:"limit_id"`
 	LimitName            *string        `json:"limit_name"`
@@ -206,12 +229,23 @@ func parseTimestamp(s string) (time.Time, bool) {
 	return t, err == nil
 }
 
-// lastTokenCount folds across files for the token_count event with info and the largest
-// timestamp. Rate-limit windows are account-level, so the latest windows are tracked apart from
-// the latest event: a later event that nulls them after a usage-limit hit inherits them, minus
-// any window that has already reset.
-func lastTokenCount(files []string) (rolloutEvent, string, bool) {
+// rolloutFold is one pass over the rollout files. last is the token_count event with the
+// largest timestamp and carries the account's rate-limit windows. days is token usage per day
+// key: total_token_usage is cumulative per session, so last alone is one session's total.
+type rolloutFold struct {
+	last     rolloutEvent
+	lastFile string
+	days     map[string]tokenUsage
+}
+
+// foldRollouts reads every token_count event with info, ok=false when there is none. Each event
+// adds its rise in the session's cumulative usage to the day of its timestamp, so a session
+// that runs past midnight splits across days. Rate-limit windows are account-level, so the
+// latest windows are tracked apart from the latest event: a later event that nulls them after a
+// usage-limit hit inherits them, minus any window that has already reset.
+func foldRollouts(files []string, dayKey func(time.Time) string) (rolloutFold, bool) {
 	var (
+		days        = map[string]tokenUsage{}
 		best        rolloutEvent
 		bestFile    string
 		bestTime    time.Time
@@ -225,6 +259,7 @@ func lastTokenCount(files []string) (rolloutEvent, string, bool) {
 		if err != nil || !utf8.Valid(contents) {
 			continue
 		}
+		var previous tokenUsage
 		for _, line := range bytes.Split(contents, []byte{'\n'}) {
 			if !bytes.Contains(line, []byte(`"token_count"`)) {
 				continue
@@ -240,6 +275,11 @@ func lastTokenCount(files []string) (rolloutEvent, string, bool) {
 			if !ok {
 				continue
 			}
+			if usage := event.Payload.Info.TotalTokenUsage; usage != nil {
+				key := dayKey(at)
+				days[key] = days[key].plus(usage.riseSince(previous))
+				previous = *usage
+			}
 			if limits := event.Payload.RateLimits; limits != nil && limits.hasWindows() && (!hasWindows || !at.Before(windowsTime)) {
 				lastWindows, windowsTime, hasWindows = *limits, at, true
 			}
@@ -249,7 +289,7 @@ func lastTokenCount(files []string) (rolloutEvent, string, bool) {
 		}
 	}
 	if !found {
-		return rolloutEvent{}, "", false
+		return rolloutFold{}, false
 	}
 	if limits := best.Payload.RateLimits; limits != nil && limits.isPostLimitNulling() && hasWindows && !windowsTime.After(bestTime) {
 		live := limits.fillingEmptyWindows(lastWindows).droppingWindowsReset(bestTime)
@@ -257,7 +297,7 @@ func lastTokenCount(files []string) (rolloutEvent, string, bool) {
 			best.Payload.RateLimits = &live
 		}
 	}
-	return best, bestFile, true
+	return rolloutFold{last: best, lastFile: bestFile, days: days}, true
 }
 
 // maxQuota is the max(primary, secondary) quota shared by the rollout and wham/usage paths.
