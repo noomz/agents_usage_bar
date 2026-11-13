@@ -89,9 +89,6 @@ public struct CodexRolloutScanner: Sendable {
         // missing every rollout file. The fix forces the components to the
         // Gregorian calendar while preserving the supplied calendar's TZ
         // so DST / leap-day handling (Pitfall 4) keeps working.
-        var pathCalendar = Calendar(identifier: .gregorian)
-        pathCalendar.timeZone = calendar.timeZone
-
         var results: [URL] = []
         for date in [todayStart, yesterdayStart] {
             let comps = pathCalendar.dateComponents([.year, .month, .day], from: date)
@@ -105,6 +102,18 @@ public struct CodexRolloutScanner: Sendable {
             results.append(contentsOf: jsonlFiles(in: dir))
         }
         return results
+    }
+
+    /// The Gregorian `yyyy-MM-dd` of an instant in the scanner's zone. The Codex CLI names its
+    /// directories with the same date.
+    public func dayKey(for date: Date) -> String {
+        TodayHelper.formatYYYYMMDD(date, calendar: pathCalendar)
+    }
+
+    private var pathCalendar: Calendar {
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = calendar.timeZone
+        return gregorian
     }
 
     /// Returns the rollout `*.jsonl` files under `<root>/YYYY/MM/DD` for each day key. A day
