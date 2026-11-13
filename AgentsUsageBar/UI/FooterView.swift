@@ -1,7 +1,8 @@
 import SwiftUI
 import AppKit
 
-/// Popover footer with "Refresh now" (Cmd-R) and "Quit Agents Usage Bar" (Cmd-Q) buttons.
+/// Popover footer: the reset-time caption over icon-only Refresh (Cmd-R), Settings (Cmd-,),
+/// Dashboard, and Quit (Cmd-Q) buttons. Each keeps its text as the accessibility label.
 ///
 /// Satisfies:
 /// - UI-10: Manual "Refresh now" button with Cmd-R keyboard shortcut
@@ -43,6 +44,7 @@ public struct FooterView: View {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
                 .keyboardShortcut("r", modifiers: .command)
+                .help("Refresh (⌘R)")
                 .buttonStyle(HoverableBorderedButtonStyle())
                 .tint(.accentColor)
 
@@ -57,6 +59,7 @@ public struct FooterView: View {
                     Label("Settings", systemImage: "gearshape")
                 }
                 .keyboardShortcut(",", modifiers: .command)
+                .help("Settings (⌘,)")
                 .buttonStyle(HoverableBorderedButtonStyle())
 
                 Button {
@@ -65,16 +68,21 @@ public struct FooterView: View {
                 } label: {
                     Label("Dashboard", systemImage: "chart.xyaxis.line")
                 }
+                .help("Dashboard")
                 .buttonStyle(HoverableBorderedButtonStyle())
 
                 Spacer()
 
-                Button("Quit") {
+                Button {
                     NSApp.terminate(nil)
+                } label: {
+                    Label("Quit", systemImage: "power")
                 }
                 .keyboardShortcut("q", modifiers: .command)
+                .help("Quit (⌘Q)")
                 .buttonStyle(HoverableBorderedButtonStyle())
             }
+            .labelStyle(.iconOnly)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
         }
