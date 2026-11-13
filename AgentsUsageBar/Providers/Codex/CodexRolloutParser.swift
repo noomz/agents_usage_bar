@@ -144,7 +144,7 @@ public enum CodexRolloutParser {
         return (best.event, best.fileURL)
     }
 
-    /// Token usage per day key across rollout files, for backfill (SPEC I10). Each
+    /// Token usage per day key across rollout files, for today's row and backfill (SPEC I10). Each
     /// `token_count` event adds its rise in the session's cumulative `total_token_usage` to
     /// the day of its timestamp, so a session that runs past midnight splits across days.
     /// A cumulative total that drops starts the session count again.

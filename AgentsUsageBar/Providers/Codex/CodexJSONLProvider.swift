@@ -43,7 +43,9 @@ public typealias CodexRolloutScannerFactory = @Sendable (Date) -> CodexRolloutSc
 //         to maintain the byte-offset cache invariant. The reader's per-line
 //         Claude decoder is NOT consumed — Codex events go through the
 //         CodexRolloutParser fold instead.
-//      b. Fold across all files via CodexRolloutParser.lastTokenCount(in:).
+//      b. Fold across all files via CodexRolloutParser.lastTokenCount(in:) for
+//         the quota windows, and CodexRolloutParser.dailyUsage(in:dayKey:) for
+//         today's tokens and cost.
 //      c. Single batched cache.setTranscriptOffsets(...) write (STATE #43).
 //      d. If parser returned a token_count event → buildSnapshot(fromRollout:).
 //         When that event has no live quota windows (CLIProxy and other custom
@@ -275,7 +277,9 @@ public actor CodexJSONLProvider: UsageProvider {
         guard let pick = CodexRolloutParser.lastTokenCount(in: rolloutFiles) else {
             return nil
         }
-        return buildSnapshot(fromRollout: pick.event, fileURL: pick.fileURL, now: now)
+        let today = CodexRolloutParser.dailyUsage(in: rolloutFiles, dayKey: scanner.dayKey(for:))[
+            scanner.dayKey(for: now)] ?? CodexDayUsage()
+        return buildSnapshot(fromRollout: pick.event, today: today, fileURL: pick.fileURL, now: now)
     }
 
     /// One snapshot for every enabled login. A failed `wham/usage` leaves that
@@ -449,34 +453,28 @@ public actor CodexJSONLProvider: UsageProvider {
 
     // MARK: - Snapshot builders
 
-    /// Builds a UsageSnapshot from a local rollout `token_count` event.
+    /// Builds a UsageSnapshot from the newest rollout `token_count` event and today's usage.
     ///
-    /// Pitfall 11 invariant: uses the cumulative session-total token usage
-    /// (emitted on every token_count event), NOT the per-request delta variant
-    /// which would under-count the session aggregate.
+    /// Tokens and cost come from `today`, the sum over every session. The event's own
+    /// `total_token_usage` is cumulative for one session, so it is not today's total. The
+    /// event supplies the account-level quota windows and balance.
     private func buildSnapshot(
         fromRollout event: CodexRolloutEvent,
+        today: CodexDayUsage,
         fileURL: URL,
         now: Date
     ) -> UsageSnapshot {
-        // Tokens — total_token_usage.total_tokens.
-        let totalTokenUsage = event.payload.info?.totalTokenUsage
-        let tokensToday = totalTokenUsage?.totalTokens
+        let tokensToday = today.totalTokens
 
         // Cost — pricing is best-effort; modelID is nil today (rollout
         // token_count events don't carry model IDs — see Plan 03-02 SUMMARY).
-        let costTodayUSD: Decimal?
-        if let pricing, let usage = totalTokenUsage {
-            costTodayUSD = pricing.cost(
-                inputTokens: usage.inputTokens,
-                cachedInputTokens: usage.cachedInputTokens,
-                outputTokens: usage.outputTokens,
-                reasoningOutputTokens: usage.reasoningOutputTokens ?? 0,
-                modelID: nil
-            )
-        } else {
-            costTodayUSD = nil
-        }
+        let costTodayUSD = pricing?.cost(
+            inputTokens: today.inputTokens,
+            cachedInputTokens: today.cachedInputTokens,
+            outputTokens: today.outputTokens,
+            reasoningOutputTokens: today.reasoningOutputTokens,
+            modelID: nil
+        )
 
         // Quota windows — primary + secondary from rate_limits.
         var windows: [QuotaWindow] = []
