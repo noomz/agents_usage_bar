@@ -6,12 +6,14 @@ import SwiftUI
 /// Fixed at 360pt width (SHELL-04; Pitfall 1 mitigation: explicit fixed width prevents
 /// `MenuBarExtra` from sizing to an indeterminate intrinsic size on first appearance).
 ///
-/// Layout:
+/// Layout (header and footer stay on screen; only the middle scrolls once the panel
+/// reaches its max height):
 ///   TotalsHeaderView   ← summed tokens + USD (UI-01)
 ///   Divider
-///   ProviderRowView    ← one per provider, in `provider-order` (SPEC V32)
+///   ScrollView         ← ProviderRowView per provider in `provider-order` (SPEC V32)
 ///   Divider
-///   FooterView         ← Refresh now (Cmd-R) + Quit (Cmd-Q)
+///   PopoverTeaserView  ← 14-day spend strip, when history exists
+///   FooterView        ← icon-only Refresh (Cmd-R), Settings, Dashboard, Quit (Cmd-Q)
 ///
 /// UI-07 guarantee: `AggregateStore.init` seeds `providers` from cache synchronously, so
 /// this view renders cached values IMMEDIATELY on first open — no "Loading…" flash.
@@ -38,10 +40,20 @@ public struct PopoverRootView: View {
     public init() {}
 
     public var body: some View {
-        ScrollView(.vertical) {
-            content
+        VStack(alignment: .leading, spacing: 0) {
+            TotalsHeaderView()
+            Divider()
+            ScrollView(.vertical) {
+                ProviderListView(isVisible: isVisible)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            Divider()
+            if let teaser {
+                PopoverTeaserView(teaser: teaser)
+                Divider()
+            }
+            FooterView()
         }
-        .scrollBounceBehavior(.basedOnSize)
         .frame(width: 360)
         .frame(maxHeight: maxHeight)
         // The panel takes its height from the hosting view's min and max size, so the
@@ -82,20 +94,6 @@ public struct PopoverRootView: View {
         .task(id: isVisible) {
             guard isVisible, let teaserSource else { return }
             teaser = await teaserSource.load()
-        }
-    }
-
-    private var content: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            TotalsHeaderView()
-            Divider()
-            ProviderListView(isVisible: isVisible)
-            Divider()
-            if let teaser {
-                PopoverTeaserView(teaser: teaser)
-                Divider()
-            }
-            FooterView()
         }
     }
 

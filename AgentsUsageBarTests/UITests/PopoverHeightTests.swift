@@ -18,6 +18,9 @@ struct PopoverHeightTests {
         let cap: CGFloat
         let viewport: CGFloat?
         let document: CGFloat?
+
+        /// Height outside the scroll viewport: the pinned header and footer.
+        var pinned: CGFloat? { viewport.map { window - $0 } }
     }
 
     private func scrollView(in view: NSView) -> NSScrollView? {
@@ -70,7 +73,8 @@ struct PopoverHeightTests {
         let sizing = try await panelSizing(providers: 1, flexibleContainer: true)
         #expect(abs(sizing.window - sizing.content) <= 1)
         let viewport = try #require(sizing.viewport)
-        #expect(abs(viewport - sizing.window) <= 1)
+        let document = try #require(sizing.document)
+        #expect(abs(viewport - document) <= 1, "viewport \(viewport)pt, rows \(document)pt")
     }
 
     @Test("popover resizes when moved between displays", .enabled(if: NSScreen.screens.count > 1, "needs two displays"))
@@ -94,6 +98,7 @@ struct PopoverHeightTests {
         defer { panel.close() }
         panel.contentView = host
         try await Task.sleep(for: .milliseconds(300))
+        var pinned: CGFloat?
         for screen in [screens[0], screens[1], screens[0], screens[1], screens[0]] {
             panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.midX, y: screen.visibleFrame.minY + 20))
             let anchoredTop = panel.frame.maxY
@@ -105,7 +110,10 @@ struct PopoverHeightTests {
             #expect(!panel.isKeyWindow, "resizing must not acquire keyboard focus")
             #expect(abs(panel.frame.maxY - anchoredTop) <= 1, "resizing must preserve the menu-bar anchor")
             #expect(abs(host.frame.height - cap) <= 1)
-            #expect(abs(viewport - host.frame.height) <= 1, "transparent vertical margins must not surround the viewport")
+            let outside = host.frame.height - viewport
+            #expect(outside > 0, "header and footer sit outside the scroll view")
+            #expect(abs(outside - (pinned ?? outside)) <= 1, "only the scroll viewport changes height")
+            pinned = outside
         }
     }
 
@@ -124,7 +132,15 @@ struct PopoverHeightTests {
         #expect(abs(sizing.min - sizing.cap) < 1, "panel \(sizing.min)pt, cap \(sizing.cap)pt")
         let viewport = try #require(sizing.viewport, "no scroll view in the popover")
         let document = try #require(sizing.document)
-        #expect(abs(viewport - sizing.cap) < 1, "viewport \(viewport)pt, cap \(sizing.cap)pt")
+        #expect(viewport < sizing.cap, "viewport \(viewport)pt, cap \(sizing.cap)pt")
         #expect(document > viewport, "document \(document)pt, viewport \(viewport)pt")
+    }
+
+    @Test("tall content: header and footer stay on screen while only the rows scroll")
+    func headerAndFooterStayPinned() async throws {
+        let short = try #require(try await panelSizing(providers: 1).pinned)
+        let tall = try #require(try await panelSizing(providers: 200).pinned)
+        #expect(short > 0, "header and footer sit outside the scroll view")
+        #expect(abs(tall - short) < 1, "pinned \(tall)pt with 200 rows, \(short)pt with 1 row")
     }
 }
