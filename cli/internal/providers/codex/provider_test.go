@@ -180,9 +180,9 @@ func TestFixtureRolloutSnapshot(t *testing.T) {
 	}
 	h := newHome(t)
 	h.auth(authFile(ptr("acc"), "t"))
-	h.rollout("2026-10-07", "fixture.jsonl", line)
+	h.rollout("2026-04-24", "fixture.jsonl", line)
 	p := h.build()
-	snap, status, err := p.Fetch(context.Background(), testNow)
+	snap, status, err := p.Fetch(context.Background(), time.Date(2026, 4, 24, 12, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -20,6 +20,8 @@ func tokenLine(ts string, total int, limits string) string {
 	return fmt.Sprintf(`{"timestamp":%q,"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":%d,"cached_input_tokens":0,"output_tokens":0,"total_tokens":%d}}%s}}`, ts, total, total, limits)
 }
 
+func utcDay(t time.Time) string { return t.UTC().Format("2006-01-02") }
+
 func TestLastTokenCount(t *testing.T) {
 	const windows = `{"limit_id":"codex","primary":{"used_percent":98.0,"window_minutes":300,"resets_at":1788858959},"secondary":{"used_percent":15.0,"window_minutes":10080,"resets_at":1789445759},"plan_type":"plus"}`
 	secondaryPct := func(p float64) *float64 { return &p }
@@ -136,13 +138,14 @@ func TestLastTokenCount(t *testing.T) {
 				}
 				paths = append(paths, path)
 			}
-			event, _, found := lastTokenCount(paths)
+			fold, found := foldRollouts(paths, utcDay)
 			if found != tc.found {
 				t.Fatalf("found = %v", found)
 			}
 			if !found {
 				return
 			}
+			event := fold.last
 			if got := event.Payload.Info.TotalTokenUsage.TotalTokens; got != tc.total {
 				t.Fatalf("total = %d, want %d", got, tc.total)
 			}
@@ -172,7 +175,7 @@ func TestLastTokenCountSkipsFileWithInvalidUTF8(t *testing.T) {
 	if err := os.WriteFile(path, []byte(tokenLine("2026-04-24T12:00:00.000Z", 9, "")+"\n\xff\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, found := lastTokenCount([]string{path}); found {
+	if _, found := foldRollouts([]string{path}, utcDay); found {
 		t.Fatal("Swift's String(contentsOf:encoding:) rejects the whole file")
 	}
 }

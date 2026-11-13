@@ -363,7 +363,7 @@ func (o *DayKeyOwner) Today() string { return o.KeyFor(o.clock.Now()) }
 
 // KeyFor is the key at an instant, held at the newest key when the wall clock is behind it.
 func (o *DayKeyOwner) KeyFor(t time.Time) string {
-	wall := t.In(o.loc).Format("2006-01-02")
+	wall := o.WallKey(t)
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if o.newest > wall {
@@ -371,6 +371,10 @@ func (o *DayKeyOwner) KeyFor(t time.Time) string {
 	}
 	return wall
 }
+
+// WallKey is the key at an instant from the wall clock alone. It dates a past event, which the
+// newest key must not pull forward.
+func (o *DayKeyOwner) WallKey(t time.Time) string { return t.In(o.loc).Format("2006-01-02") }
 
 // StartOfDay is the first instant of the day key at t, in the owner's zone.
 func (o *DayKeyOwner) StartOfDay(t time.Time) time.Time {

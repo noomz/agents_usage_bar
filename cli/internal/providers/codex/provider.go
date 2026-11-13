@@ -138,11 +138,11 @@ func (p *Provider) readRollout(now time.Time) (*domain.UsageSnapshot, error) {
 	if err := p.env.Cache.WithCursors(func(c cache.Cursors) { advanceOffsets(c, files) }); err != nil {
 		return nil, err
 	}
-	event, file, ok := lastTokenCount(files)
+	fold, ok := foldRollouts(files, p.env.DayKeys.WallKey)
 	if !ok {
 		return nil, nil
 	}
-	return p.rolloutSnapshot(event, file, now), nil
+	return p.rolloutSnapshot(fold.last, fold.lastFile, fold.days[today], now), nil
 }
 
 func advanceOffsets(c cache.Cursors, files []string) {
@@ -164,19 +164,16 @@ func advanceOffsets(c cache.Cursors, files []string) {
 	c.SetTranscriptOffsets(offsets)
 }
 
-func (p *Provider) rolloutSnapshot(event rolloutEvent, file string, now time.Time) *domain.UsageSnapshot {
+func (p *Provider) rolloutSnapshot(event rolloutEvent, file string, today tokenUsage, now time.Time) *domain.UsageSnapshot {
 	snap := domain.UsageSnapshot{
 		ProviderID: domain.Codex,
 		AsOf:       now,
 		Raw:        map[string]string{"source": "rollout", "fileURL": filepath.Base(file)},
 	}
-	if usage := event.Payload.Info.TotalTokenUsage; usage != nil {
-		tokens := usage.TotalTokens
-		snap.TokensToday = &tokens
-		if p.rates != nil {
-			cost := p.rates.cost(*usage)
-			snap.CostTodayUSD = &cost
-		}
+	snap.TokensToday = &today.TotalTokens
+	if p.rates != nil {
+		cost := p.rates.cost(today)
+		snap.CostTodayUSD = &cost
 	}
 	if limits := event.Payload.RateLimits; limits != nil {
 		appendWindow := func(name string, w *rolloutWindow) {
