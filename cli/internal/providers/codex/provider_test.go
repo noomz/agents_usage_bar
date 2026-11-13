@@ -95,10 +95,11 @@ type home struct {
 	root string
 	http *fakeHTTP
 	c    *recordingCache
+	loc  *time.Location
 }
 
 func newHome(t *testing.T) *home {
-	return &home{t: t, root: t.TempDir(), http: &fakeHTTP{responses: map[string]any{}}, c: &recordingCache{}}
+	return &home{t: t, root: t.TempDir(), http: &fakeHTTP{responses: map[string]any{}}, c: &recordingCache{}, loc: time.UTC}
 }
 
 func (h *home) rollout(day, name, contents string) string {
@@ -123,7 +124,7 @@ func (h *home) build() provider.Provider {
 	return Build(provider.Env{
 		HTTP:    h.http,
 		Cache:   h.c,
-		DayKeys: domain.NewDayKeyOwner(clock.Fixed(testNow), time.UTC),
+		DayKeys: domain.NewDayKeyOwner(clock.Fixed(testNow), h.loc),
 		Paths:   paths.Layout{Home: h.root},
 	})
 }
@@ -204,6 +205,82 @@ func TestFixtureRolloutSnapshot(t *testing.T) {
 	if len(h.http.calls) != 0 {
 		t.Fatalf("rollout windows win but wham was called")
 	}
+}
+
+func TestTokensTodaySumEverySessionsRiseToday(t *testing.T) {
+	bangkok := time.FixedZone("ICT", 7*60*60)
+	cases := []struct {
+		name     string
+		loc      *time.Location
+		rollouts map[string][]string
+		tokens   int
+	}{
+		{
+			name: "two sessions today and one that ran past local midnight",
+			loc:  bangkok,
+			rollouts: map[string][]string{
+				"2026-10-07/a.jsonl": {
+					tokenLine("2026-10-07T01:00:00.000Z", 1000, ""),
+					tokenLine("2026-10-07T02:00:00.000Z", 1500, ""),
+				},
+				"2026-10-07/b.jsonl": {tokenLine("2026-10-07T02:30:00.000Z", 300, "")},
+				"2026-10-06/overnight.jsonl": {
+					tokenLine("2026-10-06T16:00:00.000Z", 5000, ""),
+					tokenLine("2026-10-06T18:00:00.000Z", 5400, ""),
+				},
+			},
+			tokens: 1500 + 300 + 400,
+		},
+		{
+			name: "a cumulative total that drops starts the session count again",
+			loc:  time.UTC,
+			rollouts: map[string][]string{
+				"2026-10-07/a.jsonl": {
+					tokenLine("2026-10-07T00:10:00.000Z", 1000, ""),
+					tokenLine("2026-10-07T00:20:00.000Z", 200, ""),
+					tokenLine("2026-10-07T00:30:00.000Z", 500, ""),
+				},
+			},
+			tokens: 1000 + 200 + 300,
+		},
+		{
+			name: "only yesterday's events leave today at zero",
+			loc:  time.UTC,
+			rollouts: map[string][]string{
+				"2026-10-06/a.jsonl": {tokenLine("2026-10-06T23:00:00.000Z", 9000, "")},
+			},
+			tokens: 0,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newHome(t)
+			h.loc = tc.loc
+			for path, lines := range tc.rollouts {
+				day, name := filepath.Split(path)
+				h.rollout(filepath.Clean(day), name, strings.Join(lines, "\n")+"\n")
+			}
+			p := h.build()
+			snap, _, err := p.Fetch(context.Background(), testNow)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if snap.TokensToday == nil || *snap.TokensToday != tc.tokens {
+				t.Fatalf("tokens = %v, want %d", deref(snap.TokensToday), tc.tokens)
+			}
+			want := p.(*Provider).rates.cost(tokenUsage{InputTokens: tc.tokens, TotalTokens: tc.tokens})
+			if snap.CostTodayUSD == nil || snap.CostTodayUSD.Cmp(want) != 0 {
+				t.Fatalf("cost = %v, want %s", snap.CostTodayUSD, want)
+			}
+		})
+	}
+}
+
+func deref(p *int) any {
+	if p == nil {
+		return nil
+	}
+	return *p
 }
 
 func TestLegacyResetIsNowPlusSeconds(t *testing.T) {
