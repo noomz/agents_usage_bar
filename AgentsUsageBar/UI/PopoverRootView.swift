@@ -13,7 +13,7 @@ import SwiftUI
 ///   ScrollView         ← ProviderRowView per provider in `provider-order` (SPEC V32)
 ///   Divider
 ///   PopoverTeaserView  ← 14-day spend strip, when history exists
-///   FooterView        ← icon-only Refresh (Cmd-R), Settings, Dashboard, Quit (Cmd-Q)
+///   FooterView         ← icon-only Refresh (Cmd-R), Settings, Dashboard, Quit (Cmd-Q)
 ///
 /// UI-07 guarantee: `AggregateStore.init` seeds `providers` from cache synchronously, so
 /// this view renders cached values IMMEDIATELY on first open — no "Loading…" flash.

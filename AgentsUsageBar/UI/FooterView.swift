@@ -1,7 +1,8 @@
 import SwiftUI
 import AppKit
 
-/// Popover footer with "Refresh now" (Cmd-R) and "Quit Agents Usage Bar" (Cmd-Q) buttons.
+/// Popover footer: the reset-time caption over icon-only Refresh (Cmd-R), Settings (Cmd-,),
+/// Dashboard, and Quit (Cmd-Q) buttons. Each keeps its text as the accessibility label.
 ///
 /// Satisfies:
 /// - UI-10: Manual "Refresh now" button with Cmd-R keyboard shortcut
