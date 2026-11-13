@@ -459,4 +459,88 @@ struct CodexJSONLProviderTests {
         #expect(snap.tooltipLabel == "plus")
         #expect(snap.raw["source"] == "rollout")
     }
+
+    // MARK: - Tokens today sum each session's rise today
+
+    private func tokenCount(_ timestamp: String, total: Int) -> String {
+        #"{"timestamp":"\#(timestamp)","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":\#(total),"cached_input_tokens":0,"output_tokens":0,"reasoning_output_tokens":0,"total_tokens":\#(total)}}}}"#
+    }
+
+    private func fetchTokens(
+        rollouts: [(year: Int, month: Int, day: Int, name: String, lines: [String])],
+        now: String,
+        timeZone: TimeZone
+    ) async throws -> UsageSnapshot {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        for rollout in rollouts {
+            let dir = try dateDir(under: root, year: rollout.year, month: rollout.month, day: rollout.day)
+            try writeJsonl(rollout.lines.joined(separator: "\n") + "\n", to: dir.appendingPathComponent(rollout.name))
+        }
+        let calendar = {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = timeZone
+            return calendar
+        }()
+        let provider = CodexJSONLProvider(
+            scannerFactory: { now in CodexRolloutScanner(now: now, calendar: calendar, root: root) },
+            reader: TranscriptReader(),
+            pricing: .testPricing,
+            oauth: nil,
+            cache: FakeCodexCacheStore(),
+            clock: SystemClock()
+        )
+        return try await provider.fetch(now: try #require(ISO8601DateFormatter().date(from: now)))
+    }
+
+    @Test func tokens_today_sum_sessions_and_split_one_that_ran_past_local_midnight() async throws {
+        let bangkok = try #require(TimeZone(secondsFromGMT: 7 * 3600))
+        let snap = try await fetchTokens(
+            rollouts: [
+                (2026, 10, 7, "a.jsonl", [
+                    tokenCount("2026-10-07T01:00:00.000Z", total: 1000),
+                    tokenCount("2026-10-07T02:00:00.000Z", total: 1500),
+                ]),
+                (2026, 10, 7, "b.jsonl", [tokenCount("2026-10-07T02:30:00.000Z", total: 300)]),
+                (2026, 10, 6, "overnight.jsonl", [
+                    tokenCount("2026-10-06T16:00:00.000Z", total: 5000),
+                    tokenCount("2026-10-06T18:00:00.000Z", total: 5400),
+                ]),
+            ],
+            now: "2026-10-07T02:40:00Z",
+            timeZone: bangkok
+        )
+
+        #expect(snap.tokensToday == 1500 + 300 + 400)
+        #expect(snap.costTodayUSD == Decimal(2200) * Decimal(0.750) / Decimal(1_000_000))
+    }
+
+    @Test func tokens_today_restart_the_count_when_a_cumulative_total_drops() async throws {
+        let utc = try #require(TimeZone(secondsFromGMT: 0))
+        let snap = try await fetchTokens(
+            rollouts: [
+                (2026, 10, 7, "a.jsonl", [
+                    tokenCount("2026-10-07T00:10:00.000Z", total: 1000),
+                    tokenCount("2026-10-07T00:20:00.000Z", total: 200),
+                    tokenCount("2026-10-07T00:30:00.000Z", total: 500),
+                ]),
+            ],
+            now: "2026-10-07T02:40:00Z",
+            timeZone: utc
+        )
+
+        #expect(snap.tokensToday == 1000 + 200 + 300)
+    }
+
+    @Test func tokens_today_are_zero_when_every_event_is_from_yesterday() async throws {
+        let utc = try #require(TimeZone(secondsFromGMT: 0))
+        let snap = try await fetchTokens(
+            rollouts: [(2026, 10, 6, "a.jsonl", [tokenCount("2026-10-06T23:00:00.000Z", total: 9000)])],
+            now: "2026-10-07T02:40:00Z",
+            timeZone: utc
+        )
+
+        #expect(snap.tokensToday == 0)
+        #expect(snap.costTodayUSD == 0)
+    }
 }
