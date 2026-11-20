@@ -143,26 +143,13 @@ public actor ClaudeHookProvider: UsageProvider {
                 throw ClaudeHookError.noFeedData
             }
 
-            // Staleness gate: files exist but the newest is older than 24h — the user simply
-            // hasn't used Claude Code lately. That is a legitimate zero-usage state, not a
-            // broken hook: return a zero snapshot (quota nil — stale rate limits mislead).
+            // Staleness detection: newest file older than 24h — the user hasn't run
+            // Claude Code lately. Cost = 0 (mtime before local midnight). We still
+            // read rate limits: a limit-reached account can't run sessions, so the feed
+            // goes stale exactly when the reset countdown matters most. Only drop
+            // windows whose resets_at has already passed.
             let newestMTime = entries.map(\.mtime).max()!
-            if now.timeIntervalSince(newestMTime) > Self.stalenessHorizon {
-                // Still perform cleanup so a long-idle feed doesn't grow unbounded.
-                cleanup(entries: allEntries, now: now, fileManager: fm)
-                let snap = UsageSnapshot(
-                    providerID: id,
-                    asOf: now,
-                    tokensToday: nil,
-                    costTodayUSD: 0,
-                    balanceUSD: nil,
-                    quota: nil,
-                    raw: [:],
-                    quotaWindows: nil
-                )
-                lastStatus = .ok(lastSuccess: now)
-                return snap
-            }
+            let isStale = now.timeIntervalSince(newestMTime) > Self.stalenessHorizon
 
             // Per-account aggregation: today's cost sum + peak-within-window rate limits.
             struct AccountAgg {
@@ -231,7 +218,8 @@ public actor ClaudeHookProvider: UsageProvider {
                 var accountWindows: [QuotaWindow] = []
                 if agg.fiveHour != nil || agg.sevenDay != nil {
                     let prefix = isMultiAccount ? "\(account) " : ""
-                    if let fh = agg.fiveHour {
+                    if let fh = agg.fiveHour,
+                       !isStale || (fh.resetsAtDate ?? .distantPast) >= now {
                         let utilization = fh.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
                             name: prefix + "5h", utilization: utilization, resetsAt: fh.resetsAtDate
@@ -240,7 +228,8 @@ public actor ClaudeHookProvider: UsageProvider {
                             name: "5h", utilization: utilization, resetsAt: fh.resetsAtDate
                         ))
                     }
-                    if let sd = agg.sevenDay {
+                    if let sd = agg.sevenDay,
+                       !isStale || (sd.resetsAtDate ?? .distantPast) >= now {
                         let utilization = sd.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
                             name: prefix + "7d", utilization: utilization, resetsAt: sd.resetsAtDate
@@ -249,8 +238,12 @@ public actor ClaudeHookProvider: UsageProvider {
                             name: "7d", utilization: utilization, resetsAt: sd.resetsAtDate
                         ))
                     }
-                    accountMaxPct = [agg.fiveHour?.usedPercentage, agg.sevenDay?.usedPercentage]
-                        .compactMap { $0 }.max()
+                    // accountMaxPct only counts non-expired windows.
+                    let activePcts: [Double] = [
+                        (agg.fiveHour, !isStale || (agg.fiveHour?.resetsAtDate ?? .distantPast) >= now),
+                        (agg.sevenDay, !isStale || (agg.sevenDay?.resetsAtDate ?? .distantPast) >= now)
+                    ].compactMap { $0.1 ? $0.0?.usedPercentage : nil }
+                    accountMaxPct = activePcts.max()
                     if let pct = accountMaxPct {
                         maxUtilizationPct = max(maxUtilizationPct ?? 0, pct)
                     }
@@ -305,7 +298,7 @@ public actor ClaudeHookProvider: UsageProvider {
                 providerID: id,
                 asOf: now,
                 tokensToday: nil,                                   // statusline has no token totals
-                costTodayUSD: sawTodayCost ? costTodayUSD : nil,
+                costTodayUSD: isStale ? 0 : (sawTodayCost ? costTodayUSD : nil),
                 balanceUSD: nil,
                 quota: primaryQuota,
                 raw: raw,

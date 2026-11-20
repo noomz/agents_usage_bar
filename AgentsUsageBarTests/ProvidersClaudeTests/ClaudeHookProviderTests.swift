@@ -209,9 +209,7 @@ struct ClaudeHookProviderTests {
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let now = Date()
-        // Newest file is 25h old → the user simply hasn't used Claude Code lately.
-        // That is a legitimate zero-usage state, NOT a broken hook: zero snapshot,
-        // no quota (stale rate limits would mislead), no error row.
+        // Newest file is 25h old with no rate limits → zero cost, no quota data to keep.
         try writeSession("stale", json: costJSON(sessionId: "stale", usd: 5.0),
                          mtime: now.addingTimeInterval(-25 * 3600), in: dir)
 
@@ -222,6 +220,133 @@ struct ClaudeHookProviderTests {
         #expect(snap.quota == nil)
         #expect(snap.quotaWindows == nil)
         #expect(await provider.status() == .ok(lastSuccess: now))
+    }
+
+    /// Stale feed (>24h) with a future 7d reset → the window is kept with last-known
+    /// utilization. This is the #73 scenario: a limit-reached account can't run sessions,
+    /// so the feed goes stale exactly when the reset countdown matters most.
+    @Test func staleFeedKeepsUnexpiredQuotaWindows() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        // 25h old file — stale feed.
+        let staleMtime = now.addingTimeInterval(-25 * 3600)
+        // 5h window resets 24h ago (expired) — should be dropped.
+        let expired5hReset = now.addingTimeInterval(-24 * 3600).timeIntervalSince1970
+        // 7d window resets in 10h (future) — should be kept.
+        let future7dReset = now.addingTimeInterval(10 * 3600).timeIntervalSince1970
+        try writeSession("stale", json: """
+        {
+          "session_id": "stale",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 99, "resets_at": \(expired5hReset) },
+            "seven_day": { "used_percentage": 99, "resets_at": \(future7dReset) }
+          }
+        }
+        """, mtime: staleMtime, in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        // Cost is 0 for stale feeds.
+        #expect(snap.costTodayUSD == 0)
+        // 5h window expired — dropped.
+        let windows = try #require(snap.quotaWindows)
+        #expect(windows.map(\.name) == ["7d"])
+        let seven = try #require(windows.first { $0.name == "7d" })
+        #expect(seven.utilization == 0.99)
+        #expect(seven.resetsAt == Date(timeIntervalSince1970: future7dReset))
+        // Primary quota follows the kept window.
+        let quota = try #require(snap.quota)
+        #expect(quota.used == 0.99)
+    }
+
+    /// Stale feed with ALL windows already expired → no quota returned.
+    @Test func staleFeedDropsAllExpiredQuotaWindows() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let staleMtime = now.addingTimeInterval(-25 * 3600)
+        // Both windows expired.
+        let old5hReset = now.addingTimeInterval(-24 * 3600).timeIntervalSince1970
+        let old7dReset = now.addingTimeInterval(-10 * 3600).timeIntervalSince1970
+        try writeSession("stale", json: """
+        {
+          "session_id": "stale",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 99, "resets_at": \(old5hReset) },
+            "seven_day": { "used_percentage": 99, "resets_at": \(old7dReset) }
+          }
+        }
+        """, mtime: staleMtime, in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        #expect(snap.costTodayUSD == 0)
+        #expect(snap.quota == nil)
+        #expect(snap.quotaWindows == nil)
+    }
+
+    /// Stale multi-account feed: only the unexpired windows per account are kept.
+    @Test func staleMultiAccountFeedKeepsUnexpiredWindowsPerAccount() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let staleMtime = now.addingTimeInterval(-25 * 3600)
+
+        // "personal" account: 7d resets in 10h (keep), 5h expired (drop).
+        let personalDir = dir.appendingPathComponent("personal", isDirectory: true)
+        try FileManager.default.createDirectory(at: personalDir, withIntermediateDirectories: true)
+        let expired5hReset = now.addingTimeInterval(-24 * 3600).timeIntervalSince1970
+        let future7dReset = now.addingTimeInterval(10 * 3600).timeIntervalSince1970
+        try writeSession("p1", json: """
+        {
+          "session_id": "p1",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 99, "resets_at": \(expired5hReset) },
+            "seven_day": { "used_percentage": 75, "resets_at": \(future7dReset) }
+          }
+        }
+        """, mtime: staleMtime, in: personalDir)
+
+        // "work" account: both windows expired.
+        let workDir = dir.appendingPathComponent("work", isDirectory: true)
+        try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
+        let old5hReset = now.addingTimeInterval(-6 * 3600).timeIntervalSince1970
+        let old7dReset = now.addingTimeInterval(-10 * 3600).timeIntervalSince1970
+        try writeSession("w1", json: """
+        {
+          "session_id": "w1",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 50, "resets_at": \(old5hReset) },
+            "seven_day": { "used_percentage": 80, "resets_at": \(old7dReset) }
+          }
+        }
+        """, mtime: staleMtime, in: workDir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        #expect(snap.costTodayUSD == 0)
+        // Only personal 7d survives.
+        let windows = try #require(snap.quotaWindows)
+        #expect(windows.map(\.name) == ["personal 7d"])
+        let quota = try #require(snap.quota)
+        #expect(quota.used == 0.75)
+
+        // Per-account slices.
+        let accounts = try #require(snap.accounts)
+        #expect(accounts.map(\.name) == ["personal", "work"])
+        #expect(accounts[0].quota?.used == 0.75)
+        #expect(accounts[1].quota == nil)
     }
 
     // MARK: - Multi-account (DESIGN-hook-multi-account)
