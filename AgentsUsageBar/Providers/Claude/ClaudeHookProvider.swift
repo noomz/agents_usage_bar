@@ -150,24 +150,26 @@ public actor ClaudeHookProvider: UsageProvider {
             // Staleness detection: newest file older than 24h — the user hasn't run
             // Claude Code lately. Cost = 0 (mtime before local midnight). We still
             // read rate limits: a limit-reached account can't run sessions, so the feed
-            // goes stale exactly when the reset countdown matters most. Only drop
-            // windows whose resets_at has already passed.
-            //
-            // Staleness is judged PER ACCOUNT for window filtering: retention can keep
-            // an idle account's file alive for days, and a fresh sibling account would
-            // otherwise flip feed-wide isStale to false and resurrect the idle
-            // account's expired windows (a 100% 5h window driving the primary quota).
-            // A stale account keeps only unexpired windows; a fresh account keeps all.
+            // goes stale exactly when the reset countdown matters most.
             let newestMTime = entries.map(\.mtime).max()!
             let isStale = now.timeIntervalSince(newestMTime) > Self.stalenessHorizon
 
             // Per-account aggregation: today's cost sum + peak-within-window rate limits.
+            //
+            // Window freshness is tracked PER WINDOW SLOT (suppliedAt = newest mtime of a
+            // payload that supplied that slot), not per account or per feed: a sibling
+            // account going active must not resurrect an idle account's expired windows,
+            // and a newer payload that omits rate_limits must not flip a stale slot fresh.
+            // Filtering happens BEFORE mergeWindow: a stale payload's window merges only
+            // while its resets_at is still in the future, so a stale window with a missing
+            // resets_at can never out-merge (on usedPercentage) a valid countdown.
             struct AccountAgg {
                 var costToday: Decimal = 0
                 var sawTodayCost = false
-                var newestMTime: Date?
                 var fiveHour: ClaudeHookPayload.Window?
                 var sevenDay: ClaudeHookPayload.Window?
+                var fiveHourSuppliedAt: Date?
+                var sevenDaySuppliedAt: Date?
             }
             var accounts: [String: AccountAgg] = [:]
 
@@ -186,20 +188,26 @@ public actor ClaudeHookProvider: UsageProvider {
 
                 var agg = accounts[account] ?? AccountAgg()
 
-                if let cur = agg.newestMTime {
-                    agg.newestMTime = max(cur, entry.mtime)
-                } else {
-                    agg.newestMTime = entry.mtime
-                }
-
                 if entry.mtime >= today, let usd = payload.cost?.totalCostUsd {
                     agg.costToday += Self.decimal(fromUSD: usd)
                     agg.sawTodayCost = true
                 }
 
-                if let limits = payload.rateLimits {
-                    agg.fiveHour = Self.mergeWindow(agg.fiveHour, with: limits.fiveHour)
-                    agg.sevenDay = Self.mergeWindow(agg.sevenDay, with: limits.sevenDay)
+                // Windows from payloads older than the horizon merge only while their
+                // reset is still in the future — the limit-reached countdown #73 needs.
+                // An expired window (or one with no reset to verify) drops out before it
+                // can pollute the merge or ride a fresh sibling payload into the UI.
+                let stalePayload = now.timeIntervalSince(entry.mtime) > Self.stalenessHorizon
+                let limits = payload.rateLimits
+                if let five = limits?.fiveHour,
+                   !stalePayload || (five.resetsAtDate ?? .distantPast) >= now {
+                    agg.fiveHour = Self.mergeWindow(agg.fiveHour, with: five)
+                    agg.fiveHourSuppliedAt = max(agg.fiveHourSuppliedAt ?? .distantPast, entry.mtime)
+                }
+                if let seven = limits?.sevenDay,
+                   !stalePayload || (seven.resetsAtDate ?? .distantPast) >= now {
+                    agg.sevenDay = Self.mergeWindow(agg.sevenDay, with: seven)
+                    agg.sevenDaySuppliedAt = max(agg.sevenDaySuppliedAt ?? .distantPast, entry.mtime)
                 }
 
                 accounts[account] = agg
@@ -234,18 +242,20 @@ public actor ClaudeHookProvider: UsageProvider {
                 var accountMaxPct: Double?
                 var accountWindows: [QuotaWindow] = []
                 if agg.fiveHour != nil || agg.sevenDay != nil {
-                    // Per-account staleness (see the isStale note above): a fresh account
-                    // keeps all windows; an idle one keeps only windows that haven't
-                    // reset yet, even when a sibling account keeps the feed fresh.
-                    let accountStale: Bool
-                    if let acctNewest = agg.newestMTime {
-                        accountStale = now.timeIntervalSince(acctNewest) > Self.stalenessHorizon
-                    } else {
-                        accountStale = isStale
+                    // Window visibility (per slot, see the aggregation note above):
+                    // a window supplied by a recent payload is always shown (last-known);
+                    // a window that only survives from stale payloads must still be
+                    // unexpired — the expired residue of a long-idle account must not
+                    // drive the primary quota.
+                    let visible: (ClaudeHookPayload.Window?, Date?) -> ClaudeHookPayload.Window? = { window, suppliedAt in
+                        guard let window else { return nil }
+                        if let suppliedAt, now.timeIntervalSince(suppliedAt) <= Self.stalenessHorizon {
+                            return window
+                        }
+                        return (window.resetsAtDate ?? .distantPast) >= now ? window : nil
                     }
                     let prefix = isMultiAccount ? "\(account) " : ""
-                    if let fh = agg.fiveHour,
-                       !accountStale || (fh.resetsAtDate ?? .distantPast) >= now {
+                    if let fh = visible(agg.fiveHour, agg.fiveHourSuppliedAt) {
                         let utilization = fh.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
                             name: prefix + "5h", utilization: utilization, resetsAt: fh.resetsAtDate
@@ -254,8 +264,7 @@ public actor ClaudeHookProvider: UsageProvider {
                             name: "5h", utilization: utilization, resetsAt: fh.resetsAtDate
                         ))
                     }
-                    if let sd = agg.sevenDay,
-                       !accountStale || (sd.resetsAtDate ?? .distantPast) >= now {
+                    if let sd = visible(agg.sevenDay, agg.sevenDaySuppliedAt) {
                         let utilization = sd.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
                             name: prefix + "7d", utilization: utilization, resetsAt: sd.resetsAtDate
@@ -264,12 +273,12 @@ public actor ClaudeHookProvider: UsageProvider {
                             name: "7d", utilization: utilization, resetsAt: sd.resetsAtDate
                         ))
                     }
-                    // accountMaxPct only counts non-expired windows.
-                    let activePcts: [Double] = [
-                        (agg.fiveHour, !accountStale || (agg.fiveHour?.resetsAtDate ?? .distantPast) >= now),
-                        (agg.sevenDay, !accountStale || (agg.sevenDay?.resetsAtDate ?? .distantPast) >= now)
-                    ].compactMap { $0.1 ? $0.0?.usedPercentage : nil }
-                    accountMaxPct = activePcts.max()
+                    // accountMaxPct only counts visible windows.
+                    let activePcts: [Double?] = [
+                        visible(agg.fiveHour, agg.fiveHourSuppliedAt)?.usedPercentage,
+                        visible(agg.sevenDay, agg.sevenDaySuppliedAt)?.usedPercentage
+                    ]
+                    accountMaxPct = activePcts.compactMap { $0 }.max()
                     if let pct = accountMaxPct {
                         maxUtilizationPct = max(maxUtilizationPct ?? 0, pct)
                     }

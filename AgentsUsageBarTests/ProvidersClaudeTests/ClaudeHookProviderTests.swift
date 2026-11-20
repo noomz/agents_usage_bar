@@ -507,6 +507,113 @@ struct ClaudeHookProviderTests {
         #expect(try #require(snap.quota).used == 0.3)
     }
 
+    // MARK: - Per-slot window freshness (astra P2 re-review, PR #74)
+
+    /// Core #73 regression: a single-account file older than the 48h retention
+    /// horizon (retained because its windows are unexpired) still reports its
+    /// unexpired 5h countdown — the limit-reached case the retention rule exists for.
+    @Test func staleFeedKeepsUnexpiredFiveHourWindow() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        // 5 days old — past the 48h retention horizon; retained via unexpired windows.
+        let staleMtime = now.addingTimeInterval(-5 * 24 * 3600)
+        let live5hReset = now.addingTimeInterval(5 * 3600).timeIntervalSince1970
+        let live7dReset = now.addingTimeInterval(30 * 3600).timeIntervalSince1970
+        try writeSession("default", json: """
+        {
+          "session_id": "default",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 60, "resets_at": \(live5hReset) },
+            "seven_day": { "used_percentage": 20, "resets_at": \(live7dReset) }
+          }
+        }
+        """, mtime: staleMtime, in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        #expect(snap.costTodayUSD == 0)
+        let windows = try #require(snap.quotaWindows)
+        #expect(windows.map(\.name) == ["5h", "7d"])
+        let five = try #require(windows.first { $0.name == "5h" })
+        #expect(five.utilization == 0.6)
+        #expect(try #require(snap.quota).used == 0.6)
+    }
+
+    /// Guard: the same payload shape from a fresh file keeps both windows as before.
+    @Test func freshFeedKeepsAllWindowsFromRecentPayload() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let live5hReset = now.addingTimeInterval(5 * 3600).timeIntervalSince1970
+        let live7dReset = now.addingTimeInterval(30 * 3600).timeIntervalSince1970
+        try writeSession("default", json: """
+        {
+          "session_id": "default",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 60, "resets_at": \(live5hReset) },
+            "seven_day": { "used_percentage": 20, "resets_at": \(live7dReset) }
+          }
+        }
+        """, mtime: now.addingTimeInterval(-60), in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        let windows = try #require(snap.quotaWindows)
+        #expect(windows.map(\.name) == ["5h", "7d"])
+        #expect(try #require(snap.quota).used == 0.6)
+    }
+
+    /// P2 regression: within ONE account, a stale session's EXPIRED 5h window must
+    /// be dropped even though a fresh sibling session in the same account keeps the
+    /// feed (and account) non-stale. Under per-feed/per-account freshness the
+    /// expired 100% window would resurrect and drive the primary quota; per-slot
+    /// freshness drops it, so only the fresh session's 7d window counts.
+    @Test func staleSessionExpiredFiveHourWindowDroppedDespiteFreshSiblingSession() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        // Old session (5 days): expired 100% 5h window, no 7d.
+        let expired5hReset = now.addingTimeInterval(-4 * 24 * 3600).timeIntervalSince1970
+        try writeSession("old", json: """
+        {
+          "session_id": "old",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 100, "resets_at": \(expired5hReset) }
+          }
+        }
+        """, mtime: now.addingTimeInterval(-5 * 24 * 3600), in: dir)
+
+        // Fresh session (1 minute): live 7d window, no 5h.
+        let live7dReset = now.addingTimeInterval(30 * 3600).timeIntervalSince1970
+        try writeSession("new", json: """
+        {
+          "session_id": "new",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "seven_day": { "used_percentage": 10, "resets_at": \(live7dReset) }
+          }
+        }
+        """, mtime: now.addingTimeInterval(-60), in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        // The expired 5h window from the stale session must not resurrect:
+        // only the fresh session's 7d window is visible.
+        let windows = try #require(snap.quotaWindows)
+        #expect(windows.map(\.name) == ["7d"])
+        #expect(try #require(snap.quota).used == 0.1)
+    }
+
     // MARK: - Multi-account (DESIGN-hook-multi-account)
 
     /// Legacy flat file ("default") + sessions/personal/ subdir → merged cost, per-account
