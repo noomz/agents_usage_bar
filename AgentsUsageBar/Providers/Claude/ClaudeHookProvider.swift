@@ -48,10 +48,14 @@ public enum ClaudeHookError: Error, Equatable {
 ///   `ClaudeJSONLProvider` (RESEARCH Open Question 4).
 /// - Empty / missing feed dir → throw `ClaudeHookError.noFeedData` (hook not installed /
 ///   never fired — actionable error). A feed with files whose newest is older than 24h means
-///   the user simply hasn't used Claude Code lately → valid ZERO snapshot (cost 0, quota nil;
-///   stale rate limits would mislead), not an error.
+///   the user simply hasn't used Claude Code lately → valid ZERO cost snapshot; quota
+///   windows whose `resets_at` is still in the future are kept (a limit-reached account
+///   can't run sessions, so the feed goes stale exactly when the countdown matters most —
+///   #73), expired windows are dropped.
 /// - Cleanup: session files with mtime older than 48h are deleted during each fetch to bound
-///   directory growth.
+///   directory growth — EXCEPT the newest copy of a session whose payload still carries an
+///   unexpired rate-limit window, which is retained so the kept countdown survives past the
+///   cleanup horizon.
 public actor ClaudeHookProvider: UsageProvider {
 
     // MARK: - UsageProvider nonisolated constants
@@ -143,33 +147,29 @@ public actor ClaudeHookProvider: UsageProvider {
                 throw ClaudeHookError.noFeedData
             }
 
-            // Staleness gate: files exist but the newest is older than 24h — the user simply
-            // hasn't used Claude Code lately. That is a legitimate zero-usage state, not a
-            // broken hook: return a zero snapshot (quota nil — stale rate limits mislead).
+            // Staleness detection: newest file older than 24h — the user hasn't run
+            // Claude Code lately. Cost = 0 (mtime before local midnight). We still
+            // read rate limits: a limit-reached account can't run sessions, so the feed
+            // goes stale exactly when the reset countdown matters most.
             let newestMTime = entries.map(\.mtime).max()!
-            if now.timeIntervalSince(newestMTime) > Self.stalenessHorizon {
-                // Still perform cleanup so a long-idle feed doesn't grow unbounded.
-                cleanup(entries: allEntries, now: now, fileManager: fm)
-                let snap = UsageSnapshot(
-                    providerID: id,
-                    asOf: now,
-                    tokensToday: nil,
-                    costTodayUSD: 0,
-                    balanceUSD: nil,
-                    quota: nil,
-                    raw: [:],
-                    quotaWindows: nil
-                )
-                lastStatus = .ok(lastSuccess: now)
-                return snap
-            }
+            let isStale = now.timeIntervalSince(newestMTime) > Self.stalenessHorizon
 
             // Per-account aggregation: today's cost sum + peak-within-window rate limits.
+            //
+            // Window freshness is tracked PER WINDOW SLOT (suppliedAt = newest mtime of a
+            // payload that supplied that slot), not per account or per feed: a sibling
+            // account going active must not resurrect an idle account's expired windows,
+            // and a newer payload that omits rate_limits must not flip a stale slot fresh.
+            // Filtering happens BEFORE mergeWindow: a stale payload's window merges only
+            // while its resets_at is still in the future, so a stale window with a missing
+            // resets_at can never out-merge (on usedPercentage) a valid countdown.
             struct AccountAgg {
                 var costToday: Decimal = 0
                 var sawTodayCost = false
                 var fiveHour: ClaudeHookPayload.Window?
                 var sevenDay: ClaudeHookPayload.Window?
+                var fiveHourSuppliedAt: Date?
+                var sevenDaySuppliedAt: Date?
             }
             var accounts: [String: AccountAgg] = [:]
 
@@ -193,9 +193,21 @@ public actor ClaudeHookProvider: UsageProvider {
                     agg.sawTodayCost = true
                 }
 
-                if let limits = payload.rateLimits {
-                    agg.fiveHour = Self.mergeWindow(agg.fiveHour, with: limits.fiveHour)
-                    agg.sevenDay = Self.mergeWindow(agg.sevenDay, with: limits.sevenDay)
+                // Windows from payloads older than the horizon merge only while their
+                // reset is still in the future — the limit-reached countdown #73 needs.
+                // An expired window (or one with no reset to verify) drops out before it
+                // can pollute the merge or ride a fresh sibling payload into the UI.
+                let stalePayload = now.timeIntervalSince(entry.mtime) > Self.stalenessHorizon
+                let limits = payload.rateLimits
+                if let five = limits?.fiveHour,
+                   !stalePayload || (five.resetsAtDate ?? .distantPast) >= now {
+                    agg.fiveHour = Self.mergeWindow(agg.fiveHour, with: five)
+                    agg.fiveHourSuppliedAt = max(agg.fiveHourSuppliedAt ?? .distantPast, entry.mtime)
+                }
+                if let seven = limits?.sevenDay,
+                   !stalePayload || (seven.resetsAtDate ?? .distantPast) >= now {
+                    agg.sevenDay = Self.mergeWindow(agg.sevenDay, with: seven)
+                    agg.sevenDaySuppliedAt = max(agg.sevenDaySuppliedAt ?? .distantPast, entry.mtime)
                 }
 
                 accounts[account] = agg
@@ -230,8 +242,20 @@ public actor ClaudeHookProvider: UsageProvider {
                 var accountMaxPct: Double?
                 var accountWindows: [QuotaWindow] = []
                 if agg.fiveHour != nil || agg.sevenDay != nil {
+                    // Window visibility (per slot, see the aggregation note above):
+                    // a window supplied by a recent payload is always shown (last-known);
+                    // a window that only survives from stale payloads must still be
+                    // unexpired — the expired residue of a long-idle account must not
+                    // drive the primary quota.
+                    let visible: (ClaudeHookPayload.Window?, Date?) -> ClaudeHookPayload.Window? = { window, suppliedAt in
+                        guard let window else { return nil }
+                        if let suppliedAt, now.timeIntervalSince(suppliedAt) <= Self.stalenessHorizon {
+                            return window
+                        }
+                        return (window.resetsAtDate ?? .distantPast) >= now ? window : nil
+                    }
                     let prefix = isMultiAccount ? "\(account) " : ""
-                    if let fh = agg.fiveHour {
+                    if let fh = visible(agg.fiveHour, agg.fiveHourSuppliedAt) {
                         let utilization = fh.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
                             name: prefix + "5h", utilization: utilization, resetsAt: fh.resetsAtDate
@@ -240,7 +264,7 @@ public actor ClaudeHookProvider: UsageProvider {
                             name: "5h", utilization: utilization, resetsAt: fh.resetsAtDate
                         ))
                     }
-                    if let sd = agg.sevenDay {
+                    if let sd = visible(agg.sevenDay, agg.sevenDaySuppliedAt) {
                         let utilization = sd.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
                             name: prefix + "7d", utilization: utilization, resetsAt: sd.resetsAtDate
@@ -249,8 +273,12 @@ public actor ClaudeHookProvider: UsageProvider {
                             name: "7d", utilization: utilization, resetsAt: sd.resetsAtDate
                         ))
                     }
-                    accountMaxPct = [agg.fiveHour?.usedPercentage, agg.sevenDay?.usedPercentage]
-                        .compactMap { $0 }.max()
+                    // accountMaxPct only counts visible windows.
+                    let activePcts: [Double?] = [
+                        visible(agg.fiveHour, agg.fiveHourSuppliedAt)?.usedPercentage,
+                        visible(agg.sevenDay, agg.sevenDaySuppliedAt)?.usedPercentage
+                    ]
+                    accountMaxPct = activePcts.compactMap { $0 }.max()
                     if let pct = accountMaxPct {
                         maxUtilizationPct = max(maxUtilizationPct ?? 0, pct)
                     }
@@ -305,7 +333,7 @@ public actor ClaudeHookProvider: UsageProvider {
                 providerID: id,
                 asOf: now,
                 tokensToday: nil,                                   // statusline has no token totals
-                costTodayUSD: sawTodayCost ? costTodayUSD : nil,
+                costTodayUSD: isStale ? 0 : (sawTodayCost ? costTodayUSD : nil),
                 balanceUSD: nil,
                 quota: primaryQuota,
                 raw: raw,
@@ -327,7 +355,9 @@ public actor ClaudeHookProvider: UsageProvider {
 
     // MARK: - Feed pruning (public — used by the facade in sessionReads mode)
 
-    /// Prunes session files older than the 48h cleanup horizon WITHOUT reading payloads.
+    /// Prunes session files older than the 48h cleanup horizon, retaining the newest copy
+    /// of any session whose payload still carries an unexpired rate-limit window (the same
+    /// retention rule as the fetch path).
     ///
     /// The tee script keeps writing feed files regardless of the selected source, so
     /// `ClaudeSwitchableProvider` calls this on every `.sessionReads` fetch — otherwise a
@@ -438,18 +468,38 @@ public actor ClaudeHookProvider: UsageProvider {
     }
 
     /// Deletes session files whose mtime is older than the 48h cleanup horizon.
+    /// Retains the newest copy of a session whose payload still carries an unexpired
+    /// rate-limit window (any `resets_at` in the future) — deleting it would drop the
+    /// reset countdown a stale feed still needs (#73). Superseded copies of a session are
+    /// always deleted, since the newest copy already carries the merged window data.
     /// Best-effort — deletion failures are logged and ignored.
     private func cleanup(
         entries: [(account: String, url: URL, mtime: Date)],
         now: Date,
         fileManager fm: FileManager
     ) {
+        let newest = Set(Self.newestCopies(entries).map { $0.url })
         for entry in entries where now.timeIntervalSince(entry.mtime) > Self.cleanupHorizon {
+            if newest.contains(entry.url), hasUnexpiredWindow(at: entry.url, now: now) {
+                continue
+            }
             do {
                 try fm.removeItem(at: entry.url)
             } catch {
                 logger.notice("hook cleanup could not remove \(entry.url.lastPathComponent, privacy: .public)")
             }
+        }
+    }
+
+    /// True when the session file at `url` decodes to a payload with any rate-limit window
+    /// whose `resets_at` is still in the future. Unreadable payloads return false.
+    private func hasUnexpiredWindow(at url: URL, now: Date) -> Bool {
+        guard let data = try? Data(contentsOf: url),
+              let payload = try? ClaudeHookPayload.decode(data),
+              let limits = payload.rateLimits
+        else { return false }
+        return [limits.fiveHour, limits.sevenDay].contains { window in
+            window?.resetsAtDate.map { $0 > now } ?? false
         }
     }
 
