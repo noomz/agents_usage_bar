@@ -48,10 +48,14 @@ public enum ClaudeHookError: Error, Equatable {
 ///   `ClaudeJSONLProvider` (RESEARCH Open Question 4).
 /// - Empty / missing feed dir → throw `ClaudeHookError.noFeedData` (hook not installed /
 ///   never fired — actionable error). A feed with files whose newest is older than 24h means
-///   the user simply hasn't used Claude Code lately → valid ZERO snapshot (cost 0, quota nil;
-///   stale rate limits would mislead), not an error.
+///   the user simply hasn't used Claude Code lately → valid ZERO cost snapshot; quota
+///   windows whose `resets_at` is still in the future are kept (a limit-reached account
+///   can't run sessions, so the feed goes stale exactly when the countdown matters most —
+///   #73), expired windows are dropped.
 /// - Cleanup: session files with mtime older than 48h are deleted during each fetch to bound
-///   directory growth.
+///   directory growth — EXCEPT the newest copy of a session whose payload still carries an
+///   unexpired rate-limit window, which is retained so the kept countdown survives past the
+///   cleanup horizon.
 public actor ClaudeHookProvider: UsageProvider {
 
     // MARK: - UsageProvider nonisolated constants
@@ -320,7 +324,9 @@ public actor ClaudeHookProvider: UsageProvider {
 
     // MARK: - Feed pruning (public — used by the facade in sessionReads mode)
 
-    /// Prunes session files older than the 48h cleanup horizon WITHOUT reading payloads.
+    /// Prunes session files older than the 48h cleanup horizon, retaining the newest copy
+    /// of any session whose payload still carries an unexpired rate-limit window (the same
+    /// retention rule as the fetch path).
     ///
     /// The tee script keeps writing feed files regardless of the selected source, so
     /// `ClaudeSwitchableProvider` calls this on every `.sessionReads` fetch — otherwise a
@@ -431,18 +437,38 @@ public actor ClaudeHookProvider: UsageProvider {
     }
 
     /// Deletes session files whose mtime is older than the 48h cleanup horizon.
+    /// Retains the newest copy of a session whose payload still carries an unexpired
+    /// rate-limit window (any `resets_at` in the future) — deleting it would drop the
+    /// reset countdown a stale feed still needs (#73). Superseded copies of a session are
+    /// always deleted, since the newest copy already carries the merged window data.
     /// Best-effort — deletion failures are logged and ignored.
     private func cleanup(
         entries: [(account: String, url: URL, mtime: Date)],
         now: Date,
         fileManager fm: FileManager
     ) {
+        let newest = Set(Self.newestCopies(entries).map { $0.url })
         for entry in entries where now.timeIntervalSince(entry.mtime) > Self.cleanupHorizon {
+            if newest.contains(entry.url), hasUnexpiredWindow(at: entry.url, now: now) {
+                continue
+            }
             do {
                 try fm.removeItem(at: entry.url)
             } catch {
                 logger.notice("hook cleanup could not remove \(entry.url.lastPathComponent, privacy: .public)")
             }
+        }
+    }
+
+    /// True when the session file at `url` decodes to a payload with any rate-limit window
+    /// whose `resets_at` is still in the future. Unreadable payloads return false.
+    private func hasUnexpiredWindow(at url: URL, now: Date) -> Bool {
+        guard let data = try? Data(contentsOf: url),
+              let payload = try? ClaudeHookPayload.decode(data),
+              let limits = payload.rateLimits
+        else { return false }
+        return [limits.fiveHour, limits.sevenDay].contains { window in
+            window?.resetsAtDate.map { $0 > now } ?? false
         }
     }
 

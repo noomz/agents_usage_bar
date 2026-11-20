@@ -349,6 +349,109 @@ struct ClaudeHookProviderTests {
         #expect(accounts[1].quota == nil)
     }
 
+    // MARK: - Cleanup retention (#73)
+
+    /// A session file older than the 48h cleanup horizon whose 7d window still has a
+    /// future reset must survive cleanup, on every fetch, until the window expires.
+    @Test func cleanupRetainsNewestFileWithUnexpiredWindowAcrossFetches() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let t0 = Date()
+        // File is 50h old — past the 48h cleanup horizon. 7d window resets in 3 days.
+        let fileMtime = t0.addingTimeInterval(-50 * 3600)
+        let future7dReset = t0.addingTimeInterval(3 * 86400).timeIntervalSince1970
+        try writeSession("slow", json: """
+        {
+          "session_id": "slow",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 99, "resets_at": \(t0.addingTimeInterval(-2 * 86400).timeIntervalSince1970) },
+            "seven_day": { "used_percentage": 99, "resets_at": \(future7dReset) }
+          }
+        }
+        """, mtime: fileMtime, in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+
+        // Fetch #1 at t0: file is past the horizon but the 7d window is kept.
+        let snap1 = try await provider.fetch(now: t0)
+        #expect(try #require(snap1.quotaWindows).map(\.name) == ["7d"])
+
+        // Fetch #2 twelve hours later: the file is now 62h old — it must still survive.
+        let t1 = t0.addingTimeInterval(12 * 3600)
+        let snap2 = try await provider.fetch(now: t1)
+        #expect(try #require(snap2.quotaWindows).map(\.name) == ["7d"])
+        #expect(try #require(snap2.quota).used == 0.99)
+        #expect(FileManager.default.fileExists(atPath: dir.appendingPathComponent("slow.json").path))
+    }
+
+    /// A session file older than the horizon with ONLY expired windows is still deleted —
+    /// retention must not turn the feed into a permanent archive.
+    @Test func cleanupStillDeletesFileWithOnlyExpiredWindows() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let fileMtime = now.addingTimeInterval(-50 * 3600)
+        let old5hReset = now.addingTimeInterval(-24 * 3600).timeIntervalSince1970
+        let old7dReset = now.addingTimeInterval(-10 * 3600).timeIntervalSince1970
+        let url = try writeSession("expired", json: """
+        {
+          "session_id": "expired",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 99, "resets_at": \(old5hReset) },
+            "seven_day": { "used_percentage": 50, "resets_at": \(old7dReset) }
+          }
+        }
+        """, mtime: fileMtime, in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+        #expect(snap.quota == nil)
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    /// Superseded copies (same session name, older mtime) are deleted even when they
+    /// carry an unexpired window — only the newest copy is retained.
+    @Test func cleanupDeletesSupersededCopiesWithUnexpiredWindows() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let futureReset = now.addingTimeInterval(2 * 86400).timeIntervalSince1970
+        let json = quotaJSON(sessionId: "s1", fivePct: 99, sevenPct: 50, resetsAt: futureReset)
+
+        // Flat "default" copy: 60h old. Subdir copy (account "work"): 52h old → newest.
+        let flat = try writeSession("s1", json: json, mtime: now.addingTimeInterval(-60 * 3600), in: dir)
+        let workDir = dir.appendingPathComponent("work", isDirectory: true)
+        try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
+        let newest = try writeSession("s1", json: json, mtime: now.addingTimeInterval(-52 * 3600), in: workDir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+        #expect(try #require(snap.quota).used == 0.99)
+        #expect(!FileManager.default.fileExists(atPath: flat.path))
+        #expect(FileManager.default.fileExists(atPath: newest.path))
+    }
+
+    /// The public prune path (sessionReads mode) honors the same retention rule.
+    @Test func pruneFeedRetainsUnexpiredWindowFiles() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+        let fileMtime = now.addingTimeInterval(-50 * 3600)
+        let futureReset = now.addingTimeInterval(2 * 86400).timeIntervalSince1970
+        let url = try writeSession("keepme", json: quotaJSON(sessionId: "keepme", fivePct: 99, sevenPct: 50, resetsAt: futureReset),
+                                   mtime: fileMtime, in: dir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        await provider.pruneFeed(now: now)
+        #expect(FileManager.default.fileExists(atPath: url.path))
+    }
+
     // MARK: - Multi-account (DESIGN-hook-multi-account)
 
     /// Legacy flat file ("default") + sessions/personal/ subdir → merged cost, per-account
