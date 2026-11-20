@@ -138,7 +138,7 @@ func TestGarbageThemeFallsBack(t *testing.T) {
 
 func TestProviderOrder(t *testing.T) {
 	c, m := newCLI()
-	all := "openrouter,claude,codex,gemini,grok,pi-local,ollama,ollama-cloud,lmstudio,lms-llamacpp,llamacpp"
+	all := "openrouter,claude,codex,antigravity,gemini,grok,pi-local,ollama,ollama-cloud,lmstudio,lms-llamacpp,llamacpp"
 	if got := get(t, c, "provider-order"); got != all {
 		t.Errorf("default %s", got)
 	}

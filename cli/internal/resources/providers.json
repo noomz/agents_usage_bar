@@ -31,6 +31,16 @@
       "docsURL": "https://github.com/openai/codex"
     },
     {
+      "providerID": "antigravity",
+      "displayName": "Antigravity",
+      "detectionDescription": "Install the Antigravity CLI and sign in with agy. AUB reads model quota and reset times from agy /usage.",
+      "envSnippet": "# No environment variables required.",
+      "envNote": "AUB detects the agy executable and its existing sign-in.",
+      "tomlSnippet": "# No TOML configuration required.",
+      "tomlNote": "Restart AUB after signing in.",
+      "docsURL": "https://antigravity.google/"
+    },
+    {
       "providerID": "gemini",
       "displayName": "Gemini",
       "detectionDescription": "Run gemini-cli and select 'Login with Google' (oauth-personal) to create ~/.gemini/oauth_creds.json and set selectedAuthType in ~/.gemini/settings.json.",

@@ -5,6 +5,7 @@ import (
 	"github.com/noomz/agents_usage_bar/cli/internal/config"
 	"github.com/noomz/agents_usage_bar/cli/internal/domain"
 	"github.com/noomz/agents_usage_bar/cli/internal/provider"
+	"github.com/noomz/agents_usage_bar/cli/internal/providers/antigravity"
 	"github.com/noomz/agents_usage_bar/cli/internal/providers/claude"
 	"github.com/noomz/agents_usage_bar/cli/internal/providers/codex"
 	"github.com/noomz/agents_usage_bar/cli/internal/providers/gemini"
@@ -28,6 +29,7 @@ var builds = map[domain.ProviderID]provider.Build{
 	domain.Grok:        grok.Build,
 	domain.Codex:       codex.Build,
 	domain.Gemini:      gemini.Build,
+	domain.Antigravity: antigravity.Build,
 	domain.OpenRouter:  openrouter.Build,
 	domain.Ollama:      ollama.Build,
 	domain.OllamaCloud: ollamacloud.Build,
@@ -66,6 +68,7 @@ var entries = []entry{
 	{domain.OpenRouter, func(e provider.Env) bool { return e.Config.OpenRouter.Enabled }, unauthenticated(domain.OpenRouter)},
 	{domain.Claude, preferenceEnabled(domain.Claude), unauthenticated(domain.Claude)},
 	{domain.Codex, func(e provider.Env) bool { return e.Config.Codex.Enabled }, unauthenticated(domain.Codex)},
+	{domain.Antigravity, preferenceEnabled(domain.Antigravity), nil},
 	{domain.Gemini, func(e provider.Env) bool { return e.Config.Gemini.Enabled }, unauthenticated(domain.Gemini)},
 	{domain.Grok, func(e provider.Env) bool { return e.Config.Grok.Enabled }, unauthenticated(domain.Grok)},
 	{domain.PiLocal, preferenceEnabled(domain.PiLocal), unauthenticated(domain.PiLocal)},

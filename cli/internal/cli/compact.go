@@ -294,6 +294,9 @@ func resetCountdown(until, now time.Time) string {
 
 // windowLabel is length-derived (`5h`, `7d`) when known, Grok's billing period, else the name.
 func windowLabel(w domain.QuotaWindow, p ProviderReport, snap domain.UsageSnapshot) string {
+	if p.ID == domain.Antigravity {
+		return w.Name
+	}
 	if w.Duration != nil && *w.Duration > 0 {
 		s := int(*w.Duration)
 		if s%86_400 == 0 {

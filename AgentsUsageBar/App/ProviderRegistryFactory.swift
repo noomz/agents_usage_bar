@@ -183,6 +183,10 @@ public enum ProviderRegistryFactory {
             ))
         }
 
+        if preferences.providerEnabled[.antigravity] ?? true, let cli = AntigravityCLI.discover(), cli.hasLogin {
+            registry.append(AntigravityProvider(cli: cli))
+        }
+
         let geminiRegistered: Bool
         if config.gemini.enabled,
            GeminiSettingsGate.isOAuthPersonal(),

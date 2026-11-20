@@ -15,6 +15,7 @@ const (
 	Claude           ProviderID = "claude"
 	Codex            ProviderID = "codex"
 	Gemini           ProviderID = "gemini"
+	Antigravity      ProviderID = "antigravity"
 	Grok             ProviderID = "grok"
 	PiLocal          ProviderID = "pi-local"
 	Ollama           ProviderID = "ollama"
@@ -27,10 +28,10 @@ const (
 const enginePrefix = "engine."
 
 // AllKnown lists known providers in display order.
-var AllKnown = []ProviderID{OpenRouter, Claude, Codex, Gemini, Grok, PiLocal, Ollama, OllamaCloud, LMStudio, LMStudioLlamaCpp, LlamaCpp}
+var AllKnown = []ProviderID{OpenRouter, Claude, Codex, Antigravity, Gemini, Grok, PiLocal, Ollama, OllamaCloud, LMStudio, LMStudioLlamaCpp, LlamaCpp}
 
 var displayHints = map[ProviderID]string{
-	OpenRouter: "OpenRouter", Claude: "Claude", Codex: "Codex", Gemini: "Gemini", Grok: "Grok",
+	OpenRouter: "OpenRouter", Claude: "Claude", Codex: "Codex", Gemini: "Gemini", Antigravity: "Antigravity", Grok: "Grok",
 	PiLocal: "Local Llama", Ollama: "Ollama", OllamaCloud: "Ollama Cloud", LMStudio: "LM Studio",
 	LMStudioLlamaCpp: "LM Studio llama.cpp", LlamaCpp: "llama.cpp",
 }

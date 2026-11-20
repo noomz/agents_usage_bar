@@ -137,7 +137,7 @@ public enum AUBCommand: Equatable, Sendable {
       NO_COLOR        Disable ANSI colors, like --no-color
 
     Providers:
-      openrouter, claude, codex, gemini, grok, ollama, lmstudio, lms-llamacpp, llamacpp
+      openrouter, claude, codex, antigravity, gemini, grok, ollama, lmstudio, lms-llamacpp, llamacpp
 
     Settings keys:
       refresh-interval, threshold, theme, cli-theme, provider-order,

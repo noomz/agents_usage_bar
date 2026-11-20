@@ -31,6 +31,7 @@ extension ProviderID {
     /// `GeminiOAuthProvider` actor. `displayHint` already returns "Gemini"
     /// for this rawValue.
     public static let gemini = ProviderID(rawValue: "gemini")
+    public static let antigravity = ProviderID(rawValue: "antigravity")
 
     /// Ollama — http://localhost:11434 (LOCAL-01). Plan 04-04 introduces this
     /// constant for `OllamaProvider`. `displayHint` already returns "Ollama"
@@ -85,7 +86,7 @@ extension ProviderID {
     /// Plan 05-02 — Ordered array of all known providers in display order.
     /// Used by `UserPreferencesStore.loadAll()` and `SettingsProvidersTab` row enumeration.
     public static let allKnown: [ProviderID] = [
-        .openrouter, .claude, .codex, .gemini, .grok, .piLocal, .ollama, .ollamaCloud, .lmstudio, .lmstudioLlamaCpp, .llamacpp
+        .openrouter, .claude, .codex, .antigravity, .gemini, .grok, .piLocal, .ollama, .ollamaCloud, .lmstudio, .lmstudioLlamaCpp, .llamacpp
     ]
 
     /// The provider a user-typed token names: a known id or `engine.<slug>`, else nil.
@@ -131,6 +132,7 @@ extension ProviderID {
         case "claude":     return "Claude"
         case "codex":      return "Codex"
         case "gemini":     return "Gemini"
+        case "antigravity": return "Antigravity"
         case "grok":       return "Grok"
         case "pi-local":   return "Local Llama"
         case "ollama":     return "Ollama"

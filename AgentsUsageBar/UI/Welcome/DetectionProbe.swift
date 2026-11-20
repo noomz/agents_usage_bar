@@ -69,6 +69,8 @@ public enum DetectionProbe {
             : probeClaudeFS(fileManager: fileManager)
         let codexResult = probeCodexFS(fileManager: fileManager)
         let geminiResult = probeGeminiFS(fileManager: fileManager)
+        let antigravityResult: DetectionResult = AntigravityCLI.discover(fileManager: fileManager)?.hasLogin == true
+            ? .detected : .notDetected
         let grokResult = probeGrok(config: config, fileManager: fileManager)
         let piLocalResult = probePiLocalFS(fileManager: fileManager)
         let ollamaCloudResult = probeOllamaCloud(config: config, fileManager: fileManager)
@@ -104,6 +106,7 @@ public enum DetectionProbe {
 
             // 4. Gemini — pre-computed synchronous result
             group.addTask { (.gemini, geminiResult) }
+            group.addTask { (.antigravity, antigravityResult) }
 
             group.addTask { (.grok, grokResult) }
 

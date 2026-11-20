@@ -225,6 +225,7 @@ public enum CompactTextRenderer {
     /// Window label: length-derived (`5h`, `7d`) when known, Grok's billing
     /// period, else the provider's window name.
     static func windowLabel(_ w: QuotaWindow, _ p: ProviderReport, _ snap: UsageSnapshot) -> String {
+        if p.id == .antigravity { return w.name }
         if let d = w.duration, d > 0 {
             let s = Int(d)
             if s % 86_400 == 0 { return "\(s / 86_400)d" }

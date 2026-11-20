@@ -127,7 +127,7 @@ func TestQuotaUsageCaption(t *testing.T) {
 }
 
 func TestProviderIDs(t *testing.T) {
-	want := []ProviderID{"openrouter", "claude", "codex", "gemini", "grok", "pi-local", "ollama", "ollama-cloud", "lmstudio", "lms-llamacpp", "llamacpp"}
+	want := []ProviderID{"openrouter", "claude", "codex", "antigravity", "gemini", "grok", "pi-local", "ollama", "ollama-cloud", "lmstudio", "lms-llamacpp", "llamacpp"}
 	if !reflect.DeepEqual(AllKnown, want) {
 		t.Errorf("%v", AllKnown)
 	}
