@@ -152,6 +152,12 @@ public actor ClaudeHookProvider: UsageProvider {
             // read rate limits: a limit-reached account can't run sessions, so the feed
             // goes stale exactly when the reset countdown matters most. Only drop
             // windows whose resets_at has already passed.
+            //
+            // Staleness is judged PER ACCOUNT for window filtering: retention can keep
+            // an idle account's file alive for days, and a fresh sibling account would
+            // otherwise flip feed-wide isStale to false and resurrect the idle
+            // account's expired windows (a 100% 5h window driving the primary quota).
+            // A stale account keeps only unexpired windows; a fresh account keeps all.
             let newestMTime = entries.map(\.mtime).max()!
             let isStale = now.timeIntervalSince(newestMTime) > Self.stalenessHorizon
 
@@ -159,6 +165,7 @@ public actor ClaudeHookProvider: UsageProvider {
             struct AccountAgg {
                 var costToday: Decimal = 0
                 var sawTodayCost = false
+                var newestMTime: Date?
                 var fiveHour: ClaudeHookPayload.Window?
                 var sevenDay: ClaudeHookPayload.Window?
             }
@@ -178,6 +185,12 @@ public actor ClaudeHookProvider: UsageProvider {
                     ?? entry.account
 
                 var agg = accounts[account] ?? AccountAgg()
+
+                if let cur = agg.newestMTime {
+                    agg.newestMTime = max(cur, entry.mtime)
+                } else {
+                    agg.newestMTime = entry.mtime
+                }
 
                 if entry.mtime >= today, let usd = payload.cost?.totalCostUsd {
                     agg.costToday += Self.decimal(fromUSD: usd)
@@ -221,9 +234,18 @@ public actor ClaudeHookProvider: UsageProvider {
                 var accountMaxPct: Double?
                 var accountWindows: [QuotaWindow] = []
                 if agg.fiveHour != nil || agg.sevenDay != nil {
+                    // Per-account staleness (see the isStale note above): a fresh account
+                    // keeps all windows; an idle one keeps only windows that haven't
+                    // reset yet, even when a sibling account keeps the feed fresh.
+                    let accountStale: Bool
+                    if let acctNewest = agg.newestMTime {
+                        accountStale = now.timeIntervalSince(acctNewest) > Self.stalenessHorizon
+                    } else {
+                        accountStale = isStale
+                    }
                     let prefix = isMultiAccount ? "\(account) " : ""
                     if let fh = agg.fiveHour,
-                       !isStale || (fh.resetsAtDate ?? .distantPast) >= now {
+                       !accountStale || (fh.resetsAtDate ?? .distantPast) >= now {
                         let utilization = fh.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
                             name: prefix + "5h", utilization: utilization, resetsAt: fh.resetsAtDate
@@ -233,7 +255,7 @@ public actor ClaudeHookProvider: UsageProvider {
                         ))
                     }
                     if let sd = agg.sevenDay,
-                       !isStale || (sd.resetsAtDate ?? .distantPast) >= now {
+                       !accountStale || (sd.resetsAtDate ?? .distantPast) >= now {
                         let utilization = sd.usedPercentage.map { $0 / 100.0 }
                         windows.append(QuotaWindow(
                             name: prefix + "7d", utilization: utilization, resetsAt: sd.resetsAtDate
@@ -244,8 +266,8 @@ public actor ClaudeHookProvider: UsageProvider {
                     }
                     // accountMaxPct only counts non-expired windows.
                     let activePcts: [Double] = [
-                        (agg.fiveHour, !isStale || (agg.fiveHour?.resetsAtDate ?? .distantPast) >= now),
-                        (agg.sevenDay, !isStale || (agg.sevenDay?.resetsAtDate ?? .distantPast) >= now)
+                        (agg.fiveHour, !accountStale || (agg.fiveHour?.resetsAtDate ?? .distantPast) >= now),
+                        (agg.sevenDay, !accountStale || (agg.sevenDay?.resetsAtDate ?? .distantPast) >= now)
                     ].compactMap { $0.1 ? $0.0?.usedPercentage : nil }
                     accountMaxPct = activePcts.max()
                     if let pct = accountMaxPct {

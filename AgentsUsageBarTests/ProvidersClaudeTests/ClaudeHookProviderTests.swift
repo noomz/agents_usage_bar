@@ -452,6 +452,61 @@ struct ClaudeHookProviderTests {
         #expect(FileManager.default.fileExists(atPath: url.path))
     }
 
+    // MARK: - Stale idle account next to a fresh one (astra review, PR #74)
+
+    /// A retained idle account (40h old, 7d window still live) sits next to a fresh
+    /// active account. The fresh file keeps the feed non-stale, but the idle
+    /// account's EXPIRED 100% 5h window must not resurrect into the displayed
+    /// windows or drive the primary quota — only its unexpired 7d window counts.
+    @Test func staleIdleAccountKeepsOnlyUnexpiredWindowNextToActiveAccount() async throws {
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let now = Date()
+
+        // Active account: fresh file (1 minute), both windows live.
+        let activeDir = dir.appendingPathComponent("active", isDirectory: true)
+        try FileManager.default.createDirectory(at: activeDir, withIntermediateDirectories: true)
+        let activeJson = """
+        {
+          "session_id": "active-1",
+          "cost": { "total_cost_usd": 0.5 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 20, "resets_at": \(now.addingTimeInterval(3600).timeIntervalSince1970) },
+            "seven_day": { "used_percentage": 10, "resets_at": \(now.addingTimeInterval(24 * 3600).timeIntervalSince1970) }
+          }
+        }
+        """
+        _ = try writeSession("active-1", json: activeJson, mtime: now.addingTimeInterval(-60), in: activeDir)
+
+        // Retained idle account: 40h old; 5h window expired 39h ago, 7d window
+        // resets in 30h (which is why the 48h cleanup retains the file).
+        let idleDir = dir.appendingPathComponent("idle", isDirectory: true)
+        try FileManager.default.createDirectory(at: idleDir, withIntermediateDirectories: true)
+        let idleJson = """
+        {
+          "session_id": "idle-1",
+          "cost": { "total_cost_usd": 0.0 },
+          "rate_limits": {
+            "five_hour": { "used_percentage": 100, "resets_at": \(now.addingTimeInterval(-39 * 3600).timeIntervalSince1970) },
+            "seven_day": { "used_percentage": 30, "resets_at": \(now.addingTimeInterval(30 * 3600).timeIntervalSince1970) }
+          }
+        }
+        """
+        _ = try writeSession("idle-1", json: idleJson, mtime: now.addingTimeInterval(-40 * 3600), in: idleDir)
+
+        let provider = ClaudeHookProvider(feedDir: dir)
+        let snap = try await provider.fetch(now: now)
+
+        let windowNames = try #require(snap.quotaWindows).map(\.name)
+        // The retained 7d window of the idle account is still reported.
+        #expect(windowNames.contains("idle 7d"))
+        // The idle account's expired 5h window does not resurrect.
+        #expect(!windowNames.contains("idle 5h"))
+        // Primary quota = max of live windows (20, 10, 30), NOT the dead 100% 5h.
+        #expect(try #require(snap.quota).used == 0.3)
+    }
+
     // MARK: - Multi-account (DESIGN-hook-multi-account)
 
     /// Legacy flat file ("default") + sessions/personal/ subdir → merged cost, per-account
